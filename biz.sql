@@ -91,6 +91,13 @@ CREATE TABLE `sys_notice` (
                               CONSTRAINT `fk_sup_to` FOREIGN KEY (`to_user_id`) REFERENCES `sys_user` (`user_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='系统通知表';
 
+-- 1.5 补充：token黑名单表，用于存放失效token
+CREATE TABLE token_blacklist (
+                                 token VARCHAR(255) NOT NULL PRIMARY KEY COMMENT '失效token',
+                                 expiry_time DATETIME NOT NULL COMMENT '过期时间',
+                                 INDEX idx_expiry_time (expiry_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='token黑名单表';
+
 
 -- ==========================================================================
 -- 第二部分：项目与任务核心模块
