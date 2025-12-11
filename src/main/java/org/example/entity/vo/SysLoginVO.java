@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class ErrorVo {
-    private String message;
-    private Integer code;
+public class SysLoginVO {
+    private String nick_name;
+    private String token;
 }

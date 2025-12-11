@@ -1,4 +1,4 @@
-package org.example.entity.dto;
+package org.example.entity.vo;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class SysLoginDTO {
-    private String user_name;
-    private String password;
+public class ErrorVO {
+    private String message;
+    private Integer code;
 }

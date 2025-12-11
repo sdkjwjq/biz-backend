@@ -14,7 +14,7 @@ public class JWTUtil {
     //生成jwt
     public static String generateJwtToken(SysUser user) {
         long nowMillis = System.currentTimeMillis();
-        Date now = new Date(nowMillis);
+//        Date now = new Date(nowMillis);
         long expMillis = nowMillis + 3600000; // 令牌有效期为 1 小时
         Date exp = new Date(expMillis);
 

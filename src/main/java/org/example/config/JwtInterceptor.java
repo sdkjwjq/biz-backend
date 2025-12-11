@@ -4,7 +4,7 @@ import com.auth0.jwt.interfaces.DecodedJWT;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.example.entity.vo.ErrorVo;
+import org.example.entity.vo.ErrorVO;
 import org.example.mapper.TokenBlacklistMapper;
 import org.example.utils.JWTUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,6 +50,6 @@ public class JwtInterceptor implements HandlerInterceptor {
     private void sendError(HttpServletResponse response, int code, String message) throws IOException {
         response.setStatus(code);
         response.setContentType("application/json");
-        response.getWriter().write(new ObjectMapper().writeValueAsString(new ErrorVo(message, code)));
+        response.getWriter().write(new ObjectMapper().writeValueAsString(new ErrorVO(message, code)));
     }
 }

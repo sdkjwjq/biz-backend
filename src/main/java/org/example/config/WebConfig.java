@@ -18,7 +18,7 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/api/**")
+        registry.addMapping("*")
                 .allowedOriginPatterns("*") // 允许的域名
                 .allowedMethods("GET", "POST", "PUT", "DELETE")
                 .allowedHeaders("*")
@@ -31,8 +31,8 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(jwtInterceptor)
-                .addPathPatterns("/api/**") // 拦截所有/api路径
-                .excludePathPatterns("/api/login", "/api/register","/api/upload-register"); // 排除登录和注册接口
+                .addPathPatterns("/system/**") // 拦截所有/api路径
+                .excludePathPatterns("/system/login"); // 排除登录和注册接口
     }
 
 }
