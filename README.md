@@ -83,37 +83,6 @@
 - **说明**：基于当前登录用户（通过token解析用户ID）修改密码
 
 
-### 4. 获取所有用户
-- **请求路径**：`/system/getAllUsers`
-- **请求方法**：GET
-- **请求头**：`Authorization: string`（登录获取的token，必填）
-- **成功响应**（200 OK）：
-  ```json
-  [
-    {
-      "userId": 1,
-      "deptId": 1,
-      "userName": "string",
-      "nickName": "string",
-      "email": "string",
-      "password": "string", // 注意：实际返回可能加密或脱敏
-      "role": "string",
-      "status": "string",
-      "isDelete": 0,
-      "createTime": "2024-01-01T00:00:00",
-      "updateTime": "2024-01-01T00:00:00"
-    }
-  ]
-  ```
-- **错误响应**（401 Unauthorized）：
-  ```json
-  {
-    "message": "No Token/Invalid Token",
-    "code": 401
-  }
-  ```
-- **说明**：需要认证，返回系统中所有用户信息
-
 
 ## 通用错误码说明
 | 状态码 | 说明 |
