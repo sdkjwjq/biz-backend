@@ -113,7 +113,169 @@
   }
   ```
 - **说明**：需要认证，返回系统中所有用户信息
+## 补充接口文档
 
+### 5. 获取全量任务数据
+- **请求路径**：`/biz/tasks`
+- **请求方法**：GET
+- **请求头**：`Authorization: string`（登录获取的token，必填）
+- **成功响应**（200 OK）：
+  ```json
+  [
+    {
+      "taskId": 1,
+      "projectId": 1,
+      "parentId": 0,
+      "ancestors": "0,1",
+      "phase": 1,
+      "taskCode": "TSK001",
+      "taskName": "任务名称",
+      "level": 1,
+      "deptId": 1,
+      "principalId": 1,
+      "leaderId": 1,
+      "expTarget": "预期目标",
+      "expLevel": "预期级别",
+      "expEffect": "预期效果",
+      "expMaterialDesc": "预期材料描述",
+      "dataType": "数据类型",
+      "targetValue": 100.00,
+      "currentValue": 50.00,
+      "weight": 0.5,
+      "progress": 50,
+      "status": "进行中",
+      "isDelete": 0,
+      "createTime": "2024-01-01T00:00:00",
+      "updateTime": "2024-01-02T00:00:00"
+    }
+  ]
+  ```
+- **错误响应**：
+  - 401 Unauthorized：`{"message": "No Token/Invalid Token", "code": 401}`
+  - 500 Internal Server Error：`{"message": "错误信息", "code": 500}`
+- **说明**：需要认证，返回系统中所有任务信息
+
+
+### 6. 根据ID获取任务
+- **请求路径**：`/biz/tasks/{taskId}`
+- **请求方法**：GET
+- **请求头**：`Authorization: string`（登录获取的token，必填）
+- **路径参数**：`taskId`（任务ID，必填）
+- **成功响应**（200 OK）：
+  ```json
+  {
+    "taskId": 1,
+    "projectId": 1,
+    "parentId": 0,
+    "ancestors": "0,1",
+    "phase": 1,
+    "taskCode": "TSK001",
+    "taskName": "任务名称",
+    "level": 1,
+    "deptId": 1,
+    "principalId": 1,
+    "leaderId": 1,
+    "expTarget": "预期目标",
+    "expLevel": "预期级别",
+    "expEffect": "预期效果",
+    "expMaterialDesc": "预期材料描述",
+    "dataType": "数据类型",
+    "targetValue": 100.00,
+    "currentValue": 50.00,
+    "weight": 0.5,
+    "progress": 50,
+    "status": "进行中",
+    "isDelete": 0,
+    "createTime": "2024-01-01T00:00:00",
+    "updateTime": "2024-01-02T00:00:00"
+  }
+  ```
+- **错误响应**：
+  - 401 Unauthorized：`{"message": "No Token/Invalid Token", "code": 401}`
+  - 500 Internal Server Error：`{"message": "错误信息（如任务ID为空、任务不存在）", "code": 500}`
+- **说明**：需要认证，根据任务ID返回对应任务详情
+
+
+### 7. 获取当前任务的所有子任务
+- **请求路径**：`/biz/tasks/children`
+- **请求方法**：GET
+- **请求头**：`Authorization: string`（登录获取的token，必填）
+- **请求参数**：`task_id`（父任务ID，必填）
+- **成功响应**（200 OK）：
+  ```json
+  [
+    {
+      "taskId": 2,
+      "projectId": 1,
+      "parentId": 1,
+      "ancestors": "0,1,2",
+      "phase": 1,
+      "taskCode": "TSK002",
+      "taskName": "子任务名称",
+      "level": 2,
+      "deptId": 1,
+      "principalId": 1,
+      "leaderId": 1,
+      "expTarget": "子任务预期目标",
+      "expLevel": "子任务预期级别",
+      "expEffect": "子任务预期效果",
+      "expMaterialDesc": "子任务预期材料描述",
+      "dataType": "数据类型",
+      "targetValue": 50.00,
+      "currentValue": 30.00,
+      "weight": 0.3,
+      "progress": 60,
+      "status": "进行中",
+      "isDelete": 0,
+      "createTime": "2024-01-03T00:00:00",
+      "updateTime": "2024-01-04T00:00:00"
+    }
+  ]
+  ```
+- **错误响应**：
+  - 401 Unauthorized：`{"message": "No Token/Invalid Token", "code": 401}`
+  - 500 Internal Server Error：`{"message": "错误信息（如任务ID为空、任务不存在）", "code": 500}`
+- **说明**：需要认证，根据父任务ID返回其所有子任务信息
+
+
+### 8. 获取当前任务的父任务
+- **请求路径**：`/biz/tasks/parent`
+- **请求方法**：GET
+- **请求头**：`Authorization: string`（登录获取的token，必填）
+- **请求参数**：`task_id`（子任务ID，必填）
+- **成功响应**（200 OK）：
+  ```json
+  {
+    "taskId": 1,
+    "projectId": 1,
+    "parentId": 0,
+    "ancestors": "0,1",
+    "phase": 1,
+    "taskCode": "TSK001",
+    "taskName": "父任务名称",
+    "level": 1,
+    "deptId": 1,
+    "principalId": 1,
+    "leaderId": 1,
+    "expTarget": "父任务预期目标",
+    "expLevel": "父任务预期级别",
+    "expEffect": "父任务预期效果",
+    "expMaterialDesc": "父任务预期材料描述",
+    "dataType": "数据类型",
+    "targetValue": 100.00,
+    "currentValue": 50.00,
+    "weight": 0.5,
+    "progress": 50,
+    "status": "进行中",
+    "isDelete": 0,
+    "createTime": "2024-01-01T00:00:00",
+    "updateTime": "2024-01-02T00:00:00"
+  }
+  ```
+- **错误响应**：
+  - 401 Unauthorized：`{"message": "No Token/Invalid Token", "code": 401}`
+  - 500 Internal Server Error：`{"message": "错误信息（如任务ID为空、任务不存在）", "code": 500}`
+- **说明**：需要认证，根据子任务ID返回其父任务信息
 
 ## 通用错误码说明
 | 状态码 | 说明 |
