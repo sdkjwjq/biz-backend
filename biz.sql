@@ -330,9 +330,9 @@ CREATE TABLE `biz_achievement` (
 
 -- 6.1 插入部门
 INSERT INTO `sys_dept` (`dept_name`, `leader_id`, `status`, `is_delete`, `create_time`) VALUES
-                                                                                            ('测试部', NULL, '0', 0, NOW());
+    ('测试部', NULL, '0', 0, NOW());
 
 -- 6.2 插入管理员用户（密码：admin123，使用MD5加密）
 INSERT INTO `sys_user` (`dept_id`, `user_name`, `nick_name`, `email`, `password`, `role`, `status`, `is_delete`, `create_time`) VALUES
-                                                                                                                                    (1, 'admin', '系统管理员', 'admin@example.com', '888888', '0', '0', 0, NOW());
+    (1, 'admin', '系统管理员', 'admin@example.com', '888888', '0', '0', 0, NOW());
 
