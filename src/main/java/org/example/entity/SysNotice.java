@@ -9,16 +9,18 @@ import java.util.Date;
 @AllArgsConstructor
 @NoArgsConstructor
 public class SysNotice {
-    private Long noticeId;
-    private Long fromUserId;
-    private Long toUserId;
-    private String type;
-    private String triggerEvent;
-    private String title;
-    private String content;
-    private String sourceType;
-    private Long sourceId;
-    private String isRead;
-    private Integer isDelete;
-    private Date createTime;
+    private Long noticeId; // 通知ID
+    private Long fromUserId; // 发起人ID
+    private Long toUserId; // 接收人ID
+    private String type; // 类型
+    private String triggerEvent; // 触发事件
+    private String title; // 标题
+    private String content; // 内容
+    private String sourceType; // 关联来源类型
+    private Long sourceId; // 关联业务ID
+    private String isRead; // 阅读状态 0:未读 1:已读
+    private Integer isDelete; // 0:存在 1:删除
+    private Date createTime; // 创建时间
+
+
 }

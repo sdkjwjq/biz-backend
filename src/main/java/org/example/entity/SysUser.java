@@ -9,15 +9,15 @@ import java.util.Date;
 @AllArgsConstructor
 @NoArgsConstructor
 public class SysUser {
-    private Long userId;
-    private Long deptId;
-    private String userName;
-    private String nickName;
-    private String email;
-    private String password;
-    private String role;
-    private String status;
-    private Integer isDelete;
-    private Date createTime;
-    private Date updateTime;
+    private Long userId; // 用户ID
+    private Long deptId; // 所属部门ID
+    private String userName; // 账号
+    private String nickName; // 姓名
+    private String email; // 邮箱
+    private String password; // 密码
+    private String role; // 角色 0:admin 1:user 2:leader
+    private String status; // 状态 0:正常 1:停用
+    private Integer isDelete; // 0:存在 1:删除
+    private Date createTime; // 创建时间
+    private Date updateTime; // 更新时间
 }

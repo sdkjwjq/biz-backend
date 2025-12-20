@@ -1,10 +1,16 @@
 package org.example.controller;
 
-import org.example.entity.BizTask;
+import jakarta.servlet.http.HttpServletRequest;
+import org.example.entity.dto.AuditDTO;
+import org.example.entity.dto.BizSubDTO;
 import org.example.entity.vo.ErrorVO;
+import org.example.utils.FileUploadUtil;
+import org.example.utils.JWTUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.example.service.BizService;
+import org.springframework.web.multipart.MultipartFile;
+
 @RestController
 @RequestMapping("/biz")
 public class BizController {
@@ -50,5 +56,45 @@ public class BizController {
         }
     }
 
-    
+//    根据部门id获取任务
+    @GetMapping("/tasks/dept")
+    public Object getTasksByDeptId(@RequestParam("dept_id") Long deptId){
+        try{
+            return bizService.getTasksByDeptId(deptId);
+        } catch (Exception e) {
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
+
+//    提交审批材料
+    @PostMapping("/submit")
+    public Object submitMaterial(@RequestBody BizSubDTO bizSubDTO, HttpServletRequest request){
+        try{
+            bizService.submitMaterial(bizSubDTO, JWTUtil.getUserIdFromToken(request.getHeader("Authorization")) );
+            return "提交成功";
+        } catch (Exception e) {
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
+
+//    获取审批单
+    @GetMapping("/audit/{taskId}")
+    public Object getAudit(@PathVariable("taskId") Long taskId,HttpServletRequest request){
+        try{
+            return bizService.getAudit(taskId, JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
+        } catch (Exception e) {
+            return new ErrorVO(e.getMessage(), 500);
+        }
+
+    }
+
+//    @PostMapping("/audit/{sub_id}")
+//    public Object audit(@PathVariable("sub_id") Long subId, @RequestBody AuditDTO auditDTO, HttpServletRequest request){
+//        try{
+//            return bizService.audit(subId, auditDTO, JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
+//        } catch (Exception e) {
+//            return new ErrorVO(e.getMessage(), 500);
+//        }
+//    }
+
 }

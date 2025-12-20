@@ -63,7 +63,11 @@
             <artifactId>java-jwt</artifactId>
             <version>4.4.0</version>
         </dependency>
-
-    </dependencies>
+        <!-- Maven 依赖 -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.5.0</version> <!-- 适配 Spring Boot 3.x；若用 Spring Boot 2.x，选 1.6.x 版本 -->
+        </dependency>    </dependencies>
 
 </project>

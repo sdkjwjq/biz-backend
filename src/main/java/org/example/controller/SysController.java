@@ -1,9 +1,11 @@
 package org.example.controller;
 
-import com.auth0.jwt.interfaces.DecodedJWT;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.example.entity.SysNotice;
 import org.example.entity.SysUser;
 import org.example.entity.dto.SysLoginDTO;
+import org.example.entity.dto.SysNoticeDTO;
 import org.example.entity.dto.SysPwdDTO;
 import org.example.entity.vo.ErrorVO;
 import org.example.entity.vo.SysLogoutVO;
@@ -11,6 +13,7 @@ import org.example.service.SysService;
 import org.example.utils.JWTUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Date;
 import java.util.List;
@@ -22,7 +25,7 @@ public class SysController {
     @Autowired
     private SysService sysService;
 
-    @GetMapping("/getAllUsers")
+    @GetMapping("/users")
     public List<SysUser> getAllUsers()
     {
         return sysService.getAllUsers();
@@ -62,6 +65,59 @@ public class SysController {
         }
         return new ErrorVO("token不存在", 401);
     }
+    //    上传文件
+    @PostMapping("/upload")
+    public Object uploadFile(@RequestParam("file") MultipartFile file, HttpServletRequest request){
+        try{
+            return sysService.uploadFile(file,request);
+        }catch (Exception e){
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
+
+//    根据文件名下载文件
+//    @GetMapping("/download")
+//    public void downloadFile(@RequestParam("filename") String fileName, HttpServletResponse response){
+//        try{
+//            sysService.downloadFile(fileName,response);
+//        }catch (Exception e){
+////            return new ErrorVO(e.getMessage(), 500);
+//        }
+//    }
+//    根据file_id下载文件
+    @GetMapping("/download/{file_id}")
+    public Object downloadFile(@PathVariable("file_id") Long fileId, HttpServletResponse response){
+        try{
+            sysService.downloadFile(fileId,response);
+            return "下载成功";
+        }catch (Exception e){
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
+
+
+//    发送通知
+    @PostMapping("/notice")
+    public Object sendNotice(@RequestBody SysNoticeDTO sysNoticeDTO, HttpServletRequest request){
+        try{
+            Long userId=JWTUtil.getUserIdFromToken(request.getHeader("Authorization"));
+            sysService.sendNotice(sysNoticeDTO,userId);
+            return "发送成功";
+        } catch (Exception e) {
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
+//    查看当前用户收到的通知
+    @GetMapping("/notice")
+    public List<SysNotice> getNotices(HttpServletRequest request) {
+        try{
+            Long userId=JWTUtil.getUserIdFromToken(request.getHeader("Authorization"));
+            return sysService.getNotices(userId);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 
 
 

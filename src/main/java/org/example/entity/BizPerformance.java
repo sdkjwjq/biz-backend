@@ -10,19 +10,22 @@ import java.util.Date;
 @AllArgsConstructor
 @NoArgsConstructor
 public class BizPerformance {
-    private Long perfId;
-    private Long projectId;
-    private Long parentId;
-    private String ancestors;
-    private String perfCode;
-    private String perfName;
-    private BigDecimal targetValue;
-    private BigDecimal currentValue;
-    private String dataType;
-    private Long deptId;
-    private Long principalId;
-    private Long leaderId;
-    private Integer isDelete;
-    private Date createTime;
-    private Date updateTime;
+    private Long perfId; // 指标ID
+    private Long projectId; // 项目ID
+    private Long parentId; // 父指标ID
+    private String ancestors; // 祖先指标ID集合
+    private String perfCode; // 编码
+    private String perfName; // 名称
+
+    private BigDecimal targetValue; // 总目标值
+    private BigDecimal currentValue; // 当前完成值(计算得出)
+    private String dataType; // 数据类型 0:无影响 1:数值累加 2:百分比取大
+
+    private Long deptId; // 归口部门ID
+    private Long principalId; // 归口负责人ID
+    private Long leaderId; // 任务负责人ID
+
+    private Integer isDelete; // 0:存在 1:删除
+    private Date createTime; // 创建时间
+    private Date updateTime; // 更新时间
 }

@@ -9,13 +9,13 @@ import java.util.Date;
 @AllArgsConstructor
 @NoArgsConstructor
 public class SysFile {
-    private Long fileId;
-    private String fileName;
-    private String filePath;
-    private String fileUrl;
-    private String fileSuffix;
-    private Long fileSize;
-    private Long uploadBy;
-    private Integer isDelete;
-    private Date uploadTime;
+    private Long fileId; // 文件ID
+    private String fileName; // 文件名
+    private String filePath; // 路径
+    private String fileUrl; // URL
+    private String fileSuffix; // 后缀
+    private Long fileSize; // 大小
+    private Long uploadBy; // 上传人ID
+    private Integer isDelete; // 0:存在 1:删除
+    private Date uploadTime; // 上传时间
 }
