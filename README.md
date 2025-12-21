@@ -1,19 +1,17 @@
 # biz-backend 系统接口文档
 
-### 2025-12-8
-完成登录功能
-
-### 2025-12-11
-完成登录、注销、修改密码
-
-### 后续迭代
-补充实现：根据部门ID获取任务、提交审批材料、获取审批单、文件上传/下载、通知发送/查看等接口
+### 迭代记录
+- 2025-12-8：完成登录功能
+- 2025-12-11：完成登录、注销、修改密码
+- 2025-12-21：补充实现根据部门ID获取任务、提交审批材料、获取审批单、文件上传/下载、通知发送/查看、审批任务、重新提交审批材料等接口
 
 ## 基础信息
 - 基础路径：无（接口路径已包含具体前缀）
 - 认证方式：JWT Token（登录后获取，请求时通过`Authorization`请求头携带）
 - 示例服务域名：`https://api.example.com`（实际调用时替换为部署的服务地址）
 - 示例Token：`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJ1c2VyX25hbWUiOiJhZG1pbiIsImV4cCI6MTcxMjEwMzYwMH0.xxxxxx`（所有需认证接口统一使用此示例，无需重复粘贴）
+## Postman接口文档
+https://www.postman.com/litianyi981119/biz/collection/21001135-3309c751-c3ca-4fdb-9d3e-f9aa8529b9c0/?action=share&creator=21001135
 
 ## 接口列表
 
@@ -402,7 +400,7 @@
     "code": 500
   }
   ```
-- **说明**：需要认证，用于上传审批材料等文件
+- **说明**：需要认证，用于上传审批材料等文件，支持pdf、doc、docx格式，单个文件大小限制为10MB
 
 ### 13. 根据文件ID下载文件
 - **请求路径**：`/system/download/{file_id}`
@@ -425,11 +423,11 @@
   ```json
   {
     "to_user_id": 2, // 接收人ID，示例值
-    "type": "通知类型", // 示例值
-    "trigger_event": "触发事件", // 示例值
-    "title": "通知标题", // 示例值
-    "content": "通知内容", // 示例值
-    "source_type": "1", // 关联来源类型，示例值
+    "type": "审批通知", // 通知类型，示例值
+    "trigger_event": "审批单提交", // 触发事件，示例值
+    "title": "新的审批单待处理", // 通知标题，示例值
+    "content": "您有一条新的审批单（任务ID：3）需要处理，请及时操作", // 通知内容，示例值
+    "source_type": "1", // 关联来源类型，1=审批单，示例值
     "source_id": 1 // 关联业务ID，示例值
   }
   ```
@@ -444,7 +442,7 @@
     "code": 500
   }
   ```
-- **说明**：需要认证，用于向指定用户发送通知
+- **说明**：需要认证，用于向指定用户发送通知，支持审批、任务、系统类通知类型
 
 ### 15. 查看当前用户收到的通知
 - **请求路径**：`/system/notice`
@@ -458,13 +456,13 @@
       "noticeId": 1,
       "fromUserId": 1,
       "toUserId": 2,
-      "type": "通知类型",
-      "triggerEvent": "触发事件",
-      "title": "通知标题",
-      "content": "通知内容",
+      "type": "审批通知",
+      "triggerEvent": "审批单提交",
+      "title": "新的审批单待处理",
+      "content": "您有一条新的审批单（任务ID：3）需要处理，请及时操作",
       "sourceType": "1",
       "sourceId": 1,
-      "isRead": "0",
+      "isRead": "0", // 0=未读，1=已读
       "isDelete": 0,
       "createTime": "2024-01-06T00:00:00"
     }
@@ -477,15 +475,89 @@
     "code": 401
   }
   ```
-- **说明**：需要认证，返回当前登录用户收到的所有通知信息
+- **说明**：需要认证，返回当前登录用户收到的所有通知信息，按创建时间倒序排列
+
+### 16. 审批任务
+- **请求路径**：`/biz/audit`
+- **请求方法**：POST
+- **示例调用URL**：`https://api.example.com/biz/audit`
+- **请求头**：`Authorization: 示例Token`（需替换为实际登录获取的Token）
+- **请求体参数**：
+  ```json
+  {
+    "sub_id": 1, // 审批单ID，示例值
+    "is_pass": true, // 是否通过，true为通过，false为退回
+    "opinion": "同意该审批单内容，建议加快推进任务进度" // 审批意见，示例值
+  }
+  ```
+- **成功响应**（200 OK）：
+  ```json
+  {
+    "message": "已审批，下一位审批人为管理员（ID：3）",
+    "next_handler_id": 3 // 下一位处理人ID（退回时无此字段）
+  }
+  ```
+  退回场景响应：
+  ```json
+  {
+    "message": "已退回，退回到提交人（ID：1）",
+    "back_to_id": 1
+  }
+  ```
+- **错误响应**：
+  - 401 Unauthorized：`{"message": "No Token/Invalid Token", "code": 401}`
+  - 500 Internal Server Error：
+    ```json
+    {
+      "message": "该审批单不存在或已处理",
+      "code": 500
+    }
+    ```
+- **说明**：
+  1. 需要认证，当前用户需为审批单的当前处理人才能进行审批操作
+  2. 审批通过会流转到下一处理人，审批退回会返回到提交人，并同步发送通知
+  3. 审批单流转至最后一位处理人并通过后，审批单状态标记为"已完成"；退回后状态标记为"已退回"
+
+### 17. 重新提交审批材料
+- **请求路径**：`/biz/resubmit`
+- **请求方法**：POST
+- **示例调用URL**：`https://api.example.com/biz/resubmit`
+- **请求头**：`Authorization: 示例Token`（需替换为实际登录获取的Token）
+- **请求体参数**：
+  ```json
+  {
+    "sub_id": 1, // 原审批单ID，示例值
+    "filename": "report_v2.pdf", // 重新上传的文件名，示例值
+    "reported_value": "95", // 重新申报值，示例值
+    "data_type": "数值型" // 数据类型，示例值
+  }
+  ```
+- **成功响应**（200 OK）：
+  ```json
+  "重新提交成功，审批单已流转至第一位处理人"
+  ```
+- **错误响应**：
+  - 401 Unauthorized：`{"message": "No Token/Invalid Token", "code": 401}`
+  - 500 Internal Server Error：
+    ```json
+    {
+      "message": "该审批单未被退回，无法重新提交",
+      "code": 500
+    }
+    ```
+- **说明**：
+  1. 需要认证，仅允许审批单提交人对"已退回"状态的审批单进行重新提交
+  2. 重新提交后审批单状态重置为"待处理"，流转至第一位处理人，并同步发送通知
+  3. 重新提交时可更新申报值和审批材料文件
 
 ## 通用错误码说明
-| 状态码 | 说明 |
-|--------|------|
-| 401 | 未携带token、token无效或已过期 |
-| 500 | 服务器内部错误（如业务逻辑异常） |
+| 状态码 | 说明                             |
+| ------ | -------------------------------- |
+| 401    | 未携带token、token无效或已过期   |
+| 500    | 服务器内部错误（如业务逻辑异常） |
 
 ## 认证说明
 - 除登录接口（`/system/login`）外，所有接口均需要在请求头携带`Authorization`令牌
 - 令牌有效期为1小时（从生成时间开始计算）
 - 令牌无效时需重新登录获取新令牌
+- Token格式要求：请求头中需携带 `Authorization: Bearer {token}`（示例：`Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.xxxxxx`）
