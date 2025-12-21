@@ -8,6 +8,7 @@ import org.example.entity.SysNotice;
 import org.example.entity.SysUser;
 import org.example.entity.TokenBlacklist;
 import org.example.entity.dto.FileUploadDTO;
+import org.example.entity.dto.SysAlertDTO;
 import org.example.entity.dto.SysNoticeDTO;
 import org.example.entity.vo.FileUploadVO;
 import org.example.entity.vo.SysLoginVO;
@@ -89,7 +90,8 @@ public class SysService {
             Long userId = JWTUtil.getUserIdFromToken(request.getHeader("Authorization"));
             sysFile.setUploadBy(userId);
             sysFile.setUploadTime(new Date());
-            return new FileUploadVO(sysMapper.uploadFile(sysFile), fileUploadDTO.getFilename(), fileUploadDTO.getFilepath());
+            sysMapper.uploadFile(sysFile);
+            return new FileUploadVO(sysMapper.getFileByName(sysFile.getFileName()).getFileId(), fileUploadDTO.getFilename(), fileUploadDTO.getFilepath());
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -153,6 +155,32 @@ public void downloadFile(Long fileId, HttpServletResponse response) throws IOExc
     public List<SysNotice> getNotices(Long userId) {
         try{
             return sysMapper.getNotices(userId);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+//    设为已读setRead
+    public void setRead(Long noticeId) {
+        try{
+            sysMapper.setRead(noticeId);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+    }
+
+//    站内预警
+    public void sendAlert(SysAlertDTO sysAlertDTO, Long userId) {
+        try{
+            SysNotice sysNotice = new SysNotice();
+            sysNotice.setFromUserId(userId);
+            sysNotice.setToUserId(sysMapper.getUserByNickName(sysAlertDTO.getTo_user_nick_name()).getUserId());
+            sysNotice.setType("1");
+            sysNotice.setTriggerEvent("1");
+            sysNotice.setTitle(sysAlertDTO.getTitle());
+            sysNotice.setContent(sysAlertDTO.getContent());
+            sysNotice.setSourceType("1");
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

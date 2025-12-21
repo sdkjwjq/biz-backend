@@ -8,7 +8,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class AuditDTO {
-    private Boolean isPass;
+    private Long sub_id;
+    private Boolean is_pass;
     private String title;
     private String content;
+//    private String file_id;
 }

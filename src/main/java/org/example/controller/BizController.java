@@ -3,6 +3,7 @@ package org.example.controller;
 import jakarta.servlet.http.HttpServletRequest;
 import org.example.entity.dto.AuditDTO;
 import org.example.entity.dto.BizSubDTO;
+import org.example.entity.dto.ReSubDTO;
 import org.example.entity.vo.ErrorVO;
 import org.example.utils.FileUploadUtil;
 import org.example.utils.JWTUtil;
@@ -70,8 +71,7 @@ public class BizController {
     @PostMapping("/submit")
     public Object submitMaterial(@RequestBody BizSubDTO bizSubDTO, HttpServletRequest request){
         try{
-            bizService.submitMaterial(bizSubDTO, JWTUtil.getUserIdFromToken(request.getHeader("Authorization")) );
-            return "提交成功";
+            return bizService.submitMaterial(bizSubDTO, JWTUtil.getUserIdFromToken(request.getHeader("Authorization")) );
         } catch (Exception e) {
             return new ErrorVO(e.getMessage(), 500);
         }
@@ -88,13 +88,21 @@ public class BizController {
 
     }
 
-//    @PostMapping("/audit/{sub_id}")
-//    public Object audit(@PathVariable("sub_id") Long subId, @RequestBody AuditDTO auditDTO, HttpServletRequest request){
-//        try{
-//            return bizService.audit(subId, auditDTO, JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
-//        } catch (Exception e) {
-//            return new ErrorVO(e.getMessage(), 500);
-//        }
-//    }
+    @PostMapping("/audit")
+    public Object audit( @RequestBody AuditDTO auditDTO, HttpServletRequest request){
+        try{
+            return bizService.audit(auditDTO, JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
+        } catch (Exception e) {
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
 
+    @PostMapping("/resub")
+    public Object reSubmitMaterial(@RequestBody ReSubDTO reSubDTO, HttpServletRequest request){
+        try{
+            return bizService.reSubmitMaterial(reSubDTO, JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
+        } catch (Exception e) {
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
 }

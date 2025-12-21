@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.example.entity.SysNotice;
 import org.example.entity.SysUser;
+import org.example.entity.dto.SysAlertDTO;
 import org.example.entity.dto.SysLoginDTO;
 import org.example.entity.dto.SysNoticeDTO;
 import org.example.entity.dto.SysPwdDTO;
@@ -117,8 +118,26 @@ public class SysController {
             throw new RuntimeException(e);
         }
     }
-
-
-
-
+//    设为已读
+    @PostMapping("/notice/{notice_id}")
+    public Object setRead(@PathVariable("notice_id") Long noticeId){
+        try{
+            sysService.setRead(noticeId);
+            return "已读";
+        } catch (Exception e) {
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
+//    站内信息 预警
+//input token to_user_nick_name title/content source_id
+    @PostMapping("/alert")
+    public Object sendAlert(@RequestBody SysAlertDTO sysAlertDTO, HttpServletRequest request){
+        try{
+            Long userId=JWTUtil.getUserIdFromToken(request.getHeader("Authorization"));
+            sysService.sendAlert(sysAlertDTO,userId);
+            return "发送成功";
+        } catch (Exception e) {
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
 }

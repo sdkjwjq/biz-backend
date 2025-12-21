@@ -14,5 +14,5 @@ public class BizSubDTO {
     private Long task_id;
     private BigDecimal reported_value;
     private String data_type;
-    private String filename;
+    private Long file_id;
 }
