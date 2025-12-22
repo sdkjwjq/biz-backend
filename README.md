@@ -1,4 +1,54 @@
 # biz-backend 系统接口文档
+## 项目概述
+
+`biz-backend` 是一个基于 Spring Boot 的业务管理后端系统，提供用户认证、任务管理、文件上传下载、审批流程、通知预警等核心功能，支持部门级任务协作与流程审批。
+
+## 技术栈
+
+- **核心框架**：Spring Boot 3.3.2
+- **持久层**：MyBatis 3.0.3
+- **数据库**：MySQL 9.1.0
+- **认证授权**：JWT (java-jwt 4.4.0)
+- **API文档**：SpringDoc OpenAPI 2.5.0
+- **工具类**：Lombok 1.18.30、SLF4J 2.0.13
+
+## 快速开始
+
+### 环境要求
+
+- JDK 17+
+- Maven 3.6+
+- MySQL 8.0+
+
+### 部署步骤
+
+1. 克隆仓库
+
+   1. ```Bash
+      git clone https://github.com/sdkjwjq/biz-backend.git
+      cd biz-backend
+      ```
+
+2. 配置数据库
+
+   1. 新建 MySQL 数据库（推荐名称：`biz_db`）
+
+   2. 执行 `biz.sql` 初始化表结构
+
+   3. 修改 `application.properties` 配置数据库连接：
+
+      - ```Properties
+        spring.datasource.url=jdbc:mysql://localhost:3306/biz_db?useSSL=false&serverTimezone=UTC
+        spring.datasource.username=root
+        spring.datasource.password=your_password
+        ```
+
+3. 构建并启动
+
+   1. ```Bash
+      mvn clean package
+      java -jar target/biz_backend-1.0-SNAPSHOT.jar
+      ```
 
 ### 迭代记录
 - 2025-12-8：完成登录功能
