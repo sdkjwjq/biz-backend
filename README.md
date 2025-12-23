@@ -9,7 +9,6 @@
 - **持久层**：MyBatis 3.0.3
 - **数据库**：MySQL 9.1.0
 - **认证授权**：JWT (java-jwt 4.4.0)
-- **API文档**：SpringDoc OpenAPI 2.5.0
 - **工具类**：Lombok 1.18.30、SLF4J 2.0.13
 
 ## 快速开始
