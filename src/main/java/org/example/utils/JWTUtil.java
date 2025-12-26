@@ -6,6 +6,9 @@ import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.auth0.jwt.interfaces.JWTVerifier;
 import org.example.entity.SysUser;
+import org.example.entity.TokenBlacklist;
+import org.example.mapper.TokenBlacklistMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Date;
 
@@ -44,6 +47,20 @@ public class JWTUtil {
     public static Long getUserIdFromToken(String token) {
         DecodedJWT decodedJWT = verifyJwtToken(token);
         return decodedJWT.getClaim("id").asLong();
+    }
+
+//    isTokenExpired
+    public static boolean isTokenExpired(String token) {
+        DecodedJWT decodedJWT = verifyJwtToken(token);
+        Date expiresAt = decodedJWT.getExpiresAt();
+        return expiresAt.before(new Date());
+    }
+
+//    isTokenInBlacklist
+
+    public static boolean isTokenInBlacklist(String token) {
+        // TODO: 添加黑名单检查逻辑
+        return false;
     }
 
 }

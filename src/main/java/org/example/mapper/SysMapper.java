@@ -5,6 +5,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 import org.apache.ibatis.annotations.Options;
+import org.example.entity.SysDept;
 import org.example.entity.SysFile;
 import org.example.entity.SysNotice;
 import org.example.entity.SysUser;
@@ -18,15 +19,20 @@ public interface SysMapper {
     public List<SysUser> getAllUsers();
 //  根据id获取部门
     @Select("SELECT * FROM sys_dept WHERE dept_id = #{deptId}")
-    public List<SysUser> getDeptById(Long deptId);
+    public SysDept getDeptById(Long deptId);
 
 //    根据userId获取 部门
     @Select("SELECT * FROM sys_dept WHERE dept_id = (SELECT dept_id FROM sys_user WHERE user_id = #{userId})")
-    public List<SysUser> getDeptByUserId(Long userId);
+    public SysDept getDeptByUserId(Long userId);
 
 //    根据userId获取部门负责人id
     @Select("SELECT leader_id FROM sys_dept WHERE dept_id = (SELECT dept_id FROM sys_user WHERE user_id = #{userId})")
     public Long getDeptLeaderId(Long userId);
+
+//    getDeptNameByDeptId
+    @Select("SELECT dept_name FROM sys_dept WHERE dept_id = #{deptId})")
+    public String getDeptNameByDeptId(Long deptId);
+
 
 //    根据id获取用户
     @Select("SELECT * FROM sys_user WHERE user_id = #{userId}")

@@ -80,6 +80,14 @@ public class SysService {
     //    上传文件
     public Object uploadFile(MultipartFile file, HttpServletRequest request) {
         try{
+
+            if (file.isEmpty()) {
+                throw new RuntimeException("文件不能为空");
+            }
+//            如果文件后缀不是doc,docx,pdf中的一个，报错
+            if (!file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf(".")+1).matches("doc|docx|pdf")) {
+                throw new RuntimeException("文件格式错误");
+            }
             FileUploadDTO fileUploadDTO = FileUploadUtil.upload(file);
             SysFile sysFile = new SysFile();
             sysFile.setFilePath(fileUploadDTO.getFilepath());
@@ -181,6 +189,9 @@ public void downloadFile(Long fileId, HttpServletResponse response) throws IOExc
             sysNotice.setTitle(sysAlertDTO.getTitle());
             sysNotice.setContent(sysAlertDTO.getContent());
             sysNotice.setSourceType("1");
+            sysNotice.setSourceId(sysAlertDTO.getSource_id());
+            sysNotice.setIsRead("0");
+            sysMapper.sendNotice(sysNotice);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

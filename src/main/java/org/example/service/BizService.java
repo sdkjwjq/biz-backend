@@ -8,6 +8,7 @@ import org.example.entity.dto.BizSubDTO;
 import org.example.entity.dto.ReSubDTO;
 import org.example.entity.dto.FileUploadDTO;
 import org.example.entity.dto.SysNoticeDTO;
+import org.example.entity.vo.BizTaskVo;
 import org.example.mapper.BizMapper;
 import org.example.mapper.SysMapper;
 import org.example.utils.FileUploadUtil;
@@ -35,6 +36,8 @@ public class BizService {
     public List<BizTask> getAllTasks(){
         return bizMapper.getAllTasks();
     }
+
+
 
     //根据id获取任务
     public BizTask getTaskById(Long taskId){
@@ -90,6 +93,27 @@ public class BizService {
         }
     }
 
+//    根据用户角色获取任务，角色为0和2返回所有任务，角色为1返回leaderid以及为自己的任务
+    public List<BizTaskVo> getTasksByUserRole(Long userId){
+        try{
+            SysUser sysUser = sysMapper.getUserById(userId);
+            if (sysUser == null){
+                throw new RuntimeException("用户不存在");
+            }
+            if(sysUser.getRole().equals("0")){
+                return TaskListToTaskVoList(bizMapper.getAllTasks());
+            }else if (sysUser.getRole().equals("1")){
+                return TaskListToTaskVoList(bizMapper.getTasksByLeaderId(sysUser.getUserId()));
+            }else if(sysUser.getRole().equals("2")){
+                return TaskListToTaskVoList(bizMapper.getTasksByPrincipalId(sysUser.getUserId()));
+            }else {
+                throw new RuntimeException("用户角色错误");
+            }
+        }catch (Exception e){
+            throw new RuntimeException(e);
+        }
+    }
+
     @Transactional
     public String submitMaterial(BizSubDTO bizSubDTO,Long userId){
         try{
@@ -101,9 +125,13 @@ public class BizService {
             if (bizMapper.getTaskById(bizSubDTO.getTask_id()).getLevel() != 3){
                 throw new RuntimeException("该任务不是三级任务,无法提交");
             }
-            // 验证任务状态，如果当前status为0或者2，则禁止提交
-            if (bizMapper.getTaskById(bizSubDTO.getTask_id()).getStatus().equals("0") || bizMapper.getTaskById(bizSubDTO.getTask_id()).getStatus().equals("2")){
+            // 验证任务状态，如果当前status为2，则禁止提交
+            if (bizMapper.getTaskById(bizSubDTO.getTask_id()).getStatus().equals("2")){
                 throw new RuntimeException("该任务状态未开始或正在审核中,无法提交");
+            }
+            // 验证任务状态，如果当前status为3，则禁止提交
+            if (bizMapper.getTaskById(bizSubDTO.getTask_id()).getStatus().equals("3")){
+                throw new RuntimeException("该任务状态已完成,无法提交");
             }
             // 检查文件是否存在
             SysFile sysFile = sysMapper.getFileById(bizSubDTO.getFile_id());
@@ -164,7 +192,8 @@ public class BizService {
 
 
 
-    //    审批任务
+
+//    //    审批任务
     @Transactional
     public Object audit(AuditDTO auditDTO, Long userId) {
         Long subId = auditDTO.getSub_id();
@@ -176,7 +205,7 @@ public class BizService {
 
             Map<Integer,Long> nextHandlerMap = Map.of(
                     10, bizMapper.getTaskPrincipalId(bizMaterialSubmission.getTaskId()),
-                    20, 1L
+                    20, 110228L
             );
             Map<Integer,Long> backHandlerMap = Map.of(
                     10,bizMaterialSubmission.getSubmitBy(),
@@ -194,6 +223,7 @@ public class BizService {
                         Long nextHandlerId = nextHandlerMap.get(bizMaterialSubmission.getFlowStatus());
 
                         // 更新审批单状态（使用封装方法）
+
                         updateAuditStatus(subId, nextHandlerId, 20);
 
                         // 发送通知（使用封装方法）
@@ -282,8 +312,15 @@ public class BizService {
                         // 更新审批单状态（使用封装方法）
                         bizMaterialSubmission.setFlowStatus(40);
                         bizMapper.updateAudit(bizMaterialSubmission);
-//                        修改任务状态,标记为已完成
-                        bizMapper.updateTaskStatus(bizMaterialSubmission.getTaskId(), "1");
+//                        更新任务状态
+                        BizTask bizTask = bizMapper.getTaskById(bizMaterialSubmission.getTaskId());
+                        bizTask.setCurrentValue(bizTask.getCurrentValue().add(bizMaterialSubmission.getReportedValue()));
+                        if(bizTask.getCurrentValue().compareTo(bizTask.getTargetValue()) >= 0){
+                            bizTask.setStatus("3");
+                        }else {
+                            bizTask.setStatus("1");
+                        }
+                        bizMapper.updateTask(bizTask);
 
                         // 发送通知，告知提交人审批过程已完成
                         sendNotice(userId,
@@ -469,5 +506,47 @@ public class BizService {
             bizMapper.updateAudit(bizMaterialSubmission);
         }
     }
+
+//    TaskToTaskVo
+    public BizTaskVo TaskToTaskVo(BizTask task){
+        return new BizTaskVo(
+                task.getTaskId(),
+                task.getProjectId(),
+                task.getParentId(),
+                task.getAncestors(),
+                task.getPhase(),
+                task.getTaskCode(),
+                task.getTaskName(),
+                task.getLevel(),
+                task.getDeptId(),
+                sysMapper.getDeptById(task.getDeptId()).getDeptName(),
+                task.getPrincipalId(),
+                sysMapper.getUserById(task.getPrincipalId()).getUserName(),
+                task.getLeaderId(),
+                sysMapper.getUserById(task.getLeaderId()).getUserName(),
+                task.getExpTarget(),
+                task.getExpLevel(),
+                task.getExpEffect(),
+                task.getExpMaterialDesc(),
+                task.getDataType(),
+                task.getTargetValue(),
+                task.getCurrentValue(),
+                task.getWeight(),
+                task.getProgress(),
+                task.getStatus(),
+                task.getIsDelete(),
+                task.getCreateTime(),
+                task.getUpdateTime()
+        );
+    }
+//TaskListToTaskVoList
+    public List<BizTaskVo> TaskListToTaskVoList(List<BizTask> tasks){
+        List<BizTaskVo> taskVos = new ArrayList<>();
+        for (BizTask task : tasks) {
+            taskVos.add(TaskToTaskVo(task));
+        }
+        return taskVos;
+    }
+
 
 }

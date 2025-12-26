@@ -26,6 +26,15 @@ public interface BizMapper {
     @Select("SELECT * FROM biz_task WHERE principal_id = #{principalId}")
     List<BizTask> getTasksByPrincipalId(Long principalId);
 
+//    getTasksByLeaderId
+    @Select("SELECT * FROM biz_task WHERE leader_id = #{leaderId}")
+    List<BizTask> getTasksByLeaderId(Long leaderId);
+
+//    getTasksByLeaderIdOrPrincipleId
+    @Select("SELECT * FROM biz_task WHERE leader_id = #{userId} OR principal_id = #{userId}")
+    List<BizTask> getTasksByLeaderIdOrPrincipalId(Long userId);
+
+
     // 获取所有一级任务
     @Select("SELECT * FROM biz_task WHERE level=1")
     List<BizTask> getAllFirstLevelTasks();
@@ -41,6 +50,14 @@ public interface BizMapper {
     // 根据二级任务id获取其三级子任务
     @Select("SELECT * FROM biz_task WHERE parent_id = #{parentId} AND level=3")
     List<BizTask> getThirdLevelTasksByParentId(Long parentId);
+
+//    更新任务
+    @Update("UPDATE biz_task SET name = #{name}, description = #{description}, level = #{level}, parent_id = #{parentId}, status = #{status}, " +
+            "start_time = #{startTime}, end_time = #{endTime}, create_time = #{createTime}, update_time = #{updateTime}, " +
+            "dept_id = #{deptId}, is_delete = #{isDelete}"+
+            "WHERE task_id = #{taskId}"
+    )
+    void updateTask(BizTask task);
 
     // 根据任务id获取部门leaderid
     @Select("SELECT leader_id FROM sys_dept WHERE dept_id = (SELECT dept_id FROM biz_task WHERE task_id = #{taskId})")
@@ -99,4 +116,6 @@ public interface BizMapper {
 //    根据subId获取提交人
     @Select("SELECT submit_by FROM biz_material_submission WHERE sub_id = #{subId}")
     Long getAuditSubmitBy(Long subId);
+
+//
 }

@@ -20,9 +20,9 @@ public class BizController {
 
 //    获取全量任务数据
     @GetMapping("/tasks")
-    public Object getAllTasks(){
+    public Object getAllTasks(HttpServletRequest request){
         try{
-            return bizService.getAllTasks();
+            return bizService.getTasksByUserRole(JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
         } catch (Exception e) {
             return new ErrorVO(e.getMessage(), 500);
         }
