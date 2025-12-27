@@ -30,7 +30,7 @@ public interface SysMapper {
     public Long getDeptLeaderId(Long userId);
 
 //    getDeptNameByDeptId
-    @Select("SELECT dept_name FROM sys_dept WHERE dept_id = #{deptId})")
+    @Select("SELECT dept_name FROM sys_dept WHERE dept_id = #{deptId}")
     public String getDeptNameByDeptId(Long deptId);
 
 

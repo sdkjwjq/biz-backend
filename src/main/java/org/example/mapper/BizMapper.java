@@ -52,11 +52,29 @@ public interface BizMapper {
     List<BizTask> getThirdLevelTasksByParentId(Long parentId);
 
 //    更新任务
-    @Update("UPDATE biz_task SET name = #{name}, description = #{description}, level = #{level}, parent_id = #{parentId}, status = #{status}, " +
-            "start_time = #{startTime}, end_time = #{endTime}, create_time = #{createTime}, update_time = #{updateTime}, " +
-            "dept_id = #{deptId}, is_delete = #{isDelete}"+
-            "WHERE task_id = #{taskId}"
-    )
+    @Update("UPDATE biz_task SET " +
+            "project_id = #{projectId}, " +
+            "parent_id = #{parentId}, " +
+            "ancestors = #{ancestors}, " +
+            "phase = #{phase}, " +
+            "task_code = #{taskCode}, " +
+            "task_name = #{taskName}, " +
+            "level = #{level}, " +
+            "dept_id = #{deptId}, " +
+            "principal_id = #{principalId}, " +
+            "leader_id = #{leaderId}, " +
+            "exp_target = #{expTarget}, " +
+            "exp_level = #{expLevel}, " +
+            "exp_effect = #{expEffect}, " +
+            "exp_material_desc = #{expMaterialDesc}, " +
+            "data_type = #{dataType}, " +
+            "target_value = #{targetValue}, " +
+            "current_value = #{currentValue}, " +
+            "weight = #{weight}, " +
+            "progress = #{progress}, " +
+            "status = #{status}, " +
+            "is_delete = #{isDelete} " +  // 这里添加空格，非常重要！
+            "WHERE task_id = #{taskId}")
     void updateTask(BizTask task);
 
     // 根据任务id获取部门leaderid
