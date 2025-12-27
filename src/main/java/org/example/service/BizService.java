@@ -103,7 +103,7 @@ public class BizService {
             if(sysUser.getRole().equals("0")){
                 return TaskListToTaskVoList(bizMapper.getAllTasks());
             }else if (sysUser.getRole().equals("1")){
-                return TaskListToTaskVoList(bizMapper.getTasksByLeaderId(sysUser.getUserId()));
+                return TaskListToTaskVoList(bizMapper.getTasksByLeaderIdOrPrincipalId(sysUser.getUserId()));
             }else if(sysUser.getRole().equals("2")){
                 return TaskListToTaskVoList(bizMapper.getTasksByPrincipalId(sysUser.getUserId()));
             }else {
