@@ -3,6 +3,7 @@ package org.example.service;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.example.entity.SysDept;
 import org.example.entity.SysFile;
 import org.example.entity.SysNotice;
 import org.example.entity.SysUser;
@@ -38,6 +39,18 @@ public class SysService {
 //    获取所有用户
     public List<SysUser> getAllUsers() {
         return sysMapper.getAllUsers();
+    }
+
+    // 获取部门信息（用于前端根据 deptId 查询 leaderId 等信息）
+    public SysDept getDeptById(Long deptId) {
+        if (deptId == null) {
+            throw new RuntimeException("deptId为空");
+        }
+        SysDept dept = sysMapper.getDeptById(deptId);
+        if (dept == null) {
+            throw new RuntimeException("部门不存在");
+        }
+        return dept;
     }
 //      登录
     public SysLoginVO login(String userName, String password) {

@@ -4,7 +4,6 @@ import org.apache.ibatis.annotations.*;
 import org.example.entity.BizAuditLog;
 import org.example.entity.BizMaterialSubmission;
 import org.example.entity.BizTask;
-import org.example.entity.SysFile;
 
 import java.util.List;
 
@@ -26,14 +25,13 @@ public interface BizMapper {
     @Select("SELECT * FROM biz_task WHERE principal_id = #{principalId}")
     List<BizTask> getTasksByPrincipalId(Long principalId);
 
-//    getTasksByLeaderId
+    // getTasksByLeaderId
     @Select("SELECT * FROM biz_task WHERE leader_id = #{leaderId}")
     List<BizTask> getTasksByLeaderId(Long leaderId);
 
-//    getTasksByLeaderIdOrPrincipleId
+    // getTasksByLeaderIdOrPrincipleId
     @Select("SELECT * FROM biz_task WHERE leader_id = #{userId} OR principal_id = #{userId}")
     List<BizTask> getTasksByLeaderIdOrPrincipalId(Long userId);
-
 
     // 获取所有一级任务
     @Select("SELECT * FROM biz_task WHERE level=1")
@@ -51,30 +49,8 @@ public interface BizMapper {
     @Select("SELECT * FROM biz_task WHERE parent_id = #{parentId} AND level=3")
     List<BizTask> getThirdLevelTasksByParentId(Long parentId);
 
-//    更新任务
-    @Update("UPDATE biz_task SET " +
-            "project_id = #{projectId}, " +
-            "parent_id = #{parentId}, " +
-            "ancestors = #{ancestors}, " +
-            "phase = #{phase}, " +
-            "task_code = #{taskCode}, " +
-            "task_name = #{taskName}, " +
-            "level = #{level}, " +
-            "dept_id = #{deptId}, " +
-            "principal_id = #{principalId}, " +
-            "leader_id = #{leaderId}, " +
-            "exp_target = #{expTarget}, " +
-            "exp_level = #{expLevel}, " +
-            "exp_effect = #{expEffect}, " +
-            "exp_material_desc = #{expMaterialDesc}, " +
-            "data_type = #{dataType}, " +
-            "target_value = #{targetValue}, " +
-            "current_value = #{currentValue}, " +
-            "weight = #{weight}, " +
-            "progress = #{progress}, " +
-            "status = #{status}, " +
-            "is_delete = #{isDelete} " +  // 这里添加空格，非常重要！
-            "WHERE task_id = #{taskId}")
+    // 更新任务
+    @Update("UPDATE biz_task SET current_value = #{currentValue}, status = #{status}, update_time = NOW() WHERE task_id = #{taskId}")
     void updateTask(BizTask task);
 
     // 根据任务id获取部门leaderid
@@ -92,6 +68,20 @@ public interface BizMapper {
     // 更新日志
     @Update("update biz_audit_log set sub_id=#{subId},operator_id=#{operatorId},action_type=#{actionType},pre_status=#{preStatus},post_status=#{postStatus},comment=#{comment},create_time=#{createTime} where log_id=#{logId}")
     void updateAuditLog(BizAuditLog auditLog);
+
+    // 根据 subId 获取审批操作日志（biz_audit_log）
+    @Select("SELECT " +
+            "log_id AS logId, " +
+            "sub_id AS subId, " +
+            "operator_id AS operatorId, " +
+            "action_type AS actionType, " +
+            "pre_status AS preStatus, " +
+            "post_status AS postStatus, " +
+            "comment, " +
+            "create_time AS createTime " +
+            "FROM biz_audit_log WHERE sub_id = #{subId} " +
+            "ORDER BY create_time DESC, log_id DESC")
+    List<BizAuditLog> getAuditLogsBySubId(@Param("subId") Long subId);
 
     // 创建审批流程
     @Insert("insert into biz_material_submission(" +
@@ -111,8 +101,7 @@ public interface BizMapper {
     @Update("update biz_material_submission set task_id=#{taskId},file_id=#{fileId},reported_value=#{reportedValue},data_type=#{dataType},"
             + "submit_by=#{submitBy},submit_dept_id=#{submitDeptId},manage_dept_id=#{manageDeptId},submit_time=#{submitTime},file_suffix=#{fileSuffix},"
             + "flow_status=#{flowStatus},current_handler_id=#{currentHandlerId},is_delete=#{isDelete} " + // 此处添加空格
-            "where sub_id=#{subId}"
-    )
+            "where sub_id=#{subId}")
     void updateAudit(BizMaterialSubmission bizMaterialSubmission);
 
     // 更新任务状态 【优化：参数名统一为驼峰风格，与Java规范一致】
@@ -125,15 +114,26 @@ public interface BizMapper {
 
     // 根据taskId及current_handler_id获取审批单
     @Select("SELECT * FROM biz_material_submission WHERE task_id = #{taskId} AND current_handler_id = #{currentHandlerId}")
-    List<BizMaterialSubmission> getAudit(@Param("taskId") Long taskId, @Param("currentHandlerId") Long currentHandlerId);
+    List<BizMaterialSubmission> getAudit(@Param("taskId") Long taskId,
+            @Param("currentHandlerId") Long currentHandlerId);
+
+    // 获取“待我审批”的审批单（按当前处理人查询）
+    @Select("SELECT * FROM biz_material_submission " +
+            "WHERE current_handler_id = #{userId} AND is_delete = 0 AND flow_status >= 10 AND flow_status < 40 " +
+            "ORDER BY submit_time DESC, sub_id DESC")
+    List<BizMaterialSubmission> getTodoAudits(@Param("userId") Long userId);
+
+    // 按 task_id 获取该任务全部审批单（用于任务详情抽屉展示完整流程）
+    @Select("SELECT * FROM biz_material_submission WHERE task_id = #{taskId} AND is_delete = 0 ORDER BY sub_id DESC")
+    List<BizMaterialSubmission> getAuditsByTaskId(@Param("taskId") Long taskId);
 
     // 根据subId获取审批单
     @Select("SELECT * FROM biz_material_submission WHERE sub_id = #{subId}")
     BizMaterialSubmission getAuditBySubId(Long subId);
 
-//    根据subId获取提交人
+    // 根据subId获取提交人
     @Select("SELECT submit_by FROM biz_material_submission WHERE sub_id = #{subId}")
     Long getAuditSubmitBy(Long subId);
 
-//
+    //
 }

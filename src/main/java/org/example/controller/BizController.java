@@ -88,6 +88,36 @@ public class BizController {
 
     }
 
+    // 获取“待我审批”的审批单列表（按 current_handler_id 查询）
+    @GetMapping("/audit/todo")
+    public Object getTodoAudits(HttpServletRequest request) {
+        try {
+            return bizService.getTodoAudits(JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
+        } catch (Exception e) {
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
+
+    // 获取某任务的全部审批单（用于任务详情抽屉展示完整流程）
+    @GetMapping("/audit/task/{taskId}")
+    public Object getAuditByTaskId(@PathVariable("taskId") Long taskId, HttpServletRequest request) {
+        try {
+            return bizService.getAuditByTaskId(taskId, JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
+        } catch (Exception e) {
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
+
+    // 获取审批操作日志（biz_audit_log）
+    @GetMapping("/audit/logs/{subId}")
+    public Object getAuditLogs(@PathVariable("subId") Long subId, HttpServletRequest request) {
+        try {
+            return bizService.getAuditLogs(subId, JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
+        } catch (Exception e) {
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
+
     @PostMapping("/audit")
     public Object audit( @RequestBody AuditDTO auditDTO, HttpServletRequest request){
         try{

@@ -16,7 +16,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.Date;
 import java.util.List;
 
 @RestController
@@ -30,6 +29,16 @@ public class SysController {
     public List<SysUser> getAllUsers()
     {
         return sysService.getAllUsers();
+    }
+
+    // 根据部门ID获取部门信息（含 leaderId）
+    @GetMapping("/dept/{deptId}")
+    public Object getDeptById(@PathVariable("deptId") Long deptId) {
+        try {
+            return sysService.getDeptById(deptId);
+        } catch (Exception e) {
+            return new ErrorVO(e.getMessage(), 500);
+        }
     }
 
     @PostMapping("/login")
