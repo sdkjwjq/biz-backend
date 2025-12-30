@@ -23,22 +23,22 @@
 
 1. 克隆仓库
 
-  1. ```Bash
+1. ```Bash
       git clone https://github.com/sdkjwjq/biz-backend.git
       cd biz-backend
       ```
 
 2. 配置数据库
 
-  1. 新建 MySQL 数据库（推荐名称：`biz_db`）
+1. 新建 MySQL 数据库（推荐名称：`biz_db`）
 
-  2. 执行 `data/biz.sql` 初始化表结构
+2. 执行 `data/biz.sql` 初始化表结构
 
-  3. 执行 `data/insert.sql` 初始化表结构
+3. 执行 `data/insert.sql` 初始化表结构
 
-  4. 修改 `application.properties` 配置数据库连接：
+4. 修改 `application.properties` 配置数据库连接：
 
-    - ```Properties
+- ```Properties
         spring.datasource.url=jdbc:mysql://localhost:3306/biz_db?useSSL=false&serverTimezone=UTC
         spring.datasource.username=root
         spring.datasource.password=your_password
@@ -46,7 +46,7 @@
 
 3. 构建并启动
 
-  1. ```Bash
+1. ```Bash
       mvn clean package
       java -jar target/biz_backend-1.0-SNAPSHOT.jar
       ```
