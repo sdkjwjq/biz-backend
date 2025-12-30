@@ -5,10 +5,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 import org.apache.ibatis.annotations.Options;
-import org.example.entity.SysDept;
-import org.example.entity.SysFile;
-import org.example.entity.SysNotice;
-import org.example.entity.SysUser;
+import org.example.entity.*;
 
 import java.util.List;
 
@@ -83,5 +80,6 @@ public interface SysMapper {
 //    setRead
     @Update("UPDATE sys_notice SET is_read = 1 WHERE notice_id = #{noticeId}")
     public void setRead(Long noticeId);
+
 
 }

@@ -135,5 +135,12 @@ public interface BizMapper {
     @Select("SELECT submit_by FROM biz_material_submission WHERE sub_id = #{subId}")
     Long getAuditSubmitBy(Long subId);
 
-    //
+//    根据任务id获取最近的审批单
+    @Select("SELECT * FROM biz_material_submission WHERE task_id = #{taskId} ORDER BY sub_id DESC LIMIT 1")
+    BizMaterialSubmission getLatestAuditByTaskId(Long taskId);
+
+
+
+
+
 }

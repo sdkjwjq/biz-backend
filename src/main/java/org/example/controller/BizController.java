@@ -1,6 +1,7 @@
 package org.example.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.example.entity.dto.AuditDTO;
 import org.example.entity.dto.BizSubDTO;
 import org.example.entity.dto.ReSubDTO;
@@ -67,7 +68,7 @@ public class BizController {
         }
     }
 
-//    提交审批材料
+    //    提交审批材料
     @PostMapping("/submit")
     public Object submitMaterial(@RequestBody BizSubDTO bizSubDTO, HttpServletRequest request){
         try{
@@ -85,7 +86,6 @@ public class BizController {
         } catch (Exception e) {
             return new ErrorVO(e.getMessage(), 500);
         }
-
     }
 
     // 获取“待我审批”的审批单列表（按 current_handler_id 查询）
@@ -108,6 +108,17 @@ public class BizController {
         }
     }
 
+//    根据任务id获取上次周期上传的文件
+    @GetMapping("/audit/file/{taskId}")
+    public Object getLastCycleFiles(@PathVariable("taskId") Long taskId, HttpServletResponse  response) {
+        try {
+            bizService.downloadTaskFile(taskId, response);
+            return "下载成功";
+        } catch (Exception e) {
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
+
     // 获取审批操作日志（biz_audit_log）
     @GetMapping("/audit/logs/{subId}")
     public Object getAuditLogs(@PathVariable("subId") Long subId, HttpServletRequest request) {
@@ -119,7 +130,7 @@ public class BizController {
     }
 
     @PostMapping("/audit")
-    public Object audit( @RequestBody AuditDTO auditDTO, HttpServletRequest request){
+    public Object audit(@RequestBody AuditDTO auditDTO, HttpServletRequest request){
         try{
             return bizService.audit(auditDTO, JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
         } catch (Exception e) {

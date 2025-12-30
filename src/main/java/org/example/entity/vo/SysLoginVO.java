@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class SysLoginVO {
+
     private String nick_name;
     private String token;
 }

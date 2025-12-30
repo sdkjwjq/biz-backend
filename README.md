@@ -23,20 +23,22 @@
 
 1. 克隆仓库
 
-   1. ```Bash
+  1. ```Bash
       git clone https://github.com/sdkjwjq/biz-backend.git
       cd biz-backend
       ```
 
 2. 配置数据库
 
-   1. 新建 MySQL 数据库（推荐名称：`biz_db`）
+  1. 新建 MySQL 数据库（推荐名称：`biz_db`）
 
-   2. 执行 `biz.sql` 初始化表结构
+  2. 执行 `data/biz.sql` 初始化表结构
 
-   3. 修改 `application.properties` 配置数据库连接：
+  3. 执行 `data/insert.sql` 初始化表结构
 
-      - ```Properties
+  4. 修改 `application.properties` 配置数据库连接：
+
+    - ```Properties
         spring.datasource.url=jdbc:mysql://localhost:3306/biz_db?useSSL=false&serverTimezone=UTC
         spring.datasource.username=root
         spring.datasource.password=your_password
@@ -44,7 +46,7 @@
 
 3. 构建并启动
 
-   1. ```Bash
+  1. ```Bash
       mvn clean package
       java -jar target/biz_backend-1.0-SNAPSHOT.jar
       ```
@@ -53,8 +55,7 @@
 - 2025-12-8：完成登录功能
 - 2025-12-11：完成登录、注销、修改密码
 - 2025-12-21：补充实现根据部门ID获取任务、提交审批材料、获取审批单、文件上传/下载、通知发送/查看、审批任务、重新提交审批材料等接口
-- 2025-12-26：更新获取任务字段，添加部门名称、负责人归口负责人名称；添加根据角色获取对应任务
-
+- 2025-12-26：修改了登录方式，改为user_id登录，修改了第一次审批人为AuditorId，上传文件的功能暂未修改
 ## 基础信息
 - 基础路径：无（接口路径已包含具体前缀）
 - 认证方式：JWT Token（登录后获取，请求时通过`Authorization`请求头携带）
@@ -72,7 +73,7 @@ https://www.postman.com/litianyi981119/biz/collection/21001135-3309c751-c3ca-4fd
 - **请求体参数**：
   ```json
   {
-    "user_name": "admin", // 示例值
+    "user_id": 110228, // 用户ID，示例值
     "password": "123456"  // 示例值
   }
   ```
@@ -122,7 +123,7 @@ https://www.postman.com/litianyi981119/biz/collection/21001135-3309c751-c3ca-4fd
 - **成功响应**（200 OK）：
   ```json
   {
-    "message": "密码修改成功"
+    "new_password": "密码修改成功"
   }
   ```
 - **错误响应**（500 Internal Server Error）：
@@ -166,7 +167,29 @@ https://www.postman.com/litianyi981119/biz/collection/21001135-3309c751-c3ca-4fd
   ```
 - **说明**：需要认证，返回系统中所有用户信息
 
-### 5. 获取全量任务数据
+### 5. 根据部门ID获取部门信息
+- **请求路径**：`/system/dept/{deptId}`
+- **请求方法**：GET
+- **示例调用URL**：`https://api.example.com/system/dept/1`（示例deptId=1）
+- **请求头**：`Authorization: 示例Token`（需替换为实际登录获取的Token）
+- **路径参数**：`deptId`（部门ID，必填，示例值：1）
+- **成功响应**（200 OK）：
+  ```json
+  {
+    "deptId": 1,
+    "deptName": "技术部",
+    "leaderId": 2,
+    "parentId": 0,
+    "status": "正常",
+    "createTime": "2024-01-01T00:00:00"
+  }
+  ```
+- **错误响应**：
+  - 401 Unauthorized：`{"message": "No Token/Invalid Token", "code": 401}`
+  - 500 Internal Server Error：`{"message": "部门不存在", "code": 500}`
+- **说明**：需要认证，根据部门ID获取部门信息（含负责人ID等）
+
+### 6. 获取全量任务数据
 - **请求路径**：`/biz/tasks`
 - **请求方法**：GET
 - **示例调用URL**：`https://api.example.com/biz/tasks`
@@ -207,7 +230,7 @@ https://www.postman.com/litianyi981119/biz/collection/21001135-3309c751-c3ca-4fd
   - 500 Internal Server Error：`{"message": "查询任务数据失败", "code": 500}`
 - **说明**：需要认证，返回系统中所有任务信息
 
-### 6. 根据ID获取任务
+### 7. 根据ID获取任务
 - **请求路径**：`/biz/tasks/{taskId}`
 - **请求方法**：GET
 - **示例调用URL**：`https://api.example.com/biz/tasks/1`（示例taskId=1）
@@ -247,7 +270,7 @@ https://www.postman.com/litianyi981119/biz/collection/21001135-3309c751-c3ca-4fd
   - 500 Internal Server Error：`{"message": "错误信息（如任务ID为空、任务不存在）", "code": 500}`
 - **说明**：需要认证，根据任务ID返回对应任务详情
 
-### 7. 获取当前任务的所有子任务
+### 8. 获取当前任务的所有子任务
 - **请求路径**：`/biz/tasks/children`
 - **请求方法**：GET
 - **示例调用URL**：`https://api.example.com/biz/tasks/children?task_id=1`（示例task_id=1）
@@ -289,7 +312,7 @@ https://www.postman.com/litianyi981119/biz/collection/21001135-3309c751-c3ca-4fd
   - 500 Internal Server Error：`{"message": "错误信息（如任务ID为空、任务不存在）", "code": 500}`
 - **说明**：需要认证，根据父任务ID返回其所有子任务信息
 
-### 8. 获取当前任务的父任务
+### 9. 获取当前任务的父任务
 - **请求路径**：`/biz/tasks/parent`
 - **请求方法**：GET
 - **示例调用URL**：`https://api.example.com/biz/tasks/parent?task_id=2`（示例task_id=2）
@@ -329,7 +352,7 @@ https://www.postman.com/litianyi981119/biz/collection/21001135-3309c751-c3ca-4fd
   - 500 Internal Server Error：`{"message": "错误信息（如任务ID为空、任务不存在）", "code": 500}`
 - **说明**：需要认证，根据子任务ID返回其父任务信息
 
-### 9. 根据部门ID获取任务
+### 10. 根据部门ID获取任务
 - **请求路径**：`/biz/tasks/dept`
 - **请求方法**：GET
 - **示例调用URL**：`https://api.example.com/biz/tasks/dept?dept_id=1`（示例dept_id=1）
@@ -371,7 +394,50 @@ https://www.postman.com/litianyi981119/biz/collection/21001135-3309c751-c3ca-4fd
   - 500 Internal Server Error：`{"message": "获取任务失败,请检查部门id是否正确", "code": 500}`
 - **说明**：需要认证，根据部门ID返回该部门下的所有任务信息
 
-### 10. 提交审批材料
+### 11. 根据用户角色获取任务
+- **请求路径**：`/biz/tasks/role`
+- **请求方法**：GET
+- **示例调用URL**：`https://api.example.com/biz/tasks/role`
+- **请求头**：`Authorization: 示例Token`（需替换为实际登录获取的Token）
+- **成功响应**（200 OK）：
+  ```json
+  [
+    {
+      "taskId": 1,
+      "projectId": 1,
+      "parentId": 0,
+      "ancestors": "0,1",
+      "phase": 1,
+      "taskCode": "TSK001",
+      "taskName": "角色可见任务",
+      "level": 1,
+      "deptId": 1,
+      "deptName": "技术部",
+      "principalId": 1,
+      "principalName": "张三",
+      "leaderId": 2,
+      "leaderName": "李四",
+      "expTarget": "任务目标",
+      "expLevel": "一级",
+      "expEffect": "任务效果",
+      "expMaterialDesc": "任务材料描述",
+      "dataType": "数值型",
+      "targetValue": 100.00,
+      "currentValue": 80.00,
+      "weight": 0.5,
+      "progress": 80,
+      "status": "进行中",
+      "createTime": "2024-01-01T00:00:00",
+      "updateTime": "2024-01-02T00:00:00"
+    }
+  ]
+  ```
+- **错误响应**：
+  - 401 Unauthorized：`{"message": "No Token/Invalid Token", "code": 401}`
+  - 500 Internal Server Error：`{"message": "用户角色错误", "code": 500}`
+- **说明**：需要认证，根据用户角色返回对应权限的任务列表（角色为0返回所有任务，角色为1返回leaderId及本人的任务，角色为2返回本人的任务）
+
+### 12. 提交审批材料
 - **请求路径**：`/biz/submit`
 - **请求方法**：POST
 - **示例调用URL**：`https://api.example.com/biz/submit`
@@ -380,14 +446,14 @@ https://www.postman.com/litianyi981119/biz/collection/21001135-3309c751-c3ca-4fd
   ```json
   {
     "task_id": 3, // 三级任务ID，示例值
-    "filename": "report.pdf", // 已上传的文件名，示例值
+    "file_id": 1, // 已上传的文件ID，示例值
     "reported_value": "100", // 申报值，示例值
     "data_type": "数值型" // 数据类型，示例值
   }
   ```
 - **成功响应**（200 OK）：
   ```json
-  "提交成功"
+  "提交成功，下一位审批人是管理员（ID：3）"
   ```
 - **错误响应**（500 Internal Server Error）：
   ```json
@@ -398,7 +464,7 @@ https://www.postman.com/litianyi981119/biz/collection/21001135-3309c751-c3ca-4fd
   ```
 - **说明**：需要认证，仅允许提交三级任务的审批材料，文件格式限pdf、doc、docx
 
-### 11. 获取审批单
+### 13. 获取审批单
 - **请求路径**：`/biz/audit/{taskId}`
 - **请求方法**：GET
 - **示例调用URL**：`https://api.example.com/biz/audit/3`（示例taskId=3）
@@ -429,11 +495,73 @@ https://www.postman.com/litianyi981119/biz/collection/21001135-3309c751-c3ca-4fd
   - 500 Internal Server Error：`{"message": "获取审批单失败,请检查任务id是否正确", "code": 500}`
 - **说明**：需要认证，根据任务ID返回当前用户作为处理人的审批单信息
 
-### 12. 文件上传
-- **请求路径**：`/system/upload`
-- **请求方法**：POST
-- **示例调用URL**：`https://api.example.com/system/upload`
+### 14. 获取待我审批的审批单
+- **请求路径**：`/biz/audit/todo`
+- **请求方法**：GET
+- **示例调用URL**：`https://api.example.com/biz/audit/todo`
 - **请求头**：`Authorization: 示例Token`（需替换为实际登录获取的Token）
+- **成功响应**（200 OK）：
+  ```json
+  [
+    {
+      "subId": 1,
+      "taskId": 3,
+      "fileId": 2,
+      "reportedValue": "100",
+      "dataType": "数值型",
+      "submitBy": 1,
+      "submitDeptId": 1,
+      "manageDeptId": 1,
+      "submitTime": "2024-01-05T00:00:00",
+      "fileSuffix": "pdf",
+      "flowStatus": 10,
+      "currentHandlerId": 2,
+      "isDelete": 0
+    }
+  ]
+  ```
+- **错误响应**：
+  - 401 Unauthorized：`{"message": "No Token/Invalid Token", "code": 401}`
+  - 500 Internal Server Error：`{"message": "获取待审批单失败", "code": 500}`
+- **说明**：需要认证，根据当前用户ID（current_handler_id）返回待处理的审批单信息
+
+### 15. 根据任务ID查询全部审批单
+- **请求路径**：`/biz/audit/task/{taskId}`
+- **请求方法**：GET
+- **示例调用URL**：`https://api.example.com/biz/audit/task/3`（示例taskId=3）
+- **请求头**：`Authorization: 示例Token`（需替换为实际登录获取的Token）
+- **路径参数**：`taskId`（任务ID，必填，示例值：3）
+- **成功响应**（200 OK）：
+  ```json
+  [
+    {
+      "subId": 1,
+      "taskId": 3,
+      "fileId": 2,
+      "reportedValue": "100",
+      "dataType": "数值型",
+      "submitBy": 1,
+      "submitDeptId": 1,
+      "manageDeptId": 1,
+      "submitTime": "2024-01-05T00:00:00",
+      "fileSuffix": "pdf",
+      "flowStatus": 10,
+      "currentHandlerId": 2,
+      "isDelete": 0
+    }
+  ]
+  ```
+- **错误响应**：
+  - 401 Unauthorized：`{"message": "No Token/Invalid Token", "code": 401}`
+  - 500 Internal Server Error：`{"message": "无权限查看该任务的审批记录", "code": 500}`
+- **说明**：需要认证，返回指定任务的所有审批单记录（管理员/任务负责人/归口负责人或本人提交的审批单可查看）
+
+### 16. 文件上传
+- **请求路径**：`/system/upload/{task_id}`
+- **请求方法**：POST
+- **示例调用URL**：`https://api.example.com/system/upload/3`（示例task_id=3）
+- **请求头**：`Authorization: 示例Token`（需替换为实际登录获取的Token）
+- **路径参数**：`task_id`（任务ID，必填，示例值：3）
 - **请求体参数**：`file`（文件，form-data格式，必填）
 - **成功响应**（200 OK）：
   ```json
@@ -446,13 +574,13 @@ https://www.postman.com/litianyi981119/biz/collection/21001135-3309c751-c3ca-4fd
 - **错误响应**（500 Internal Server Error）：
   ```json
   {
-    "message": "文件上传失败",
+    "message": "文件格式错误", // 支持格式：pdf、doc、docx
     "code": 500
   }
   ```
-- **说明**：需要认证，用于上传审批材料等文件，支持pdf、doc、docx格式，单个文件大小限制为10MB
+- **说明**：需要认证，用于上传审批材料等文件，支持pdf、doc、docx格式
 
-### 13. 根据文件ID下载文件
+### 17. 根据文件ID下载文件
 - **请求路径**：`/system/download/{file_id}`
 - **请求方法**：GET
 - **示例调用URL**：`https://api.example.com/system/download/1`（示例file_id=1）
@@ -464,7 +592,7 @@ https://www.postman.com/litianyi981119/biz/collection/21001135-3309c751-c3ca-4fd
   - 500 Internal Server Error：`{"message": "文件不存在", "code": 500}`
 - **说明**：需要认证，根据文件ID下载对应的文件
 
-### 14. 发送通知
+### 18. 发送通知
 - **请求路径**：`/system/notice`
 - **请求方法**：POST
 - **示例调用URL**：`https://api.example.com/system/notice`
@@ -477,7 +605,6 @@ https://www.postman.com/litianyi981119/biz/collection/21001135-3309c751-c3ca-4fd
     "trigger_event": "审批单提交", // 触发事件，示例值
     "title": "新的审批单待处理", // 通知标题，示例值
     "content": "您有一条新的审批单（任务ID：3）需要处理，请及时操作", // 通知内容，示例值
-    "source_type": "1", // 关联来源类型，1=审批单，示例值
     "source_id": 1 // 关联业务ID，示例值
   }
   ```
@@ -494,7 +621,7 @@ https://www.postman.com/litianyi981119/biz/collection/21001135-3309c751-c3ca-4fd
   ```
 - **说明**：需要认证，用于向指定用户发送通知，支持审批、任务、系统类通知类型
 
-### 15. 查看当前用户收到的通知
+### 19. 查看当前用户收到的通知
 - **请求路径**：`/system/notice`
 - **请求方法**：GET
 - **示例调用URL**：`https://api.example.com/system/notice`
@@ -527,7 +654,53 @@ https://www.postman.com/litianyi981119/biz/collection/21001135-3309c751-c3ca-4fd
   ```
 - **说明**：需要认证，返回当前登录用户收到的所有通知信息，按创建时间倒序排列
 
-### 16. 审批任务
+### 20. 标记通知为已读
+- **请求路径**：`/system/notice/{notice_id}`
+- **请求方法**：POST
+- **示例调用URL**：`https://api.example.com/system/notice/1`（示例notice_id=1）
+- **请求头**：`Authorization: 示例Token`（需替换为实际登录获取的Token）
+- **路径参数**：`notice_id`（通知ID，必填，示例值：1）
+- **成功响应**（200 OK）：
+  ```json
+  "已读"
+  ```
+- **错误响应**（500 Internal Server Error）：
+  ```json
+  {
+    "message": "标记失败",
+    "code": 500
+  }
+  ```
+- **说明**：需要认证，将指定通知标记为已读状态
+
+### 21. 发送站内预警
+- **请求路径**：`/system/alert`
+- **请求方法**：POST
+- **示例调用URL**：`https://api.example.com/system/alert`
+- **请求头**：`Authorization: 示例Token`（需替换为实际登录获取的Token）
+- **请求体参数**：
+  ```json
+  {
+    "to_user_nick_name": "张三", // 接收人昵称，示例值
+    "title": "任务预警", // 预警标题，示例值
+    "content": "任务ID：3 进度滞后，请及时处理", // 预警内容，示例值
+    "source_id": 3 // 关联业务ID（如任务ID），示例值
+  }
+  ```
+- **成功响应**（200 OK）：
+  ```json
+  "发送成功"
+  ```
+- **错误响应**（500 Internal Server Error）：
+  ```json
+  {
+    "message": "发送失败",
+    "code": 500
+  }
+  ```
+- **说明**：需要认证，用于向指定用户发送预警类通知（基于用户昵称匹配接收人）
+
+### 22. 审批任务
 - **请求路径**：`/biz/audit`
 - **请求方法**：POST
 - **示例调用URL**：`https://api.example.com/biz/audit`
@@ -568,7 +741,7 @@ https://www.postman.com/litianyi981119/biz/collection/21001135-3309c751-c3ca-4fd
   2. 审批通过会流转到下一处理人，审批退回会返回到提交人，并同步发送通知
   3. 审批单流转至最后一位处理人并通过后，审批单状态标记为"已完成"；退回后状态标记为"已退回"
 
-### 17. 重新提交审批材料
+### 23. 重新提交审批材料
 - **请求路径**：`/biz/resubmit`
 - **请求方法**：POST
 - **示例调用URL**：`https://api.example.com/biz/resubmit`
@@ -577,7 +750,7 @@ https://www.postman.com/litianyi981119/biz/collection/21001135-3309c751-c3ca-4fd
   ```json
   {
     "sub_id": 1, // 原审批单ID，示例值
-    "filename": "report_v2.pdf", // 重新上传的文件名，示例值
+    "file_id": 2, // 重新上传的文件ID，示例值
     "reported_value": "95", // 重新申报值，示例值
     "data_type": "数值型" // 数据类型，示例值
   }

@@ -21,6 +21,7 @@ public class BizTask {
 
     // 组织归属相关
     private Long deptId; // 归口部门ID
+    private Long auditId;//审核人ID
     private Long principalId; // 归口负责人ID
     private Long leaderId; // 任务负责人ID
 

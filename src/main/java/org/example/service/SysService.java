@@ -3,16 +3,13 @@ package org.example.service;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.example.entity.SysDept;
-import org.example.entity.SysFile;
-import org.example.entity.SysNotice;
-import org.example.entity.SysUser;
-import org.example.entity.TokenBlacklist;
+import org.example.entity.*;
 import org.example.entity.dto.FileUploadDTO;
 import org.example.entity.dto.SysAlertDTO;
 import org.example.entity.dto.SysNoticeDTO;
 import org.example.entity.vo.FileUploadVO;
 import org.example.entity.vo.SysLoginVO;
+import org.example.mapper.BizMapper;
 import org.example.mapper.SysMapper;
 import org.example.mapper.TokenBlacklistMapper;
 import org.example.utils.FileUploadUtil;
@@ -53,8 +50,9 @@ public class SysService {
         return dept;
     }
 //      登录
-    public SysLoginVO login(String userName, String password) {
-        SysUser user = sysMapper.getUserByName(userName);
+//    改成了user_id
+    public SysLoginVO login(Long userId, String password) {
+        SysUser user = sysMapper.getUserById(userId);
 //        System.out.println(user);
         if (user != null && user.getPassword().equals(password)) {
 //            System.out.println(user);
@@ -90,8 +88,9 @@ public class SysService {
 
     }
 
+
     //    上传文件
-    public Object uploadFile(MultipartFile file, HttpServletRequest request) {
+    public Object uploadFile(MultipartFile file, Long taskId,HttpServletRequest request) {
         try{
 
             if (file.isEmpty()) {

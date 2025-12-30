@@ -2,6 +2,7 @@ package org.example.service;
 
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.example.entity.*;
 import org.example.entity.dto.AuditDTO;
 import org.example.entity.dto.BizSubDTO;
@@ -9,27 +10,35 @@ import org.example.entity.dto.ReSubDTO;
 import org.example.entity.dto.FileUploadDTO;
 import org.example.entity.dto.SysNoticeDTO;
 import org.example.entity.vo.BizTaskVo;
+import org.example.entity.vo.FileUploadVO;
 import org.example.mapper.BizMapper;
 import org.example.mapper.SysMapper;
 import org.example.utils.FileUploadUtil;
+import org.example.utils.JWTUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.multipart.support.StandardServletMultipartResolver;
 
+import java.io.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 @Service
 public class BizService {
+
+    private Long ADMIN_ID = 110228L;
 
     @Autowired
     private BizMapper bizMapper;
 
     @Autowired
     private SysMapper sysMapper;
+
 
 
     // 获取全部任务
@@ -142,6 +151,7 @@ public class BizService {
                 throw new RuntimeException("文件格式错误,请上传pdf,doc,docx格式的文件");
             }
 
+            BizTask task = bizMapper.getTaskById(bizSubDTO.getTask_id());
             BizMaterialSubmission bizMaterialSubmission = new BizMaterialSubmission();
             bizMaterialSubmission.setTaskId(bizSubDTO.getTask_id());
             bizMaterialSubmission.setFileId(sysMapper.getFileByName(sysFile.getFileName()).getFileId());
@@ -153,11 +163,11 @@ public class BizService {
             bizMaterialSubmission.setDataType(bizSubDTO.getData_type());
             bizMaterialSubmission.setSubmitBy(userId);
             bizMaterialSubmission.setSubmitDeptId(sysMapper.getUserById(userId).getDeptId());
-            bizMaterialSubmission.setManageDeptId(bizMapper.getTaskById(bizSubDTO.getTask_id()).getDeptId());
+            bizMaterialSubmission.setManageDeptId(task.getDeptId());
             bizMaterialSubmission.setSubmitTime(new Date());
             bizMaterialSubmission.setFileSuffix(sysMapper.getFileByName(sysFile.getFileName()).getFileSuffix());
             bizMaterialSubmission.setFlowStatus(10);
-            bizMaterialSubmission.setCurrentHandlerId(sysMapper.getDeptLeaderId(userId));
+            bizMaterialSubmission.setCurrentHandlerId(task.getAuditId());
             bizMaterialSubmission.setIsDelete(0);
 
             bizMapper.createAudit(bizMaterialSubmission);
@@ -289,10 +299,10 @@ public class BizService {
 
             Map<Integer, Long> nextHandlerMap = Map.of(
                     10, bizMapper.getTaskPrincipalId(bizMaterialSubmission.getTaskId()),
-                    20, 110228L);
+                    20, ADMIN_ID);
             Map<Integer, Long> backHandlerMap = Map.of(
                     10, bizMaterialSubmission.getSubmitBy(),
-                    20, sysMapper.getDeptLeaderId(bizMaterialSubmission.getSubmitBy()),
+                    20, bizMapper.getTaskById(bizMaterialSubmission.getTaskId()).getAuditId(),
                     30, bizMapper.getTaskPrincipalId(bizMaterialSubmission.getTaskId()),
                     -20, bizMaterialSubmission.getSubmitBy(),
                     -30, sysMapper.getDeptLeaderId(bizMaterialSubmission.getSubmitBy()));
@@ -552,6 +562,42 @@ public class BizService {
             throw new RuntimeException(e);
         }
     }
+
+    //    根据file_id下载文件
+    public void downloadTaskFile(Long taskId, HttpServletResponse response) throws IOException {
+        // 1. 根据任务id查询最新的审批单
+        BizMaterialSubmission  bizMaterialSubmission = bizMapper.getLatestAuditByTaskId(taskId);
+        SysFile sysFile = sysMapper.getFileById(bizMaterialSubmission.getFileId());
+        if (sysFile == null) {
+            throw new RuntimeException("文件不存在");
+        }
+
+        // 2. 构建文件路径
+        String fullPath = System.getProperty("user.dir") + sysFile.getFilePath();
+        File file = new File(fullPath);
+        if (!file.exists()) {
+            throw new RuntimeException("文件已被删除或移动");
+        }
+
+        // 3. 设置响应头
+        response.setContentType("application/octet-stream");
+        response.setHeader("Content-Disposition",
+                "attachment; filename=\"" + URLEncoder.encode(sysFile.getFileName(), StandardCharsets.UTF_8.name()) + "\"");
+        response.setContentLengthLong(file.length());
+
+        // 4. 写入文件流
+        try (InputStream in = new FileInputStream(file);
+             OutputStream out = response.getOutputStream()) {
+            byte[] buffer = new byte[1024];
+            int len;
+            while ((len = in.read(buffer)) != -1) {
+                out.write(buffer, 0, len);
+            }
+            out.flush();
+        }
+    }
+
+
 
     public List<BizTask> getThirdLevelTasksByParentId(Long parentId) {
         try {

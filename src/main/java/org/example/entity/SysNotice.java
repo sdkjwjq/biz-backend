@@ -21,6 +21,4 @@ public class SysNotice {
     private String isRead; // 阅读状态 0:未读 1:已读
     private Integer isDelete; // 0:存在 1:删除
     private Date createTime; // 创建时间
-
-
 }

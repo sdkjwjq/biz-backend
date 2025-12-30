@@ -44,7 +44,7 @@ public class SysController {
     @PostMapping("/login")
     public Object login(@RequestBody SysLoginDTO sysLoginDTO){
         try{
-            return sysService.login(sysLoginDTO.getUser_name(), sysLoginDTO.getPassword());
+            return sysService.login(sysLoginDTO.getUser_id(), sysLoginDTO.getPassword());
         } catch (Exception e) {
             return new ErrorVO(e.getMessage(), 500);
         }
@@ -76,10 +76,10 @@ public class SysController {
         return new ErrorVO("token不存在", 401);
     }
     //    上传文件
-    @PostMapping("/upload")
-    public Object uploadFile(@RequestParam("file") MultipartFile file, HttpServletRequest request){
+    @PostMapping("/upload/{task_id}")
+    public Object uploadFile(@RequestParam("file") MultipartFile file, @PathVariable("task_id") Long taskId, HttpServletRequest request){
         try{
-            return sysService.uploadFile(file,request);
+            return sysService.uploadFile(file,taskId,request);
         }catch (Exception e){
             return new ErrorVO(e.getMessage(), 500);
         }
