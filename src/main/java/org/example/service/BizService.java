@@ -167,13 +167,16 @@ public class BizService {
             bizMaterialSubmission.setSubmitTime(new Date());
             bizMaterialSubmission.setFileSuffix(sysMapper.getFileByName(sysFile.getFileName()).getFileSuffix());
             bizMaterialSubmission.setFlowStatus(10);
-            bizMaterialSubmission.setCurrentHandlerId(task.getAuditId());
+            //已修改，修改内容及原因：将部门审核人从任务的auditId改为提交人所在部门的负责人，确保flowStatus=10时审核人能正确收到通知
+            // flowStatus = 10 表示"待[所在部门]审批"，部门审核人应该是提交人所在部门的负责人
+            Long handlerId = sysMapper.getDeptLeaderId(userId);
+            bizMaterialSubmission.setCurrentHandlerId(handlerId);
             bizMaterialSubmission.setIsDelete(0);
 
             bizMapper.createAudit(bizMaterialSubmission);
             Long subId = bizMapper.getNewestAuditId();
 
-            // 提交后任务进入“审核中”，并把 current_value 覆盖写为本次填报值
+            // 提交后任务进入"审核中"，并把 current_value 覆盖写为本次填报值
             BizTask bizTask = bizMapper.getTaskById(bizSubDTO.getTask_id());
             if (bizTask != null) {
                 bizTask.setCurrentValue(rv);
@@ -182,17 +185,35 @@ public class BizService {
             }
 
             // 发送审批信息（使用封装方法）
-            sendNotice(userId,
-                    bizMaterialSubmission.getCurrentHandlerId(),
-                    "任务审核",
-                    "任务审核",
-                    "您有新的任务需要审核",
-                    "0",
-                    bizSubDTO.getTask_id());
+            //已修改，修改内容及原因：添加null检查，避免handlerId为null时发送通知导致数据库约束错误
+            // 只有当 handlerId 不为 null 时才发送通知
+            if (handlerId != null) {
+                sendNotice(userId,
+                        handlerId,
+                        "任务审核",
+                        "任务审核",
+                        "您有新的任务需要审核",
+                        "0",
+                        bizSubDTO.getTask_id());
+            }
 
             // 创建审批日志（使用封装方法）
             createAuditLog(subId, userId, "提交", 0, 10, "提交任务");
-            return "提交成功，下一位审批人是" + sysMapper.getUserById(bizMaterialSubmission.getCurrentHandlerId()).getUserName();
+            //已修改，修改内容及原因：添加null检查和异常处理，避免getUserById返回null时出现空指针异常
+            String resultMsg = "提交成功";
+            if (handlerId != null) {
+                try {
+                    SysUser handler = sysMapper.getUserById(handlerId);
+                    if (handler != null) {
+                        resultMsg += "，下一位审批人是" + handler.getUserName();
+                    } else {
+                        resultMsg += "，下一位审批人ID为" + handlerId;
+                    }
+                } catch (Exception e) {
+                    resultMsg += "，下一位审批人ID为" + handlerId;
+                }
+            }
+            return resultMsg;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -297,18 +318,31 @@ public class BizService {
                 throw new RuntimeException("该任务不存在");
             }
 
+            //已修改，修改内容及原因：添加currentHandlerId的null检查，避免在equals比较时出现空指针异常
+            // 检查 currentHandlerId 是否为 null
+            Long currentHandlerId = bizMaterialSubmission.getCurrentHandlerId();
+            if (currentHandlerId == null) {
+                throw new RuntimeException("审批单的当前处理人未设置，无法进行审核");
+            }
+
             Map<Integer, Long> nextHandlerMap = Map.of(
                     10, bizMapper.getTaskPrincipalId(bizMaterialSubmission.getTaskId()),
                     20, ADMIN_ID);
+
+            //已修改，修改内容及原因：安全获取任务的auditId，避免getTaskById返回null时出现空指针异常
+            // 安全获取任务的 auditId
+            BizTask task = bizMapper.getTaskById(bizMaterialSubmission.getTaskId());
+            Long taskAuditId = (task != null) ? task.getAuditId() : null;
+
             Map<Integer, Long> backHandlerMap = Map.of(
                     10, bizMaterialSubmission.getSubmitBy(),
-                    20, bizMapper.getTaskById(bizMaterialSubmission.getTaskId()).getAuditId(),
+                    20, taskAuditId != null ? taskAuditId : bizMaterialSubmission.getSubmitBy(),
                     30, bizMapper.getTaskPrincipalId(bizMaterialSubmission.getTaskId()),
                     -20, bizMaterialSubmission.getSubmitBy(),
                     -30, sysMapper.getDeptLeaderId(bizMaterialSubmission.getSubmitBy()));
 
             // 分支1：当前用户是处理人
-            if (bizMaterialSubmission.getCurrentHandlerId().equals(userId)) {
+            if (currentHandlerId.equals(userId)) {
                 if (bizMaterialSubmission.getFlowStatus() == 10) {
                     // 部门负责人审核逻辑
                     if (auditDTO.getIs_pass()) {
@@ -331,7 +365,21 @@ public class BizService {
                         createAuditLog(subId, userId, "通过", 10, 20, auditDTO.getTitle());
 
                         System.out.println("已审批，下一位审批人id为" + nextHandlerId);
-                        return "已审批，下一位审批人为" + sysMapper.getUserById(nextHandlerId).getUserName();
+                        //已修改，修改内容及原因：添加null检查和异常处理，避免getUserById返回null时出现空指针异常
+                        String resultMsg = "已审批";
+                        if (nextHandlerId != null) {
+                            try {
+                                SysUser nextUser = sysMapper.getUserById(nextHandlerId);
+                                if (nextUser != null) {
+                                    resultMsg += "，下一位审批人为" + nextUser.getUserName();
+                                } else {
+                                    resultMsg += "，下一位审批人ID为" + nextHandlerId;
+                                }
+                            } catch (Exception e) {
+                                resultMsg += "，下一位审批人ID为" + nextHandlerId;
+                            }
+                        }
+                        return resultMsg;
                     } else {
                         Long backHandlerId = backHandlerMap.get(bizMaterialSubmission.getFlowStatus());
 
@@ -353,7 +401,21 @@ public class BizService {
                         createAuditLog(subId, userId, "退回", 10, -10, auditDTO.getTitle());
 
                         System.out.println("已退回，退回到id为" + backHandlerId);
-                        return "已退回，退回到" + sysMapper.getUserById(backHandlerId).getUserName();
+                        //已修改，修改内容及原因：添加null检查和异常处理，避免getUserById返回null时出现空指针异常
+                        String resultMsg = "已退回";
+                        if (backHandlerId != null) {
+                            try {
+                                SysUser backUser = sysMapper.getUserById(backHandlerId);
+                                if (backUser != null) {
+                                    resultMsg += "，退回到" + backUser.getUserName();
+                                } else {
+                                    resultMsg += "，退回到ID为" + backHandlerId;
+                                }
+                            } catch (Exception e) {
+                                resultMsg += "，退回到ID为" + backHandlerId;
+                            }
+                        }
+                        return resultMsg;
                     }
                 } else if (bizMaterialSubmission.getFlowStatus() == 20) {
                     if (auditDTO.getIs_pass()) {
@@ -376,7 +438,21 @@ public class BizService {
                         createAuditLog(subId, userId, "通过", 20, 30, auditDTO.getTitle());
 
                         System.out.println("已审批，下一位审批人id为" + nextHandlerId);
-                        return "已审批，下一位审批人为" + sysMapper.getUserById(nextHandlerId).getUserName();
+                        //已修改，修改内容及原因：添加null检查和异常处理，避免getUserById返回null时出现空指针异常
+                        String resultMsg = "已审批";
+                        if (nextHandlerId != null) {
+                            try {
+                                SysUser nextUser = sysMapper.getUserById(nextHandlerId);
+                                if (nextUser != null) {
+                                    resultMsg += "，下一位审批人为" + nextUser.getUserName();
+                                } else {
+                                    resultMsg += "，下一位审批人ID为" + nextHandlerId;
+                                }
+                            } catch (Exception e) {
+                                resultMsg += "，下一位审批人ID为" + nextHandlerId;
+                            }
+                        }
+                        return resultMsg;
                     } else {
                         // 退回到提交人的部门负责人
                         // 根据提交人id获取部门负责人id
@@ -401,7 +477,21 @@ public class BizService {
                         createAuditLog(subId, userId, "退回", 20, -20, auditDTO.getTitle());
 
                         System.out.println("已退回，退回到id为" + backHandlerId);
-                        return "已退回，退回到" + sysMapper.getUserById(backHandlerId).getUserName();
+                        //已修改，修改内容及原因：添加null检查和异常处理，避免getUserById返回null时出现空指针异常
+                        String resultMsg = "已退回";
+                        if (backHandlerId != null) {
+                            try {
+                                SysUser backUser = sysMapper.getUserById(backHandlerId);
+                                if (backUser != null) {
+                                    resultMsg += "，退回到" + backUser.getUserName();
+                                } else {
+                                    resultMsg += "，退回到ID为" + backHandlerId;
+                                }
+                            } catch (Exception e) {
+                                resultMsg += "，退回到ID为" + backHandlerId;
+                            }
+                        }
+                        return resultMsg;
                     }
                 } else if (bizMaterialSubmission.getFlowStatus() == 30) {
                     if (auditDTO.getIs_pass()) {
@@ -411,11 +501,11 @@ public class BizService {
                         bizMapper.updateAudit(bizMaterialSubmission);
                         // 更新任务状态
                         BizTask bizTask = bizMapper.getTaskById(bizMaterialSubmission.getTaskId());
-                // 口径调整：任务 current_value 以“本次填报值”为准（覆盖写），不再在最终通过时重复累加
-                BigDecimal rv = bizMaterialSubmission.getReportedValue() != null ? bizMaterialSubmission.getReportedValue() : BigDecimal.ZERO;
-                rv = rv.setScale(0, RoundingMode.HALF_UP);
-                bizTask.setCurrentValue(rv);
-                if (bizTask.getCurrentValue().compareTo(bizTask.getTargetValue()) >= 0) {
+                        // 口径调整：任务 current_value 以“本次填报值”为准（覆盖写），不再在最终通过时重复累加
+                        BigDecimal rv = bizMaterialSubmission.getReportedValue() != null ? bizMaterialSubmission.getReportedValue() : BigDecimal.ZERO;
+                        rv = rv.setScale(0, RoundingMode.HALF_UP);
+                        bizTask.setCurrentValue(rv);
+                        if (bizTask.getCurrentValue().compareTo(bizTask.getTargetValue()) >= 0) {
                             bizTask.setStatus("3");
                         } else {
                             bizTask.setStatus("1");
@@ -458,7 +548,21 @@ public class BizService {
                         createAuditLog(subId, userId, "退回", 30, -30, auditDTO.getTitle());
 
                         System.out.println("已退回，退回到id为" + backHandlerId);
-                        return "已退回，退回到" + sysMapper.getUserById(backHandlerId).getUserName();
+                        //已修改，修改内容及原因：添加null检查和异常处理，避免getUserById返回null时出现空指针异常
+                        String resultMsg = "已退回";
+                        if (backHandlerId != null) {
+                            try {
+                                SysUser backUser = sysMapper.getUserById(backHandlerId);
+                                if (backUser != null) {
+                                    resultMsg += "，退回到" + backUser.getUserName();
+                                } else {
+                                    resultMsg += "，退回到ID为" + backHandlerId;
+                                }
+                            } catch (Exception e) {
+                                resultMsg += "，退回到ID为" + backHandlerId;
+                            }
+                        }
+                        return resultMsg;
                     }
                     // } else if (bizMaterialSubmission.getFlowStatus() == -10){
                     //
@@ -479,7 +583,21 @@ public class BizService {
                                 bizMaterialSubmission.getTaskId());
                         createAuditLog(subId, userId, "退回", -20, -10, auditDTO.getTitle());
                         System.out.println("已退回，退回到id为" + backHandlerId);
-                        return "已退回，退回到" + sysMapper.getUserById(backHandlerId).getUserName();
+                        //已修改，修改内容及原因：添加null检查和异常处理，避免getUserById返回null时出现空指针异常
+                        String resultMsg = "已退回";
+                        if (backHandlerId != null) {
+                            try {
+                                SysUser backUser = sysMapper.getUserById(backHandlerId);
+                                if (backUser != null) {
+                                    resultMsg += "，退回到" + backUser.getUserName();
+                                } else {
+                                    resultMsg += "，退回到ID为" + backHandlerId;
+                                }
+                            } catch (Exception e) {
+                                resultMsg += "，退回到ID为" + backHandlerId;
+                            }
+                        }
+                        return resultMsg;
                     }
                 } else if (bizMaterialSubmission.getFlowStatus() == -30) {
                     if (auditDTO.getIs_pass()) {
@@ -547,17 +665,33 @@ public class BizService {
                 bizMapper.updateTask(bizTask);
             }
 
-            sendNotice(userId,
-                    nextHandlerId,
-                    "任务审核",
-                    "任务审核",
-                    "您有新的任务需要审核",
-                    "0",
-                    bizMaterialSubmission.getTaskId());
+            //已修改，修改内容及原因：添加null检查，避免nextHandlerId为null时发送通知导致数据库约束错误
+            // 只有当 nextHandlerId 不为 null 时才发送通知
+            if (nextHandlerId != null) {
+                sendNotice(userId,
+                        nextHandlerId,
+                        "任务审核",
+                        "任务审核",
+                        "您有新的任务需要审核",
+                        "0",
+                        bizMaterialSubmission.getTaskId());
+            }
 
             createAuditLog(resubDTO.getSub_id(), userId, "重新提交", -bizMaterialSubmission.getFlowStatus(),
                     bizMaterialSubmission.getFlowStatus(), "重新提交");
-            return "已重新提交,审核人为" + sysMapper.getUserById(nextHandlerId).getUserName();
+            //已修改，修改内容及原因：添加null检查和异常处理，避免getUserById返回null时出现空指针异常
+            String resultMsg = "已重新提交";
+            if (nextHandlerId != null) {
+                try {
+                    SysUser handler = sysMapper.getUserById(nextHandlerId);
+                    if (handler != null) {
+                        resultMsg += ",审核人为" + handler.getUserName();
+                    }
+                } catch (Exception e) {
+                    // 忽略获取用户信息失败的情况
+                }
+            }
+            return resultMsg;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -618,7 +752,13 @@ public class BizService {
 
     // 封装方法：发送系统通知
     private void sendNotice(Long fromUserId, Long toUserId, String triggerEvent,
-            String title, String content, String sourceType, Long sourceId) {
+                            String title, String content, String sourceType, Long sourceId) {
+        //已修改，修改内容及原因：添加toUserId的null检查，避免toUserId为null时插入数据库导致约束错误
+        // 如果 toUserId 为 null，不发送通知，避免数据库约束错误
+        if (toUserId == null) {
+            System.out.println("警告：无法发送通知，接收人ID为空。标题：" + title);
+            return;
+        }
         SysNotice sysNotice = new SysNotice();
         sysNotice.setFromUserId(fromUserId);
         sysNotice.setToUserId(toUserId);
@@ -635,7 +775,7 @@ public class BizService {
 
     // 封装方法：创建审批日志
     private void createAuditLog(Long subId, Long operatorId, String actionType,
-            Integer preStatus, Integer postStatus, String comment) {
+                                Integer preStatus, Integer postStatus, String comment) {
         BizAuditLog bizAuditLog = new BizAuditLog();
         bizAuditLog.setLogId(null);
         bizAuditLog.setSubId(subId);

@@ -30,7 +30,7 @@ public interface BizMapper {
     List<BizTask> getTasksByLeaderId(Long leaderId);
 
     // getTasksByLeaderIdOrPrincipleId
-    @Select("SELECT * FROM biz_task WHERE leader_id = #{userId} OR principal_id = #{userId}")
+    @Select("SELECT * FROM biz_task WHERE leader_id = #{userId} OR principal_id = #{userId} OR auditor_id=#{auditorId}")
     List<BizTask> getTasksByLeaderIdOrPrincipalId(Long userId);
 
     // 获取所有一级任务
