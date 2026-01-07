@@ -814,6 +814,8 @@ public class BizService {
                 sysMapper.getDeptById(task.getDeptId()).getDeptName(),
                 task.getPrincipalId(),
                 sysMapper.getUserById(task.getPrincipalId()).getUserName(),
+                task.getAuditId(),
+                sysMapper.getUserById(task.getAuditId()).getUserName(),
                 task.getLeaderId(),
                 sysMapper.getUserById(task.getLeaderId()).getUserName(),
                 task.getExpTarget(),
