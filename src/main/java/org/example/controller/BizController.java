@@ -21,7 +21,7 @@ public class BizController {
 
 //    获取全量任务数据
     @GetMapping("/tasks")
-    public Object getAllTasks(HttpServletRequest request){
+    public Object getTasks(HttpServletRequest request){
         try{
             return bizService.getTasksByUserRole(JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
         } catch (Exception e) {

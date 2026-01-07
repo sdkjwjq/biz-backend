@@ -107,6 +107,7 @@ public class BizService {
             if (sysUser == null) {
                 throw new RuntimeException("用户不存在");
             }
+
             if (sysUser.getRole().equals("0")) {
                 return TaskListToTaskVoList(bizMapper.getAllTasks());
             } else if (sysUser.getRole().equals("1")) {
@@ -167,14 +168,14 @@ public class BizService {
             bizMaterialSubmission.setSubmitTime(new Date());
             bizMaterialSubmission.setFileSuffix(sysMapper.getFileByName(sysFile.getFileName()).getFileSuffix());
             bizMaterialSubmission.setFlowStatus(10);
-            //已修改，修改内容及原因：将部门审核人从任务的auditId改为提交人所在部门的负责人，确保flowStatus=10时审核人能正确收到通知
+            //已修改，修改内容及原因：将部门审核人从任务的AuditorId改为提交人所在部门的负责人，确保flowStatus=10时审核人能正确收到通知
             // flowStatus = 10 表示"待[所在部门]审批"，部门审核人应该是提交人所在部门的负责人
             Long handlerId = sysMapper.getDeptLeaderId(userId);
             bizMaterialSubmission.setCurrentHandlerId(handlerId);
             bizMaterialSubmission.setIsDelete(0);
 
             bizMapper.createAudit(bizMaterialSubmission);
-            Long subId = bizMapper.getNewestAuditId();
+            Long subId = bizMapper.getNewestSubId();
 
             // 提交后任务进入"审核中"，并把 current_value 覆盖写为本次填报值
             BizTask bizTask = bizMapper.getTaskById(bizSubDTO.getTask_id());
@@ -329,14 +330,14 @@ public class BizService {
                     10, bizMapper.getTaskPrincipalId(bizMaterialSubmission.getTaskId()),
                     20, ADMIN_ID);
 
-            //已修改，修改内容及原因：安全获取任务的auditId，避免getTaskById返回null时出现空指针异常
-            // 安全获取任务的 auditId
+            //已修改，修改内容及原因：安全获取任务的AuditorId，避免getTaskById返回null时出现空指针异常
+            // 安全获取任务的 AuditorId
             BizTask task = bizMapper.getTaskById(bizMaterialSubmission.getTaskId());
-            Long taskAuditId = (task != null) ? task.getAuditId() : null;
+            Long taskAuditorId = (task != null) ? task.getAuditorId() : null;
 
             Map<Integer, Long> backHandlerMap = Map.of(
                     10, bizMaterialSubmission.getSubmitBy(),
-                    20, taskAuditId != null ? taskAuditId : bizMaterialSubmission.getSubmitBy(),
+                    20, taskAuditorId != null ? taskAuditorId : bizMaterialSubmission.getSubmitBy(),
                     30, bizMapper.getTaskPrincipalId(bizMaterialSubmission.getTaskId()),
                     -20, bizMaterialSubmission.getSubmitBy(),
                     -30, sysMapper.getDeptLeaderId(bizMaterialSubmission.getSubmitBy()));
@@ -801,36 +802,74 @@ public class BizService {
 
     // TaskToTaskVo
     public BizTaskVo TaskToTaskVo(BizTask task) {
-        return new BizTaskVo(
-                task.getTaskId(),
-                task.getProjectId(),
-                task.getParentId(),
-                task.getAncestors(),
-                task.getPhase(),
-                task.getTaskCode(),
-                task.getTaskName(),
-                task.getLevel(),
-                task.getDeptId(),
-                sysMapper.getDeptById(task.getDeptId()).getDeptName(),
-                task.getPrincipalId(),
-                sysMapper.getUserById(task.getPrincipalId()).getUserName(),
-                task.getAuditId(),
-                sysMapper.getUserById(task.getAuditId()).getUserName(),
-                task.getLeaderId(),
-                sysMapper.getUserById(task.getLeaderId()).getUserName(),
-                task.getExpTarget(),
-                task.getExpLevel(),
-                task.getExpEffect(),
-                task.getExpMaterialDesc(),
-                task.getDataType(),
-                task.getTargetValue(),
-                task.getCurrentValue(),
-                task.getWeight(),
-                task.getProgress(),
-                task.getStatus(),
-                task.getIsDelete(),
-                task.getCreateTime(),
-                task.getUpdateTime());
+        BizTaskVo taskVo = new BizTaskVo();
+        taskVo.setTaskId(task.getTaskId());
+        taskVo.setProjectId(task.getProjectId());
+        taskVo.setParentId(task.getParentId());
+        taskVo.setAncestors(task.getAncestors());
+        taskVo.setPhase(task.getPhase());
+        taskVo.setTaskCode(task.getTaskCode());
+        taskVo.setTaskName(task.getTaskName());
+        taskVo.setLevel(task.getLevel());
+        taskVo.setDeptId(task.getDeptId());
+        taskVo.setDeptName(sysMapper.getDeptById(task.getDeptId()).getDeptName());
+        taskVo.setPrincipalId(task.getPrincipalId());
+        taskVo.setPrincipalName(sysMapper.getUserById(task.getPrincipalId()).getUserName());
+//        避免空指针错误
+        if(task.getAuditorId()!=null){
+            taskVo.setAuditorId(task.getAuditorId());
+            taskVo.setAuditorName(sysMapper.getUserById(task.getAuditorId()).getUserName());
+        }else {
+            taskVo.setAuditorId(null);
+            taskVo.setAuditorName("无");
+        }
+//        taskVo.setAuditName(sysMapper.getUserById(task.getAuditorId()).getUserName());
+        taskVo.setLeaderId(task.getLeaderId());
+        taskVo.setLeaderName(sysMapper.getUserById(task.getLeaderId()).getUserName());
+        taskVo.setExpTarget(task.getExpTarget());
+        taskVo.setExpLevel(task.getExpLevel());
+        taskVo.setExpEffect(task.getExpEffect());
+        taskVo.setExpMaterialDesc(task.getExpMaterialDesc());
+        taskVo.setDataType(task.getDataType());
+        taskVo.setTargetValue(task.getTargetValue());
+        taskVo.setCurrentValue(task.getCurrentValue());
+        taskVo.setWeight(task.getWeight());
+        taskVo.setProgress(task.getProgress());
+        taskVo.setStatus(task.getStatus());
+        taskVo.setIsDelete(task.getIsDelete());
+        taskVo.setCreateTime(task.getCreateTime());
+        taskVo.setUpdateTime(task.getUpdateTime());
+        return taskVo;
+//        return new BizTaskVo(
+//                task.getTaskId(),
+//                task.getProjectId(),
+//                task.getParentId(),
+//                task.getAncestors(),
+//                task.getPhase(),
+//                task.getTaskCode(),
+//                task.getTaskName(),
+//                task.getLevel(),
+//                task.getDeptId(),
+//                sysMapper.getDeptById(task.getDeptId()).getDeptName(),
+//                task.getPrincipalId(),
+//                sysMapper.getUserById(task.getPrincipalId()).getUserName(),
+//                task.getAuditorId(),
+//                sysMapper.getUserById(task.getAuditorId()).getUserName(),
+//                task.getLeaderId(),
+//                sysMapper.getUserById(task.getLeaderId()).getUserName(),
+//                task.getExpTarget(),
+//                task.getExpLevel(),
+//                task.getExpEffect(),
+//                task.getExpMaterialDesc(),
+//                task.getDataType(),
+//                task.getTargetValue(),
+//                task.getCurrentValue(),
+//                task.getWeight(),
+//                task.getProgress(),
+//                task.getStatus(),
+//                task.getIsDelete(),
+//                task.getCreateTime(),
+//                task.getUpdateTime());
     }
 
     // TaskListToTaskVoList

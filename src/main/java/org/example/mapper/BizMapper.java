@@ -95,7 +95,7 @@ public interface BizMapper {
 
     // 获取最新的审批单id
     @Select("SELECT sub_id FROM biz_material_submission ORDER BY sub_id DESC LIMIT 1")
-    Long getNewestAuditId();
+    Long getNewestSubId();
 
     // 更新审批单 【核心修复点1：注解改为@Update；核心修复点2：where前加空格】
     @Update("update biz_material_submission set task_id=#{taskId},file_id=#{fileId},reported_value=#{reportedValue},data_type=#{dataType},"

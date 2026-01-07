@@ -25,8 +25,8 @@ public class BizTaskVo {
     private String deptName;
     private Long principalId; // 归口负责人ID
     private String principalName;
-    private Long auditId;//审核人ID
-    private String auditName;
+    private Long auditorId;//审核人ID
+    private String auditorName;
     private Long leaderId; // 任务负责人ID
     private String leaderName;
 
