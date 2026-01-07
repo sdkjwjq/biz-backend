@@ -1010,7 +1010,7 @@ UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nic
 WHERE `dept_name` = '化学工程学院';
 
 -- 19. 机电工程学院 -> 朱涛
-UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '王敏' LIMIT 1) 
+UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '朱涛' LIMIT 1)
 WHERE `dept_name` = '机电工程学院';
 
 -- 20. 机关党总支 -> 吴红
@@ -1119,7 +1119,7 @@ INSERT INTO `biz_task` (
   `dept_id`, 
   `principal_id`, 
   `leader_id`, 
-	`data_type`, 
+  `data_type`,
   `status`, 
   `create_time`
 ) 
@@ -1132,21 +1132,21 @@ SELECT
   '0', -- 祖先路径
   (SELECT `dept_id` FROM `sys_dept` WHERE `dept_name` = '“双高”建设办公室' LIMIT 1), -- 归口：双高办
   (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '徐忠杰' LIMIT 1), -- 负责人：徐忠杰
-  (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '徐忠杰' LIMIT 1), 
+  (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = temp.leader_name LIMIT 1),
 	'0', -- 数据类型 无影响
   '1', -- 状态：进行中
   NOW()
 FROM (
-  SELECT 'SG01' AS code, '实施“三维联动”工程，塑造“价值引领、启智润心”立德树人新格局' AS name UNION ALL
-  SELECT 'SG02', '实施“三机健全”工程，创新“多方参与、主动作为”产教融合机制' UNION ALL
-  SELECT 'SG03', '实施“三需对接”工程，打造“匹配需求、要素集聚”的金专业' UNION ALL
-  SELECT 'SG04', '实施“三措并举”工程，打造“对接岗位、数智融合”的金课程' UNION ALL
-  SELECT 'SG05', '实施“革故鼎新”工程，打造“双元开发、形态多样”的金教材' UNION ALL
-  SELECT 'SG06', '实施“卓越匠师”工程，打造“结构合理、技艺精湛”的金教师' UNION ALL
-  SELECT 'SG07', '实施“智造共享”工程，打造“场景真实、开放融合”的金基地' UNION ALL
-  SELECT 'SG08', '实施“数智赋能”工程，构建“技术驱动、数据变革”的教学生态' UNION ALL
-  SELECT 'SG09', '实施“文技出海”工程，探索“教随产出、校企同行”国际化发展新模式' UNION ALL
-  SELECT 'SG10', '成立工程机械产业发展研究院，打造一流区域型高端智库'
+  SELECT 'SG01' AS code, '实施“三维联动”工程，塑造“价值引领、启智润心”立德树人新格局' AS name, '赵圣洁' AS leader_name UNION ALL
+  SELECT 'SG02', '实施“三机健全”工程，创新“多方参与、主动作为”产教融合机制', '褚超' UNION ALL
+  SELECT 'SG03', '实施“三需对接”工程，打造“匹配需求、要素集聚”的金专业', '李赛' UNION ALL
+  SELECT 'SG04', '实施“三措并举”工程，打造“对接岗位、数智融合”的金课程', '燕硕' UNION ALL
+  SELECT 'SG05', '实施“革故鼎新”工程，打造“双元开发、形态多样”的金教材', '卓自明' UNION ALL
+  SELECT 'SG06', '实施“卓越匠师”工程，打造“结构合理、技艺精湛”的金教师', '周天沛' UNION ALL
+  SELECT 'SG07', '实施“智造共享”工程，打造“场景真实、开放融合”的金基地', '陈奥林' UNION ALL
+  SELECT 'SG08', '实施“数智赋能”工程，构建“技术驱动、数据变革”的教学生态', '孟宝星' UNION ALL
+  SELECT 'SG09', '实施“文技出海”工程，探索“教随产出、校企同行”国际化发展新模式', '周波' UNION ALL
+  SELECT 'SG10', '成立工程机械产业发展研究院，打造一流区域型高端智库', '詹国兵'
 ) AS temp;
 
 -- 插入二级任务 (SG0101 - SG1003，共30条)
@@ -1180,54 +1180,54 @@ SELECT
   NOW()
 FROM (
   -- SG01
-  SELECT 'SG0101' AS code, '支部联建共创，拓展协同育人新路径' AS name, 'SG01' AS p_code, '张佳铭' AS leader_name UNION ALL
-  SELECT 'SG0102', '联动三个课堂，丰富育人工作新场景', 'SG01', '王军雨' UNION ALL
+  SELECT 'SG0101' AS code, '支部联建共创，拓展协同育人新路径' AS name, 'SG01' AS p_code, '赵圣洁' AS leader_name UNION ALL
+  SELECT 'SG0102', '联动三个课堂，丰富育人工作新场景', 'SG01', '赵圣洁' UNION ALL
   SELECT 'SG0103', '联结虚实资源，构建立体育人新平台', 'SG01', '赵圣洁' UNION ALL
   
   -- SG02
   SELECT 'SG0201', '健全合作发展机制，促进多主体深度参与', 'SG02', '褚超' UNION ALL
-  SELECT 'SG0202', '健全议事决策机制，激发多主体主动作为', 'SG02', '于鸣泉' UNION ALL
-  SELECT 'SG0203', '健全项目执行机制，强化多主体协同落实', 'SG02', '王翠英' UNION ALL
+  SELECT 'SG0202', '健全议事决策机制，激发多主体主动作为', 'SG02', '褚超' UNION ALL
+  SELECT 'SG0203', '健全项目执行机制，强化多主体协同落实', 'SG02', '褚超' UNION ALL
   
   -- SG03
-  SELECT 'SG0301', '对接岗位需求，共订人才培养方案', 'SG03', '高许' UNION ALL
-  SELECT 'SG0302', '对接成才需要，创新培养培训模式', 'SG03', '权宁' UNION ALL
-  SELECT 'SG0303', '对接产业需要，健全持续发展机制', 'SG03', '刘清勇' UNION ALL
+  SELECT 'SG0301', '对接岗位需求，共订人才培养方案', 'SG03', '李赛' UNION ALL
+  SELECT 'SG0302', '对接成才需要，创新培养培训模式', 'SG03', '李赛' UNION ALL
+  SELECT 'SG0303', '对接产业需要，健全持续发展机制', 'SG03', '李赛' UNION ALL
   
   -- SG04
-  SELECT 'SG0401', '集聚各方智慧，打造系统化一流核心课程', 'SG04', '毛少文' UNION ALL
-  SELECT 'SG0402', '突出学生主体，探索多元化课堂教学模式', 'SG04', '查剑林' UNION ALL
+  SELECT 'SG0401', '集聚各方智慧，打造系统化一流核心课程', 'SG04', '燕硕' UNION ALL
+  SELECT 'SG0402', '突出学生主体，探索多元化课堂教学模式', 'SG04', '燕硕' UNION ALL
   SELECT 'SG0403', '搭建信息平台，构建智能多维度评价体系', 'SG04', '燕硕' UNION ALL
   
   -- SG05
-  SELECT 'SG0501', '优化教学内容，校企合作开发多形态教材', 'SG05', '李忠焕' UNION ALL
+  SELECT 'SG0501', '优化教学内容，校企合作开发多形态教材', 'SG05', '卓自明' UNION ALL
   SELECT 'SG0502', '整合平台资源，打造品高质优数字化教材', 'SG05', '卓自明' UNION ALL
-  SELECT 'SG0503', '抓好过程管理，规范教材编审选用全流程', 'SG05', '马士良' UNION ALL
+  SELECT 'SG0503', '抓好过程管理，规范教材编审选用全流程', 'SG05', '卓自明' UNION ALL
   
   -- SG06
   SELECT 'SG0601', '坚持第一标准，锻造品质卓越大先生', 'SG06', '周天沛' UNION ALL
-  SELECT 'SG0602', '畅通引才渠道，打造技能卓越大匠师', 'SG06', '纪海宾' UNION ALL
-  SELECT 'SG0603', '健全培养体系，打造协同卓越大团队', 'SG06', '樊丽丽' UNION ALL
+  SELECT 'SG0602', '畅通引才渠道，打造技能卓越大匠师', 'SG06', '周天沛' UNION ALL
+  SELECT 'SG0603', '健全培养体系，打造协同卓越大团队', 'SG06', '周天沛' UNION ALL
   
   -- SG07
   SELECT 'SG0701', '虚实结合，共建产教融合实践中心', 'SG07', '陈奥林' UNION ALL
-  SELECT 'SG0702', '智慧管训，推进实践教学提质增效', 'SG07', '范硕硕' UNION ALL
-  SELECT 'SG0703', '协同合作，助推实践中心开放共享', 'SG07', '王伟男' UNION ALL
+  SELECT 'SG0702', '智慧管训，推进实践教学提质增效', 'SG07', '陈奥林' UNION ALL
+  SELECT 'SG0703', '协同合作，助推实践中心开放共享', 'SG07', '陈奥林' UNION ALL
   
   -- SG08
-  SELECT 'SG0801', '对接数字变革，推动专业数智化升级', 'SG08', '梅栋' UNION ALL
+  SELECT 'SG0801', '对接数字变革，推动专业数智化升级', 'SG08', '孟宝星' UNION ALL
   SELECT 'SG0802', '优化资源平台，助力教学数智化改革', 'SG08', '孟宝星' UNION ALL
-  SELECT 'SG0803', '深化数据分析，促进评价数智化转型', 'SG08', '高缓钦' UNION ALL
+  SELECT 'SG0803', '深化数据分析，促进评价数智化转型', 'SG08', '孟宝星' UNION ALL
   
   -- SG09
-  SELECT 'SG0901', '厚植技术优势，开展本土化技能人才培养', 'SG09', '刘娟' UNION ALL
+  SELECT 'SG0901', '厚植技术优势，开展本土化技能人才培养', 'SG09', '周波' UNION ALL
   SELECT 'SG0902', '集聚资源优势，推动职教与企业标准输出', 'SG09', '周波' UNION ALL
-  SELECT 'SG0903', '深化合作办学，助力徐工院品牌享誉海外', 'SG09', '刘怀乐' UNION ALL
+  SELECT 'SG0903', '深化合作办学，助力徐工院品牌享誉海外', 'SG09', '周波' UNION ALL
   
   -- SG10
-  SELECT 'SG1001', '强化调研打造产业发展“瞭望塔”，助力政府科学决策', 'SG10', '余心明' UNION ALL
+  SELECT 'SG1001', '强化调研打造产业发展“瞭望塔”，助力政府科学决策', 'SG10', '詹国兵' UNION ALL
   SELECT 'SG1002', '聚焦智慧打造技术标准“输出源”，助力产业健康发展', 'SG10', '詹国兵' UNION ALL
-  SELECT 'SG1003', '产助教改打造教学标准“孵化器”，助力技能迭代升级', 'SG10', '李赛'
+  SELECT 'SG1003', '产助教改打造教学标准“孵化器”，助力技能迭代升级', 'SG10', '詹国兵'
 ) AS t
 JOIN `biz_task` p ON p.task_code = t.p_code;
 
@@ -1374,12 +1374,12 @@ INSERT INTO `biz_task` (`project_id`, `task_code`, `task_name`, `level`, `parent
 INSERT INTO `biz_task` (`project_id`, `task_code`, `task_name`, `level`, `parent_id`, `ancestors`, `phase`, `dept_id`, `principal_id`, `leader_id`, `auditor_id`, `exp_target`, `exp_level`, `exp_effect`, `exp_material_desc`, `data_type`, `target_value`, `current_value`, `status`, `is_delete`, `create_time`) SELECT (SELECT `project_id` FROM `biz_project` WHERE `project_name` = '徐州工业职业技术学院第二期“双高建设计划”' LIMIT 1), 'SG03010225', '3-1-2 开展对工程机械产业链关键环节的10 家重点企业初步调研；', 3, p.task_id, CONCAT(p.ancestors, ',', p.task_id), 2025, (SELECT `dept_id` FROM `sys_dept` WHERE `dept_name` = '教务部、创新创业学院（合署）、招生办公室（挂靠教务部）' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '周寒' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '李赛' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '刘娟' LIMIT 1),'调研报告1份', '', '通过开展对工程机械产业链关键环节调研形成了调研报告1份，覆盖了10 家重点企业，明确了工程机械产业链对人才的需要分析。', '3-1-2-1 企业调研报告1份\n3-1-2-2 企业调研问卷1套\n3-1-2-3 企业调研照片1套', '1', 1.0, 0.00, '0', 0, NOW() FROM `biz_task` p WHERE p.task_code = 'SG0301';
 INSERT INTO `biz_task` (`project_id`, `task_code`, `task_name`, `level`, `parent_id`, `ancestors`, `phase`, `dept_id`, `principal_id`, `leader_id`, `auditor_id`, `exp_target`, `exp_level`, `exp_effect`, `exp_material_desc`, `data_type`, `target_value`, `current_value`, `status`, `is_delete`, `create_time`) SELECT (SELECT `project_id` FROM `biz_project` WHERE `project_name` = '徐州工业职业技术学院第二期“双高建设计划”' LIMIT 1), 'SG03010325', '3-1-3 修订人才培养方案，优化课程体系、实践教学体系 ；', 3, p.task_id, CONCAT(p.ancestors, ',', p.task_id), 2025, (SELECT `dept_id` FROM `sys_dept` WHERE `dept_name` = '教务部、创新创业学院（合署）、招生办公室（挂靠教务部）' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '周寒' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '李赛' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '刘娟' LIMIT 1),'人才培养方案1套', '', '通过修订人才培养方案形成了动态优化机制，覆盖了人才培养全过程，明确了立德树人的根本任务与时代要求，预期在构建高水平人才培养模式上实现了创新引领。', '3-1-3-1 企业调研报告1份\n3-1-3-2 人才培养方案研讨照片\n3-1-3-3 专业群人才培养方案1套，包括课程体系与实践教学体系\n3-1-3-4  党政联席会议记录\n3-1-3-5  人才培养方案论证资料', '1', 1.0, 0.00, '0', 0, NOW() FROM `biz_task` p WHERE p.task_code = 'SG0301';
 INSERT INTO `biz_task` (`project_id`, `task_code`, `task_name`, `level`, `parent_id`, `ancestors`, `phase`, `dept_id`, `principal_id`, `leader_id`, `auditor_id`, `exp_target`, `exp_level`, `exp_effect`, `exp_material_desc`, `data_type`, `target_value`, `current_value`, `status`, `is_delete`, `create_time`) SELECT (SELECT `project_id` FROM `biz_project` WHERE `project_name` = '徐州工业职业技术学院第二期“双高建设计划”' LIMIT 1), 'SG03010425', '3-1-4 确定专业课企业实施课程及项目。', 3, p.task_id, CONCAT(p.ancestors, ',', p.task_id), 2025, (SELECT `dept_id` FROM `sys_dept` WHERE `dept_name` = '教务部、创新创业学院（合署）、招生办公室（挂靠教务部）' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '周寒' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '李赛' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '刘娟' LIMIT 1),'企业实施课程及项目1批', '', '通过开展对工程机械产业链关键环节调研形成了调研报告1份，明确了工程机械产业链对人才的需要，确定了专业课企业实施课程及项目。', '3-1-4-1 调研报告1份\n3-1-4-2 企业实施课程及项目研讨照片\n3-1-4-3 专业课企业实施课程与项目', '1', 1.0, 0.00, '0', 0, NOW() FROM `biz_task` p WHERE p.task_code = 'SG0301';
-INSERT INTO `biz_task` (`project_id`, `task_code`, `task_name`, `level`, `parent_id`, `ancestors`, `phase`, `dept_id`, `principal_id`, `leader_id`, `auditor_id`, `exp_target`, `exp_level`, `exp_effect`, `exp_material_desc`, `data_type`, `target_value`, `current_value`, `status`, `is_delete`, `create_time`) SELECT (SELECT `project_id` FROM `biz_project` WHERE `project_name` = '徐州工业职业技术学院第二期“双高建设计划”' LIMIT 1), 'SG03010525', '3-1-5 调研至少 10 家重点企业，更新 8 项岗位标准；', 3, p.task_id, CONCAT(p.ancestors, ',', p.task_id), 2025, (SELECT `dept_id` FROM `sys_dept` WHERE `dept_name` = '教务部、创新创业学院（合署）、招生办公室（挂靠教务部）' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '周寒' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '李赛' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '刘娟' LIMIT 1),'更新8项岗位标准', '', '通过开展对工程机械产业链关键环节调研形成了调研报告1份，覆盖了10 家重点企业，明确了人才培养对接产业发展的升级路径，预期在建设周期内岗位标准更新8项。', '3-1-5-1调研报告1份（包括问卷调查、照片等）\n3-1-5-2 调研问卷1套\n3-1-5-3 岗位标准更新研讨会资料1套\n3-1-5-4 岗位标准更新8项', '1', 8.0, 0.00, '0', 0, NOW() FROM `biz_task` p WHERE p.task_code = 'SG0301';
+INSERT INTO `biz_task` (`project_id`, `task_code`, `task_name`, `level`, `parent_id`, `ancestors`, `phase`, `dept_id`, `principal_id`, `leader_id`, `auditor_id`, `exp_target`, `exp_level`, `exp_effect`, `exp_material_desc`, `data_type`, `target_value`, `current_value`, `status`, `is_delete`, `create_time`) SELECT (SELECT `project_id` FROM `biz_project` WHERE `project_name` = '徐州工业职业技术学院第二期“双高建设计划”' LIMIT 1), 'SG03010526', '3-1-5 调研至少 10 家重点企业，更新 8 项岗位标准；', 3, p.task_id, CONCAT(p.ancestors, ',', p.task_id), 2026, (SELECT `dept_id` FROM `sys_dept` WHERE `dept_name` = '教务部、创新创业学院（合署）、招生办公室（挂靠教务部）' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '周寒' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '李赛' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '刘娟' LIMIT 1),'更新8项岗位标准', '', '通过开展对工程机械产业链关键环节调研形成了调研报告1份，覆盖了10 家重点企业，明确了人才培养对接产业发展的升级路径，预期在建设周期内岗位标准更新8项。', '3-1-5-1调研报告1份（包括问卷调查、照片等）\n3-1-5-2 调研问卷1套\n3-1-5-3 岗位标准更新研讨会资料1套\n3-1-5-4 岗位标准更新8项', '1', 8.0, 0.00, '0', 0, NOW() FROM `biz_task` p WHERE p.task_code = 'SG0301';
 INSERT INTO `biz_task` (`project_id`, `task_code`, `task_name`, `level`, `parent_id`, `ancestors`, `phase`, `dept_id`, `principal_id`, `leader_id`, `auditor_id`, `exp_target`, `exp_level`, `exp_effect`, `exp_material_desc`, `data_type`, `target_value`, `current_value`, `status`, `is_delete`, `create_time`) SELECT (SELECT `project_id` FROM `biz_project` WHERE `project_name` = '徐州工业职业技术学院第二期“双高建设计划”' LIMIT 1), 'SG03010626', '3-1-6 完善现代学徒制课程标准，修订优化课程内容；', 3, p.task_id, CONCAT(p.ancestors, ',', p.task_id), 2026, (SELECT `dept_id` FROM `sys_dept` WHERE `dept_name` = '教务部、创新创业学院（合署）、招生办公室（挂靠教务部）' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '周寒' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '李赛' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '刘娟' LIMIT 1),'现代学徒制课程标准1套', '', '通过成立现代学徒制课程专项工作组，形成了以岗位能力为核心、工学结合为路径的新版课程标准体系，覆盖了全部试点专业的关键技能领域，明确了校企双导师的职责分工与教学实施规范，预期在下个学年实现全面落地实施，并将课程内容更新率稳定控制在不低于10%，为现代学徒制人才培养工作的深化与高质量开展奠定了扎实基础。', '3-1-6-1 现代学徒制座谈研讨资料1套\n3-1-6-2 修订现代学徒制课程标准1套\n3-1-6-3 课程内容更新率不低于10%\n3-1-6-4 更新后学生使用反馈报告', '1', 1.0, 0.00, '0', 0, NOW() FROM `biz_task` p WHERE p.task_code = 'SG0301';
 INSERT INTO `biz_task` (`project_id`, `task_code`, `task_name`, `level`, `parent_id`, `ancestors`, `phase`, `dept_id`, `principal_id`, `leader_id`, `auditor_id`, `exp_target`, `exp_level`, `exp_effect`, `exp_material_desc`, `data_type`, `target_value`, `current_value`, `status`, `is_delete`, `create_time`) SELECT (SELECT `project_id` FROM `biz_project` WHERE `project_name` = '徐州工业职业技术学院第二期“双高建设计划”' LIMIT 1), 'SG03010726', '3-1-7 专业拓展课程企业场地教学占比达20%；', 3, p.task_id, CONCAT(p.ancestors, ',', p.task_id), 2026, (SELECT `dept_id` FROM `sys_dept` WHERE `dept_name` = '教务部、创新创业学院（合署）、招生办公室（挂靠教务部）' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '马光辉' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '李赛' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '刘娟' LIMIT 1),'企业场地教学占比达20%', '', '通过成立校企协同教学工作组，形成了专业拓展课程在企业真实场景中教学占比不低于20%的常态化教学机制，覆盖了全部相关课程，明确了由校企双方协议约定的场地、设备、师资及安全责任，预期在本年度教学周期内实现企业场地教学的全面规范化运行，为深化产教融合、提升学生岗位胜任力工作奠定了扎实基础', '3-1-7-1 专业拓展课程实施场地一览表\n3-1-7-2 企业与学校签订相关协议\n3-1-7-3 企业场地教学实施反馈报告', '2', 20.0, 0.00, '0', 0, NOW() FROM `biz_task` p WHERE p.task_code = 'SG0301';
 INSERT INTO `biz_task` (`project_id`, `task_code`, `task_name`, `level`, `parent_id`, `ancestors`, `phase`, `dept_id`, `principal_id`, `leader_id`, `auditor_id`, `exp_target`, `exp_level`, `exp_effect`, `exp_material_desc`, `data_type`, `target_value`, `current_value`, `status`, `is_delete`, `create_time`) SELECT (SELECT `project_id` FROM `biz_project` WHERE `project_name` = '徐州工业职业技术学院第二期“双高建设计划”' LIMIT 1), 'SG03010826', '3-1-8 核心课真实项目课时占比达20%；', 3, p.task_id, CONCAT(p.ancestors, ',', p.task_id), 2026, (SELECT `dept_id` FROM `sys_dept` WHERE `dept_name` = '教务部、创新创业学院（合署）、招生办公室（挂靠教务部）' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '周寒' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '李赛' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '刘娟' LIMIT 1),'实项目课时占比达20%', '', '通过成立校企双元课程开发团队，形成了以企业真实生产项目为载体、其课时在核心课程中占比不低于20%的教学新模式，覆盖了全部专业核心课程体系，明确了真实项目的来源、教学标准与考核评价办法，预期在新学年全面实现核心课程教学与产业实践的深度耦合，为高素质技术技能人才的培养工作奠定了扎实基础。', '3-1-8-1 核心课程融入真实项目座谈研讨会\n3-1-8-2 核心课程融入真实项目一览表\n3-1-8-3 核心课程融入真实项目运行反馈报告', '2', 20.0, 0.00, '0', 0, NOW() FROM `biz_task` p WHERE p.task_code = 'SG0301';
 INSERT INTO `biz_task` (`project_id`, `task_code`, `task_name`, `level`, `parent_id`, `ancestors`, `phase`, `dept_id`, `principal_id`, `leader_id`, `auditor_id`, `exp_target`, `exp_level`, `exp_effect`, `exp_material_desc`, `data_type`, `target_value`, `current_value`, `status`, `is_delete`, `create_time`) SELECT (SELECT `project_id` FROM `biz_project` WHERE `project_name` = '徐州工业职业技术学院第二期“双高建设计划”' LIMIT 1), 'SG03010926', '3-1-9 组建 2 个学徒制或订单班，工学交替课时占比 20%。', 3, p.task_id, CONCAT(p.ancestors, ',', p.task_id), 2026, (SELECT `dept_id` FROM `sys_dept` WHERE `dept_name` = '教务部、创新创业学院（合署）、招生办公室（挂靠教务部）' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '张岩' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '李赛' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '刘娟' LIMIT 1),'学徒制班级2个，课时占比 20%。', '', '通过成立订单班/学徒制专项工作小组，形成了以“工学交替”为特色、其课时占总学时比例不低于20%的人才培养新模式，预期首批组建的2个订单班或学徒制班，明确了校企双方在人才培养、教学实施与学生管理中的具体权责，本培养周期内实现“工学交替”教学环节的规范化管理与高效运行。', '3-1-9-1 校企合作协议\n3-1-9-2 学徒制或订单班组班通知\n3-1-9-3 学徒制或订单班人员名单\n3-1-9-4 学徒制或订单班人才培养方案', '2', 20.0, 0.00, '0', 0, NOW() FROM `biz_task` p WHERE p.task_code = 'SG0301';
-INSERT INTO `biz_task` (`project_id`, `task_code`, `task_name`, `level`, `parent_id`, `ancestors`, `phase`, `dept_id`, `principal_id`, `leader_id`, `auditor_id`, `exp_target`, `exp_level`, `exp_effect`, `exp_material_desc`, `data_type`, `target_value`, `current_value`, `status`, `is_delete`, `create_time`) SELECT (SELECT `project_id` FROM `biz_project` WHERE `project_name` = '徐州工业职业技术学院第二期“双高建设计划”' LIMIT 1), 'SG0301027', '3-1-10 开发四类融通课程5 门；', 3, p.task_id, CONCAT(p.ancestors, ',', p.task_id), 2027, (SELECT `dept_id` FROM `sys_dept` WHERE `dept_name` = '教务部、创新创业学院（合署）、招生办公室（挂靠教务部）' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '张岩' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '李赛' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '刘娟' LIMIT 1),'开发四类融通课程5 门', '', '通过成立跨领域课程开发团队，形成了涵盖四种关键融通类型、共计5门新课的课程体系，覆盖了理论实践、技术与素养、校内校外等多维度融通领域，明确了各类课程的教学目标、内容标准与评价方式，预期在新学年全面投入教学运行并实现优质教学资源的有效整合，为构建复合型人才培养课程体系的工作奠定了扎实基础。', '3-1-10-1 四类融通课程的立项通知\n3-1-10-2 四类融通课程的公示文件\n3-1-10-3 四类融通课程的案例1套', '1', 5.0, 0.00, '0', 0, NOW() FROM `biz_task` p WHERE p.task_code = 'SG0301';
+INSERT INTO `biz_task` (`project_id`, `task_code`, `task_name`, `level`, `parent_id`, `ancestors`, `phase`, `dept_id`, `principal_id`, `leader_id`, `auditor_id`, `exp_target`, `exp_level`, `exp_effect`, `exp_material_desc`, `data_type`, `target_value`, `current_value`, `status`, `is_delete`, `create_time`) SELECT (SELECT `project_id` FROM `biz_project` WHERE `project_name` = '徐州工业职业技术学院第二期“双高建设计划”' LIMIT 1), 'SG03011027', '3-1-10 开发四类融通课程5 门；', 3, p.task_id, CONCAT(p.ancestors, ',', p.task_id), 2027, (SELECT `dept_id` FROM `sys_dept` WHERE `dept_name` = '教务部、创新创业学院（合署）、招生办公室（挂靠教务部）' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '张岩' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '李赛' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '刘娟' LIMIT 1),'开发四类融通课程5 门', '', '通过成立跨领域课程开发团队，形成了涵盖四种关键融通类型、共计5门新课的课程体系，覆盖了理论实践、技术与素养、校内校外等多维度融通领域，明确了各类课程的教学目标、内容标准与评价方式，预期在新学年全面投入教学运行并实现优质教学资源的有效整合，为构建复合型人才培养课程体系的工作奠定了扎实基础。', '3-1-10-1 四类融通课程的立项通知\n3-1-10-2 四类融通课程的公示文件\n3-1-10-3 四类融通课程的案例1套', '1', 5.0, 0.00, '0', 0, NOW() FROM `biz_task` p WHERE p.task_code = 'SG0301';
 INSERT INTO `biz_task` (`project_id`, `task_code`, `task_name`, `level`, `parent_id`, `ancestors`, `phase`, `dept_id`, `principal_id`, `leader_id`, `auditor_id`, `exp_target`, `exp_level`, `exp_effect`, `exp_material_desc`, `data_type`, `target_value`, `current_value`, `status`, `is_delete`, `create_time`) SELECT (SELECT `project_id` FROM `biz_project` WHERE `project_name` = '徐州工业职业技术学院第二期“双高建设计划”' LIMIT 1), 'SG03011127', '3-1-11 更新核心课程内容，真实项目课时占比30%；', 3, p.task_id, CONCAT(p.ancestors, ',', p.task_id), 2027, (SELECT `dept_id` FROM `sys_dept` WHERE `dept_name` = '教务部、创新创业学院（合署）、招生办公室（挂靠教务部）' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '周寒' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '李赛' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '刘娟' LIMIT 1),'更新核心课程内容，真实项目课时占比30%；', '', '通过构建以真实生产项目驱动教学内容全面更新的教学模式，真实项目课时占比不低于30%，覆盖全部专业核心课程，明确真实项目的引入标准、教学转化流程及质量评价体系，预期在周期内实现核心课程内容与行业前沿技术的同步升级，提升了学生综合职业能力与岗位适应力。', '3-1-11-1 核心课程更新项目一览表\n3-1-11-2 核心课程融入真实项目一览表\n3-1-11-3 教学实施反馈报告', '2', 30.0, 0.00, '0', 0, NOW() FROM `biz_task` p WHERE p.task_code = 'SG0301';
 INSERT INTO `biz_task` (`project_id`, `task_code`, `task_name`, `level`, `parent_id`, `ancestors`, `phase`, `dept_id`, `principal_id`, `leader_id`, `auditor_id`, `exp_target`, `exp_level`, `exp_effect`, `exp_material_desc`, `data_type`, `target_value`, `current_value`, `status`, `is_delete`, `create_time`) SELECT (SELECT `project_id` FROM `biz_project` WHERE `project_name` = '徐州工业职业技术学院第二期“双高建设计划”' LIMIT 1), 'SG03011227', '3-1-12 组建 2 个学徒制或订单班，专业课工学交替课时占比 30% ；', 3, p.task_id, CONCAT(p.ancestors, ',', p.task_id), 2027, (SELECT `dept_id` FROM `sys_dept` WHERE `dept_name` = '教务部、创新创业学院（合署）、招生办公室（挂靠教务部）' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '张岩' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '李赛' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '刘娟' LIMIT 1),'组建 2 个学徒制或订单班，工学交替课时占比 30% ；', '', '通过成立订单班/学徒制专项工作小组，形成了以“工学交替”为特色、其课时占总学时比例不低于30%的人才培养新模式，预期首批组建的2个订单班或学徒制班，明确了校企双方在人才培养、教学实施与学生管理中的具体权责，本培养周期内实现“工学交替”教学环节的规范化管理与高效运行。', '3-1-12-1 校企合作协议\n3-1-12-2 学徒制或订单班组班通知\n3-1-12-3 学徒制或订单班人员名单\n3-1-12-4 修订学徒制或订单班人才培养方案', '2', 30.0, 0.00, '0', 0, NOW() FROM `biz_task` p WHERE p.task_code = 'SG0301';
 INSERT INTO `biz_task` (`project_id`, `task_code`, `task_name`, `level`, `parent_id`, `ancestors`, `phase`, `dept_id`, `principal_id`, `leader_id`, `auditor_id`, `exp_target`, `exp_level`, `exp_effect`, `exp_material_desc`, `data_type`, `target_value`, `current_value`, `status`, `is_delete`, `create_time`) SELECT (SELECT `project_id` FROM `biz_project` WHERE `project_name` = '徐州工业职业技术学院第二期“双高建设计划”' LIMIT 1), 'SG03011327', '3-1-13 专业课程企业场地教学占比达30%。', 3, p.task_id, CONCAT(p.ancestors, ',', p.task_id), 2027, (SELECT `dept_id` FROM `sys_dept` WHERE `dept_name` = '教务部、创新创业学院（合署）、招生办公室（挂靠教务部）' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '马光辉' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '李赛' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '刘娟' LIMIT 1),'企业场地教学占比达30%', '', '通过专业课程在企业真实场景中教学占比达30%的常态化运行机制，覆盖了所有相关的专业核心课程，明确了校企双方在场地、设备、师资及安全等方面的权责与资源保障，预期在本学年内实现企业场地教学的全面规范化管理与质量提升，强化学生实践技能、深化产教融合。', '3-1-13-1 专业拓展课程实施场地一览表\n3-1-13-2 企业与学校签订相关协议\n3-1-13-3 企业场地教学实施反馈报告', '2', 30.0, 0.00, '0', 0, NOW() FROM `biz_task` p WHERE p.task_code = 'SG0301';
