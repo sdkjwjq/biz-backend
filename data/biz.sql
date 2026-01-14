@@ -145,7 +145,7 @@ CREATE TABLE `biz_task` (
     `task_code` varchar(64) DEFAULT NULL COMMENT '任务编号',
     `task_name` varchar(500) NOT NULL COMMENT '任务名称',
     `level` int(2) DEFAULT 1 COMMENT '任务层级',
-    'comment' varchar(500) DEFAULT '' COMMENT '任务情况描述',
+    `comment` varchar(500) DEFAULT '' COMMENT '任务情况描述',
     -- 组织归属
     `leader_id` bigint(20) DEFAULT NULL COMMENT '任务负责人ID',
     `auditor_id` bigint(20) DEFAULT NULL COMMENT '审核人ID',
