@@ -4,14 +4,13 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
-
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class ReSubDTO {
+public class BizAuditDTO {
     private Long sub_id;
-    private BigDecimal reported_value;
-    private String data_type;
-    private Long file_id;
+    private Boolean is_pass;
+    private String title;
+    private String content;
+//    private String file_id;
 }

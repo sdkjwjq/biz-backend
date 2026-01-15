@@ -1,25 +1,17 @@
 package org.example.service;
 
-import io.swagger.v3.oas.models.security.SecurityScheme;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.example.entity.*;
-import org.example.entity.dto.AuditDTO;
+import org.example.entity.dto.BizAuditDTO;
 import org.example.entity.dto.BizSubDTO;
-import org.example.entity.dto.ReSubDTO;
-import org.example.entity.dto.FileUploadDTO;
-import org.example.entity.dto.SysNoticeDTO;
+import org.example.entity.dto.BizReSubDTO;
+import org.example.entity.dto.BizTaskDTO;
 import org.example.entity.vo.BizTaskVo;
-import org.example.entity.vo.FileUploadVO;
 import org.example.mapper.BizMapper;
 import org.example.mapper.SysMapper;
-import org.example.utils.FileUploadUtil;
-import org.example.utils.JWTUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.multipart.support.StandardServletMultipartResolver;
 
 import java.io.*;
 import java.math.BigDecimal;
@@ -109,11 +101,11 @@ public class BizService {
             }
 
             if (sysUser.getRole().equals("0")) {
-                return TaskListToTaskVoList(bizMapper.getAllTasks());
+                return taskListToTaskVoList(bizMapper.getAllTasks());
             } else if (sysUser.getRole().equals("1")) {
-                return TaskListToTaskVoList(bizMapper.getTasksByLeaderIdOrPrincipalId(sysUser.getUserId()));
+                return taskListToTaskVoList(bizMapper.getTasks(sysUser.getUserId()));
             } else if (sysUser.getRole().equals("2")) {
-                return TaskListToTaskVoList(bizMapper.getTasksByPrincipalId(sysUser.getUserId()));
+                return taskListToTaskVoList(bizMapper.getTasksByPrincipalId(sysUser.getUserId()));
             } else {
                 throw new RuntimeException("用户角色错误");
             }
@@ -121,6 +113,46 @@ public class BizService {
             throw new RuntimeException(e);
         }
     }
+
+//    添加任务
+    public void addTask(BizTaskDTO taskDTO) {
+        try {
+//            只能添加三级任务,根据parent字段判断二级任务是否正确
+            if (bizMapper.getTaskById(taskDTO.getParentId()) == null) {
+                throw new RuntimeException("该二级任务不存在");
+            }
+            if (bizMapper.getTaskById(taskDTO.getParentId()).getLevel() != 2) {
+                throw new RuntimeException("该任务不是二级任务,无法添加");
+            }
+            if (bizMapper.getTaskById(taskDTO.getParentId()).getDeptId() != taskDTO.getDeptId()) {
+                throw new RuntimeException("该任务所属部门与二级任务部门不一致");
+            }
+
+            BizTask task = taskDTO2Task(taskDTO);
+            task.setIsDelete(0);
+            task.setCreateTime(new Date());
+            task.setUpdateTime(new Date());
+            bizMapper.addTask(task);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+//更新任务
+    public void updateTask(BizTaskDTO taskDTO) {
+        try {
+            if (bizMapper.getTaskById(taskDTO.getTaskId()) == null) {
+                throw new RuntimeException("该任务不存在");
+            }
+            BizTask task = taskDTO2Task(taskDTO);
+            task.setUpdateTime(new Date());
+            bizMapper.updateTask(task);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
 
     @Transactional
     public String submitMaterial(BizSubDTO bizSubDTO, Long userId) {
@@ -182,7 +214,7 @@ public class BizService {
             if (bizTask != null) {
                 bizTask.setCurrentValue(rv);
                 bizTask.setStatus("2");
-                bizMapper.updateTask(bizTask);
+                bizMapper.updateCurrentTask(bizTask);
             }
 
             // 发送审批信息（使用封装方法）
@@ -311,8 +343,8 @@ public class BizService {
 
     // // 审批任务
     @Transactional
-    public Object audit(AuditDTO auditDTO, Long userId) {
-        Long subId = auditDTO.getSub_id();
+    public Object audit(BizAuditDTO bizAuditDTO, Long userId) {
+        Long subId = bizAuditDTO.getSub_id();
         try {
             BizMaterialSubmission bizMaterialSubmission = bizMapper.getAuditBySubId(subId);
             if (bizMaterialSubmission == null) {
@@ -346,7 +378,7 @@ public class BizService {
             if (currentHandlerId.equals(userId)) {
                 if (bizMaterialSubmission.getFlowStatus() == 10) {
                     // 部门负责人审核逻辑
-                    if (auditDTO.getIs_pass()) {
+                    if (bizAuditDTO.getIs_pass()) {
                         Long nextHandlerId = nextHandlerMap.get(bizMaterialSubmission.getFlowStatus());
 
                         // 更新审批单状态（使用封装方法）
@@ -363,7 +395,7 @@ public class BizService {
                                 bizMaterialSubmission.getTaskId());
 
                         // 创建审批日志（使用封装方法）
-                        createAuditLog(subId, userId, "通过", 10, 20, auditDTO.getTitle());
+                        createAuditLog(subId, userId, "通过", 10, 20, bizAuditDTO.getTitle());
 
                         System.out.println("已审批，下一位审批人id为" + nextHandlerId);
                         //已修改，修改内容及原因：添加null检查和异常处理，避免getUserById返回null时出现空指针异常
@@ -399,7 +431,7 @@ public class BizService {
                                 bizMaterialSubmission.getTaskId());
 
                         // 创建审批日志（使用封装方法）
-                        createAuditLog(subId, userId, "退回", 10, -10, auditDTO.getTitle());
+                        createAuditLog(subId, userId, "退回", 10, -10, bizAuditDTO.getTitle());
 
                         System.out.println("已退回，退回到id为" + backHandlerId);
                         //已修改，修改内容及原因：添加null检查和异常处理，避免getUserById返回null时出现空指针异常
@@ -419,7 +451,7 @@ public class BizService {
                         return resultMsg;
                     }
                 } else if (bizMaterialSubmission.getFlowStatus() == 20) {
-                    if (auditDTO.getIs_pass()) {
+                    if (bizAuditDTO.getIs_pass()) {
                         Long nextHandlerId = nextHandlerMap.get(bizMaterialSubmission.getFlowStatus());
                         ;// 管理员
 
@@ -436,7 +468,7 @@ public class BizService {
                                 bizMaterialSubmission.getTaskId());
 
                         // 创建审批日志（使用封装方法）
-                        createAuditLog(subId, userId, "通过", 20, 30, auditDTO.getTitle());
+                        createAuditLog(subId, userId, "通过", 20, 30, bizAuditDTO.getTitle());
 
                         System.out.println("已审批，下一位审批人id为" + nextHandlerId);
                         //已修改，修改内容及原因：添加null检查和异常处理，避免getUserById返回null时出现空指针异常
@@ -475,7 +507,7 @@ public class BizService {
                                 bizMaterialSubmission.getTaskId());
 
                         // 创建审批日志（使用封装方法）
-                        createAuditLog(subId, userId, "退回", 20, -20, auditDTO.getTitle());
+                        createAuditLog(subId, userId, "退回", 20, -20, bizAuditDTO.getTitle());
 
                         System.out.println("已退回，退回到id为" + backHandlerId);
                         //已修改，修改内容及原因：添加null检查和异常处理，避免getUserById返回null时出现空指针异常
@@ -495,7 +527,7 @@ public class BizService {
                         return resultMsg;
                     }
                 } else if (bizMaterialSubmission.getFlowStatus() == 30) {
-                    if (auditDTO.getIs_pass()) {
+                    if (bizAuditDTO.getIs_pass()) {
 
                         // 更新审批单状态（使用封装方法）
                         bizMaterialSubmission.setFlowStatus(40);
@@ -511,7 +543,7 @@ public class BizService {
                         } else {
                             bizTask.setStatus("1");
                         }
-                        bizMapper.updateTask(bizTask);
+                        bizMapper.updateCurrentTask(bizTask);
 
                         // 发送通知，告知提交人审批过程已完成
                         sendNotice(userId,
@@ -523,7 +555,7 @@ public class BizService {
                                 bizMaterialSubmission.getTaskId());
 
                         // 创建审批日志（使用封装方法）
-                        createAuditLog(subId, userId, "通过", 30, 40, auditDTO.getTitle());
+                        createAuditLog(subId, userId, "通过", 30, 40, bizAuditDTO.getTitle());
 
                         System.out.println("审批完成");
                         return "审批完成";
@@ -546,7 +578,7 @@ public class BizService {
                                 bizMaterialSubmission.getTaskId());
 
                         // 创建审批日志（使用封装方法）
-                        createAuditLog(subId, userId, "退回", 30, -30, auditDTO.getTitle());
+                        createAuditLog(subId, userId, "退回", 30, -30, bizAuditDTO.getTitle());
 
                         System.out.println("已退回，退回到id为" + backHandlerId);
                         //已修改，修改内容及原因：添加null检查和异常处理，避免getUserById返回null时出现空指针异常
@@ -568,7 +600,7 @@ public class BizService {
                     // } else if (bizMaterialSubmission.getFlowStatus() == -10){
                     //
                 } else if (bizMaterialSubmission.getFlowStatus() == -20) {
-                    if (auditDTO.getIs_pass()) {
+                    if (bizAuditDTO.getIs_pass()) {
                         throw new RuntimeException("请重新提交材料");
                     } else {
                         Long backHandlerId = backHandlerMap.get(bizMaterialSubmission.getFlowStatus());
@@ -582,7 +614,7 @@ public class BizService {
                                 "您提交的材料被退回",
                                 "0",
                                 bizMaterialSubmission.getTaskId());
-                        createAuditLog(subId, userId, "退回", -20, -10, auditDTO.getTitle());
+                        createAuditLog(subId, userId, "退回", -20, -10, bizAuditDTO.getTitle());
                         System.out.println("已退回，退回到id为" + backHandlerId);
                         //已修改，修改内容及原因：添加null检查和异常处理，避免getUserById返回null时出现空指针异常
                         String resultMsg = "已退回";
@@ -601,7 +633,7 @@ public class BizService {
                         return resultMsg;
                     }
                 } else if (bizMaterialSubmission.getFlowStatus() == -30) {
-                    if (auditDTO.getIs_pass()) {
+                    if (bizAuditDTO.getIs_pass()) {
                         throw new RuntimeException("请重新提交材料");
                     }
                     Long backHandlerId = backHandlerMap.get(bizMaterialSubmission.getFlowStatus());
@@ -615,7 +647,7 @@ public class BizService {
                             "您提交的材料被退回",
                             "0",
                             bizMaterialSubmission.getTaskId());
-                    createAuditLog(subId, userId, "退回", -30, -20, auditDTO.getTitle());
+                    createAuditLog(subId, userId, "退回", -30, -20, bizAuditDTO.getTitle());
                     System.out.println("已退回，退回到id为" + backHandlerId);
                     return "已退回，退回到" + sysMapper.getUserById(backHandlerId).getUserName();
                 } else {// 补充：flowStatus不在枚举值范围内的返回值
@@ -632,9 +664,9 @@ public class BizService {
 
     // 退回重新提交材料
     @Transactional
-    public String reSubmitMaterial(ReSubDTO resubDTO, Long userId) {
+    public String reSubmitMaterial(BizReSubDTO resubDTOBiz, Long userId) {
         try {
-            BizMaterialSubmission bizMaterialSubmission = bizMapper.getAuditBySubId(resubDTO.getSub_id());
+            BizMaterialSubmission bizMaterialSubmission = bizMapper.getAuditBySubId(resubDTOBiz.getSub_id());
             if (bizMaterialSubmission == null) {
                 throw new RuntimeException("该任务不存在");
             }
@@ -648,11 +680,11 @@ public class BizService {
                 throw new RuntimeException("该任务状态不是退回状态,无法重新提交");
             }
             // 重新提交同样只保留整数，并覆盖写任务 current_value
-            BigDecimal rv = resubDTO.getReported_value() != null ? resubDTO.getReported_value() : BigDecimal.ZERO;
+            BigDecimal rv = resubDTOBiz.getReported_value() != null ? resubDTOBiz.getReported_value() : BigDecimal.ZERO;
             rv = rv.setScale(0, RoundingMode.HALF_UP);
             bizMaterialSubmission.setReportedValue(rv);
-            bizMaterialSubmission.setDataType(resubDTO.getData_type());
-            bizMaterialSubmission.setFileId(resubDTO.getFile_id());
+            bizMaterialSubmission.setDataType(resubDTOBiz.getData_type());
+            bizMaterialSubmission.setFileId(resubDTOBiz.getFile_id());
             bizMaterialSubmission.setSubmitTime(new Date());
             bizMaterialSubmission.setFlowStatus(-bizMaterialSubmission.getFlowStatus());
             bizMaterialSubmission.setCurrentHandlerId(nextHandlerId);
@@ -663,7 +695,7 @@ public class BizService {
             if (bizTask != null) {
                 bizTask.setCurrentValue(rv);
                 bizTask.setStatus("2");
-                bizMapper.updateTask(bizTask);
+                bizMapper.updateCurrentTask(bizTask);
             }
 
             //已修改，修改内容及原因：添加null检查，避免nextHandlerId为null时发送通知导致数据库约束错误
@@ -678,7 +710,7 @@ public class BizService {
                         bizMaterialSubmission.getTaskId());
             }
 
-            createAuditLog(resubDTO.getSub_id(), userId, "重新提交", -bizMaterialSubmission.getFlowStatus(),
+            createAuditLog(resubDTOBiz.getSub_id(), userId, "重新提交", -bizMaterialSubmission.getFlowStatus(),
                     bizMaterialSubmission.getFlowStatus(), "重新提交");
             //已修改，修改内容及原因：添加null检查和异常处理，避免getUserById返回null时出现空指针异常
             String resultMsg = "已重新提交";
@@ -801,7 +833,7 @@ public class BizService {
     }
 
     // TaskToTaskVo
-    public BizTaskVo TaskToTaskVo(BizTask task) {
+    public BizTaskVo taskToTaskVo(BizTask task) {
         BizTaskVo taskVo = new BizTaskVo();
         taskVo.setTaskId(task.getTaskId());
         taskVo.setProjectId(task.getProjectId());
@@ -811,6 +843,7 @@ public class BizService {
         taskVo.setTaskCode(task.getTaskCode());
         taskVo.setTaskName(task.getTaskName());
         taskVo.setLevel(task.getLevel());
+        taskVo.setComment(task.getComment());
         taskVo.setDeptId(task.getDeptId());
         taskVo.setDeptName(sysMapper.getDeptById(task.getDeptId()).getDeptName());
         taskVo.setPrincipalId(task.getPrincipalId());
@@ -840,45 +873,44 @@ public class BizService {
         taskVo.setCreateTime(task.getCreateTime());
         taskVo.setUpdateTime(task.getUpdateTime());
         return taskVo;
-//        return new BizTaskVo(
-//                task.getTaskId(),
-//                task.getProjectId(),
-//                task.getParentId(),
-//                task.getAncestors(),
-//                task.getPhase(),
-//                task.getTaskCode(),
-//                task.getTaskName(),
-//                task.getLevel(),
-//                task.getDeptId(),
-//                sysMapper.getDeptById(task.getDeptId()).getDeptName(),
-//                task.getPrincipalId(),
-//                sysMapper.getUserById(task.getPrincipalId()).getUserName(),
-//                task.getAuditorId(),
-//                sysMapper.getUserById(task.getAuditorId()).getUserName(),
-//                task.getLeaderId(),
-//                sysMapper.getUserById(task.getLeaderId()).getUserName(),
-//                task.getExpTarget(),
-//                task.getExpLevel(),
-//                task.getExpEffect(),
-//                task.getExpMaterialDesc(),
-//                task.getDataType(),
-//                task.getTargetValue(),
-//                task.getCurrentValue(),
-//                task.getWeight(),
-//                task.getProgress(),
-//                task.getStatus(),
-//                task.getIsDelete(),
-//                task.getCreateTime(),
-//                task.getUpdateTime());
     }
 
     // TaskListToTaskVoList
-    public List<BizTaskVo> TaskListToTaskVoList(List<BizTask> tasks) {
+    public List<BizTaskVo> taskListToTaskVoList(List<BizTask> tasks) {
         List<BizTaskVo> taskVos = new ArrayList<>();
         for (BizTask task : tasks) {
-            taskVos.add(TaskToTaskVo(task));
+            taskVos.add(taskToTaskVo(task));
         }
         return taskVos;
+    }
+
+//    TaskDTO2Task
+    public BizTask taskDTO2Task(BizTaskDTO taskDTO) {
+        BizTask task = new BizTask();
+        task.setTaskId(taskDTO.getTaskId());
+        task.setProjectId(taskDTO.getProjectId());
+        task.setParentId(taskDTO.getParentId());
+        task.setAncestors(taskDTO.getAncestors());
+        task.setPhase(taskDTO.getPhase());
+        task.setTaskCode(taskDTO.getTaskCode());
+        task.setTaskName(taskDTO.getTaskName());
+        task.setLevel(taskDTO.getLevel());
+        task.setComment(taskDTO.getComment());
+        task.setDeptId(taskDTO.getDeptId());
+        task.setAuditorId(taskDTO.getAuditorId());
+        task.setPrincipalId(taskDTO.getPrincipalId());
+        task.setLeaderId(taskDTO.getLeaderId());
+        task.setExpTarget(taskDTO.getExpTarget());
+        task.setExpLevel(taskDTO.getExpLevel());
+        task.setExpEffect(taskDTO.getExpEffect());
+        task.setExpMaterialDesc(taskDTO.getExpMaterialDesc());
+        task.setDataType(taskDTO.getDataType());
+        task.setTargetValue(taskDTO.getTargetValue());
+        task.setCurrentValue(taskDTO.getCurrentValue());
+        task.setWeight(taskDTO.getWeight());
+        task.setProgress(taskDTO.getProgress());
+        task.setStatus(taskDTO.getStatus());
+        return task;
     }
 
 }

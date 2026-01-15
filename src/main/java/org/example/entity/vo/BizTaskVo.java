@@ -19,6 +19,7 @@ public class BizTaskVo {
     private String taskCode; // 任务编号
     private String taskName; // 任务名称
     private Integer level; // 任务层级
+    private String comment;// 任务描述
 
     // 组织归属相关
     private Long deptId; // 归口部门ID

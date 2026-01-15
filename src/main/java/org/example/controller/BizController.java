@@ -2,16 +2,15 @@ package org.example.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.example.entity.dto.AuditDTO;
+import org.example.entity.dto.BizAuditDTO;
 import org.example.entity.dto.BizSubDTO;
-import org.example.entity.dto.ReSubDTO;
+import org.example.entity.dto.BizReSubDTO;
+import org.example.entity.dto.BizTaskDTO;
 import org.example.entity.vo.ErrorVO;
-import org.example.utils.FileUploadUtil;
 import org.example.utils.JWTUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.example.service.BizService;
-import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/biz")
@@ -67,6 +66,30 @@ public class BizController {
             return new ErrorVO(e.getMessage(), 500);
         }
     }
+
+//    添加任务
+    @PostMapping("/tasks/manage/add")
+    public Object addTask(@RequestBody BizTaskDTO task, HttpServletRequest request){
+        try{
+            bizService.addTask(task);
+            return "任务"+task.getTaskName()+"添加成功";
+        } catch (Exception e) {
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
+
+//    更新任务
+    @PostMapping("/tasks/manage/update")
+    public Object updateTask(@RequestBody BizTaskDTO task, HttpServletRequest request){
+        try{
+            bizService.updateTask(task);
+            return "任务"+task.getTaskName()+"更新成功";
+        } catch (Exception e) {
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
+
+
 
     //    提交审批材料
     @PostMapping("/submit")
@@ -130,18 +153,18 @@ public class BizController {
     }
 
     @PostMapping("/audit")
-    public Object audit(@RequestBody AuditDTO auditDTO, HttpServletRequest request){
+    public Object audit(@RequestBody BizAuditDTO bizAuditDTO, HttpServletRequest request){
         try{
-            return bizService.audit(auditDTO, JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
+            return bizService.audit(bizAuditDTO, JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
         } catch (Exception e) {
             return new ErrorVO(e.getMessage(), 500);
         }
     }
 
     @PostMapping("/resub")
-    public Object reSubmitMaterial(@RequestBody ReSubDTO reSubDTO, HttpServletRequest request){
+    public Object reSubmitMaterial(@RequestBody BizReSubDTO bizReSubDTO, HttpServletRequest request){
         try{
-            return bizService.reSubmitMaterial(reSubDTO, JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
+            return bizService.reSubmitMaterial(bizReSubDTO, JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
         } catch (Exception e) {
             return new ErrorVO(e.getMessage(), 500);
         }

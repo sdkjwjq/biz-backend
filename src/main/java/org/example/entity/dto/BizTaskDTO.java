@@ -1,15 +1,16 @@
-package org.example.entity;
+package org.example.entity.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
 import java.math.BigDecimal;
 import java.util.Date;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class BizTask {
+public class BizTaskDTO {
     private Long taskId; // 任务ID
     private Long projectId; // 项目ID
     private Long parentId; // 父任务节点ID
@@ -48,7 +49,5 @@ public class BizTask {
      * 2:审核中 3:已完成
      */
     private String status;
-    private Integer isDelete; // 0:存在 1:删除
-    private Date createTime; // 创建时间
-    private Date updateTime; // 更新时间
+
 }

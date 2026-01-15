@@ -4,10 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.example.entity.SysNotice;
 import org.example.entity.SysUser;
-import org.example.entity.dto.SysAlertDTO;
-import org.example.entity.dto.SysLoginDTO;
-import org.example.entity.dto.SysNoticeDTO;
-import org.example.entity.dto.SysPwdDTO;
+import org.example.entity.dto.*;
 import org.example.entity.vo.ErrorVO;
 import org.example.entity.vo.SysLogoutVO;
 import org.example.service.SysService;
@@ -26,9 +23,45 @@ public class SysController {
     private SysService sysService;
 
     @GetMapping("/users")
-    public List<SysUser> getAllUsers()
-    {
-        return sysService.getAllUsers();
+    public Object getAllUsers() {
+        try{
+            return sysService.getAllUsers();
+        } catch (Exception e) {
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
+
+//    添加用户
+    @PostMapping("/users/add")
+    public Object addUser(@RequestBody SysUserDTO  user) {
+        try{
+            sysService.addUser(user);
+            return "用户 "+user.getUserName()+" 添加成功";
+        } catch (Exception e) {
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
+
+//    更新用户
+    @PostMapping("/users/update")
+    public Object updateUser(@RequestBody SysUserDTO user) {
+        try{
+            sysService.updateUser(user);
+            return "用户 "+user.getUserName()+" 更新成功";
+        } catch (Exception e) {
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
+
+//    删除用户
+    @PostMapping("/users/delete/{userId}")
+    public Object deleteUser(@PathVariable Long userId) {
+        try{
+            sysService.deleteUser(userId);
+            return "用户 "+userId+" 删除成功";
+        } catch (Exception e) {
+            return new ErrorVO(e.getMessage(), 500);
+        }
     }
 
     // 根据部门ID获取部门信息（含 leaderId）

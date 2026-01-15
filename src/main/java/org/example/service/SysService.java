@@ -7,6 +7,7 @@ import org.example.entity.*;
 import org.example.entity.dto.FileUploadDTO;
 import org.example.entity.dto.SysAlertDTO;
 import org.example.entity.dto.SysNoticeDTO;
+import org.example.entity.dto.SysUserDTO;
 import org.example.entity.vo.FileUploadVO;
 import org.example.entity.vo.SysLoginVO;
 import org.example.mapper.BizMapper;
@@ -33,7 +34,10 @@ public class SysService {
 
     @Autowired
     private SysMapper sysMapper;
-//    获取所有用户
+    @Autowired
+    private BizMapper bizMapper;
+
+    //    获取所有用户
     public List<SysUser> getAllUsers() {
         return sysMapper.getAllUsers();
     }
@@ -217,15 +221,61 @@ public void downloadFile(Long fileId, HttpServletResponse response) throws IOExc
         return sysMapper.getUserByName(userName);
     }
 
-    public void addUser(SysUser user) {
-        sysMapper.addUser(user);
+    public void addUser(SysUserDTO user) {
+//        id已存在，报错
+        if(sysMapper.getUserById(user.getUserId()) != null){
+            throw new RuntimeException("用户id已存在");
+        }
+        if(sysMapper.getUserByName(user.getUserName()) != null){
+            throw new RuntimeException("用户名已存在，请添加文字进行区分");
+        }
+//        验证deptId是否存在
+        if(sysMapper.getDeptById(user.getDeptId()) == null){
+            throw new RuntimeException("部门不存在");
+        }
+
+        sysMapper.addUser(userDTO2User(user));
     }
 
-    public void updateUser(SysUser user) {
-        sysMapper.updateUser(user);
+    public void updateUser(SysUserDTO  user) {
+        if(sysMapper.getUserByName(user.getUserName()) != null){
+            throw new RuntimeException("用户名已存在，请添加文字进行区分");
+        }
+        if(sysMapper.getDeptById(user.getDeptId()) == null){
+            throw new RuntimeException("部门不存在");
+        }
+
+        sysMapper.updateUser(userDTO2User(user));
     }
+
+//    删除用户
 
     public void deleteUser(Long userId) {
+        if(sysMapper.getUserById(userId) == null){
+            throw new RuntimeException("用户不存在");
+        }
+
+        if(!bizMapper.getTasks(userId).isEmpty()){
+            throw new RuntimeException("该用户名下有任务，请先修改任务负责人");
+        }
         sysMapper.deleteUser(userId);
+    }
+
+//    UserDTO2User
+    public SysUser userDTO2User(SysUserDTO user) {
+        SysUser newUser = new SysUser();
+        newUser.setUserId(user.getUserId());
+        newUser.setDeptId(user.getDeptId());
+        newUser.setUserName(user.getUserName());
+        newUser.setNickName(user.getNickName());
+        newUser.setEmail(user.getEmail());
+        newUser.setPassword(user.getPassword());
+        newUser.setRole(user.getRole());
+        newUser.setCreateTime(new Date());
+        newUser.setUpdateTime(new Date());
+        newUser.setStatus("1");
+        newUser.setIsDelete(0);
+        return newUser;
+
     }
 }

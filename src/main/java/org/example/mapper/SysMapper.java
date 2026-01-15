@@ -42,11 +42,25 @@ public interface SysMapper {
     @Select("SELECT * FROM sys_user WHERE nick_name = #{nickName}")
     public SysUser getUserByNickName(String nickName);
 //    添加用户
-    @Insert("INSERT INTO sys_user (user_name, nick_name, email, password, role, status, is_delete, create_time, update_time) VALUES (#{userName}, #{nickName}, #{email}, #{password}, #{role}, #{status}, #{isDelete}, #{createTime}, #{updateTime})")
-    public void addUser(SysUser user);
+//    userId手动添加而非自增
+//public class SysUserDTO {
+//    private Long userId; // 用户ID
+//    private Long deptId; // 所属部门ID
+//    private String userName; // 账号
+//    private String nickName; // 姓名
+//    private String email; // 邮箱
+//    private String password; // 密码
+//    private String role; // 角色 0:admin 1:user 2:leader
+//    private String status; // 状态 0:正常 1:停用
+//    private Integer isDelete; // 0:存在 1:删除
+//}
+    @Insert("INSERT INTO sys_user (user_id, dept_id, user_name, nick_name, email, password, role, status, is_delete, create_time, update_time) VALUES (#{userId}, #{deptId}, #{userName}, #{nickName}, #{email}, #{password}, #{role}, #{status}, #{isDelete}, #{createTime}, #{updateTime})")
+    @Options(useGeneratedKeys = true, keyProperty = "userId", keyColumn = "user_id")
+    public Long addUser(SysUser user);
+
 
 //    修改用户信息
-    @Update("UPDATE sys_user SET user_name = #{userName}, nick_name = #{nickName}, email = #{email}, password = #{password}, role = #{role}, status = #{status}, is_delete = #{isDelete}, create_time = #{createTime}, update_time = #{updateTime} WHERE user_id = #{userId}")
+    @Update("UPDATE sys_user SET dept_id = #{deptId}, user_name = #{userName}, nick_name = #{nickName}, email = #{email}, password = #{password}, role = #{role}, status = #{status}, update_time = #{updateTime} WHERE user_id = #{userId}")
     public void updateUser(SysUser user);
 
 //    删除用户

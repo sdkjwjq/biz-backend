@@ -49,6 +49,12 @@ public class JWTUtil {
         return decodedJWT.getClaim("id").asLong();
     }
 
+//    getRoleFromToken
+    public static String getRoleFromToken(String token) {
+        DecodedJWT decodedJWT = verifyJwtToken(token);
+        return decodedJWT.getClaim("role").asString();
+    }
+
 //    isTokenExpired
     public static boolean isTokenExpired(String token) {
         DecodedJWT decodedJWT = verifyJwtToken(token);

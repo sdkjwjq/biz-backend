@@ -5,6 +5,8 @@ import org.example.entity.BizAuditLog;
 import org.example.entity.BizMaterialSubmission;
 import org.example.entity.BizTask;
 
+import java.math.BigDecimal;
+import java.util.Date;
 import java.util.List;
 
 @Mapper
@@ -31,7 +33,7 @@ public interface BizMapper {
 
     // getTasksByLeaderIdOrPrincipleId
     @Select("SELECT * FROM biz_task WHERE leader_id = #{userId} OR principal_id = #{userId} OR auditor_id=#{auditorId}")
-    List<BizTask> getTasksByLeaderIdOrPrincipalId(Long userId);
+    List<BizTask> getTasks(Long userId);
 
     // 获取所有一级任务
     @Select("SELECT * FROM biz_task WHERE level=1")
@@ -49,9 +51,34 @@ public interface BizMapper {
     @Select("SELECT * FROM biz_task WHERE parent_id = #{parentId} AND level=3")
     List<BizTask> getThirdLevelTasksByParentId(Long parentId);
 
-    // 更新任务
+    /**
+     * 新增任务
+     * @param task 任务实体（taskId会自增，无需传入）
+     * @return 影响的行数（1表示新增成功）
+     */
+    @Insert("INSERT INTO biz_task (" +
+            "project_id, parent_id, ancestors, phase, task_code, task_name, level, comment, " +
+            "leader_id, auditor_id, principal_id, dept_id, exp_target, exp_level, exp_effect, " +
+            "exp_material_desc, data_type, target_value, current_value, weight, progress, " +
+            "status, is_delete, create_time, update_time" +
+            ") VALUES (" +
+            "#{projectId}, #{parentId}, #{ancestors}, #{phase}, #{taskCode}, #{taskName}, #{level}, #{comment}, " +
+            "#{leaderId}, #{auditorId}, #{principalId}, #{deptId}, #{expTarget}, #{expLevel}, #{expEffect}, " +
+            "#{expMaterialDesc}, #{dataType}, #{targetValue}, #{currentValue}, #{weight}, #{progress}, " +
+            "#{status}, #{isDelete}, #{createTime}, #{updateTime}" +
+            ")")
+    // 新增注解：返回自增的taskId到实体对象中
+    @Options(useGeneratedKeys = true, keyProperty = "taskId", keyColumn = "task_id")
+    void addTask(BizTask task);
+
+//    更新任务
+// 全字段更新任务（根据taskId更新所有字段）
+    @Update("UPDATE biz_task SET project_id=#{projectId},parent_id=#{parentId},ancestors=#{ancestors},phase=#{phase},task_code=#{taskCode},task_name=#{taskName},level=#{level},comment=#{comment},leader_id=#{leaderId},auditor_id=#{auditorId},principal_id=#{principalId},dept_id=#{deptId},exp_target=#{expTarget},exp_level=#{expLevel},exp_effect=#{expEffect},exp_material_desc=#{expMaterialDesc},data_type=#{dataType},target_value=#{targetValue},current_value=#{currentValue},weight=#{weight},progress=#{progress},status=#{status},is_delete=#{isDelete},create_time=#{createTime},update_time=NOW() WHERE task_id=#{taskId}")
+    int updateTask(BizTask task);
+
+    // 提交后更新任务
     @Update("UPDATE biz_task SET current_value = #{currentValue}, status = #{status}, update_time = NOW() WHERE task_id = #{taskId}")
-    void updateTask(BizTask task);
+    void updateCurrentTask(BizTask task);
 
     // 根据任务id获取部门leaderid
     @Select("SELECT leader_id FROM sys_dept WHERE dept_id = (SELECT dept_id FROM biz_task WHERE task_id = #{taskId})")
