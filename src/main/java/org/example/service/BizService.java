@@ -201,8 +201,8 @@ public class BizService {
             bizMaterialSubmission.setFileSuffix(sysMapper.getFileByName(sysFile.getFileName()).getFileSuffix());
             bizMaterialSubmission.setFlowStatus(10);
             //已修改，修改内容及原因：将部门审核人从任务的AuditorId改为提交人所在部门的负责人，确保flowStatus=10时审核人能正确收到通知
-            // flowStatus = 10 表示"待[所在部门]审批"，部门审核人应该是提交人所在部门的负责人
-            Long handlerId = sysMapper.getDeptLeaderId(userId);
+            // flowStatus = 10 表示"待[所在部门]审批"
+            Long handlerId = task.getAuditorId();
             bizMaterialSubmission.setCurrentHandlerId(handlerId);
             bizMaterialSubmission.setIsDelete(0);
 
@@ -372,7 +372,7 @@ public class BizService {
                     20, taskAuditorId != null ? taskAuditorId : bizMaterialSubmission.getSubmitBy(),
                     30, bizMapper.getTaskPrincipalId(bizMaterialSubmission.getTaskId()),
                     -20, bizMaterialSubmission.getSubmitBy(),
-                    -30, sysMapper.getDeptLeaderId(bizMaterialSubmission.getSubmitBy()));
+                    -30, taskAuditorId != null ? taskAuditorId : bizMaterialSubmission.getSubmitBy());
 
             // 分支1：当前用户是处理人
             if (currentHandlerId.equals(userId)) {
