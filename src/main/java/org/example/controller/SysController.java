@@ -22,7 +22,7 @@ public class SysController {
     @Autowired
     private SysService sysService;
 
-    @GetMapping("/users")
+    @GetMapping("/allUsers")
     public Object getAllUsers() {
         try{
             return sysService.getAllUsers();
