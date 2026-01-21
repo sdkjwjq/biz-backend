@@ -90,6 +90,9 @@ public class BizController {
     }
 
 
+    
+
+
 
     //    提交审批材料
     @PostMapping("/submit")
@@ -135,8 +138,7 @@ public class BizController {
     @GetMapping("/audit/file/{taskId}")
     public Object getLastCycleFiles(@PathVariable("taskId") Long taskId, HttpServletResponse  response) {
         try {
-            bizService.downloadTaskFile(taskId, response);
-            return "下载成功";
+            return bizService.getLastCycleFiles(taskId);
         } catch (Exception e) {
             return new ErrorVO(e.getMessage(), 500);
         }

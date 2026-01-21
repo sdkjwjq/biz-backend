@@ -166,6 +166,10 @@ public interface BizMapper {
     @Select("SELECT * FROM biz_material_submission WHERE task_id = #{taskId} ORDER BY sub_id DESC LIMIT 1")
     BizMaterialSubmission getLatestAuditByTaskId(Long taskId);
 
+//    根据任务id获取最近的、且状态为40的审批单
+    @Select("SELECT * FROM biz_material_submission WHERE task_id = #{taskId} AND flow_status = 40 ORDER BY sub_id DESC LIMIT 1")
+    BizMaterialSubmission getLatestApprovedAuditByTaskId(Long taskId);
+
 
 
 

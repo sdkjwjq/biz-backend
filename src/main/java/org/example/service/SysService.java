@@ -96,7 +96,6 @@ public class SysService {
     //    上传文件
     public Object uploadFile(MultipartFile file, Long taskId,HttpServletRequest request) {
         try{
-
             if (file.isEmpty()) {
                 throw new RuntimeException("文件不能为空");
             }
@@ -122,38 +121,40 @@ public class SysService {
     }
 
 
-//    根据file_id下载文件
-public void downloadFile(Long fileId, HttpServletResponse response) throws IOException {
-    // 1. 查询文件信息
-    SysFile sysFile = sysMapper.getFileById(fileId);
-    if (sysFile == null) {
-        throw new RuntimeException("文件不存在");
-    }
 
-    // 2. 构建文件路径
-    String fullPath = System.getProperty("user.dir") + sysFile.getFilePath();
-    File file = new File(fullPath);
-    if (!file.exists()) {
-        throw new RuntimeException("文件已被删除或移动");
-    }
 
-    // 3. 设置响应头
-    response.setContentType("application/octet-stream");
-    response.setHeader("Content-Disposition",
-            "attachment; filename=\"" + URLEncoder.encode(sysFile.getFileName(), StandardCharsets.UTF_8.name()) + "\"");
-    response.setContentLengthLong(file.length());
-
-    // 4. 写入文件流
-    try (InputStream in = new FileInputStream(file);
-         OutputStream out = response.getOutputStream()) {
-        byte[] buffer = new byte[1024];
-        int len;
-        while ((len = in.read(buffer)) != -1) {
-            out.write(buffer, 0, len);
+    //    根据file_id下载文件
+    public void downloadFile(Long fileId, HttpServletResponse response) throws IOException {
+        // 1. 查询文件信息
+        SysFile sysFile = sysMapper.getFileById(fileId);
+        if (sysFile == null) {
+            throw new RuntimeException("文件不存在");
         }
-        out.flush();
+
+        // 2. 构建文件路径
+        String fullPath = System.getProperty("user.dir") + sysFile.getFilePath();
+        File file = new File(fullPath);
+        if (!file.exists()) {
+            throw new RuntimeException("文件已被删除或移动");
+        }
+
+        // 3. 设置响应头
+        response.setContentType("application/octet-stream");
+        response.setHeader("Content-Disposition",
+                "attachment; filename=\"" + URLEncoder.encode(sysFile.getFileName(), StandardCharsets.UTF_8.name()) + "\"");
+        response.setContentLengthLong(file.length());
+
+        // 4. 写入文件流
+        try (InputStream in = new FileInputStream(file);
+             OutputStream out = response.getOutputStream()) {
+            byte[] buffer = new byte[1024];
+            int len;
+            while ((len = in.read(buffer)) != -1) {
+                out.write(buffer, 0, len);
+            }
+            out.flush();
+        }
     }
-}
 
 //    发送消息
     public void sendNotice(SysNoticeDTO sysNoticeDTO, Long userId) {

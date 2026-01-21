@@ -1,12 +1,15 @@
 package org.example.service;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.example.entity.*;
 import org.example.entity.dto.BizAuditDTO;
 import org.example.entity.dto.BizSubDTO;
 import org.example.entity.dto.BizReSubDTO;
 import org.example.entity.dto.BizTaskDTO;
+import org.example.entity.vo.BizAuditVO;
 import org.example.entity.vo.BizTaskVo;
+import org.example.entity.vo.FileUploadVO;
 import org.example.mapper.BizMapper;
 import org.example.mapper.SysMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -253,27 +256,27 @@ public class BizService {
     }
 
     // 根据taskId查询审批单
-    public List<BizMaterialSubmission> getAudit(Long taskId, Long userId) {
+    public List<BizAuditVO> getAudit(Long taskId, Long userId) {
         try {
-            return bizMapper.getAudit(taskId, userId);
+            return auditListToAuditVoList(bizMapper.getAudit(taskId, userId));
         } catch (RuntimeException e) {
             throw new RuntimeException("获取审批单失败,请检查任务id是否正确");
         }
     }
 
     // 获取“待我审批”的审批单（按 current_handler_id 查询）
-    public List<BizMaterialSubmission> getTodoAudits(Long userId) {
+    public List<BizAuditVO> getTodoAudits(Long userId) {
         try {
             if (userId == null)
                 throw new RuntimeException("userId为空");
-            return bizMapper.getTodoAudits(userId);
+            return auditListToAuditVoList(bizMapper.getTodoAudits(userId));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
     // 根据 taskId 查询该任务全部审批单（用于任务详情抽屉展示完整流程）
-    public List<BizMaterialSubmission> getAuditByTaskId(Long taskId, Long userId) {
+    public List<BizAuditVO> getAuditByTaskId(Long taskId, Long userId) {
         try {
             if (taskId == null)
                 throw new RuntimeException("taskId为空");
@@ -289,12 +292,12 @@ public class BizService {
             if ("0".equals(me.getRole())
                     || (task.getLeaderId() != null && task.getLeaderId().equals(userId))
                     || (task.getPrincipalId() != null && task.getPrincipalId().equals(userId))) {
-                return bizMapper.getAuditsByTaskId(taskId);
+                return auditListToAuditVoList(bizMapper.getAuditsByTaskId(taskId));
             }
 
-            List<BizMaterialSubmission> list = bizMapper.getAuditsByTaskId(taskId);
+            List<BizAuditVO> list = auditListToAuditVoList(bizMapper.getAuditsByTaskId(taskId));
             boolean submittedByMe = false;
-            for (BizMaterialSubmission s : list) {
+            for (BizAuditVO s : list) {
                 if (s != null && s.getSubmitBy() != null && s.getSubmitBy().equals(userId)) {
                     submittedByMe = true;
                     break;
@@ -730,41 +733,26 @@ public class BizService {
         }
     }
 
-    //    根据file_id下载文件
-    public void downloadTaskFile(Long taskId, HttpServletResponse response) throws IOException {
-        // 1. 根据任务id查询最新的审批单
-        BizMaterialSubmission  bizMaterialSubmission = bizMapper.getLatestAuditByTaskId(taskId);
-        SysFile sysFile = sysMapper.getFileById(bizMaterialSubmission.getFileId());
-        if (sysFile == null) {
-            throw new RuntimeException("文件不存在");
-        }
-
-        // 2. 构建文件路径
-        String fullPath = System.getProperty("user.dir") + sysFile.getFilePath();
-        File file = new File(fullPath);
-        if (!file.exists()) {
-            throw new RuntimeException("文件已被删除或移动");
-        }
-
-        // 3. 设置响应头
-        response.setContentType("application/octet-stream");
-        response.setHeader("Content-Disposition",
-                "attachment; filename=\"" + URLEncoder.encode(sysFile.getFileName(), StandardCharsets.UTF_8.name()) + "\"");
-        response.setContentLengthLong(file.length());
-
-        // 4. 写入文件流
-        try (InputStream in = new FileInputStream(file);
-             OutputStream out = response.getOutputStream()) {
-            byte[] buffer = new byte[1024];
-            int len;
-            while ((len = in.read(buffer)) != -1) {
-                out.write(buffer, 0, len);
+//    获取该任务上一次审批通过的文件
+    public FileUploadVO getLastCycleFiles(Long taskId) {
+        try{
+            BizTask task = bizMapper.getTaskById(taskId);
+            if (task == null) {
+                throw new RuntimeException("任务不存在");
             }
-            out.flush();
+            BizMaterialSubmission submission = bizMapper.getLatestApprovedAuditByTaskId(taskId);
+            if (submission == null) {
+                return null;
+            }
+            FileUploadVO fileUploadVo = new FileUploadVO();
+            fileUploadVo.setFileId(submission.getFileId());
+            fileUploadVo.setFilename(sysMapper.getFileById(submission.getFileId()).getFileName());
+            fileUploadVo.setFilepath(sysMapper.getFileById(submission.getFileId()).getFileUrl());
+            return fileUploadVo;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
-
-
 
     public List<BizTask> getThirdLevelTasksByParentId(Long parentId) {
         try {
@@ -911,6 +899,35 @@ public class BizService {
         task.setProgress(taskDTO.getProgress());
         task.setStatus(taskDTO.getStatus());
         return task;
+    }
+
+    public BizAuditVO auditToAuditVo(BizMaterialSubmission audit){
+        BizAuditVO bizAuditVO = new BizAuditVO();
+        bizAuditVO.setSubId(audit.getSubId());
+        bizAuditVO.setTaskId(audit.getTaskId());
+        bizAuditVO.setFileId(audit.getFileId());
+        bizAuditVO.setFilename(sysMapper.getFileById(audit.getFileId()).getFileName());
+        bizAuditVO.setReportedValue(audit.getReportedValue());
+        bizAuditVO.setDataType(audit.getDataType());
+        bizAuditVO.setSubmitBy(audit.getSubmitBy());
+        bizAuditVO.setSubmitDeptId(audit.getSubmitDeptId());
+        bizAuditVO.setManageDeptId(audit.getManageDeptId());
+        bizAuditVO.setSubmitTime(audit.getSubmitTime());
+        bizAuditVO.setFileSuffix(audit.getFileSuffix());
+        bizAuditVO.setFlowStatus(audit.getFlowStatus());
+        bizAuditVO.setCurrentHandlerId(audit.getCurrentHandlerId());
+        bizAuditVO.setIsDelete(audit.getIsDelete());
+        return bizAuditVO;
+    }
+
+
+
+    public List<BizAuditVO> auditListToAuditVoList(List<BizMaterialSubmission> audits){
+        List<BizAuditVO> auditVos = new ArrayList<>();
+        for (BizMaterialSubmission audit : audits) {
+            auditVos.add(auditToAuditVo(audit));
+        }
+        return auditVos;
     }
 
 }
