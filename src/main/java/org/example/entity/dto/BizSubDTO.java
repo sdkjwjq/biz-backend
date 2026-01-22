@@ -15,4 +15,5 @@ public class BizSubDTO {
     private BigDecimal reported_value;
     private String data_type;
     private Long file_id;
+    private String comment;
 }

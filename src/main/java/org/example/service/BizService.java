@@ -217,7 +217,9 @@ public class BizService {
             if (bizTask != null) {
                 bizTask.setCurrentValue(rv);
                 bizTask.setStatus("2");
-                bizMapper.updateCurrentTask(bizTask);
+                bizTask.setComment(bizSubDTO.getComment());
+                bizTask.setUpdateTime(new Date());
+                bizMapper.updateTask(bizTask);
             }
 
             // 发送审批信息（使用封装方法）
@@ -291,6 +293,7 @@ public class BizService {
             // 最小权限校验：管理员/任务负责人/归口负责人可查看；或本人提交过该任务审批单也可查看
             if ("0".equals(me.getRole())
                     || (task.getLeaderId() != null && task.getLeaderId().equals(userId))
+                    || (task.getAuditorId() != null && task.getAuditorId().equals(userId))
                     || (task.getPrincipalId() != null && task.getPrincipalId().equals(userId))) {
                 return auditListToAuditVoList(bizMapper.getAuditsByTaskId(taskId));
             }
@@ -332,6 +335,7 @@ public class BizService {
             // 最小权限校验：管理员/任务部门负责人/归口负责人/提交人可查看
             boolean allowed = "0".equals(me.getRole())
                     || (task.getLeaderId() != null && task.getLeaderId().equals(userId))
+                    || (task.getAuditorId() != null && task.getAuditorId().equals(userId))
                     || (task.getPrincipalId() != null && task.getPrincipalId().equals(userId))
                     || (submission.getSubmitBy() != null && submission.getSubmitBy().equals(userId));
             if (!allowed) {
