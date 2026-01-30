@@ -163,6 +163,15 @@ public class BizController {
         }
     }
 
+    @PostMapping("/drawback/{taskId}")
+    public Object drawbackSubmit(@PathVariable("taskId") Long taskId, HttpServletRequest request){
+        try{
+            return bizService.drawbackSubmit(taskId, JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
+        } catch (Exception e) {
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
+
     @PostMapping("/resub")
     public Object reSubmitMaterial(@RequestBody BizReSubDTO bizReSubDTO, HttpServletRequest request){
         try{

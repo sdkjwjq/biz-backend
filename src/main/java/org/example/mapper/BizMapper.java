@@ -11,6 +11,12 @@ import java.util.List;
 
 @Mapper
 public interface BizMapper {
+
+    /**
+     Task
+     */
+
+
     // 获取全部任务
     @Select("SELECT * FROM biz_task")
     List<BizTask> getAllTasks();
@@ -88,6 +94,13 @@ public interface BizMapper {
     @Select("SELECT principal_id FROM biz_task WHERE task_id = #{taskId}")
     Long getTaskPrincipalId(Long taskId);
 
+
+    /**
+     Log
+     */
+
+
+
     // 创建审批单日志
     @Insert("insert into biz_audit_log(sub_id,operator_id,action_type,pre_status,post_status,comment,create_time) values(#{subId},#{operatorId},#{actionType},#{preStatus},#{postStatus},#{comment},#{createTime})")
     void createAuditLog(BizAuditLog auditLog);
@@ -110,6 +123,14 @@ public interface BizMapper {
             "ORDER BY create_time DESC, log_id DESC")
     List<BizAuditLog> getAuditLogsBySubId(@Param("subId") Long subId);
 
+
+
+
+
+
+    /**
+     MaterialSubmission
+     */
     // 创建审批流程
     @Insert("insert into biz_material_submission(" +
             "task_id, file_id, reported_value, data_type, submit_by, submit_dept_id, " +
@@ -140,13 +161,18 @@ public interface BizMapper {
     void updateAuditFlowStatus(@Param("subId") Long subId, @Param("flowStatus") Integer flowStatus);
 
     // 根据taskId及current_handler_id获取审批单
-    @Select("SELECT * FROM biz_material_submission WHERE task_id = #{taskId} AND current_handler_id = #{currentHandlerId}")
+    @Select("SELECT * FROM biz_material_submission WHERE task_id = #{taskId} AND current_handler_id = #{currentHandlerId} AND is_delete = 0")
     List<BizMaterialSubmission> getAudit(@Param("taskId") Long taskId,
             @Param("currentHandlerId") Long currentHandlerId);
 
+//      根据任务id获取最新的审批单
+    @Select("SELECT * FROM biz_material_submission WHERE task_id = #{taskId} AND is_delete = 0 ORDER BY sub_id DESC LIMIT 1")
+    BizMaterialSubmission getNewestAudit(@Param("taskId") Long taskId);
+
+
     // 获取“待我审批”的审批单（按当前处理人查询）
     @Select("SELECT * FROM biz_material_submission " +
-            "WHERE current_handler_id = #{userId} AND is_delete = 0 AND flow_status >= 10 AND flow_status < 40 " +
+            "WHERE current_handler_id = #{userId} AND is_delete = 0 AND flow_status >= 10 AND flow_status < 40 AND is_delete = 0" +
             "ORDER BY submit_time DESC, sub_id DESC")
     List<BizMaterialSubmission> getTodoAudits(@Param("userId") Long userId);
 
@@ -155,19 +181,19 @@ public interface BizMapper {
     List<BizMaterialSubmission> getAuditsByTaskId(@Param("taskId") Long taskId);
 
     // 根据subId获取审批单
-    @Select("SELECT * FROM biz_material_submission WHERE sub_id = #{subId}")
+    @Select("SELECT * FROM biz_material_submission WHERE sub_id = #{subId} AND is_delete = 0")
     BizMaterialSubmission getAuditBySubId(Long subId);
 
     // 根据subId获取提交人
-    @Select("SELECT submit_by FROM biz_material_submission WHERE sub_id = #{subId}")
+    @Select("SELECT submit_by FROM biz_material_submission WHERE sub_id = #{subId} AND is_delete = 0")
     Long getAuditSubmitBy(Long subId);
 
 //    根据任务id获取最近的审批单
-    @Select("SELECT * FROM biz_material_submission WHERE task_id = #{taskId} ORDER BY sub_id DESC LIMIT 1")
+    @Select("SELECT * FROM biz_material_submission WHERE task_id = #{taskId} AND is_delete = 0 ORDER BY sub_id DESC LIMIT 1")
     BizMaterialSubmission getLatestAuditByTaskId(Long taskId);
 
 //    根据任务id获取最近的、且状态为40的审批单
-    @Select("SELECT * FROM biz_material_submission WHERE task_id = #{taskId} AND flow_status = 40 ORDER BY sub_id DESC LIMIT 1")
+    @Select("SELECT * FROM biz_material_submission WHERE task_id = #{taskId} AND flow_status = 40 AND is_delete = 0 ORDER BY sub_id DESC LIMIT 1")
     BizMaterialSubmission getLatestApprovedAuditByTaskId(Long taskId);
 
 

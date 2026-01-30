@@ -113,6 +113,7 @@ public class SysService {
             Long userId = JWTUtil.getUserIdFromToken(request.getHeader("Authorization"));
             sysFile.setUploadBy(userId);
             sysFile.setUploadTime(new Date());
+            System.out.println(sysFile);
             sysMapper.uploadFile(sysFile);
             return new FileUploadVO(sysMapper.getFileByName(sysFile.getFileName()).getFileId(), fileUploadDTO.getFilename(), fileUploadDTO.getFilepath());
         } catch (Exception e) {

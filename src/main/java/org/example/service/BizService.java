@@ -130,6 +130,9 @@ public class BizService {
             if (bizMapper.getTaskById(taskDTO.getParentId()).getDeptId() != taskDTO.getDeptId()) {
                 throw new RuntimeException("该任务所属部门与二级任务部门不一致");
             }
+            if(taskDTO.getProjectId()!=1){
+                throw new RuntimeException("该任务所属项目id不为1");
+            }
 
             BizTask task = taskDTO2Task(taskDTO);
             task.setIsDelete(0);
@@ -736,6 +739,26 @@ public class BizService {
             throw new RuntimeException(e);
         }
     }
+//    撤回提交申请
+    public Object drawbackSubmit(Long taskId, Long userId){
+        try{
+            BizMaterialSubmission bizMaterialSubmission = bizMapper.getNewestAudit(taskId);
+            if (bizMaterialSubmission == null) {
+                throw new RuntimeException("该任务不存在");
+            }
+            if (!bizMaterialSubmission.getSubmitBy().equals(userId)){
+                throw new RuntimeException("您不是该任务的提交人，无法撤回");
+            }
+            bizMaterialSubmission.setIsDelete(1);
+            bizMapper.updateAudit(bizMaterialSubmission);
+            createAuditLog(bizMaterialSubmission.getSubId(), userId, "撤回提交", bizMaterialSubmission.getFlowStatus(), -bizMaterialSubmission.getFlowStatus(), "撤回提交");
+            return "已撤回提交";
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
 
 //    获取该任务上一次审批通过的文件
     public FileUploadVO getLastCycleFiles(Long taskId) {
