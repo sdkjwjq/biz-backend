@@ -313,12 +313,39 @@ CREATE TABLE `rel_task_performance` (
 DROP TABLE IF EXISTS `biz_achievement`;
 CREATE TABLE `biz_achievement` (
     `ach_id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '成果ID',
-    `project_id` bigint(20) NOT NULL,
-    `ach_name` varchar(255) NOT NULL,
-    `level` varchar(20) NOT NULL,
-    `source_type` char(1) DEFAULT '3',
-    `source_id` bigint(20) DEFAULT NULL,
-    `obtain_date` date DEFAULT NULL,
+--     类别
+--     1.落实立德树人根本任务
+--     2.创新产教融合机制
+--     3.打造高水平专业群
+--     4.建设一流核心课程
+--     5.开放优质新形态教材
+--     6.建设高水平双师队伍
+--     7.建设产教融合实训基地
+--     8.构建数字化教学新生态
+--     9.拓展国际交流与合作
+--     10.打造一流区域型高端智库
+    `category` int(4) NOT NULL COMMENT '类别',
+--     国家级/省级/市级
+    `level` varchar(20) NOT NULL COMMENT '级别',
+    `ach_name` varchar(255) NOT NULL COMMENT '成果名称',
+    `department` varchar(255) NOT NULL COMMENT '组织部门 如：教育部办公厅等，注意不同于校内部门',
+    `got_time` datetime NOT NULL COMMENT '颁发时间',
+    `dept_id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '部门ID',
+    `file_id` bigint(20) DEFAULT NULL COMMENT '佐证材料文件ID',
+    `comment` varchar(500) NOT NULL COMMENT '备注',
+    `is_competition` tinyint(1) DEFAULT 0 COMMENT '是否竞赛 0:不是竞赛 1:是竞赛',,
+
+--     不同类型奖项的数量，为方便区分，使用拼音
+    `te_deng_jiang` int(4) DEFAULT 0 COMMENT '特等奖数量',
+    `yi_deng_jiang` int(4) DEFAULT 0 COMMENT '一等奖数量',
+    `er_deng_jiang` int(4) DEFAULT 0 COMMENT '二等奖数量',
+    `san_deng_jiang` int(4) DEFAULT 0 COMMENT '三等奖数量',
+    `jin_jiang` int(4) DEFAULT 0 COMMENT '金奖数量',
+    `yin_jiang` int(4) DEFAULT 0 COMMENT '银奖数量',
+    `tong_jiang` int(4) DEFAULT 0 COMMENT '铜奖数量',
+    `you_sheng_jiang` int(4) DEFAULT 0 COMMENT '优胜奖数量',
+    `bud_deng_deng_ci` int(4) DEFAULT 0 COMMENT '不定等次数量',
+
     `create_by` bigint(20) DEFAULT NULL COMMENT '创建人ID',
     `is_delete` tinyint(1) DEFAULT 0 COMMENT '0:存在 1:删除',
     `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
