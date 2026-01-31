@@ -4,6 +4,8 @@ import org.apache.ibatis.annotations.*;
 import org.example.entity.BizAuditLog;
 import org.example.entity.BizMaterialSubmission;
 import org.example.entity.BizTask;
+import org.example.entity.vo.DeptTaskStatsVO;
+import org.example.entity.vo.FirstLevelTaskDetailVO;
 
 import java.math.BigDecimal;
 import java.util.Date;
@@ -337,4 +339,138 @@ public interface BizMapper {
             "WHERE current_handler_id = #{handlerId} " +
             "AND flow_status >= 10 AND flow_status < 40 AND is_delete = 0")
     Integer countPendingAuditsByHandler(@Param("handlerId") Long handlerId);
+
+
+    // ... 原有的其他方法 ...
+
+    /**
+     * 获取所有任务数量
+     * @return 任务总数
+     */
+    @Select("SELECT COUNT(*) FROM biz_task WHERE is_delete = 0")
+    Integer getTotalTaskCount();
+
+    /**
+     * 获取已完成任务数量
+     * @return 已完成任务数
+     */
+    @Select("SELECT COUNT(*) FROM biz_task WHERE status = '3' AND is_delete = 0")
+    Integer getCompletedTaskCount();
+
+    /**
+     * 获取本年度任务数量
+     * @param year 年份
+     * @return 本年度任务数
+     */
+    @Select("SELECT COUNT(*) FROM biz_task WHERE phase = #{year} AND is_delete = 0")
+    Integer getYearTaskCount(@Param("year") Integer year);
+
+    /**
+     * 获取本年度已完成任务数量
+     * @param year 年份
+     * @return 本年度已完成任务数
+     */
+    @Select("SELECT COUNT(*) FROM biz_task WHERE phase = #{year} AND status = '3' AND is_delete = 0")
+    Integer getYearCompletedTaskCount(@Param("year") Integer year);
+
+    /**
+     * 获取中期任务数量（phase在2028年之前）
+     * @param endYear 截止年份
+     * @return 中期任务数
+     */
+    @Select("SELECT COUNT(*) FROM biz_task WHERE phase < #{endYear} AND is_delete = 0")
+    Integer getMidTermTaskCount(@Param("endYear") Integer endYear);
+
+    /**
+     * 获取中期已完成任务数量
+     * @param endYear 截止年份
+     * @return 中期已完成任务数
+     */
+    @Select("SELECT COUNT(*) FROM biz_task WHERE phase < #{endYear} AND status = '3' AND is_delete = 0")
+    Integer getMidTermCompletedTaskCount(@Param("endYear") Integer endYear);
+
+    /**
+     * 获取一级任务数量
+     * @return 一级任务数
+     */
+    @Select("SELECT COUNT(*) FROM biz_task WHERE level = 1 AND is_delete = 0")
+    Integer getFirstLevelTaskCount();
+
+    /**
+     * 获取一级已完成任务数量
+     * @return 一级已完成任务数
+     */
+    @Select("SELECT COUNT(*) FROM biz_task WHERE level = 1 AND status = '3' AND is_delete = 0")
+    Integer getFirstLevelCompletedTaskCount();
+
+
+    /**
+     * 获取部门任务数量统计
+     * @return 部门任务统计列表
+     */
+    @Select("SELECT " +
+            "d.dept_id as deptId, " +
+            "d.dept_name as deptName, " +
+            "COUNT(t.task_id) as totalTasks, " +
+            "SUM(CASE WHEN t.status = '3' THEN 1 ELSE 0 END) as completedTasks " +
+            "FROM sys_dept d " +
+            "LEFT JOIN biz_task t ON d.dept_id = t.dept_id AND t.is_delete = 0 " +
+            "WHERE d.is_delete = 0 " +
+            "GROUP BY d.dept_id, d.dept_name " +
+            "ORDER BY d.dept_id")
+    List<DeptTaskStatsVO> getDeptTaskStats();
+
+    /**
+     * 获取部门本年度任务统计
+     * @param year 年份
+     * @return 部门本年度任务统计
+     */
+    @Select("SELECT " +
+            "d.dept_id as deptId, " +
+            "d.dept_name as deptName, " +
+            "COUNT(t.task_id) as totalTasks, " +
+            "SUM(CASE WHEN t.status = '3' THEN 1 ELSE 0 END) as completedTasks " +
+            "FROM sys_dept d " +
+            "LEFT JOIN biz_task t ON d.dept_id = t.dept_id AND t.phase = #{year} AND t.is_delete = 0 " +
+            "WHERE d.is_delete = 0 " +
+            "GROUP BY d.dept_id, d.dept_name " +
+            "ORDER BY d.dept_id")
+    List<DeptTaskStatsVO> getDeptYearTaskStats(@Param("year") Integer year);
+
+    /**
+     * 获取部门中期任务统计（phase在2028年之前）
+     * @param endYear 截止年份
+     * @return 部门中期任务统计
+     */
+    @Select("SELECT " +
+            "d.dept_id as deptId, " +
+            "d.dept_name as deptName, " +
+            "COUNT(t.task_id) as totalTasks, " +
+            "SUM(CASE WHEN t.status = '3' THEN 1 ELSE 0 END) as completedTasks " +
+            "FROM sys_dept d " +
+            "LEFT JOIN biz_task t ON d.dept_id = t.dept_id AND t.phase < #{endYear} AND t.is_delete = 0 " +
+            "WHERE d.is_delete = 0 " +
+            "GROUP BY d.dept_id, d.dept_name " +
+            "ORDER BY d.dept_id")
+    List<DeptTaskStatsVO> getDeptMidTermTaskStats(@Param("endYear") Integer endYear);
+
+    /**
+     * 获取一级任务的详细完成情况
+     * @return 一级任务完成情况列表
+     */
+    @Select("SELECT " +
+            "task_id as taskId, " +
+            "task_name as taskName, " +
+            "dept_id as deptId, " +
+            "(SELECT dept_name FROM sys_dept WHERE dept_id = t.dept_id) as deptName, " +
+            "status, " +
+            "target_value as targetValue, " +
+            "current_value as currentValue, " +
+            "progress, " +
+            "create_time as createTime, " +
+            "update_time as updateTime " +
+            "FROM biz_task t " +
+            "WHERE level = 1 AND is_delete = 0 " +
+            "ORDER BY task_id")
+    List<FirstLevelTaskDetailVO> getFirstLevelTaskDetails();
 }

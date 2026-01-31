@@ -1,26 +1,20 @@
 package org.example.service;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import org.example.entity.*;
 import org.example.entity.dto.BizAuditDTO;
 import org.example.entity.dto.BizSubDTO;
 import org.example.entity.dto.BizReSubDTO;
 import org.example.entity.dto.BizTaskDTO;
-import org.example.entity.vo.BizAuditVO;
-import org.example.entity.vo.BizTaskVo;
-import org.example.entity.vo.FileUploadVO;
+import org.example.entity.vo.*;
 import org.example.mapper.BizMapper;
 import org.example.mapper.SysMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
@@ -1117,5 +1111,304 @@ public class BizService {
             auditVos.add(auditToAuditVo(audit));
         }
         return auditVos;
+    }
+
+    // 中期截止年份
+    private static final Integer MID_TERM_END_YEAR = 2028;
+
+    /**
+     * 获取看板数据汇总
+     * @return 看板数据汇总
+     */
+    public DashboardSummaryVO getDashboardSummary() {
+        DashboardSummaryVO summary = new DashboardSummaryVO();
+
+        try {
+            // 设置统计时间
+            Calendar cal = Calendar.getInstance();
+            int currentYear = cal.get(Calendar.YEAR);
+            summary.setCurrentYear(String.valueOf(currentYear));
+            summary.setMidTermEndYear(String.valueOf(MID_TERM_END_YEAR));
+
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            summary.setUpdateTime(sdf.format(new Date()));
+
+            // 1. 计算整体数据
+            calculateOverallData(summary, currentYear);
+
+            // 2. 计算部门数据
+            calculateDeptData(summary, currentYear);
+
+            // 3. 获取一级任务详情
+            List<FirstLevelTaskDetailVO> firstLevelTasks = bizMapper.getFirstLevelTaskDetails();
+            summary.setFirstLevelTasks(firstLevelTasks);
+
+        } catch (Exception e) {
+            throw new RuntimeException("获取看板数据失败: " + e.getMessage());
+        }
+
+        return summary;
+    }
+
+    /**
+     * 计算整体数据
+     */
+    private void calculateOverallData(DashboardSummaryVO summary, int currentYear) {
+        // 1.1 所有任务完成率
+        Integer totalTasks = bizMapper.getTotalTaskCount();
+        Integer completedTasks = bizMapper.getCompletedTaskCount();
+        summary.setOverallCompletion(new TaskCompletionVO(
+                totalTasks, completedTasks, "all", "所有任务完成率"
+        ));
+
+        // 1.2 本年度任务完成率
+        Integer yearTotalTasks = bizMapper.getYearTaskCount(currentYear);
+        Integer yearCompletedTasks = bizMapper.getYearCompletedTaskCount(currentYear);
+        summary.setYearCompletion(new TaskCompletionVO(
+                yearTotalTasks, yearCompletedTasks, "year", currentYear + "年度任务完成率"
+        ));
+
+        // 1.3 中期任务完成率（phase在2028年之前）
+        Integer midTermTotalTasks = bizMapper.getMidTermTaskCount(MID_TERM_END_YEAR);
+        Integer midTermCompletedTasks = bizMapper.getMidTermCompletedTaskCount(MID_TERM_END_YEAR);
+        summary.setMidTermCompletion(new TaskCompletionVO(
+                midTermTotalTasks, midTermCompletedTasks, "midterm", "中期（" + MID_TERM_END_YEAR + "年前）任务完成率"
+        ));
+
+        // 1.4 一级任务完成率
+        Integer firstLevelTotalTasks = bizMapper.getFirstLevelTaskCount();
+        Integer firstLevelCompletedTasks = bizMapper.getFirstLevelCompletedTaskCount();
+        summary.setFirstLevelCompletion(new TaskCompletionVO(
+                firstLevelTotalTasks, firstLevelCompletedTasks, "firstLevel", "一级任务完成率"
+        ));
+    }
+
+    /**
+     * 计算部门数据
+     */
+    private void calculateDeptData(DashboardSummaryVO summary, int currentYear) {
+        // 2.1 各部门整体完成率
+        List<DeptTaskStatsVO> deptOverallStats = bizMapper.getDeptTaskStats();
+        deptOverallStats.forEach(DeptTaskStatsVO::calculateCompletionRate);
+        summary.setDeptOverallStats(deptOverallStats);
+
+        // 2.2 各部门本年度完成率
+        List<DeptTaskStatsVO> deptYearStats = bizMapper.getDeptYearTaskStats(currentYear);
+        deptYearStats.forEach(DeptTaskStatsVO::calculateCompletionRate);
+        summary.setDeptYearStats(deptYearStats);
+
+        // 2.3 各部门中期完成率
+        List<DeptTaskStatsVO> deptMidTermStats = bizMapper.getDeptMidTermTaskStats(MID_TERM_END_YEAR);
+        deptMidTermStats.forEach(DeptTaskStatsVO::calculateCompletionRate);
+        summary.setDeptMidTermStats(deptMidTermStats);
+    }
+
+    /**
+     * 获取所有任务完成率（单独的接口）
+     * @return 所有任务完成率
+     */
+    public TaskCompletionVO getAllTaskCompletionRate() {
+        try {
+            Integer totalTasks = bizMapper.getTotalTaskCount();
+            Integer completedTasks = bizMapper.getCompletedTaskCount();
+            return new TaskCompletionVO(
+                    totalTasks, completedTasks, "all", "所有任务完成率"
+            );
+        } catch (Exception e) {
+            throw new RuntimeException("获取所有任务完成率失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取本年度任务完成率（单独的接口）
+     * @param year 年份，为空时使用当前年份
+     * @return 本年度任务完成率
+     */
+    public TaskCompletionVO getYearTaskCompletionRate(Integer year) {
+        try {
+            if (year == null) {
+                Calendar cal = Calendar.getInstance();
+                year = cal.get(Calendar.YEAR);
+            }
+
+            Integer totalTasks = bizMapper.getYearTaskCount(year);
+            Integer completedTasks = bizMapper.getYearCompletedTaskCount(year);
+            return new TaskCompletionVO(
+                    totalTasks, completedTasks, "year", year + "年度任务完成率"
+            );
+        } catch (Exception e) {
+            throw new RuntimeException("获取本年度任务完成率失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取中期任务完成率（单独的接口）
+     * @param endYear 截止年份，为空时使用默认值2028
+     * @return 中期任务完成率
+     */
+    public TaskCompletionVO getMidTermTaskCompletionRate(Integer endYear) {
+        try {
+            if (endYear == null) {
+                endYear = MID_TERM_END_YEAR;
+            }
+
+            Integer totalTasks = bizMapper.getMidTermTaskCount(endYear);
+            Integer completedTasks = bizMapper.getMidTermCompletedTaskCount(endYear);
+            return new TaskCompletionVO(
+                    totalTasks, completedTasks, "midterm", "中期（" + endYear + "年前）任务完成率"
+            );
+        } catch (Exception e) {
+            throw new RuntimeException("获取中期任务完成率失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取一级任务完成率（单独的接口）
+     * @return 一级任务完成率
+     */
+    public TaskCompletionVO getFirstLevelTaskCompletionRate() {
+        try {
+            Integer totalTasks = bizMapper.getFirstLevelTaskCount();
+            Integer completedTasks = bizMapper.getFirstLevelCompletedTaskCount();
+            return new TaskCompletionVO(
+                    totalTasks, completedTasks, "firstLevel", "一级任务完成率"
+            );
+        } catch (Exception e) {
+            throw new RuntimeException("获取一级任务完成率失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取各部门任务完成率（单独的接口）
+     * @return 各部门任务完成率列表
+     */
+    public List<DeptTaskStatsVO> getDeptTaskCompletionRates() {
+        try {
+            List<DeptTaskStatsVO> stats = bizMapper.getDeptTaskStats();
+            stats.forEach(DeptTaskStatsVO::calculateCompletionRate);
+            return stats;
+        } catch (Exception e) {
+            throw new RuntimeException("获取各部门任务完成率失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取各部门本年度任务完成率（单独的接口）
+     * @param year 年份，为空时使用当前年份
+     * @return 各部门本年度任务完成率列表
+     */
+    public List<DeptTaskStatsVO> getDeptYearTaskCompletionRates(Integer year) {
+        try {
+            if (year == null) {
+                Calendar cal = Calendar.getInstance();
+                year = cal.get(Calendar.YEAR);
+            }
+
+            List<DeptTaskStatsVO> stats = bizMapper.getDeptYearTaskStats(year);
+            stats.forEach(DeptTaskStatsVO::calculateCompletionRate);
+            return stats;
+        } catch (Exception e) {
+            throw new RuntimeException("获取各部门本年度任务完成率失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取各部门中期任务完成率（单独的接口）
+     * @param endYear 截止年份，为空时使用默认值2028
+     * @return 各部门中期任务完成率列表
+     */
+    public List<DeptTaskStatsVO> getDeptMidTermTaskCompletionRates(Integer endYear) {
+        try {
+            if (endYear == null) {
+                endYear = MID_TERM_END_YEAR;
+            }
+
+            List<DeptTaskStatsVO> stats = bizMapper.getDeptMidTermTaskStats(endYear);
+            stats.forEach(DeptTaskStatsVO::calculateCompletionRate);
+            return stats;
+        } catch (Exception e) {
+            throw new RuntimeException("获取各部门中期任务完成率失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取一级任务详细完成情况（单独的接口）
+     * @return 一级任务详情列表
+     */
+    public List<FirstLevelTaskDetailVO> getFirstLevelTaskDetails() {
+        try {
+            return bizMapper.getFirstLevelTaskDetails();
+        } catch (Exception e) {
+            throw new RuntimeException("获取一级任务详情失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取单个部门的所有统计信息
+     * @param deptId 部门ID
+     * @return 部门统计信息
+     */
+    public Map<String, Object> getDeptStatsDetail(Long deptId) {
+        try {
+            Map<String, Object> result = new HashMap<>();
+
+            Calendar cal = Calendar.getInstance();
+            int currentYear = cal.get(Calendar.YEAR);
+
+            // 获取部门信息
+            String deptName = sysMapper.getDeptNameByDeptId(deptId);
+            if (deptName == null) {
+                throw new RuntimeException("部门不存在");
+            }
+
+            result.put("deptId", deptId);
+            result.put("deptName", deptName);
+
+            // 计算各种完成率
+            result.put("overall", calculateDeptCompletionRate(deptId, null, null));
+            result.put("year", calculateDeptCompletionRate(deptId, currentYear, null));
+            result.put("midterm", calculateDeptCompletionRate(deptId, null, MID_TERM_END_YEAR));
+
+            // 获取部门负责人
+            Long leaderId = sysMapper.getDeptLeaderId(deptId);
+            if (leaderId != null) {
+                String leaderName = sysMapper.getUserById(leaderId).getNickName();
+                result.put("leaderId", leaderId);
+                result.put("leaderName", leaderName);
+            }
+
+            return result;
+
+        } catch (Exception e) {
+            throw new RuntimeException("获取部门统计详情失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 计算部门的任务完成率（辅助方法）
+     */
+    private Map<String, Object> calculateDeptCompletionRate(Long deptId, Integer year, Integer endYear) {
+        Map<String, Object> result = new HashMap<>();
+
+        // 这里简化处理，实际应该添加相应的Mapper方法
+        // 临时使用查询所有数据再过滤的方式（后续可以优化）
+        List<DeptTaskStatsVO> allDeptStats = bizMapper.getDeptTaskStats();
+        for (DeptTaskStatsVO stats : allDeptStats) {
+            if (stats.getDeptId().equals(deptId)) {
+                result.put("totalTasks", stats.getTotalTasks());
+                result.put("completedTasks", stats.getCompletedTasks());
+                result.put("completionRate", stats.getCompletionRate());
+                break;
+            }
+        }
+
+        // 如果没有找到数据，设置默认值
+        if (!result.containsKey("totalTasks")) {
+            result.put("totalTasks", 0);
+            result.put("completedTasks", 0);
+            result.put("completionRate", BigDecimal.ZERO);
+        }
+
+        return result;
     }
 }
