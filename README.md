@@ -29,15 +29,15 @@
    ```
 
 2. **配置数据库**
-  - 新建 MySQL 数据库（推荐名称：`biz`）
-  - 执行 `data/biz.sql` 初始化表结构
-  - 执行 `data/insert.sql` 插入初始化数据
-  - 修改 `application.properties` 配置数据库连接：
-    ```properties
-    spring.datasource.url=jdbc:mysql://localhost:3306/biz_db?useSSL=false&serverTimezone=UTC
-    spring.datasource.username=root
-    spring.datasource.password=your_password
-    ```
+   - 新建 MySQL 数据库（推荐名称：`biz`）
+   - 执行 `data/biz.sql` 初始化表结构
+   - 执行 `data/insert.sql` 插入初始化数据
+   - 修改 `application.properties` 配置数据库连接：
+     ```properties
+     spring.datasource.url=jdbc:mysql://localhost:3306/biz_db?useSSL=false&serverTimezone=UTC
+     spring.datasource.username=root
+     spring.datasource.password=your_password
+     ```
 
 3. **构建并启动**
    ```bash
