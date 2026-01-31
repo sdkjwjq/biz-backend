@@ -1,4 +1,5 @@
-# biz-backend 系统接口文档
+# biz-backend 系统接口文档 v2.0
+
 ## 项目概述
 
 `biz-backend` 是一个基于 Spring Boot 的业务管理后端系统，提供用户认证、任务管理、文件上传下载、审批流程、通知预警等核心功能，支持部门级任务协作与流程审批。
@@ -21,126 +22,127 @@
 
 ### 部署步骤
 
-1. 克隆仓库
+1. **克隆仓库**
+   ```bash
+   git clone https://github.com/sdkjwjq/biz-backend.git
+   cd biz-backend
+   ```
 
-1. ```Bash
-      git clone https://github.com/sdkjwjq/biz-backend.git
-      cd biz-backend
-      ```
+2. **配置数据库**
+   - 新建 MySQL 数据库（推荐名称：`biz`）
+   - 执行 `data/biz.sql` 初始化表结构
+   - 执行 `data/insert.sql` 插入初始化数据
+   - 修改 `application.properties` 配置数据库连接：
+     ```properties
+     spring.datasource.url=jdbc:mysql://localhost:3306/biz_db?useSSL=false&serverTimezone=UTC
+     spring.datasource.username=root
+     spring.datasource.password=your_password
+     ```
 
-2. 配置数据库
+3. **构建并启动**
+   ```bash
+   mvn clean package
+   java -jar target/biz_backend-1.0-SNAPSHOT.jar
+   ```
 
-1. 新建 MySQL 数据库（推荐名称：`biz_db`）
+### 生产环境部署
 
-2. 执行 `data/biz.sql` 初始化表结构
+#### 服务器信息
+```
+IP地址: 172.19.2.81
+用户名: root
+密码: Xzcit@xg.2025.8
 
-3. 执行 `data/insert.sql` 初始化表结构
+数据库账号密码:
+账号: root
+密码: Xxxy@123
+```
 
-4. 修改 `application.properties` 配置数据库连接：
+#### 后端部署
+1. 修改数据库配置为生产环境密码
+2. 使用 Maven 打包：先后执行 `clean` 和 `package`
+3. 将生成的 `target/biz_backend-1.0-SNAPSHOT.jar` 上传到服务器
+4. 停止旧进程：`ps aux|grep java` → `kill -9 [PID]`
+5. 启动新进程：`nohup java -jar biz_backend-1.0-SNAPSHOT.jar &`
 
-- ```Properties
-        spring.datasource.url=jdbc:mysql://localhost:3306/biz_db?useSSL=false&serverTimezone=UTC
-        spring.datasource.username=root
-        spring.datasource.password=your_password
-        ```
-
-3. 构建并启动
-
-1. ```Bash
-      mvn clean package
-      java -jar target/biz_backend-1.0-SNAPSHOT.jar
-      ```
+#### 前端部署
+1. 修改 `vite.config.js`，将 IP 地址改为服务器 IP
+2. 运行 `npm run builds` 生成 `dist` 文件夹
+3. 将 `dist` 文件夹内容上传到 `/usr/share/nginx/html` 目录下
 
 ### 迭代记录
-- 2025-12-8：完成登录功能
+- 2025-12-08：完成登录功能
 - 2025-12-11：完成登录、注销、修改密码
 - 2025-12-21：补充实现根据部门ID获取任务、提交审批材料、获取审批单、文件上传/下载、通知发送/查看、审批任务、重新提交审批材料等接口
-- 2025-12-26：修改了登录方式，改为user_id登录，修改了第一次审批人为AuditorId，上传文件的功能暂未修改
+- 2025-12-26：修改登录方式为user_id登录，修改第一次审批人为AuditorId
+- 2026-01-31：新增标志性成果管理、任务管理、定时任务触发接口
+
 ## 基础信息
-- 基础路径：无（接口路径已包含具体前缀）
-- 认证方式：JWT Token（登录后获取，请求时通过`Authorization`请求头携带）
-- 示例服务域名：`https://api.example.com`（实际调用时替换为部署的服务地址）
-- 示例Token：`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJ1c2VyX25hbWUiOiJhZG1pbiIsImV4cCI6MTcxMjEwMzYwMH0.xxxxxx`（所有需认证接口统一使用此示例，无需重复粘贴）
+
+- **基础路径**：无（接口路径已包含具体前缀）
+- **认证方式**：JWT Token（登录后获取，请求时通过 `Authorization` 请求头携带）
+- **服务地址**：`https://api.example.com`（实际调用时替换为部署的服务地址）
+- **示例Token**：`eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJ1c2VyX25hbWUiOiJhZG1pbiIsImV4cCI6MTcxMjEwMzYwMH0.xxxxxx`
+
 ## Postman接口文档
-https://www.postman.com/litianyi981119/biz/collection/21001135-3309c751-c3ca-4fdb-9d3e-f9aa8529b9c0/?action=share&creator=21001135
+https://www.postman.com/litianyi981119/biz/collection/21001135-3309c751-c3ca-4fdb-9d3e-f9aa8529b9c0/
 
 ## 接口列表
 
-### 1. 用户登录
-- **请求路径**：`/system/login`
-- **请求方法**：POST
-- **示例调用URL**：`https://api.example.com/system/login`
-- **请求体参数**：
+### 一、系统管理接口
+
+#### 1.1 用户登录
+- **接口**：`POST /system/login`
+- **描述**：用户登录，返回Token
+- **无需认证**：是
+- **请求体**：
   ```json
   {
-    "user_id": 110228, // 用户ID，示例值
-    "password": "123456"  // 示例值
+    "user_id": 110228,
+    "password": "123456"
   }
   ```
-- **成功响应**（200 OK）：
+- **响应**：
   ```json
   {
     "nick_name": "系统管理员",
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJ1c2VyX25hbWUiOiJhZG1pbiIsImV4cCI6MTcxMjEwMzYwMH0.xxxxxx"
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
   }
   ```
-- **错误响应**（500 Internal Server Error）：
-  ```json
-  {
-    "message": "密码错误",
-    "code": 500
-  }
-  ```
-- **说明**：无需认证，登录成功后返回令牌用于后续接口调用
 
-### 2. 用户登出
-- **请求路径**：`/system/logout`
-- **请求方法**：POST
-- **示例调用URL**：`https://api.example.com/system/logout`
-- **请求头**：`Authorization: 示例Token`（需替换为实际登录获取的Token）
-- **成功响应**（200 OK）：
+#### 1.2 用户注销
+- **接口**：`POST /system/logout`
+- **描述**：用户注销，Token加入黑名单
+- **请求头**：`Authorization: Bearer {token}`
+- **响应**：
   ```json
   {
     "message": "注销成功"
   }
   ```
-- **错误响应**：
-  - 401 Unauthorized：`{"message": "token不存在", "code": 401}`
-  - 500 Internal Server Error：`{"message": "注销失败", "code": 500}`
-- **说明**：登出后令牌将被加入黑名单，无法再使用
 
-### 3. 修改密码
-- **请求路径**：`/system/password`
-- **请求方法**：POST
-- **示例调用URL**：`https://api.example.com/system/password`
-- **请求头**：`Authorization: 示例Token`（需替换为实际登录获取的Token）
-- **请求体参数**：
+#### 1.3 修改密码
+- **接口**：`POST /system/password`
+- **描述**：修改当前用户密码
+- **请求头**：`Authorization: Bearer {token}`
+- **请求体**：
   ```json
   {
-    "new_password": "654321" // 示例值
+    "new_password": "654321"
   }
   ```
-- **成功响应**（200 OK）：
+- **响应**：
   ```json
   {
     "new_password": "密码修改成功"
   }
   ```
-- **错误响应**（500 Internal Server Error）：
-  ```json
-  {
-    "message": "用户不存在",
-    "code": 500
-  }
-  ```
-- **说明**：基于当前登录用户（通过token解析用户ID）修改密码
 
-### 4. 获取所有用户
-- **请求路径**：`/system/users`
-- **请求方法**：GET
-- **示例调用URL**：`https://api.example.com/system/users`
-- **请求头**：`Authorization: 示例Token`（需替换为实际登录获取的Token）
-- **成功响应**（200 OK）：
+#### 1.4 获取所有用户
+- **接口**：`GET /system/allUsers`
+- **描述**：获取系统所有用户信息
+- **请求头**：`Authorization: Bearer {token}`
+- **响应**：
   ```json
   [
     {
@@ -149,638 +151,585 @@ https://www.postman.com/litianyi981119/biz/collection/21001135-3309c751-c3ca-4fd
       "userName": "admin",
       "nickName": "系统管理员",
       "email": "admin@example.com",
-      "password": "******", // 脱敏展示
-      "role": "admin",
-      "status": "正常",
+      "role": "0",
+      "status": "0",
       "isDelete": 0,
-      "createTime": "2024-01-01T00:00:00",
-      "updateTime": "2024-01-01T00:00:00"
+      "createTime": "2024-01-01 00:00:00",
+      "updateTime": "2024-01-01 00:00:00"
     }
   ]
   ```
-- **错误响应**（401 Unauthorized）：
+
+#### 1.5 添加用户
+- **接口**：`POST /system/users/add`
+- **描述**：管理员添加新用户
+- **请求头**：`Authorization: Bearer {token}`
+- **权限**：仅管理员（role=0）
+- **请求体**：
   ```json
   {
-    "message": "No Token/Invalid Token",
-    "code": 401
+    "userId": 110229,
+    "deptId": 1,
+    "userName": "newuser",
+    "nickName": "新用户",
+    "email": "new@example.com",
+    "password": "123456",
+    "role": "1",
+    "status": "0",
+    "isDelete": 0
   }
   ```
-- **说明**：需要认证，返回系统中所有用户信息
+- **响应**：`"用户 新用户 添加成功"`
 
-### 5. 根据部门ID获取部门信息
-- **请求路径**：`/system/dept/{deptId}`
-- **请求方法**：GET
-- **示例调用URL**：`https://api.example.com/system/dept/1`（示例deptId=1）
-- **请求头**：`Authorization: 示例Token`（需替换为实际登录获取的Token）
-- **路径参数**：`deptId`（部门ID，必填，示例值：1）
-- **成功响应**（200 OK）：
+#### 1.6 更新用户
+- **接口**：`POST /system/users/update`
+- **描述**：管理员更新用户信息
+- **请求头**：`Authorization: Bearer {token}`
+- **权限**：仅管理员（role=0）
+- **请求体**：同添加用户
+- **响应**：`"用户 新用户 更新成功"`
+
+#### 1.7 删除用户
+- **接口**：`POST /system/users/delete/{userId}`
+- **描述**：管理员删除用户（逻辑删除）
+- **请求头**：`Authorization: Bearer {token}`
+- **权限**：仅管理员（role=0）
+- **路径参数**：`userId`（用户ID）
+- **响应**：`"用户 110229 删除成功"`
+
+#### 1.8 获取部门信息
+- **接口**：`GET /system/dept/{deptId}`
+- **描述**：根据部门ID获取部门信息
+- **请求头**：`Authorization: Bearer {token}`
+- **路径参数**：`deptId`（部门ID）
+- **响应**：
   ```json
   {
     "deptId": 1,
     "deptName": "技术部",
-    "leaderId": 2,
-    "parentId": 0,
-    "status": "正常",
-    "createTime": "2024-01-01T00:00:00"
+    "leaderId": 110228,
+    "status": "0",
+    "isDelete": 0,
+    "createTime": "2024-01-01 00:00:00",
+    "updateTime": "2024-01-01 00:00:00"
   }
   ```
-- **错误响应**：
-  - 401 Unauthorized：`{"message": "No Token/Invalid Token", "code": 401}`
-  - 500 Internal Server Error：`{"message": "部门不存在", "code": 500}`
-- **说明**：需要认证，根据部门ID获取部门信息（含负责人ID等）
 
-### 6. 获取全量任务数据
-- **请求路径**：`/biz/tasks`
-- **请求方法**：GET
-- **示例调用URL**：`https://api.example.com/biz/tasks`
-- **请求头**：`Authorization: 示例Token`（需替换为实际登录获取的Token）
-- **成功响应**（200 OK）：
+### 二、任务管理接口
+
+#### 2.1 获取全量任务数据
+- **接口**：`GET /biz/tasks`
+- **描述**：根据用户角色获取任务列表
+- **请求头**：`Authorization: Bearer {token}`
+- **权限规则**：
+  - 管理员(role=0)：返回所有任务
+  - 普通用户(role=1)：返回本人负责或参与的任务
+  - 负责人(role=2)：返回本人归口负责的任务
+- **响应**：
   ```json
   [
     {
       "taskId": 1,
       "projectId": 1,
       "parentId": 0,
-      "ancestors": "0,1",
-      "phase": 1,
+      "ancestors": "0",
+      "phase": 2024,
       "taskCode": "TSK001",
       "taskName": "项目初始化",
       "level": 1,
-      "deptId": 1,
-      "principalId": 1,
-      "leaderId": 1,
-      "expTarget": "完成项目框架搭建",
-      "expLevel": "一级",
-      "expEffect": "满足业务基础运行需求",
-      "expMaterialDesc": "项目文档、代码仓库初始化",
-      "dataType": "数值型",
-      "targetValue": 100.00,
-      "currentValue": 80.00,
-      "weight": 0.5,
-      "progress": 80,
-      "status": "进行中",
-      "isDelete": 0,
-      "createTime": "2024-01-01T00:00:00",
-      "updateTime": "2024-01-02T00:00:00"
-    }
-  ]
-  ```
-- **错误响应**：
-  - 401 Unauthorized：`{"message": "No Token/Invalid Token", "code": 401}`
-  - 500 Internal Server Error：`{"message": "查询任务数据失败", "code": 500}`
-- **说明**：需要认证，返回系统中所有任务信息
-
-### 7. 根据ID获取任务
-- **请求路径**：`/biz/tasks/{taskId}`
-- **请求方法**：GET
-- **示例调用URL**：`https://api.example.com/biz/tasks/1`（示例taskId=1）
-- **请求头**：`Authorization: 示例Token`（需替换为实际登录获取的Token）
-- **路径参数**：`taskId`（任务ID，必填，示例值：1）
-- **成功响应**（200 OK）：
-  ```json
-  {
-    "taskId": 1,
-    "projectId": 1,
-    "parentId": 0,
-    "ancestors": "0,1",
-    "phase": 1,
-    "taskCode": "TSK001",
-    "taskName": "项目初始化",
-    "level": 1,
-    "deptId": 1,
-    "principalId": 1,
-    "leaderId": 1,
-    "expTarget": "完成项目框架搭建",
-    "expLevel": "一级",
-    "expEffect": "满足业务基础运行需求",
-    "expMaterialDesc": "项目文档、代码仓库初始化",
-    "dataType": "数值型",
-    "targetValue": 100.00,
-    "currentValue": 80.00,
-    "weight": 0.5,
-    "progress": 80,
-    "status": "进行中",
-    "isDelete": 0,
-    "createTime": "2024-01-01T00:00:00",
-    "updateTime": "2024-01-02T00:00:00"
-  }
-  ```
-- **错误响应**：
-  - 401 Unauthorized：`{"message": "No Token/Invalid Token", "code": 401}`
-  - 500 Internal Server Error：`{"message": "错误信息（如任务ID为空、任务不存在）", "code": 500}`
-- **说明**：需要认证，根据任务ID返回对应任务详情
-
-### 8. 获取当前任务的所有子任务
-- **请求路径**：`/biz/tasks/children`
-- **请求方法**：GET
-- **示例调用URL**：`https://api.example.com/biz/tasks/children?task_id=1`（示例task_id=1）
-- **请求头**：`Authorization: 示例Token`（需替换为实际登录获取的Token）
-- **请求参数**：`task_id`（父任务ID，必填，示例值：1）
-- **成功响应**（200 OK）：
-  ```json
-  [
-    {
-      "taskId": 2,
-      "projectId": 1,
-      "parentId": 1,
-      "ancestors": "0,1,2",
-      "phase": 1,
-      "taskCode": "TSK002",
-      "taskName": "子任务名称",
-      "level": 2,
-      "deptId": 1,
-      "principalId": 1,
-      "leaderId": 1,
-      "expTarget": "子任务预期目标",
-      "expLevel": "子任务预期级别",
-      "expEffect": "子任务预期效果",
-      "expMaterialDesc": "子任务预期材料描述",
-      "dataType": "数据类型",
-      "targetValue": 50.00,
-      "currentValue": 30.00,
-      "weight": 0.3,
-      "progress": 60,
-      "status": "进行中",
-      "isDelete": 0,
-      "createTime": "2024-01-03T00:00:00",
-      "updateTime": "2024-01-04T00:00:00"
-    }
-  ]
-  ```
-- **错误响应**：
-  - 401 Unauthorized：`{"message": "No Token/Invalid Token", "code": 401}`
-  - 500 Internal Server Error：`{"message": "错误信息（如任务ID为空、任务不存在）", "code": 500}`
-- **说明**：需要认证，根据父任务ID返回其所有子任务信息
-
-### 9. 获取当前任务的父任务
-- **请求路径**：`/biz/tasks/parent`
-- **请求方法**：GET
-- **示例调用URL**：`https://api.example.com/biz/tasks/parent?task_id=2`（示例task_id=2）
-- **请求头**：`Authorization: 示例Token`（需替换为实际登录获取的Token）
-- **请求参数**：`task_id`（子任务ID，必填，示例值：2）
-- **成功响应**（200 OK）：
-  ```json
-  {
-    "taskId": 1,
-    "projectId": 1,
-    "parentId": 0,
-    "ancestors": "0,1",
-    "phase": 1,
-    "taskCode": "TSK001",
-    "taskName": "父任务名称",
-    "level": 1,
-    "deptId": 1,
-    "principalId": 1,
-    "leaderId": 1,
-    "expTarget": "父任务预期目标",
-    "expLevel": "父任务预期级别",
-    "expEffect": "父任务预期效果",
-    "expMaterialDesc": "父任务预期材料描述",
-    "dataType": "数据类型",
-    "targetValue": 100.00,
-    "currentValue": 50.00,
-    "weight": 0.5,
-    "progress": 50,
-    "status": "进行中",
-    "isDelete": 0,
-    "createTime": "2024-01-01T00:00:00",
-    "updateTime": "2024-01-02T00:00:00"
-  }
-  ```
-- **错误响应**：
-  - 401 Unauthorized：`{"message": "No Token/Invalid Token", "code": 401}`
-  - 500 Internal Server Error：`{"message": "错误信息（如任务ID为空、任务不存在）", "code": 500}`
-- **说明**：需要认证，根据子任务ID返回其父任务信息
-
-### 10. 根据部门ID获取任务
-- **请求路径**：`/biz/tasks/dept`
-- **请求方法**：GET
-- **示例调用URL**：`https://api.example.com/biz/tasks/dept?dept_id=1`（示例dept_id=1）
-- **请求头**：`Authorization: 示例Token`（需替换为实际登录获取的Token）
-- **请求参数**：`dept_id`（部门ID，必填，示例值：1）
-- **成功响应**（200 OK）：
-  ```json
-  [
-    {
-      "taskId": 1,
-      "projectId": 1,
-      "parentId": 0,
-      "ancestors": "0,1",
-      "phase": 1,
-      "taskCode": "TSK001",
-      "taskName": "部门任务1",
-      "level": 1,
-      "deptId": 1,
-      "principalId": 1,
-      "leaderId": 1,
-      "expTarget": "部门任务目标",
-      "expLevel": "一级",
-      "expEffect": "满足部门业务需求",
-      "expMaterialDesc": "部门任务材料描述",
-      "dataType": "数值型",
-      "targetValue": 100.00,
-      "currentValue": 80.00,
-      "weight": 0.5,
-      "progress": 80,
-      "status": "进行中",
-      "isDelete": 0,
-      "createTime": "2024-01-01T00:00:00",
-      "updateTime": "2024-01-02T00:00:00"
-    }
-  ]
-  ```
-- **错误响应**：
-  - 401 Unauthorized：`{"message": "No Token/Invalid Token", "code": 401}`
-  - 500 Internal Server Error：`{"message": "获取任务失败,请检查部门id是否正确", "code": 500}`
-- **说明**：需要认证，根据部门ID返回该部门下的所有任务信息
-
-### 11. 根据用户角色获取任务
-- **请求路径**：`/biz/tasks/role`
-- **请求方法**：GET
-- **示例调用URL**：`https://api.example.com/biz/tasks/role`
-- **请求头**：`Authorization: 示例Token`（需替换为实际登录获取的Token）
-- **成功响应**（200 OK）：
-  ```json
-  [
-    {
-      "taskId": 1,
-      "projectId": 1,
-      "parentId": 0,
-      "ancestors": "0,1",
-      "phase": 1,
-      "taskCode": "TSK001",
-      "taskName": "角色可见任务",
-      "level": 1,
+      "comment": "任务描述",
       "deptId": 1,
       "deptName": "技术部",
-      "principalId": 1,
-      "principalName": "张三",
-      "leaderId": 2,
-      "leaderName": "李四",
-      "expTarget": "任务目标",
-      "expLevel": "一级",
-      "expEffect": "任务效果",
-      "expMaterialDesc": "任务材料描述",
-      "dataType": "数值型",
+      "auditorId": 110228,
+      "auditorName": "管理员",
+      "principalId": 110228,
+      "principalName": "管理员",
+      "leaderId": 110228,
+      "leaderName": "管理员",
+      "expTarget": "完成框架搭建",
+      "expLevel": "国家级",
+      "expEffect": "提升效率",
+      "expMaterialDesc": "文档材料",
+      "dataType": "1",
       "targetValue": 100.00,
       "currentValue": 80.00,
       "weight": 0.5,
       "progress": 80,
-      "status": "进行中",
-      "createTime": "2024-01-01T00:00:00",
-      "updateTime": "2024-01-02T00:00:00"
+      "status": "1",
+      "isDelete": 0,
+      "createTime": "2024-01-01 00:00:00",
+      "updateTime": "2024-01-02 00:00:00"
     }
   ]
   ```
-- **错误响应**：
-  - 401 Unauthorized：`{"message": "No Token/Invalid Token", "code": 401}`
-  - 500 Internal Server Error：`{"message": "用户角色错误", "code": 500}`
-- **说明**：需要认证，根据用户角色返回对应权限的任务列表（角色为0返回所有任务，角色为1返回leaderId及本人的任务，角色为2返回本人的任务）
 
-### 12. 提交审批材料
-- **请求路径**：`/biz/submit`
-- **请求方法**：POST
-- **示例调用URL**：`https://api.example.com/biz/submit`
-- **请求头**：`Authorization: 示例Token`（需替换为实际登录获取的Token）
-- **请求体参数**：
+#### 2.2 根据ID获取任务
+- **接口**：`GET /biz/tasks/{taskId}`
+- **描述**：根据任务ID获取任务详情
+- **请求头**：`Authorization: Bearer {token}`
+- **路径参数**：`taskId`（任务ID）
+- **响应**：单个任务对象（同2.1格式）
+
+#### 2.3 获取所有子任务
+- **接口**：`GET /biz/tasks/children`
+- **描述**：获取当前任务的所有子任务
+- **请求头**：`Authorization: Bearer {token}`
+- **查询参数**：`task_id`（父任务ID）
+- **响应**：任务列表（同2.1格式）
+
+#### 2.4 获取父任务
+- **接口**：`GET /biz/tasks/parent`
+- **描述**：获取当前任务的父任务
+- **请求头**：`Authorization: Bearer {token}`
+- **查询参数**：`task_id`（子任务ID）
+- **响应**：单个任务对象（同2.1格式）
+
+#### 2.5 根据部门ID获取任务
+- **接口**：`GET /biz/tasks/dept`
+- **描述**：根据部门ID获取该部门所有任务
+- **请求头**：`Authorization: Bearer {token}`
+- **查询参数**：`dept_id`（部门ID）
+- **响应**：任务列表（同2.1格式）
+
+#### 2.6 添加任务
+- **接口**：`POST /biz/tasks/manage/add`
+- **描述**：添加新任务（仅限三级任务）
+- **请求头**：`Authorization: Bearer {token}`
+- **请求体**：
   ```json
   {
-    "task_id": 3, // 三级任务ID，示例值
-    "file_id": 1, // 已上传的文件ID，示例值
-    "reported_value": "100", // 申报值，示例值
-    "data_type": "数值型" // 数据类型，示例值
+    "taskId": null,
+    "projectId": 1,
+    "parentId": 2,
+    "ancestors": "0,1,2",
+    "phase": 2024,
+    "taskCode": "TSK003",
+    "taskName": "三级任务示例",
+    "level": 3,
+    "comment": "任务描述",
+    "deptId": 1,
+    "auditorId": 110228,
+    "principalId": 110228,
+    "leaderId": 110229,
+    "expTarget": "完成具体实施",
+    "expLevel": "省级",
+    "expEffect": "实现目标",
+    "expMaterialDesc": "实施材料",
+    "dataType": "1",
+    "targetValue": 50.00,
+    "currentValue": 0.00,
+    "weight": 0.3,
+    "progress": 0,
+    "status": "0"
   }
   ```
-- **成功响应**（200 OK）：
-  ```json
-  "提交成功，下一位审批人是管理员（ID：3）"
-  ```
-- **错误响应**（500 Internal Server Error）：
+- **响应**：`"任务三级任务示例添加成功"`
+
+#### 2.7 更新任务
+- **接口**：`POST /biz/tasks/manage/update`
+- **描述**：更新任务信息
+- **请求头**：`Authorization: Bearer {token}`
+- **请求体**：同添加任务（需包含taskId）
+- **响应**：`"任务三级任务示例更新成功"`
+
+#### 2.8 完成任务
+- **接口**：`POST /biz/tasks/manage/finish/{taskId}`
+- **描述**：管理员标记任务为完成状态
+- **请求头**：`Authorization: Bearer {token}`
+- **权限**：仅管理员（role=0）
+- **路径参数**：`taskId`（任务ID）
+- **响应**：`"任务三级任务示例已完成"`
+
+### 三、审批流程接口
+
+#### 3.1 提交审批材料
+- **接口**：`POST /biz/submit`
+- **描述**：提交任务审批材料，启动审批流程
+- **请求头**：`Authorization: Bearer {token}`
+- **请求体**：
   ```json
   {
-    "message": "该任务不是三级任务,无法提交", // 可能的错误信息，根据实际情况变化
-    "code": 500
+    "task_id": 3,
+    "reported_value": 100,
+    "data_type": "1",
+    "file_id": 1,
+    "comment": "备注信息"
   }
   ```
-- **说明**：需要认证，仅允许提交三级任务的审批材料，文件格式限pdf、doc、docx
+- **响应**：`"提交成功，下一位审批人是张三"`
 
-### 13. 获取审批单
-- **请求路径**：`/biz/audit/{taskId}`
-- **请求方法**：GET
-- **示例调用URL**：`https://api.example.com/biz/audit/3`（示例taskId=3）
-- **请求头**：`Authorization: 示例Token`（需替换为实际登录获取的Token）
-- **路径参数**：`taskId`（任务ID，必填，示例值：3）
-- **成功响应**（200 OK）：
+#### 3.2 获取审批单
+- **接口**：`GET /biz/audit/{taskId}`
+- **描述**：根据任务ID获取当前用户的审批单
+- **请求头**：`Authorization: Bearer {token}`
+- **路径参数**：`taskId`（任务ID）
+- **响应**：
   ```json
   [
     {
       "subId": 1,
       "taskId": 3,
-      "fileId": 2,
-      "reportedValue": "100",
-      "dataType": "数值型",
-      "submitBy": 1,
+      "fileId": 1,
+      "filename": "report.pdf",
+      "reportedValue": 100.00,
+      "dataType": "1",
+      "submitBy": 110229,
       "submitDeptId": 1,
       "manageDeptId": 1,
-      "submitTime": "2024-01-05T00:00:00",
+      "submitTime": "2024-01-05 00:00:00",
       "fileSuffix": "pdf",
       "flowStatus": 10,
-      "currentHandlerId": 2,
+      "currentHandlerId": 110228,
       "isDelete": 0
     }
   ]
   ```
-- **错误响应**：
-  - 401 Unauthorized：`{"message": "No Token/Invalid Token", "code": 401}`
-  - 500 Internal Server Error：`{"message": "获取审批单失败,请检查任务id是否正确", "code": 500}`
-- **说明**：需要认证，根据任务ID返回当前用户作为处理人的审批单信息
 
-### 14. 获取待我审批的审批单
-- **请求路径**：`/biz/audit/todo`
-- **请求方法**：GET
-- **示例调用URL**：`https://api.example.com/biz/audit/todo`
-- **请求头**：`Authorization: 示例Token`（需替换为实际登录获取的Token）
-- **成功响应**（200 OK）：
+#### 3.3 获取待我审批列表
+- **接口**：`GET /biz/audit/todo`
+- **描述**：获取当前用户待处理的审批单
+- **请求头**：`Authorization: Bearer {token}`
+- **响应**：审批单列表（同3.2格式）
+
+#### 3.4 获取任务全部审批单
+- **接口**：`GET /biz/audit/task/{taskId}`
+- **描述**：获取指定任务的全部审批记录
+- **请求头**：`Authorization: Bearer {token}`
+- **权限**：管理员/任务负责人/归口负责人/提交人
+- **路径参数**：`taskId`（任务ID）
+- **响应**：审批单列表（同3.2格式）
+
+#### 3.5 获取审批操作日志
+- **接口**：`GET /biz/audit/logs/{subId}`
+- **描述**：获取审批单的操作日志
+- **请求头**：`Authorization: Bearer {token}`
+- **路径参数**：`subId`（提交ID）
+- **响应**：
   ```json
   [
     {
+      "logId": 1,
       "subId": 1,
-      "taskId": 3,
-      "fileId": 2,
-      "reportedValue": "100",
-      "dataType": "数值型",
-      "submitBy": 1,
-      "submitDeptId": 1,
-      "manageDeptId": 1,
-      "submitTime": "2024-01-05T00:00:00",
-      "fileSuffix": "pdf",
-      "flowStatus": 10,
-      "currentHandlerId": 2,
-      "isDelete": 0
+      "operatorId": 110229,
+      "actionType": "提交",
+      "preStatus": 0,
+      "postStatus": 10,
+      "comment": "提交任务",
+      "createTime": "2024-01-05 00:00:00"
     }
   ]
   ```
-- **错误响应**：
-  - 401 Unauthorized：`{"message": "No Token/Invalid Token", "code": 401}`
-  - 500 Internal Server Error：`{"message": "获取待审批单失败", "code": 500}`
-- **说明**：需要认证，根据当前用户ID（current_handler_id）返回待处理的审批单信息
 
-### 15. 根据任务ID查询全部审批单
-- **请求路径**：`/biz/audit/task/{taskId}`
-- **请求方法**：GET
-- **示例调用URL**：`https://api.example.com/biz/audit/task/3`（示例taskId=3）
-- **请求头**：`Authorization: 示例Token`（需替换为实际登录获取的Token）
-- **路径参数**：`taskId`（任务ID，必填，示例值：3）
-- **成功响应**（200 OK）：
+#### 3.6 审批操作
+- **接口**：`POST /biz/audit`
+- **描述**：审批通过或退回
+- **请求头**：`Authorization: Bearer {token}`
+- **请求体**：
   ```json
-  [
-    {
-      "subId": 1,
-      "taskId": 3,
-      "fileId": 2,
-      "reportedValue": "100",
-      "dataType": "数值型",
-      "submitBy": 1,
-      "submitDeptId": 1,
-      "manageDeptId": 1,
-      "submitTime": "2024-01-05T00:00:00",
-      "fileSuffix": "pdf",
-      "flowStatus": 10,
-      "currentHandlerId": 2,
-      "isDelete": 0
-    }
-  ]
+  {
+    "sub_id": 1,
+    "is_pass": true,
+    "title": "审批意见标题",
+    "content": "详细审批意见"
+  }
   ```
-- **错误响应**：
-  - 401 Unauthorized：`{"message": "No Token/Invalid Token", "code": 401}`
-  - 500 Internal Server Error：`{"message": "无权限查看该任务的审批记录", "code": 500}`
-- **说明**：需要认证，返回指定任务的所有审批单记录（管理员/任务负责人/归口负责人或本人提交的审批单可查看）
+- **响应**：
+  - 通过：`"已审批，下一位审批人为李四"`
+  - 退回：`"已退回，退回到王五"`
 
-### 16. 文件上传
-- **请求路径**：`/system/upload/{task_id}`
-- **请求方法**：POST
-- **示例调用URL**：`https://api.example.com/system/upload/3`（示例task_id=3）
-- **请求头**：`Authorization: 示例Token`（需替换为实际登录获取的Token）
-- **路径参数**：`task_id`（任务ID，必填，示例值：3）
-- **请求体参数**：`file`（文件，form-data格式，必填）
-- **成功响应**（200 OK）：
+#### 3.7 撤回提交
+- **接口**：`POST /biz/drawback/{taskId}`
+- **描述**：撤回已提交的审批申请
+- **请求头**：`Authorization: Bearer {token}`
+- **权限**：仅提交人
+- **路径参数**：`taskId`（任务ID）
+- **响应**：`"已撤回提交"`
+
+#### 3.8 重新提交材料
+- **接口**：`POST /biz/resub`
+- **描述**：重新提交被退回的审批材料
+- **请求头**：`Authorization: Bearer {token}`
+- **请求体**：
+  ```json
+  {
+    "sub_id": 1,
+    "reported_value": 95,
+    "data_type": "1",
+    "file_id": 2
+  }
+  ```
+- **响应**：`"已重新提交,审核人为张三"`
+
+#### 3.9 获取上次审批文件
+- **接口**：`GET /biz/audit/file/{taskId}`
+- **描述**：获取任务上一次审批通过的文件
+- **请求头**：`Authorization: Bearer {token}`
+- **路径参数**：`taskId`（任务ID）
+- **响应**：
+  ```json
+  {
+    "fileId": 1,
+    "filename": "last_report.pdf",
+    "filepath": "/uploads/last_report.pdf"
+  }
+  ```
+
+### 四、文件管理接口
+
+#### 4.1 上传文件
+- **接口**：`POST /system/upload/{task_id}`
+- **描述**：上传文件并关联任务
+- **请求头**：`Authorization: Bearer {token}`
+- **Content-Type**：`multipart/form-data`
+- **路径参数**：`task_id`（任务ID）
+- **表单参数**：`file`（文件，支持pdf/doc/docx）
+- **响应**：
   ```json
   {
     "fileId": 1,
     "filename": "report.pdf",
-    "filePath": "/uploads/report.pdf"
+    "filepath": "/uploads/report.pdf"
   }
   ```
-- **错误响应**（500 Internal Server Error）：
+
+#### 4.2 下载文件
+- **接口**：`GET /system/download/{file_id}`
+- **描述**：根据文件ID下载文件
+- **请求头**：`Authorization: Bearer {token}`
+- **路径参数**：`file_id`（文件ID）
+- **响应**：文件流
+
+### 五、通知管理接口
+
+#### 5.1 发送通知
+- **接口**：`POST /system/notice`
+- **描述**：发送系统通知
+- **请求头**：`Authorization: Bearer {token}`
+- **请求体**：
   ```json
   {
-    "message": "文件格式错误", // 支持格式：pdf、doc、docx
-    "code": 500
+    "to_user_id": 110229,
+    "type": "1",
+    "trigger_event": "任务审核",
+    "title": "新的审批单",
+    "content": "您有新的任务需要审核",
+    "source_type": "0",
+    "source_id": 3
   }
   ```
-- **说明**：需要认证，用于上传审批材料等文件，支持pdf、doc、docx格式
+- **响应**：`"发送成功"`
 
-### 17. 根据文件ID下载文件
-- **请求路径**：`/system/download/{file_id}`
-- **请求方法**：GET
-- **示例调用URL**：`https://api.example.com/system/download/1`（示例file_id=1）
-- **请求头**：`Authorization: 示例Token`（需替换为实际登录获取的Token）
-- **路径参数**：`file_id`（文件ID，必填，示例值：1）
-- **成功响应**（200 OK）：文件流（浏览器自动下载）
-- **错误响应**：
-  - 401 Unauthorized：`{"message": "No Token/Invalid Token", "code": 401}`
-  - 500 Internal Server Error：`{"message": "文件不存在", "code": 500}`
-- **说明**：需要认证，根据文件ID下载对应的文件
-
-### 18. 发送通知
-- **请求路径**：`/system/notice`
-- **请求方法**：POST
-- **示例调用URL**：`https://api.example.com/system/notice`
-- **请求头**：`Authorization: 示例Token`（需替换为实际登录获取的Token）
-- **请求体参数**：
-  ```json
-  {
-    "to_user_id": 2, // 接收人ID，示例值
-    "type": "审批通知", // 通知类型，示例值
-    "trigger_event": "审批单提交", // 触发事件，示例值
-    "title": "新的审批单待处理", // 通知标题，示例值
-    "content": "您有一条新的审批单（任务ID：3）需要处理，请及时操作", // 通知内容，示例值
-    "source_id": 1 // 关联业务ID，示例值
-  }
-  ```
-- **成功响应**（200 OK）：
-  ```json
-  "发送成功"
-  ```
-- **错误响应**（500 Internal Server Error）：
-  ```json
-  {
-    "message": "发送失败",
-    "code": 500
-  }
-  ```
-- **说明**：需要认证，用于向指定用户发送通知，支持审批、任务、系统类通知类型
-
-### 19. 查看当前用户收到的通知
-- **请求路径**：`/system/notice`
-- **请求方法**：GET
-- **示例调用URL**：`https://api.example.com/system/notice`
-- **请求头**：`Authorization: 示例Token`（需替换为实际登录获取的Token）
-- **成功响应**（200 OK）：
+#### 5.2 查看通知
+- **接口**：`GET /system/notice`
+- **描述**：查看当前用户收到的通知
+- **请求头**：`Authorization: Bearer {token}`
+- **响应**：
   ```json
   [
     {
       "noticeId": 1,
-      "fromUserId": 1,
-      "toUserId": 2,
-      "type": "审批通知",
-      "triggerEvent": "审批单提交",
-      "title": "新的审批单待处理",
-      "content": "您有一条新的审批单（任务ID：3）需要处理，请及时操作",
-      "sourceType": "1",
-      "sourceId": 1,
-      "isRead": "0", // 0=未读，1=已读
+      "fromUserId": 110228,
+      "toUserId": 110229,
+      "type": "1",
+      "triggerEvent": "任务审核",
+      "title": "新的审批单",
+      "content": "您有新的任务需要审核",
+      "sourceType": "0",
+      "sourceId": 3,
+      "isRead": "0",
       "isDelete": 0,
-      "createTime": "2024-01-06T00:00:00"
+      "createTime": "2024-01-06 00:00:00"
     }
   ]
   ```
-- **错误响应**（401 Unauthorized）：
-  ```json
-  {
-    "message": "No Token/Invalid Token",
-    "code": 401
-  }
-  ```
-- **说明**：需要认证，返回当前登录用户收到的所有通知信息，按创建时间倒序排列
 
-### 20. 标记通知为已读
-- **请求路径**：`/system/notice/{notice_id}`
-- **请求方法**：POST
-- **示例调用URL**：`https://api.example.com/system/notice/1`（示例notice_id=1）
-- **请求头**：`Authorization: 示例Token`（需替换为实际登录获取的Token）
-- **路径参数**：`notice_id`（通知ID，必填，示例值：1）
-- **成功响应**（200 OK）：
-  ```json
-  "已读"
-  ```
-- **错误响应**（500 Internal Server Error）：
-  ```json
-  {
-    "message": "标记失败",
-    "code": 500
-  }
-  ```
-- **说明**：需要认证，将指定通知标记为已读状态
+#### 5.3 标记已读
+- **接口**：`POST /system/notice/{notice_id}`
+- **描述**：将通知标记为已读
+- **请求头**：`Authorization: Bearer {token}`
+- **路径参数**：`notice_id`（通知ID）
+- **响应**：`"已读"`
 
-### 21. 发送站内预警
-- **请求路径**：`/system/alert`
-- **请求方法**：POST
-- **示例调用URL**：`https://api.example.com/system/alert`
-- **请求头**：`Authorization: 示例Token`（需替换为实际登录获取的Token）
-- **请求体参数**：
+#### 5.4 发送预警
+- **接口**：`POST /system/alert`
+- **描述**：发送站内预警信息
+- **请求头**：`Authorization: Bearer {token}`
+- **请求体**：
   ```json
   {
-    "to_user_nick_name": "张三", // 接收人昵称，示例值
-    "title": "任务预警", // 预警标题，示例值
-    "content": "任务ID：3 进度滞后，请及时处理", // 预警内容，示例值
-    "source_id": 3 // 关联业务ID（如任务ID），示例值
+    "to_user_nick_name": "张三",
+    "title": "任务预警",
+    "content": "任务进度滞后",
+    "source_id": 3
   }
   ```
-- **成功响应**（200 OK）：
-  ```json
-  "发送成功"
-  ```
-- **错误响应**（500 Internal Server Error）：
-  ```json
-  {
-    "message": "发送失败",
-    "code": 500
-  }
-  ```
-- **说明**：需要认证，用于向指定用户发送预警类通知（基于用户昵称匹配接收人）
+- **响应**：`"发送成功"`
 
-### 22. 审批任务
-- **请求路径**：`/biz/audit`
-- **请求方法**：POST
-- **示例调用URL**：`https://api.example.com/biz/audit`
-- **请求头**：`Authorization: 示例Token`（需替换为实际登录获取的Token）
-- **请求体参数**：
-  ```json
-  {
-    "sub_id": 1, // 审批单ID，示例值
-    "is_pass": true, // 是否通过，true为通过，false为退回
-    "opinion": "同意该审批单内容，建议加快推进任务进度" // 审批意见，示例值
-  }
-  ```
-- **成功响应**（200 OK）：
-  ```json
-  {
-    "message": "已审批，下一位审批人为管理员（ID：3）",
-    "next_handler_id": 3 // 下一位处理人ID（退回时无此字段）
-  }
-  ```
-  退回场景响应：
-  ```json
-  {
-    "message": "已退回，退回到提交人（ID：1）",
-    "back_to_id": 1
-  }
-  ```
-- **错误响应**：
-  - 401 Unauthorized：`{"message": "No Token/Invalid Token", "code": 401}`
-  - 500 Internal Server Error：
-    ```json
-    {
-      "message": "该审批单不存在或已处理",
-      "code": 500
-    }
-    ```
-- **说明**：
-  1. 需要认证，当前用户需为审批单的当前处理人才能进行审批操作
-  2. 审批通过会流转到下一处理人，审批退回会返回到提交人，并同步发送通知
-  3. 审批单流转至最后一位处理人并通过后，审批单状态标记为"已完成"；退回后状态标记为"已退回"
+### 六、标志性成果接口
 
-### 23. 重新提交审批材料
-- **请求路径**：`/biz/resubmit`
-- **请求方法**：POST
-- **示例调用URL**：`https://api.example.com/biz/resubmit`
-- **请求头**：`Authorization: 示例Token`（需替换为实际登录获取的Token）
-- **请求体参数**：
+#### 6.1 查询单个成果
+- **接口**：`GET /achievement/{achId}`
+- **描述**：根据ID查询标志性成果
+- **请求头**：`Authorization: Bearer {token}`
+- **路径参数**：`achId`（成果ID）
+- **响应**：
   ```json
   {
-    "sub_id": 1, // 原审批单ID，示例值
-    "file_id": 2, // 重新上传的文件ID，示例值
-    "reported_value": "95", // 重新申报值，示例值
-    "data_type": "数值型" // 数据类型，示例值
+    "achId": 1,
+    "category": 1,
+    "level": "国家级",
+    "achName": "国家级教学成果奖",
+    "department": "教育部",
+    "gotTime": "2024-01-01 00:00:00",
+    "deptId": 1,
+    "fileId": 1,
+    "comment": "备注信息",
+    "isCompetition": 0,
+    "teDengJiang": 0,
+    "yiDengJiang": 1,
+    "erDengJiang": 0,
+    "sanDengJiang": 0,
+    "jinJiang": 0,
+    "yinJiang": 0,
+    "tongJiang": 0,
+    "youShengJiang": 0,
+    "budDengDengCi": 0,
+    "createBy": 110228,
+    "isDelete": 0,
+    "createTime": "2024-01-01 00:00:00"
   }
   ```
-- **成功响应**（200 OK）：
-  ```json
-  "重新提交成功，审批单已流转至第一位处理人"
-  ```
-- **错误响应**：
-  - 401 Unauthorized：`{"message": "No Token/Invalid Token", "code": 401}`
-  - 500 Internal Server Error：
-    ```json
-    {
-      "message": "该审批单未被退回，无法重新提交",
-      "code": 500
-    }
-    ```
-- **说明**：
-  1. 需要认证，仅允许审批单提交人对"已退回"状态的审批单进行重新提交
-  2. 重新提交后审批单状态重置为"待处理"，流转至第一位处理人，并同步发送通知
-  3. 重新提交时可更新申报值和审批材料文件
 
-## 通用错误码说明
-| 状态码 | 说明                             |
-| ------ | -------------------------------- |
-| 401    | 未携带token、token无效或已过期   |
-| 500    | 服务器内部错误（如业务逻辑异常） |
+#### 6.2 查询所有成果
+- **接口**：`GET /achievement/`
+- **描述**：查询所有未删除的标志性成果
+- **请求头**：`Authorization: Bearer {token}`
+- **响应**：成果列表（同6.1格式）
 
-## 认证说明
-- 除登录接口（`/system/login`）外，所有接口均需要在请求头携带`Authorization`令牌
-- 令牌有效期为1小时（从生成时间开始计算）
-- 令牌无效时需重新登录获取新令牌
-- Token格式要求：请求头中需携带 `Authorization: Bearer {token}`（示例：`Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.xxxxxx`）
+#### 6.3 新增成果
+- **接口**：`POST /achievement/add`
+- **描述**：新增标志性成果
+- **请求头**：`Authorization: Bearer {token}`
+- **请求体**：同6.1响应格式（不含achId）
+- **响应**：`"标志性成果「国家级教学成果奖」添加成功，成果ID：1"`
+
+#### 6.4 更新成果
+- **接口**：`POST /achievement/update/{id}`
+- **描述**：更新标志性成果
+- **请求头**：`Authorization: Bearer {token}`
+- **路径参数**：`id`（成果ID）
+- **请求体**：同6.1响应格式
+- **响应**：`"标志性成果「国家级教学成果奖」修改成功"`
+
+#### 6.5 删除成果
+- **接口**：`POST /achievement/delete/{achId}`
+- **描述**：逻辑删除标志性成果
+- **请求头**：`Authorization: Bearer {token}`
+- **路径参数**：`achId`（成果ID）
+- **响应**：`"标志性成果「国家级教学成果奖」删除成功"`
+
+### 七、定时任务接口
+
+#### 7.1 触发月度部门负责人提醒
+- **接口**：`POST /scheduled/month_leader_trigger`
+- **描述**：手动触发月度部门负责人提醒（原自动每月1号9:00执行）
+- **请求头**：`Authorization: Bearer {token}`
+- **响应**：`"向X名用户发送月度提醒成功"`
+
+#### 7.2 触发月度审核人提醒
+- **接口**：`POST /scheduled/month_auditor_trigger`
+- **描述**：手动触发月度审核人提醒（原自动每月1号9:00执行）
+- **请求头**：`Authorization: Bearer {token}`
+- **响应**：`"向X名用户发送月度提醒成功"`
+
+#### 7.3 触发年度提醒
+- **接口**：`POST /scheduled/year_trigger`
+- **描述**：手动触发年度提醒（原自动每年1月1号10:00执行）
+- **请求头**：`Authorization: Bearer {token}`
+- **响应**：`"年度提醒完成，成功发送 X 条提醒"`
+
+#### 7.4 更新任务状态
+- **接口**：`POST /scheduled/update_task_status`
+- **描述**：手动触发任务状态更新（原自动每年1月1号10:00执行）
+- **请求头**：`Authorization: Bearer {token}`
+- **响应**：无
+
+## 通用说明
+
+### 状态码说明
+| 状态码 | 说明 |
+|--------|------|
+| 200 | 请求成功 |
+| 401 | 未认证或Token无效 |
+| 403 | 权限不足 |
+| 500 | 服务器内部错误 |
+
+### 认证说明
+- 除登录接口外，所有接口需要在请求头携带Token
+- Token格式：`Authorization: Bearer {token}`
+- Token有效期为1小时
+- 注销后Token会被加入黑名单
+
+### 权限说明
+| 角色值 | 角色 | 权限说明 |
+|--------|------|----------|
+| 0 | 管理员 | 所有权限 |
+| 1 | 普通用户 | 本人任务相关权限 |
+| 2 | 负责人 | 归口负责任务权限 |
+
+### 审批流程状态
+| 状态值 | 状态说明 |
+|--------|----------|
+| 0 | 草稿 |
+| 10 | 待部门负责人审批 |
+| 20 | 待归口负责人审批 |
+| 30 | 待管理员审批 |
+| 40 | 已归档 |
+| -10 | 被部门负责人退回 |
+| -20 | 被归口负责人退回 |
+| -30 | 被管理员退回 |
+
+### 任务状态
+| 状态值 | 状态说明 |
+|--------|----------|
+| 0 | 未开始 |
+| 1 | 进行中 |
+| 2 | 审核中 |
+| 3 | 已完成 |
+
+### 数据类型
+| 类型值 | 类型说明 |
+|--------|----------|
+| 0 | 对指标没有影响 |
+| 1 | 数值累加 |
+| 2 | 百分比取大 |
+
+## 注意事项
+
+1. **文件格式限制**：仅支持pdf、doc、docx格式
+2. **任务层级**：系统采用三级任务结构，只能提交三级任务的审批
+3. **审批流程**：部门负责人→归口负责人→管理员三级审批
+4. **定时任务**：系统内置定时提醒功能，也可手动触发
+5. **数据安全**：敏感操作需管理员权限，所有操作记录日志
+
+## 更新日志
+
+### v2.0 (2026-01-31)
+- 新增标志性成果管理接口
+- 新增定时任务触发接口
+- 完善任务管理接口
+- 补充完整审批流程接口
+- 规范接口文档格式
+
+### v1.2 (2025-12-26)
+- 修改登录方式为user_id登录
+- 调整首次审批人为任务AuditorId
+
+### v1.1 (2025-12-21)
+- 新增审批流程相关接口
+- 新增文件管理接口
+- 新增通知系统接口
+
+### v1.0 (2025-12-11)
+- 基础用户认证功能
+- 基础任务管理功能
