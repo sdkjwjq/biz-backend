@@ -9,12 +9,19 @@ import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.io.PrintWriter;
 
+/**
+ * 用户角色拦截器：验证用户角色权限
+ * 仅允许管理员角色（role=0）访问受保护接口
+ */
 @Component
 public class UserRoleInterceptor implements HandlerInterceptor {
 
-    // 仅允许角色0访问（管理员）
+    /** 允许访问的角色：0-管理员 */
     private static final String ALLOWED_ROLE = "0";
-    //    角色验证,待调试, 待完善
+
+    /**
+     * 角色验证，待调试，待完善
+     */
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         // 1. 从请求头解析Token获取角色（你的真实逻辑）

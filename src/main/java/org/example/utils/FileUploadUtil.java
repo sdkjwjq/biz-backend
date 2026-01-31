@@ -10,11 +10,25 @@ import java.nio.file.Paths;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * 文件上传工具类
+ */
 public class FileUploadUtil {
+    /** 上传目录 */
     private static final String UPLOAD_DIR = System.getProperty("user.dir") + "/uploads/";
+
+    /** 非法字符正则 */
     private static final Pattern INVALID_CHARS = Pattern.compile("[\\\\/:*?\"<>|]");
+
+    /** 重复文件模式正则 */
     private static final Pattern DUPLICATE_PATTERN = Pattern.compile("(.+?)(?:\\((\\d+)\\))?(\\.[^.]*)?$");
 
+    /**
+     * 上传文件
+     * @param file 文件对象
+     * @return 文件上传数据传输对象
+     * @throws IOException IO异常
+     */
     public static FileUploadDTO upload(MultipartFile file) throws IOException {
         if (file.isEmpty()) {
             throw new RuntimeException("上传文件不能为空");
@@ -58,6 +72,9 @@ public class FileUploadUtil {
      * file.txt -> file(1).txt (file.txt已存在)
      * file(1).txt -> file(2).txt (file(1).txt已存在)
      * file(2).txt -> file(3).txt (file(2).txt已存在)
+     * @param uploadPath 上传路径
+     * @param fileName 文件名
+     * @return 唯一文件名
      */
     private static String getUniqueFileName(Path uploadPath, String fileName) {
         // 解析文件名，提取基础名称、数字后缀和扩展名

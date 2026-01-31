@@ -23,9 +23,13 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
+/**
+ * 业务服务类：处理所有业务逻辑
+ */
 @Service
 public class BizService {
 
+    /** 管理员ID */
     private Long ADMIN_ID = 110228L;
 
     @Autowired
@@ -34,14 +38,19 @@ public class BizService {
     @Autowired
     private SysMapper sysMapper;
 
-
-
-    // 获取全部任务
+    /**
+     * 获取全部任务
+     * @return 任务列表
+     */
     public List<BizTask> getAllTasks() {
         return bizMapper.getAllTasks();
     }
 
-    // 根据id获取任务
+    /**
+     * 根据id获取任务
+     * @param taskId 任务ID
+     * @return 任务对象
+     */
     public BizTask getTaskById(Long taskId) {
         try {
             if (taskId == null) {
@@ -56,7 +65,11 @@ public class BizService {
         }
     }
 
-    // 获取当前任务的所有子任务
+    /**
+     * 获取当前任务的所有子任务
+     * @param taskId 任务ID
+     * @return 子任务列表
+     */
     public List<BizTask> getAllChildrenTasks(Long taskId) {
         try {
             if (taskId == null) {
@@ -71,7 +84,11 @@ public class BizService {
         }
     }
 
-    // 获取当前任务的父任务
+    /**
+     * 获取当前任务的父任务
+     * @param taskId 任务ID
+     * @return 父任务对象
+     */
     public BizTask getParentTask(Long taskId) {
         try {
             if (taskId == null) {
@@ -87,6 +104,11 @@ public class BizService {
         }
     }
 
+    /**
+     * 根据部门ID获取任务
+     * @param deptId 部门ID
+     * @return 任务列表
+     */
     public List<BizTask> getTasksByDeptId(Long deptId) {
         try {
             return bizMapper.getTasksByDeptId(deptId);
@@ -95,7 +117,12 @@ public class BizService {
         }
     }
 
-    // 根据用户角色获取任务，角色为0和2返回所有任务，角色为1返回leaderid以及为自己的任务
+    /**
+     * 根据用户角色获取任务
+     * 角色为0和2返回所有任务，角色为1返回leaderid以及为自己的任务
+     * @param userId 用户ID
+     * @return 任务视图对象列表
+     */
     public List<BizTaskVo> getTasksByUserRole(Long userId) {
         try {
             SysUser sysUser = sysMapper.getUserById(userId);
@@ -117,10 +144,14 @@ public class BizService {
         }
     }
 
-//    添加任务
+    /**
+     * 添加任务
+     * 只能添加三级任务,根据parent字段判断二级任务是否正确
+     * @param taskDTO 任务数据
+     */
     public void addTask(BizTaskDTO taskDTO) {
         try {
-//            只能添加三级任务,根据parent字段判断二级任务是否正确
+            // 只能添加三级任务,根据parent字段判断二级任务是否正确
             if (bizMapper.getTaskById(taskDTO.getParentId()) == null) {
                 throw new RuntimeException("该二级任务不存在");
             }
@@ -144,7 +175,10 @@ public class BizService {
         }
     }
 
-//更新任务
+    /**
+     * 更新任务
+     * @param taskDTO 任务数据
+     */
     public void updateTask(BizTaskDTO taskDTO) {
         try {
             if (bizMapper.getTaskById(taskDTO.getTaskId()) == null) {
@@ -158,8 +192,52 @@ public class BizService {
         }
     }
 
+    /**
+     * 完成任务
+     * @param taskId 任务ID
+     * @param userId 用户ID
+     * @return 操作结果
+     */
+    @Transactional
+    public String finishTask(Long taskId, Long userId){
+        try {
+            if (userId == null) {
+                throw new RuntimeException("用户ID为空");
+            }
+            SysUser sysUser = sysMapper.getUserById(userId);
+            if (sysUser == null) {
+                throw new RuntimeException("用户不存在");
+            }
+            if (!sysUser.getRole().equals("0")) {
+                throw new RuntimeException("仅限管理员访问");
+            }
+            if (bizMapper.getTaskById(taskId) == null) {
+                throw new RuntimeException("该任务不存在");
+            }
+            if (bizMapper.getTaskById(taskId).getStatus().equals("2")) {
+                throw new RuntimeException("该任务正在审核中，请先完成审核");
+            }
+            if (bizMapper.getTaskById(taskId).getStatus().equals("3")) {
+                throw new RuntimeException("该任务已完成，请勿重复提交");
+            }
+            BizTask taskById = bizMapper.getTaskById(taskId);
+            taskById.setStatus("3");
+            taskById.setCurrentValue(taskById.getTargetValue());
+            bizMapper.updateTask(taskById);
+            sendNotice(userId, taskById.getLeaderId(), "任务完成", "任务已完成", "任务"+taskById.getTaskName()+"已完成", "0", taskId);
+            createAuditLog(taskId, userId, "任务完成", 1, 3, "任务完成");
+            return "任务"+taskById.getTaskName()+"已完成";
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
 
-
+    /**
+     * 提交材料
+     * @param bizSubDTO 提交数据
+     * @param userId 用户ID
+     * @return 操作结果
+     */
     @Transactional
     public String submitMaterial(BizSubDTO bizSubDTO, Long userId) {
         try {
@@ -206,7 +284,7 @@ public class BizService {
             bizMaterialSubmission.setSubmitTime(new Date());
             bizMaterialSubmission.setFileSuffix(sysMapper.getFileByName(sysFile.getFileName()).getFileSuffix());
             bizMaterialSubmission.setFlowStatus(10);
-            //已修改，修改内容及原因：将部门审核人从任务的AuditorId改为提交人所在部门的负责人，确保flowStatus=10时审核人能正确收到通知
+            // 已修改，修改内容及原因：将部门审核人从任务的AuditorId改为提交人所在部门的负责人，确保flowStatus=10时审核人能正确收到通知
             // flowStatus = 10 表示"待[所在部门]审批"
             Long handlerId = task.getAuditorId();
             bizMaterialSubmission.setCurrentHandlerId(handlerId);
@@ -226,7 +304,7 @@ public class BizService {
             }
 
             // 发送审批信息（使用封装方法）
-            //已修改，修改内容及原因：添加null检查，避免handlerId为null时发送通知导致数据库约束错误
+            // 已修改，修改内容及原因：添加null检查，避免handlerId为null时发送通知导致数据库约束错误
             // 只有当 handlerId 不为 null 时才发送通知
             if (handlerId != null) {
                 sendNotice(userId,
@@ -240,7 +318,7 @@ public class BizService {
 
             // 创建审批日志（使用封装方法）
             createAuditLog(subId, userId, "提交", 0, 10, "提交任务");
-            //已修改，修改内容及原因：添加null检查和异常处理，避免getUserById返回null时出现空指针异常
+            // 已修改，修改内容及原因：添加null检查和异常处理，避免getUserById返回null时出现空指针异常
             String resultMsg = "提交成功";
             if (handlerId != null) {
                 try {
@@ -260,7 +338,12 @@ public class BizService {
         }
     }
 
-    // 根据taskId查询审批单
+    /**
+     * 根据taskId查询审批单
+     * @param taskId 任务ID
+     * @param userId 用户ID
+     * @return 审批视图对象列表
+     */
     public List<BizAuditVO> getAudit(Long taskId, Long userId) {
         try {
             return auditListToAuditVoList(bizMapper.getAudit(taskId, userId));
@@ -269,7 +352,11 @@ public class BizService {
         }
     }
 
-    // 获取“待我审批”的审批单（按 current_handler_id 查询）
+    /**
+     * 获取"待我审批"的审批单（按 current_handler_id 查询）
+     * @param userId 用户ID
+     * @return 审批视图对象列表
+     */
     public List<BizAuditVO> getTodoAudits(Long userId) {
         try {
             if (userId == null)
@@ -280,7 +367,12 @@ public class BizService {
         }
     }
 
-    // 根据 taskId 查询该任务全部审批单（用于任务详情抽屉展示完整流程）
+    /**
+     * 根据 taskId 查询该任务全部审批单（用于任务详情抽屉展示完整流程）
+     * @param taskId 任务ID
+     * @param userId 用户ID
+     * @return 审批视图对象列表
+     */
     public List<BizAuditVO> getAuditByTaskId(Long taskId, Long userId) {
         try {
             if (taskId == null)
@@ -318,7 +410,12 @@ public class BizService {
         }
     }
 
-    // 根据 subId 查询审批操作日志（biz_audit_log）
+    /**
+     * 根据 subId 查询审批操作日志（biz_audit_log）
+     * @param subId 提交ID
+     * @param userId 用户ID
+     * @return 审批日志列表
+     */
     public List<BizAuditLog> getAuditLogs(Long subId, Long userId) {
         try {
             if (subId == null)
@@ -351,7 +448,12 @@ public class BizService {
         }
     }
 
-    // // 审批任务
+    /**
+     * 审批任务
+     * @param bizAuditDTO 审批数据
+     * @param userId 用户ID
+     * @return 操作结果
+     */
     @Transactional
     public Object audit(BizAuditDTO bizAuditDTO, Long userId) {
         Long subId = bizAuditDTO.getSub_id();
@@ -361,7 +463,7 @@ public class BizService {
                 throw new RuntimeException("该任务不存在");
             }
 
-            //已修改，修改内容及原因：添加currentHandlerId的null检查，避免在equals比较时出现空指针异常
+            // 已修改，修改内容及原因：添加currentHandlerId的null检查，避免在equals比较时出现空指针异常
             // 检查 currentHandlerId 是否为 null
             Long currentHandlerId = bizMaterialSubmission.getCurrentHandlerId();
             if (currentHandlerId == null) {
@@ -372,7 +474,7 @@ public class BizService {
                     10, bizMapper.getTaskPrincipalId(bizMaterialSubmission.getTaskId()),
                     20, ADMIN_ID);
 
-            //已修改，修改内容及原因：安全获取任务的AuditorId，避免getTaskById返回null时出现空指针异常
+            // 已修改，修改内容及原因：安全获取任务的AuditorId，避免getTaskById返回null时出现空指针异常
             // 安全获取任务的 AuditorId
             BizTask task = bizMapper.getTaskById(bizMaterialSubmission.getTaskId());
             Long taskAuditorId = (task != null) ? task.getAuditorId() : null;
@@ -392,7 +494,6 @@ public class BizService {
                         Long nextHandlerId = nextHandlerMap.get(bizMaterialSubmission.getFlowStatus());
 
                         // 更新审批单状态（使用封装方法）
-
                         updateAuditStatus(subId, nextHandlerId, 20);
 
                         // 发送通知（使用封装方法）
@@ -408,7 +509,7 @@ public class BizService {
                         createAuditLog(subId, userId, "通过", 10, 20, bizAuditDTO.getTitle());
 
                         System.out.println("已审批，下一位审批人id为" + nextHandlerId);
-                        //已修改，修改内容及原因：添加null检查和异常处理，避免getUserById返回null时出现空指针异常
+                        // 已修改，修改内容及原因：添加null检查和异常处理，避免getUserById返回null时出现空指针异常
                         String resultMsg = "已审批";
                         if (nextHandlerId != null) {
                             try {
@@ -428,7 +529,7 @@ public class BizService {
 
                         // 更新审批单状态（使用封装方法）
                         updateAuditStatus(subId, backHandlerId, -10);
-                        // 退回后任务不应保持“审核中”，恢复为“进行中”，允许重新提交
+                        // 退回后任务不应保持"审核中"，恢复为"进行中"，允许重新提交
                         bizMapper.updateTaskStatus(bizMaterialSubmission.getTaskId(), "1");
 
                         // 发送通知（使用封装方法）
@@ -444,7 +545,7 @@ public class BizService {
                         createAuditLog(subId, userId, "退回", 10, -10, bizAuditDTO.getTitle());
 
                         System.out.println("已退回，退回到id为" + backHandlerId);
-                        //已修改，修改内容及原因：添加null检查和异常处理，避免getUserById返回null时出现空指针异常
+                        // 已修改，修改内容及原因：添加null检查和异常处理，避免getUserById返回null时出现空指针异常
                         String resultMsg = "已退回";
                         if (backHandlerId != null) {
                             try {
@@ -481,7 +582,7 @@ public class BizService {
                         createAuditLog(subId, userId, "通过", 20, 30, bizAuditDTO.getTitle());
 
                         System.out.println("已审批，下一位审批人id为" + nextHandlerId);
-                        //已修改，修改内容及原因：添加null检查和异常处理，避免getUserById返回null时出现空指针异常
+                        // 已修改，修改内容及原因：添加null检查和异常处理，避免getUserById返回null时出现空指针异常
                         String resultMsg = "已审批";
                         if (nextHandlerId != null) {
                             try {
@@ -504,7 +605,7 @@ public class BizService {
 
                         // 更新审批单状态（使用封装方法）
                         updateAuditStatus(subId, backHandlerId, -20);
-                        // 退回后任务不应保持“审核中”，恢复为“进行中”，允许重新提交
+                        // 退回后任务不应保持"审核中"，恢复为"进行中"，允许重新提交
                         bizMapper.updateTaskStatus(bizMaterialSubmission.getTaskId(), "1");
 
                         // 发送通知（使用封装方法）
@@ -520,7 +621,7 @@ public class BizService {
                         createAuditLog(subId, userId, "退回", 20, -20, bizAuditDTO.getTitle());
 
                         System.out.println("已退回，退回到id为" + backHandlerId);
-                        //已修改，修改内容及原因：添加null检查和异常处理，避免getUserById返回null时出现空指针异常
+                        // 已修改，修改内容及原因：添加null检查和异常处理，避免getUserById返回null时出现空指针异常
                         String resultMsg = "已退回";
                         if (backHandlerId != null) {
                             try {
@@ -544,7 +645,7 @@ public class BizService {
                         bizMapper.updateAudit(bizMaterialSubmission);
                         // 更新任务状态
                         BizTask bizTask = bizMapper.getTaskById(bizMaterialSubmission.getTaskId());
-                        // 口径调整：任务 current_value 以“本次填报值”为准（覆盖写），不再在最终通过时重复累加
+                        // 口径调整：任务 current_value 以"本次填报值"为准（覆盖写），不再在最终通过时重复累加
                         BigDecimal rv = bizMaterialSubmission.getReportedValue() != null ? bizMaterialSubmission.getReportedValue() : BigDecimal.ZERO;
                         rv = rv.setScale(0, RoundingMode.HALF_UP);
                         bizTask.setCurrentValue(rv);
@@ -575,7 +676,7 @@ public class BizService {
 
                         // 更新审批单状态（使用封装方法）
                         updateAuditStatus(subId, backHandlerId, -30);
-                        // 退回后任务不应保持“审核中”，恢复为“进行中”，允许重新提交
+                        // 退回后任务不应保持"审核中"，恢复为"进行中"，允许重新提交
                         bizMapper.updateTaskStatus(bizMaterialSubmission.getTaskId(), "1");
 
                         // 发送通知（使用封装方法）
@@ -591,7 +692,7 @@ public class BizService {
                         createAuditLog(subId, userId, "退回", 30, -30, bizAuditDTO.getTitle());
 
                         System.out.println("已退回，退回到id为" + backHandlerId);
-                        //已修改，修改内容及原因：添加null检查和异常处理，避免getUserById返回null时出现空指针异常
+                        // 已修改，修改内容及原因：添加null检查和异常处理，避免getUserById返回null时出现空指针异常
                         String resultMsg = "已退回";
                         if (backHandlerId != null) {
                             try {
@@ -607,15 +708,13 @@ public class BizService {
                         }
                         return resultMsg;
                     }
-                    // } else if (bizMaterialSubmission.getFlowStatus() == -10){
-                    //
                 } else if (bizMaterialSubmission.getFlowStatus() == -20) {
                     if (bizAuditDTO.getIs_pass()) {
                         throw new RuntimeException("请重新提交材料");
                     } else {
                         Long backHandlerId = backHandlerMap.get(bizMaterialSubmission.getFlowStatus());
                         updateAuditStatus(subId, backHandlerId, -10);
-                        // 退回后任务不应保持“审核中”，恢复为“进行中”，允许重新提交
+                        // 退回后任务不应保持"审核中"，恢复为"进行中"，允许重新提交
                         bizMapper.updateTaskStatus(bizMaterialSubmission.getTaskId(), "1");
                         sendNotice(userId,
                                 backHandlerId,
@@ -626,7 +725,7 @@ public class BizService {
                                 bizMaterialSubmission.getTaskId());
                         createAuditLog(subId, userId, "退回", -20, -10, bizAuditDTO.getTitle());
                         System.out.println("已退回，退回到id为" + backHandlerId);
-                        //已修改，修改内容及原因：添加null检查和异常处理，避免getUserById返回null时出现空指针异常
+                        // 已修改，修改内容及原因：添加null检查和异常处理，避免getUserById返回null时出现空指针异常
                         String resultMsg = "已退回";
                         if (backHandlerId != null) {
                             try {
@@ -648,7 +747,7 @@ public class BizService {
                     }
                     Long backHandlerId = backHandlerMap.get(bizMaterialSubmission.getFlowStatus());
                     updateAuditStatus(subId, backHandlerId, -20);
-                    // 退回后任务不应保持“审核中”，恢复为“进行中”，允许重新提交
+                    // 退回后任务不应保持"审核中"，恢复为"进行中"，允许重新提交
                     bizMapper.updateTaskStatus(bizMaterialSubmission.getTaskId(), "1");
                     sendNotice(userId,
                             backHandlerId,
@@ -672,7 +771,12 @@ public class BizService {
         }
     }
 
-    // 退回重新提交材料
+    /**
+     * 退回重新提交材料
+     * @param resubDTOBiz 重新提交数据
+     * @param userId 用户ID
+     * @return 操作结果
+     */
     @Transactional
     public String reSubmitMaterial(BizReSubDTO resubDTOBiz, Long userId) {
         try {
@@ -700,7 +804,7 @@ public class BizService {
             bizMaterialSubmission.setCurrentHandlerId(nextHandlerId);
             bizMapper.updateAudit(bizMaterialSubmission);
 
-            // 重新提交后恢复任务状态为“审核中”，并覆盖写 current_value
+            // 重新提交后恢复任务状态为"审核中"，并覆盖写 current_value
             BizTask bizTask = bizMapper.getTaskById(bizMaterialSubmission.getTaskId());
             if (bizTask != null) {
                 bizTask.setCurrentValue(rv);
@@ -708,7 +812,7 @@ public class BizService {
                 bizMapper.updateCurrentTask(bizTask);
             }
 
-            //已修改，修改内容及原因：添加null检查，避免nextHandlerId为null时发送通知导致数据库约束错误
+            // 已修改，修改内容及原因：添加null检查，避免nextHandlerId为null时发送通知导致数据库约束错误
             // 只有当 nextHandlerId 不为 null 时才发送通知
             if (nextHandlerId != null) {
                 sendNotice(userId,
@@ -722,7 +826,7 @@ public class BizService {
 
             createAuditLog(resubDTOBiz.getSub_id(), userId, "重新提交", -bizMaterialSubmission.getFlowStatus(),
                     bizMaterialSubmission.getFlowStatus(), "重新提交");
-            //已修改，修改内容及原因：添加null检查和异常处理，避免getUserById返回null时出现空指针异常
+            // 已修改，修改内容及原因：添加null检查和异常处理，避免getUserById返回null时出现空指针异常
             String resultMsg = "已重新提交";
             if (nextHandlerId != null) {
                 try {
@@ -739,7 +843,13 @@ public class BizService {
             throw new RuntimeException(e);
         }
     }
-//    撤回提交申请
+
+    /**
+     * 撤回提交申请
+     * @param taskId 任务ID
+     * @param userId 用户ID
+     * @return 操作结果
+     */
     public Object drawbackSubmit(Long taskId, Long userId){
         try{
             BizMaterialSubmission bizMaterialSubmission = bizMapper.getNewestAudit(taskId);
@@ -758,9 +868,11 @@ public class BizService {
         }
     }
 
-
-
-//    获取该任务上一次审批通过的文件
+    /**
+     * 获取该任务上一次审批通过的文件
+     * @param taskId 任务ID
+     * @return 文件上传视图对象
+     */
     public FileUploadVO getLastCycleFiles(Long taskId) {
         try{
             BizTask task = bizMapper.getTaskById(taskId);
@@ -781,6 +893,11 @@ public class BizService {
         }
     }
 
+    /**
+     * 根据父任务ID获取三级任务
+     * @param parentId 父任务ID
+     * @return 任务列表
+     */
     public List<BizTask> getThirdLevelTasksByParentId(Long parentId) {
         try {
             return bizMapper.getThirdLevelTasksByParentId(parentId);
@@ -789,19 +906,32 @@ public class BizService {
         }
     }
 
+    /**
+     * 根据归口负责人ID获取任务
+     * @param principalId 归口负责人ID
+     * @return 任务列表
+     */
     public List<BizTask> getTasksByPrincipalId(Long principalId) {
         try {
             return bizMapper.getTasksByPrincipalId(principalId);
         } catch (Exception e) {
             throw new RuntimeException("获取任务失败,请检查负责人id是否正确");
         }
-
     }
 
-    // 封装方法：发送系统通知
+    /**
+     * 封装方法：发送系统通知
+     * @param fromUserId 发送人ID
+     * @param toUserId 接收人ID
+     * @param triggerEvent 触发事件
+     * @param title 标题
+     * @param content 内容
+     * @param sourceType 来源类型
+     * @param sourceId 来源ID
+     */
     private void sendNotice(Long fromUserId, Long toUserId, String triggerEvent,
                             String title, String content, String sourceType, Long sourceId) {
-        //已修改，修改内容及原因：添加toUserId的null检查，避免toUserId为null时插入数据库导致约束错误
+        // 已修改，修改内容及原因：添加toUserId的null检查，避免toUserId为null时插入数据库导致约束错误
         // 如果 toUserId 为 null，不发送通知，避免数据库约束错误
         if (toUserId == null) {
             System.out.println("警告：无法发送通知，接收人ID为空。标题：" + title);
@@ -821,7 +951,15 @@ public class BizService {
         System.out.println("id=" + toUserId + "的用户收到一条通知：" + title);
     }
 
-    // 封装方法：创建审批日志
+    /**
+     * 封装方法：创建审批日志
+     * @param subId 提交ID
+     * @param operatorId 操作人ID
+     * @param actionType 动作类型
+     * @param preStatus 前状态
+     * @param postStatus 后状态
+     * @param comment 意见
+     */
     private void createAuditLog(Long subId, Long operatorId, String actionType,
                                 Integer preStatus, Integer postStatus, String comment) {
         BizAuditLog bizAuditLog = new BizAuditLog();
@@ -837,7 +975,12 @@ public class BizService {
         bizMapper.createAuditLog(bizAuditLog);
     }
 
-    // 封装方法：更新审批单状态和处理人
+    /**
+     * 封装方法：更新审批单状态和处理人
+     * @param subId 提交ID
+     * @param currentHandlerId 当前处理人ID
+     * @param flowStatus 流程状态
+     */
     private void updateAuditStatus(Long subId, Long currentHandlerId, Integer flowStatus) {
         BizMaterialSubmission bizMaterialSubmission = bizMapper.getAuditBySubId(subId);
         if (bizMaterialSubmission != null) {
@@ -847,7 +990,11 @@ public class BizService {
         }
     }
 
-    // TaskToTaskVo
+    /**
+     * TaskToTaskVo转换方法
+     * @param task 任务实体
+     * @return 任务视图对象
+     */
     public BizTaskVo taskToTaskVo(BizTask task) {
         BizTaskVo taskVo = new BizTaskVo();
         taskVo.setTaskId(task.getTaskId());
@@ -863,7 +1010,7 @@ public class BizService {
         taskVo.setDeptName(sysMapper.getDeptById(task.getDeptId()).getDeptName());
         taskVo.setPrincipalId(task.getPrincipalId());
         taskVo.setPrincipalName(sysMapper.getUserById(task.getPrincipalId()).getUserName());
-//        避免空指针错误
+        // 避免空指针错误
         if(task.getAuditorId()!=null){
             taskVo.setAuditorId(task.getAuditorId());
             taskVo.setAuditorName(sysMapper.getUserById(task.getAuditorId()).getUserName());
@@ -871,7 +1018,6 @@ public class BizService {
             taskVo.setAuditorId(null);
             taskVo.setAuditorName("无");
         }
-//        taskVo.setAuditName(sysMapper.getUserById(task.getAuditorId()).getUserName());
         taskVo.setLeaderId(task.getLeaderId());
         taskVo.setLeaderName(sysMapper.getUserById(task.getLeaderId()).getUserName());
         taskVo.setExpTarget(task.getExpTarget());
@@ -890,7 +1036,11 @@ public class BizService {
         return taskVo;
     }
 
-    // TaskListToTaskVoList
+    /**
+     * TaskListToTaskVoList转换方法
+     * @param tasks 任务实体列表
+     * @return 任务视图对象列表
+     */
     public List<BizTaskVo> taskListToTaskVoList(List<BizTask> tasks) {
         List<BizTaskVo> taskVos = new ArrayList<>();
         for (BizTask task : tasks) {
@@ -899,7 +1049,11 @@ public class BizService {
         return taskVos;
     }
 
-//    TaskDTO2Task
+    /**
+     * TaskDTO转Task转换方法
+     * @param taskDTO 任务数据传输对象
+     * @return 任务实体
+     */
     public BizTask taskDTO2Task(BizTaskDTO taskDTO) {
         BizTask task = new BizTask();
         task.setTaskId(taskDTO.getTaskId());
@@ -928,6 +1082,11 @@ public class BizService {
         return task;
     }
 
+    /**
+     * Audit转AuditVO转换方法
+     * @param audit 材料提交实体
+     * @return 审批视图对象
+     */
     public BizAuditVO auditToAuditVo(BizMaterialSubmission audit){
         BizAuditVO bizAuditVO = new BizAuditVO();
         bizAuditVO.setSubId(audit.getSubId());
@@ -947,8 +1106,11 @@ public class BizService {
         return bizAuditVO;
     }
 
-
-
+    /**
+     * AuditList转AuditVoList转换方法
+     * @param audits 材料提交实体列表
+     * @return 审批视图对象列表
+     */
     public List<BizAuditVO> auditListToAuditVoList(List<BizMaterialSubmission> audits){
         List<BizAuditVO> auditVos = new ArrayList<>();
         for (BizMaterialSubmission audit : audits) {
@@ -956,5 +1118,4 @@ public class BizService {
         }
         return auditVos;
     }
-
 }

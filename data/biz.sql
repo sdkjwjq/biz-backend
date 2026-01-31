@@ -330,10 +330,10 @@ CREATE TABLE `biz_achievement` (
     `ach_name` varchar(255) NOT NULL COMMENT '成果名称',
     `department` varchar(255) NOT NULL COMMENT '组织部门 如：教育部办公厅等，注意不同于校内部门',
     `got_time` datetime NOT NULL COMMENT '颁发时间',
-    `dept_id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '部门ID',
+    `dept_id` bigint(20) NOT NULL COMMENT '部门ID',
     `file_id` bigint(20) DEFAULT NULL COMMENT '佐证材料文件ID',
     `comment` varchar(500) NOT NULL COMMENT '备注',
-    `is_competition` tinyint(1) DEFAULT 0 COMMENT '是否竞赛 0:不是竞赛 1:是竞赛',,
+    `is_competition` tinyint(1) DEFAULT 0 COMMENT '是否竞赛 0:不是竞赛 1:是竞赛',
 
 --     不同类型奖项的数量，为方便区分，使用拼音
     `te_deng_jiang` int(4) DEFAULT 0 COMMENT '特等奖数量',
