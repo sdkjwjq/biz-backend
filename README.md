@@ -654,6 +654,298 @@ https://www.postman.com/litianyi981119/biz/collection/21001135-3309c751-c3ca-4fd
 - **请求头**：`Authorization: Bearer {token}`
 - **响应**：无
 
+### 八、看板数据接口（新增）
+
+#### 8.1 获取看板数据汇总
+
+- **接口**：`GET /dashboard/summary`
+
+- **描述**：获取完整的看板数据汇总，包含所有统计维度
+
+- **请求头**：`Authorization: Bearer {token}`
+
+- **响应**：
+
+  ```json
+  {
+    "currentYear": "2025",
+    "midTermEndYear": "2028",
+    "updateTime": "2025-12-31 10:30:00",
+    "overallCompletion": {
+      "totalTasks": 100,
+      "completedTasks": 65,
+      "completionRate": 65.00,
+      "period": "all",
+      "description": "所有任务完成率"
+    },
+    "yearCompletion": {
+      "totalTasks": 30,
+      "completedTasks": 20,
+      "completionRate": 66.67,
+      "period": "year",
+      "description": "2025年度任务完成率"
+    },
+    "midTermCompletion": {
+      "totalTasks": 80,
+      "completedTasks": 50,
+      "completionRate": 62.50,
+      "period": "midterm",
+      "description": "中期（2028年前）任务完成率"
+    },
+    "firstLevelCompletion": {
+      "totalTasks": 10,
+      "completedTasks": 6,
+      "completionRate": 60.00,
+      "period": "firstLevel",
+      "description": "一级任务完成率"
+    },
+    "deptOverallStats": [
+      {
+        "deptId": 1,
+        "deptName": "技术部",
+        "totalTasks": 30,
+        "completedTasks": 20,
+        "completionRate": 66.67
+      },
+      {
+        "deptId": 2,
+        "deptName": "市场部",
+        "totalTasks": 25,
+        "completedTasks": 15,
+        "completionRate": 60.00
+      }
+    ],
+    "deptYearStats": [...],
+    "deptMidTermStats": [...],
+    "firstLevelTasks": [
+      {
+        "taskId": 1,
+        "taskName": "项目初始化",
+        "deptId": 1,
+        "deptName": "技术部",
+        "status": "3",
+        "targetValue": 100.00,
+        "currentValue": 100.00,
+        "progress": 100,
+        "createTime": "2024-01-01 00:00:00",
+        "updateTime": "2024-06-01 00:00:00"
+      }
+    ]
+  }
+  ```
+
+#### 8.2 获取所有任务完成率
+
+- **接口**：`GET /dashboard/completion/overall`
+
+- **描述**：获取系统所有任务的完成率统计
+
+- **请求头**：`Authorization: Bearer {token}`
+
+- **响应**：
+
+  ```json
+  {
+    "totalTasks": 100,
+    "completedTasks": 65,
+    "completionRate": 65.00,
+    "period": "all",
+    "description": "所有任务完成率"
+  }
+  ```
+
+#### 8.3 获取本年度任务完成率
+
+- **接口**：`GET /dashboard/completion/year`
+
+- **描述**：获取指定年份的任务完成率（默认当前年份）
+
+- **请求头**：`Authorization: Bearer {token}`
+
+- **查询参数**：
+
+  - `year`（可选）：年份，默认为当前年份
+
+- **响应**：
+
+  ```json
+  {
+    "totalTasks": 30,
+    "completedTasks": 20,
+    "completionRate": 66.67,
+    "period": "year",
+    "description": "2025年度任务完成率"
+  }
+  ```
+
+#### 8.4 获取中期任务完成率
+
+- **接口**：`GET /dashboard/completion/midterm`
+
+- **描述**：获取中期任务（phase在指定年份之前）完成率
+
+- **请求头**：`Authorization: Bearer {token}`
+
+- **查询参数**：
+
+  - `endYear`（可选）：截止年份，默认为2028
+
+- **响应**：
+
+  ```json
+  {
+    "totalTasks": 80,
+    "completedTasks": 50,
+    "completionRate": 62.50,
+    "period": "midterm",
+    "description": "中期（2028年前）任务完成率"
+  }
+  ```
+
+#### 8.5 获取一级任务完成率
+
+- **接口**：`GET /dashboard/completion/first-level`
+
+- **描述**：获取一级任务的完成率统计
+
+- **请求头**：`Authorization: Bearer {token}`
+
+- **响应**：
+
+  ```json
+  {
+    "totalTasks": 10,
+    "completedTasks": 6,
+    "completionRate": 60.00,
+    "period": "firstLevel",
+    "description": "一级任务完成率"
+  }
+  ```
+
+#### 8.6 获取各部门整体任务完成率
+
+- **接口**：`GET /dashboard/dept/overall`
+
+- **描述**：获取各部门所有任务的完成率统计
+
+- **请求头**：`Authorization: Bearer {token}`
+
+- **响应**：
+
+  ```json
+  [
+    {
+      "deptId": 1,
+      "deptName": "技术部",
+      "totalTasks": 30,
+      "completedTasks": 20,
+      "completionRate": 66.67
+    },
+    {
+      "deptId": 2,
+      "deptName": "市场部",
+      "totalTasks": 25,
+      "completedTasks": 15,
+      "completionRate": 60.00
+    }
+  ]
+  ```
+
+#### 8.7 获取各部门本年度任务完成率
+
+- **接口**：`GET /dashboard/dept/year`
+- **描述**：获取各部门本年度任务的完成率统计
+- **请求头**：`Authorization: Bearer {token}`
+- **查询参数**：
+  - `year`（可选）：年份，默认为当前年份
+- **响应**：部门任务完成率列表（同8.6格式）
+
+#### 8.8 获取各部门中期任务完成率
+
+- **接口**：`GET /dashboard/dept/midterm`
+- **描述**：获取各部门中期任务的完成率统计
+- **请求头**：`Authorization: Bearer {token}`
+- **查询参数**：
+  - `endYear`（可选）：截止年份，默认为2028
+- **响应**：部门任务完成率列表（同8.6格式）
+
+#### 8.9 获取一级任务详细情况
+
+- **接口**：`GET /dashboard/tasks/first-level`
+
+- **描述**：获取一级任务的详细信息列表
+
+- **请求头**：`Authorization: Bearer {token}`
+
+- **响应**：
+
+  ```json
+  [
+    {
+      "taskId": 1,
+      "taskName": "项目初始化",
+      "deptId": 1,
+      "deptName": "技术部",
+      "status": "3",
+      "targetValue": 100.00,
+      "currentValue": 100.00,
+      "progress": 100,
+      "createTime": "2024-01-01 00:00:00",
+      "updateTime": "2024-06-01 00:00:00"
+    },
+    {
+      "taskId": 2,
+      "taskName": "系统架构设计",
+      "deptId": 1,
+      "deptName": "技术部",
+      "status": "2",
+      "targetValue": 80.00,
+      "currentValue": 60.00,
+      "progress": 75,
+      "createTime": "2024-01-15 00:00:00",
+      "updateTime": "2024-05-20 00:00:00"
+    }
+  ]
+  ```
+
+#### 8.10 获取单个部门详细统计信息
+
+- **接口**：`GET /dashboard/dept/{deptId}`
+
+- **描述**：获取单个部门的详细统计信息，包含整体、年度、中期完成率
+
+- **请求头**：`Authorization: Bearer {token}`
+
+- **路径参数**：`deptId`（部门ID）
+
+- **响应**：
+
+  ```json
+  {
+    "deptId": 1,
+    "deptName": "技术部",
+    "leaderId": 110228,
+    "leaderName": "系统管理员",
+    "overall": {
+      "totalTasks": 30,
+      "completedTasks": 20,
+      "completionRate": 66.67
+    },
+    "year": {
+      "totalTasks": 10,
+      "completedTasks": 8,
+      "completionRate": 80.00
+    },
+    "midterm": {
+      "totalTasks": 25,
+      "completedTasks": 16,
+      "completionRate": 64.00
+    }
+  }
+  ```
+
+#### 
+
 ## 通用说明
 
 ### 状态码说明
