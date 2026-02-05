@@ -85,7 +85,7 @@ public class AchievementController {
      * @return 操作结果/错误信息
      */
     @PostMapping("/delete/{achId}")
-    public Object deleteAchievement(@PathVariable Long achId) {
+    public Object deleteAchievement(@PathVariable("achId") Long achId) {
         try {
             // 查询成果名称，用于返回友好提示
             BizAchievement achievement = achievementService.getAchievementById(achId);
