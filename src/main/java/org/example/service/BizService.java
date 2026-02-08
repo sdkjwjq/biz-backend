@@ -1151,54 +1151,172 @@ public class BizService {
     }
 
     /**
-     * 计算整体数据
+     * 计算整体数据（在Service中查询各状态数量）
      */
     private void calculateOverallData(DashboardSummaryVO summary, int currentYear) {
-        // 1.1 所有任务完成率
+        // 1.1 所有任务完成率（在Service中查询各状态数量）
         Integer totalTasks = bizMapper.getTotalTaskCount();
         Integer completedTasks = bizMapper.getCompletedTaskCount();
+
+        // 在Service中查询各状态数量
+        Integer notStartedCount = bizMapper.getTaskCountByStatus("0");
+        Integer inProgressCount = bizMapper.getTaskCountByStatus("1");
+        Integer inReviewCount = bizMapper.getTaskCountByStatus("2");
+        Integer finishedCount = bizMapper.getTaskCountByStatus("3");
+
         summary.setOverallCompletion(new TaskCompletionVO(
-                totalTasks, completedTasks, "all", "所有任务完成率"
+                totalTasks, completedTasks, "all", "所有任务完成率",
+                notStartedCount != null ? notStartedCount : 0,
+                inProgressCount != null ? inProgressCount : 0,
+                inReviewCount != null ? inReviewCount : 0,
+                finishedCount != null ? finishedCount : 0
         ));
 
-        // 1.2 本年度任务完成率
+        // 1.2 本年度任务完成率（在Service中查询各状态数量）
         Integer yearTotalTasks = bizMapper.getYearTaskCount(currentYear);
         Integer yearCompletedTasks = bizMapper.getYearCompletedTaskCount(currentYear);
+
+        // 在Service中查询本年度各状态数量
+        Integer yearNotStartedCount = bizMapper.getYearTaskCountByStatus(currentYear, "0");
+        Integer yearInProgressCount = bizMapper.getYearTaskCountByStatus(currentYear, "1");
+        Integer yearInReviewCount = bizMapper.getYearTaskCountByStatus(currentYear, "2");
+        Integer yearFinishedCount = bizMapper.getYearTaskCountByStatus(currentYear, "3");
+
         summary.setYearCompletion(new TaskCompletionVO(
-                yearTotalTasks, yearCompletedTasks, "year", currentYear + "年度任务完成率"
+                yearTotalTasks, yearCompletedTasks, "year", currentYear + "年度任务完成率",
+                yearNotStartedCount != null ? yearNotStartedCount : 0,
+                yearInProgressCount != null ? yearInProgressCount : 0,
+                yearInReviewCount != null ? yearInReviewCount : 0,
+                yearFinishedCount != null ? yearFinishedCount : 0
         ));
 
-        // 1.3 中期任务完成率（phase在2028年之前）
+        // 1.3 中期任务完成率（在Service中查询各状态数量）
         Integer midTermTotalTasks = bizMapper.getMidTermTaskCount(MID_TERM_END_YEAR);
         Integer midTermCompletedTasks = bizMapper.getMidTermCompletedTaskCount(MID_TERM_END_YEAR);
+
+        // 在Service中查询中期各状态数量
+        Integer midTermNotStartedCount = bizMapper.getMidTermTaskCountByStatus(MID_TERM_END_YEAR, "0");
+        Integer midTermInProgressCount = bizMapper.getMidTermTaskCountByStatus(MID_TERM_END_YEAR, "1");
+        Integer midTermInReviewCount = bizMapper.getMidTermTaskCountByStatus(MID_TERM_END_YEAR, "2");
+        Integer midTermFinishedCount = bizMapper.getMidTermTaskCountByStatus(MID_TERM_END_YEAR, "3");
+
         summary.setMidTermCompletion(new TaskCompletionVO(
-                midTermTotalTasks, midTermCompletedTasks, "midterm", "中期（" + MID_TERM_END_YEAR + "年前）任务完成率"
+                midTermTotalTasks, midTermCompletedTasks, "midterm", "中期（" + MID_TERM_END_YEAR + "年前）任务完成率",
+                midTermNotStartedCount != null ? midTermNotStartedCount : 0,
+                midTermInProgressCount != null ? midTermInProgressCount : 0,
+                midTermInReviewCount != null ? midTermInReviewCount : 0,
+                midTermFinishedCount != null ? midTermFinishedCount : 0
         ));
 
-        // 1.4 一级任务完成率
+        // 1.4 一级任务完成率（在Service中查询各状态数量）
         Integer firstLevelTotalTasks = bizMapper.getFirstLevelTaskCount();
         Integer firstLevelCompletedTasks = bizMapper.getFirstLevelCompletedTaskCount();
+
+        // 在Service中查询一级各状态数量
+        Integer firstLevelNotStartedCount = bizMapper.getFirstLevelTaskCountByStatus("0");
+        Integer firstLevelInProgressCount = bizMapper.getFirstLevelTaskCountByStatus("1");
+        Integer firstLevelInReviewCount = bizMapper.getFirstLevelTaskCountByStatus("2");
+        Integer firstLevelFinishedCount = bizMapper.getFirstLevelTaskCountByStatus("3");
+
         summary.setFirstLevelCompletion(new TaskCompletionVO(
-                firstLevelTotalTasks, firstLevelCompletedTasks, "firstLevel", "一级任务完成率"
+                firstLevelTotalTasks, firstLevelCompletedTasks, "firstLevel", "一级任务完成率",
+                firstLevelNotStartedCount != null ? firstLevelNotStartedCount : 0,
+                firstLevelInProgressCount != null ? firstLevelInProgressCount : 0,
+                firstLevelInReviewCount != null ? firstLevelInReviewCount : 0,
+                firstLevelFinishedCount != null ? firstLevelFinishedCount : 0
         ));
     }
 
     /**
-     * 计算部门数据
+     * 计算部门数据（在Service中补充状态统计）
      */
     private void calculateDeptData(DashboardSummaryVO summary, int currentYear) {
-        // 2.1 各部门整体完成率
+        // 2.1 各部门整体完成率（在Service中补充状态统计）
         List<DeptTaskStatsVO> deptOverallStats = bizMapper.getDeptTaskStats();
+        // 补充每个部门的状态统计
+        for (DeptTaskStatsVO stats : deptOverallStats) {
+            if (stats.getDeptId() != null) {
+                // 查询该部门的各状态任务数量
+                List<BizTask> deptTasks = bizMapper.getTasksByDeptId(stats.getDeptId());
+                // 统计各状态数量
+                int notStarted = 0, inProgress = 0, inReview = 0, finished = 0;
+                for (BizTask task : deptTasks) {
+                    String status = task.getStatus();
+                    if (status == null) continue;
+
+                    switch (status) {
+                        case "0": notStarted++; break;
+                        case "1": inProgress++; break;
+                        case "2": inReview++; break;
+                        case "3": finished++; break;
+                    }
+                }
+                stats.setNotStartedCount(notStarted);
+                stats.setInProgressCount(inProgress);
+                stats.setInReviewCount(inReview);
+                stats.setFinishedCount(finished);
+            }
+        }
         deptOverallStats.forEach(DeptTaskStatsVO::calculateCompletionRate);
         summary.setDeptOverallStats(deptOverallStats);
 
-        // 2.2 各部门本年度完成率
+        // 2.2 各部门本年度完成率（在Service中补充状态统计）
         List<DeptTaskStatsVO> deptYearStats = bizMapper.getDeptYearTaskStats(currentYear);
+        // 补充每个部门的本年度状态统计
+        for (DeptTaskStatsVO stats : deptYearStats) {
+            if (stats.getDeptId() != null) {
+                // 查询该部门本年度各状态任务数量
+                List<BizTask> deptYearTasks = bizMapper.getTasksByDeptIdAndPhase(stats.getDeptId(), currentYear);
+                // 统计各状态数量
+                int notStarted = 0, inProgress = 0, inReview = 0, finished = 0;
+                for (BizTask task : deptYearTasks) {
+                    String status = task.getStatus();
+                    if (status == null) continue;
+
+                    switch (status) {
+                        case "0": notStarted++; break;
+                        case "1": inProgress++; break;
+                        case "2": inReview++; break;
+                        case "3": finished++; break;
+                    }
+                }
+                stats.setNotStartedCount(notStarted);
+                stats.setInProgressCount(inProgress);
+                stats.setInReviewCount(inReview);
+                stats.setFinishedCount(finished);
+            }
+        }
         deptYearStats.forEach(DeptTaskStatsVO::calculateCompletionRate);
         summary.setDeptYearStats(deptYearStats);
 
-        // 2.3 各部门中期完成率
+        // 2.3 各部门中期完成率（在Service中补充状态统计）
         List<DeptTaskStatsVO> deptMidTermStats = bizMapper.getDeptMidTermTaskStats(MID_TERM_END_YEAR);
+        // 补充每个部门的中期状态统计
+        for (DeptTaskStatsVO stats : deptMidTermStats) {
+            if (stats.getDeptId() != null) {
+                // 查询该部门中期各状态任务数量（需要单独查询）
+                List<BizTask> deptTasks = bizMapper.getTasksByDeptId(stats.getDeptId());
+                int notStarted = 0, inProgress = 0, inReview = 0, finished = 0;
+                for (BizTask task : deptTasks) {
+                    // 添加空值检查
+                    if (task.getPhase() != null && task.getPhase() < MID_TERM_END_YEAR) {
+                        String status = task.getStatus();
+                        if (status == null) continue;
+
+                        switch (status) {
+                            case "0": notStarted++; break;
+                            case "1": inProgress++; break;
+                            case "2": inReview++; break;
+                            case "3": finished++; break;
+                        }
+                    }
+                }
+                stats.setNotStartedCount(notStarted);
+                stats.setInProgressCount(inProgress);
+                stats.setInReviewCount(inReview);
+                stats.setFinishedCount(finished);
+            }
+        }
         deptMidTermStats.forEach(DeptTaskStatsVO::calculateCompletionRate);
         summary.setDeptMidTermStats(deptMidTermStats);
     }
@@ -1211,8 +1329,19 @@ public class BizService {
         try {
             Integer totalTasks = bizMapper.getTotalTaskCount();
             Integer completedTasks = bizMapper.getCompletedTaskCount();
+
+            // 在Service中查询各状态数量
+            Integer notStartedCount = bizMapper.getTaskCountByStatus("0");
+            Integer inProgressCount = bizMapper.getTaskCountByStatus("1");
+            Integer inReviewCount = bizMapper.getTaskCountByStatus("2");
+            Integer finishedCount = bizMapper.getTaskCountByStatus("3");
+
             return new TaskCompletionVO(
-                    totalTasks, completedTasks, "all", "所有任务完成率"
+                    totalTasks, completedTasks, "all", "所有任务完成率",
+                    notStartedCount != null ? notStartedCount : 0,
+                    inProgressCount != null ? inProgressCount : 0,
+                    inReviewCount != null ? inReviewCount : 0,
+                    finishedCount != null ? finishedCount : 0
             );
         } catch (Exception e) {
             throw new RuntimeException("获取所有任务完成率失败: " + e.getMessage());
@@ -1233,8 +1362,19 @@ public class BizService {
 
             Integer totalTasks = bizMapper.getYearTaskCount(year);
             Integer completedTasks = bizMapper.getYearCompletedTaskCount(year);
+
+            // 在Service中查询本年度各状态数量
+            Integer notStartedCount = bizMapper.getYearTaskCountByStatus(year, "0");
+            Integer inProgressCount = bizMapper.getYearTaskCountByStatus(year, "1");
+            Integer inReviewCount = bizMapper.getYearTaskCountByStatus(year, "2");
+            Integer finishedCount = bizMapper.getYearTaskCountByStatus(year, "3");
+
             return new TaskCompletionVO(
-                    totalTasks, completedTasks, "year", year + "年度任务完成率"
+                    totalTasks, completedTasks, "year", year + "年度任务完成率",
+                    notStartedCount != null ? notStartedCount : 0,
+                    inProgressCount != null ? inProgressCount : 0,
+                    inReviewCount != null ? inReviewCount : 0,
+                    finishedCount != null ? finishedCount : 0
             );
         } catch (Exception e) {
             throw new RuntimeException("获取本年度任务完成率失败: " + e.getMessage());
@@ -1254,8 +1394,19 @@ public class BizService {
 
             Integer totalTasks = bizMapper.getMidTermTaskCount(endYear);
             Integer completedTasks = bizMapper.getMidTermCompletedTaskCount(endYear);
+
+            // 在Service中查询中期各状态数量
+            Integer notStartedCount = bizMapper.getMidTermTaskCountByStatus(endYear, "0");
+            Integer inProgressCount = bizMapper.getMidTermTaskCountByStatus(endYear, "1");
+            Integer inReviewCount = bizMapper.getMidTermTaskCountByStatus(endYear, "2");
+            Integer finishedCount = bizMapper.getMidTermTaskCountByStatus(endYear, "3");
+
             return new TaskCompletionVO(
-                    totalTasks, completedTasks, "midterm", "中期（" + endYear + "年前）任务完成率"
+                    totalTasks, completedTasks, "midterm", "中期（" + endYear + "年前）任务完成率",
+                    notStartedCount != null ? notStartedCount : 0,
+                    inProgressCount != null ? inProgressCount : 0,
+                    inReviewCount != null ? inReviewCount : 0,
+                    finishedCount != null ? finishedCount : 0
             );
         } catch (Exception e) {
             throw new RuntimeException("获取中期任务完成率失败: " + e.getMessage());
@@ -1270,8 +1421,19 @@ public class BizService {
         try {
             Integer totalTasks = bizMapper.getFirstLevelTaskCount();
             Integer completedTasks = bizMapper.getFirstLevelCompletedTaskCount();
+
+            // 在Service中查询一级各状态数量
+            Integer notStartedCount = bizMapper.getFirstLevelTaskCountByStatus("0");
+            Integer inProgressCount = bizMapper.getFirstLevelTaskCountByStatus("1");
+            Integer inReviewCount = bizMapper.getFirstLevelTaskCountByStatus("2");
+            Integer finishedCount = bizMapper.getFirstLevelTaskCountByStatus("3");
+
             return new TaskCompletionVO(
-                    totalTasks, completedTasks, "firstLevel", "一级任务完成率"
+                    totalTasks, completedTasks, "firstLevel", "一级任务完成率",
+                    notStartedCount != null ? notStartedCount : 0,
+                    inProgressCount != null ? inProgressCount : 0,
+                    inReviewCount != null ? inReviewCount : 0,
+                    finishedCount != null ? finishedCount : 0
             );
         } catch (Exception e) {
             throw new RuntimeException("获取一级任务完成率失败: " + e.getMessage());
@@ -1285,6 +1447,27 @@ public class BizService {
     public List<DeptTaskStatsVO> getDeptTaskCompletionRates() {
         try {
             List<DeptTaskStatsVO> stats = bizMapper.getDeptTaskStats();
+            // 补充每个部门的状态统计
+            for (DeptTaskStatsVO stat : stats) {
+                if (stat.getDeptId() != null) {
+                    // 查询该部门的各状态任务数量
+                    List<BizTask> deptTasks = bizMapper.getTasksByDeptId(stat.getDeptId());
+                    // 统计各状态数量
+                    int notStarted = 0, inProgress = 0, inReview = 0, finished = 0;
+                    for (BizTask task : deptTasks) {
+                        switch (task.getStatus()) {
+                            case "0": notStarted++; break;
+                            case "1": inProgress++; break;
+                            case "2": inReview++; break;
+                            case "3": finished++; break;
+                        }
+                    }
+                    stat.setNotStartedCount(notStarted);
+                    stat.setInProgressCount(inProgress);
+                    stat.setInReviewCount(inReview);
+                    stat.setFinishedCount(finished);
+                }
+            }
             stats.forEach(DeptTaskStatsVO::calculateCompletionRate);
             return stats;
         } catch (Exception e) {
@@ -1305,6 +1488,27 @@ public class BizService {
             }
 
             List<DeptTaskStatsVO> stats = bizMapper.getDeptYearTaskStats(year);
+            // 补充每个部门的本年度状态统计
+            for (DeptTaskStatsVO stat : stats) {
+                if (stat.getDeptId() != null) {
+                    // 查询该部门本年度各状态任务数量
+                    List<BizTask> deptYearTasks = bizMapper.getTasksByDeptIdAndPhase(stat.getDeptId(), year);
+                    // 统计各状态数量
+                    int notStarted = 0, inProgress = 0, inReview = 0, finished = 0;
+                    for (BizTask task : deptYearTasks) {
+                        switch (task.getStatus()) {
+                            case "0": notStarted++; break;
+                            case "1": inProgress++; break;
+                            case "2": inReview++; break;
+                            case "3": finished++; break;
+                        }
+                    }
+                    stat.setNotStartedCount(notStarted);
+                    stat.setInProgressCount(inProgress);
+                    stat.setInReviewCount(inReview);
+                    stat.setFinishedCount(finished);
+                }
+            }
             stats.forEach(DeptTaskStatsVO::calculateCompletionRate);
             return stats;
         } catch (Exception e) {
@@ -1324,13 +1528,38 @@ public class BizService {
             }
 
             List<DeptTaskStatsVO> stats = bizMapper.getDeptMidTermTaskStats(endYear);
+            // 补充每个部门的中期状态统计
+            for (DeptTaskStatsVO stat : stats) {
+                if (stat.getDeptId() != null) {
+                    // 查询该部门中期各状态任务数量（需要单独查询）
+                    List<BizTask> deptTasks = bizMapper.getTasksByDeptId(stat.getDeptId());
+                    int notStarted = 0, inProgress = 0, inReview = 0, finished = 0;
+                    for (BizTask task : deptTasks) {
+                        // 添加空值检查
+                        if (task.getPhase() != null && task.getPhase() < endYear) {
+                            String status = task.getStatus();
+                            if (status == null) continue;
+
+                            switch (status) {
+                                case "0": notStarted++; break;
+                                case "1": inProgress++; break;
+                                case "2": inReview++; break;
+                                case "3": finished++; break;
+                            }
+                        }
+                    }
+                    stat.setNotStartedCount(notStarted);
+                    stat.setInProgressCount(inProgress);
+                    stat.setInReviewCount(inReview);
+                    stat.setFinishedCount(finished);
+                }
+            }
             stats.forEach(DeptTaskStatsVO::calculateCompletionRate);
             return stats;
         } catch (Exception e) {
             throw new RuntimeException("获取各部门中期任务完成率失败: " + e.getMessage());
         }
     }
-
     /**
      * 获取一级任务详细完成情况（单独的接口）
      * @return 一级任务详情列表
@@ -1364,7 +1593,7 @@ public class BizService {
             result.put("deptId", deptId);
             result.put("deptName", deptName);
 
-            // 计算各种完成率
+            // 计算各种完成率（包含状态统计）
             result.put("overall", calculateDeptCompletionRate(deptId, null, null));
             result.put("year", calculateDeptCompletionRate(deptId, currentYear, null));
             result.put("midterm", calculateDeptCompletionRate(deptId, null, MID_TERM_END_YEAR));
@@ -1390,23 +1619,67 @@ public class BizService {
     private Map<String, Object> calculateDeptCompletionRate(Long deptId, Integer year, Integer endYear) {
         Map<String, Object> result = new HashMap<>();
 
-        // 这里简化处理，实际应该添加相应的Mapper方法
-        // 临时使用查询所有数据再过滤的方式（后续可以优化）
-        List<DeptTaskStatsVO> allDeptStats = bizMapper.getDeptTaskStats();
-        for (DeptTaskStatsVO stats : allDeptStats) {
-            if (stats.getDeptId().equals(deptId)) {
-                result.put("totalTasks", stats.getTotalTasks());
-                result.put("completedTasks", stats.getCompletedTasks());
-                result.put("completionRate", stats.getCompletionRate());
-                break;
+        // 根据条件查询部门任务
+        List<BizTask> deptTasks;
+        if (year != null) {
+            deptTasks = bizMapper.getTasksByDeptIdAndPhase(deptId, year);
+        } else if (endYear != null) {
+            // 中期任务需要单独过滤
+            List<BizTask> allDeptTasks = bizMapper.getTasksByDeptId(deptId);
+            deptTasks = new ArrayList<>();
+            for (BizTask task : allDeptTasks) {
+                if (task.getPhase() < endYear) {
+                    deptTasks.add(task);
+                }
+            }
+        } else {
+            deptTasks = bizMapper.getTasksByDeptId(deptId);
+        }
+
+        // 统计任务数量
+        int totalTasks = deptTasks.size();
+        int completedTasks = 0;
+        int notStarted = 0, inProgress = 0, inReview = 0, finished = 0;
+
+        for (BizTask task : deptTasks) {
+            switch (task.getStatus()) {
+                case "0": notStarted++; break;
+                case "1": inProgress++; break;
+                case "2": inReview++; break;
+                case "3":
+                    finished++;
+                    completedTasks++;
+                    break;
             }
         }
 
-        // 如果没有找到数据，设置默认值
-        if (!result.containsKey("totalTasks")) {
-            result.put("totalTasks", 0);
-            result.put("completedTasks", 0);
+        result.put("totalTasks", totalTasks);
+        result.put("completedTasks", completedTasks);
+        result.put("notStartedCount", notStarted);
+        result.put("inProgressCount", inProgress);
+        result.put("inReviewCount", inReview);
+        result.put("finishedCount", finished);
+
+        // 计算完成率和占比
+        if (totalTasks > 0) {
+            BigDecimal completionRate = BigDecimal.valueOf(completedTasks * 100.0 / totalTasks)
+                    .setScale(2, RoundingMode.HALF_UP);
+            result.put("completionRate", completionRate);
+
+            result.put("notStartedRate", BigDecimal.valueOf(notStarted * 100.0 / totalTasks)
+                    .setScale(2, RoundingMode.HALF_UP));
+            result.put("inProgressRate", BigDecimal.valueOf(inProgress * 100.0 / totalTasks)
+                    .setScale(2, RoundingMode.HALF_UP));
+            result.put("inReviewRate", BigDecimal.valueOf(inReview * 100.0 / totalTasks)
+                    .setScale(2, RoundingMode.HALF_UP));
+            result.put("finishedRate", BigDecimal.valueOf(finished * 100.0 / totalTasks)
+                    .setScale(2, RoundingMode.HALF_UP));
+        } else {
             result.put("completionRate", BigDecimal.ZERO);
+            result.put("notStartedRate", BigDecimal.ZERO);
+            result.put("inProgressRate", BigDecimal.ZERO);
+            result.put("inReviewRate", BigDecimal.ZERO);
+            result.put("finishedRate", BigDecimal.ZERO);
         }
 
         return result;

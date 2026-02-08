@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 /**
  * 一级任务详情VO
@@ -29,11 +30,22 @@ public class FirstLevelTaskDetailVO {
         return "3".equals(status);
     }
 
+    // 获取状态中文描述
+    public String getStatusText() {
+        switch (status) {
+            case "0": return "未开始";
+            case "1": return "进行中";
+            case "2": return "审核中";
+            case "3": return "已完成";
+            default: return "未知";
+        }
+    }
+
     // 获取完成率
     public BigDecimal getCompletionRate() {
         if (targetValue != null && targetValue.compareTo(BigDecimal.ZERO) > 0) {
             return currentValue.multiply(BigDecimal.valueOf(100))
-                    .divide(targetValue, 2, BigDecimal.ROUND_HALF_UP);
+                    .divide(targetValue, 2, RoundingMode.HALF_UP);
         }
         return BigDecimal.ZERO;
     }

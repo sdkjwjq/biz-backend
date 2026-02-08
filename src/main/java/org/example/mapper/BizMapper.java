@@ -44,11 +44,9 @@ public interface BizMapper {
     @Select("SELECT * FROM biz_task WHERE dept_id = #{deptId}")
     List<BizTask> getTasksByDeptId(Long deptId);
 
-//    getTasksByDeptIdAndPhase
+    // getTasksByDeptIdAndPhase
     @Select("SELECT * FROM biz_task WHERE dept_id = #{deptId} AND phase = #{phase}")
     List<BizTask> getTasksByDeptIdAndPhase(Long deptId, Integer phase);
-
-
 
     /**
      * 根据归口负责人获取任务
@@ -104,7 +102,6 @@ public interface BizMapper {
      */
     @Select("SELECT * FROM biz_task WHERE parent_id = #{parentId} AND level=3")
     List<BizTask> getThirdLevelTasksByParentId(Long parentId);
-
 
     /**
      * 根据任务阶段获取任务
@@ -340,15 +337,46 @@ public interface BizMapper {
             "AND flow_status >= 10 AND flow_status < 40 AND is_delete = 0")
     Integer countPendingAuditsByHandler(@Param("handlerId") Long handlerId);
 
-
-    // ... 原有的其他方法 ...
-
     /**
      * 获取所有任务数量
      * @return 任务总数
      */
     @Select("SELECT COUNT(*) FROM biz_task WHERE is_delete = 0")
     Integer getTotalTaskCount();
+
+    /**
+     * 获取特定状态的任务数量（新增通用方法）
+     * @param status 状态码
+     * @return 特定状态的任务数量
+     */
+    @Select("SELECT COUNT(*) FROM biz_task WHERE status = #{status} AND is_delete = 0")
+    Integer getTaskCountByStatus(@Param("status") String status);
+
+    /**
+     * 根据年份获取特定状态的任务数量（新增）
+     * @param year 年份
+     * @param status 状态码
+     * @return 特定状态的任务数量
+     */
+    @Select("SELECT COUNT(*) FROM biz_task WHERE phase = #{year} AND status = #{status} AND is_delete = 0")
+    Integer getYearTaskCountByStatus(@Param("year") Integer year, @Param("status") String status);
+
+    /**
+     * 获取中期特定状态的任务数量（新增）
+     * @param endYear 截止年份
+     * @param status 状态码
+     * @return 特定状态的任务数量
+     */
+    @Select("SELECT COUNT(*) FROM biz_task WHERE phase < #{endYear} AND status = #{status} AND is_delete = 0")
+    Integer getMidTermTaskCountByStatus(@Param("endYear") Integer endYear, @Param("status") String status);
+
+    /**
+     * 获取一级特定状态的任务数量（新增）
+     * @param status 状态码
+     * @return 特定状态的任务数量
+     */
+    @Select("SELECT COUNT(*) FROM biz_task WHERE level = 1 AND status = #{status} AND is_delete = 0")
+    Integer getFirstLevelTaskCountByStatus(@Param("status") String status);
 
     /**
      * 获取已完成任务数量
@@ -403,9 +431,8 @@ public interface BizMapper {
     @Select("SELECT COUNT(*) FROM biz_task WHERE level = 1 AND status = '3' AND is_delete = 0")
     Integer getFirstLevelCompletedTaskCount();
 
-
     /**
-     * 获取部门任务数量统计
+     * 获取部门任务数量统计（不带状态统计，Service层处理）
      * @return 部门任务统计列表
      */
     @Select("SELECT " +
@@ -421,7 +448,7 @@ public interface BizMapper {
     List<DeptTaskStatsVO> getDeptTaskStats();
 
     /**
-     * 获取部门本年度任务统计
+     * 获取部门本年度任务统计（不带状态统计，Service层处理）
      * @param year 年份
      * @return 部门本年度任务统计
      */
@@ -438,7 +465,7 @@ public interface BizMapper {
     List<DeptTaskStatsVO> getDeptYearTaskStats(@Param("year") Integer year);
 
     /**
-     * 获取部门中期任务统计（phase在2028年之前）
+     * 获取部门中期任务统计（不带状态统计，Service层处理）
      * @param endYear 截止年份
      * @return 部门中期任务统计
      */
