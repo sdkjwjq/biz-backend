@@ -7,7 +7,7 @@ SET NAMES utf8mb4;
  */
 
 -- 插入部门数据
-INSERT INTO `sys_dept` (`dept_id`, `dept_name`, `status`, `create_time`) VALUES 
+INSERT INTO `sys_dept` (`dept_id`, `dept_name`, `status`, `create_time`) VALUES
 (100, '“双高”建设办公室', '0', NOW()),
 (101, '保卫处', '0', NOW()),
 (102, '本科生院', '0', NOW()),
@@ -938,71 +938,71 @@ UPDATE `sys_user` SET `password` = `user_id`;
  */
 
 -- 1. “双高”建设办公室 -> 徐忠杰
-UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '徐忠杰' LIMIT 1) 
+UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '徐忠杰' LIMIT 1)
 WHERE `dept_name` = '“双高”建设办公室';
 
 -- 2. 保卫处 -> 杜庆深
-UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '杜庆深' LIMIT 1) 
+UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '杜庆深' LIMIT 1)
 WHERE `dept_name` = '保卫处';
 
 -- 3. 本科生院 -> 肖亚杰
-UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '肖亚杰' LIMIT 1) 
+UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '肖亚杰' LIMIT 1)
 WHERE `dept_name` = '本科生院';
 
 -- 4. 材料工程学院 -> 周树会
-UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '周树会' LIMIT 1) 
+UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '周树会' LIMIT 1)
 WHERE `dept_name` = '材料工程学院';
 
 -- 5. 财务处 -> 谭卫东
-UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '谭卫东' LIMIT 1) 
+UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '谭卫东' LIMIT 1)
 WHERE `dept_name` = '财务处';
 
 -- 6. 党委办公室、院长办公室（合署） -> 阮浩
-UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '阮浩' LIMIT 1) 
+UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '阮浩' LIMIT 1)
 WHERE `dept_name` = '党委办公室、院长办公室（合署）';
 
 -- 7. 党委教师工作部、人事处、教师发展中心（合署） -> 张海波
-UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '张海波' LIMIT 1) 
+UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '张海波' LIMIT 1)
 WHERE `dept_name` = '党委教师工作部、人事处、教师发展中心（合署）';
 
 -- 8. 党委宣传部、网信办 -> 杨宏楼
-UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '杨宏楼' LIMIT 1) 
+UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '杨宏楼' LIMIT 1)
 WHERE `dept_name` = '党委宣传部、网信办';
 
 -- 9. 党委学生工作部、党委武装部、学工处、大学生就业指导服务中心（合署） -> 张妍妍
-UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '张妍妍' LIMIT 1) 
+UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '张妍妍' LIMIT 1)
 WHERE `dept_name` = '党委学生工作部、党委武装部、学工处、大学生就业指导服务中心（合署）';
 
 -- 10. 党委组织部、党委统战部、党校（合署） -> 乔向东
-UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '乔向东' LIMIT 1) 
+UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '乔向东' LIMIT 1)
 WHERE `dept_name` = '党委组织部、党委统战部、党校（合署）';
 
 -- 11. 发展规划处、高等职业教育研究中心（合署） -> 徐云慧
-UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '徐云慧' LIMIT 1) 
+UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '徐云慧' LIMIT 1)
 WHERE `dept_name` = '发展规划处、高等职业教育研究中心（合署）';
 
 -- 12. 妇女联合会 -> 赵燕
-UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '赵燕' LIMIT 1) 
+UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '赵燕' LIMIT 1)
 WHERE `dept_name` = '妇女联合会';
 
 -- 13. 工会、关工委办公室、退休工作办公室（合署） -> 刘新良
-UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '刘新良' LIMIT 1) 
+UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '刘新良' LIMIT 1)
 WHERE `dept_name` = '工会、关工委办公室、退休工作办公室（合署）';
 
 -- 14. 工商管理学院 -> 魏贤运
-UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '魏贤运' LIMIT 1) 
+UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '魏贤运' LIMIT 1)
 WHERE `dept_name` = '工商管理学院';
 
 -- 15. 国际教育学院、外事办（合署） -> 王建华
-UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '王建华' LIMIT 1) 
+UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '王建华' LIMIT 1)
 WHERE `dept_name` = '国际教育学院、外事办（合署）';
 
 -- 16. 国有资产管理处 -> 刘继峰
-UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '刘继峰' LIMIT 1) 
+UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '刘继峰' LIMIT 1)
 WHERE `dept_name` = '国有资产管理处';
 
 -- 17. 后勤服务中心 -> 王方杰
-UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '王方杰' LIMIT 1) 
+UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '王方杰' LIMIT 1)
 WHERE `dept_name` = '后勤服务中心';
 
 -- 18. 化学工程学院 -> 燕传勇
@@ -1014,75 +1014,75 @@ UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nic
 WHERE `dept_name` = '机电工程学院';
 
 -- 20. 机关党总支 -> 吴红
-UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '吴红' LIMIT 1) 
+UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '吴红' LIMIT 1)
 WHERE `dept_name` = '机关党总支';
 
 -- 21. 基础课教学部、体育与艺术教学部（合署） -> 宋广侠
-UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '宋广侠' LIMIT 1) 
+UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '宋广侠' LIMIT 1)
 WHERE `dept_name` = '基础课教学部、体育与艺术教学部（合署）';
 
 -- 22. 纪委办公室、党委巡察办（合署） -> 朱慧芹
-UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '朱慧芹' LIMIT 1) 
+UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '朱慧芹' LIMIT 1)
 WHERE `dept_name` = '纪委办公室、党委巡察办（合署）';
 
 -- 23. 继续教育学院 -> 陈祥章
-UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '陈祥章' LIMIT 1) 
+UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '陈祥章' LIMIT 1)
 WHERE `dept_name` = '继续教育学院';
 
 -- 24. 建筑工程学院 -> 程建伟
-UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '程建伟' LIMIT 1) 
+UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '程建伟' LIMIT 1)
 WHERE `dept_name` = '建筑工程学院';
 
 -- 25. 教务部、创新创业学院（合署）、招生办公室（挂靠教务部） -> 侯亚合
-UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '侯亚合' LIMIT 1) 
+UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '侯亚合' LIMIT 1)
 WHERE `dept_name` = '教务部、创新创业学院（合署）、招生办公室（挂靠教务部）';
 
 -- 26. 科技与产业部、服务产业研究院（合署） -> 孙婷婷
-UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '孙婷婷' LIMIT 1) 
+UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '孙婷婷' LIMIT 1)
 WHERE `dept_name` = '科技与产业部、服务产业研究院（合署）';
 
 -- 27. 马克思主义学院 -> 陈竹
-UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '陈竹' LIMIT 1) 
+UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '陈竹' LIMIT 1)
 WHERE `dept_name` = '马克思主义学院';
 
 -- 28. 汽车工程学院 -> 顾广辉
-UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '顾广辉' LIMIT 1) 
+UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '顾广辉' LIMIT 1)
 WHERE `dept_name` = '汽车工程学院';
 
 -- 29. 审计处 -> 罗军
-UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '罗军' LIMIT 1) 
+UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '罗军' LIMIT 1)
 WHERE `dept_name` = '审计处';
 
 -- 30. 图文中心（综合档案室） -> 宁军胜
-UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '宁军胜' LIMIT 1) 
+UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '宁军胜' LIMIT 1)
 WHERE `dept_name` = '图文中心（综合档案室）';
 
 -- 31. 团委 -> 孙鹏
-UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '孙鹏' LIMIT 1) 
+UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '孙鹏' LIMIT 1)
 WHERE `dept_name` = '团委';
 
 -- 32. 卫生所 -> 赵颖
-UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '赵颖' LIMIT 1) 
+UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '赵颖' LIMIT 1)
 WHERE `dept_name` = '卫生所';
 
 -- 33. 现代教育技术中心 -> 王锋
-UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '王锋' LIMIT 1) 
+UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '王锋' LIMIT 1)
 WHERE `dept_name` = '现代教育技术中心';
 
 -- 34. 新沂学院 -> 陈华堂
-UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '陈华堂' LIMIT 1) 
+UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '陈华堂' LIMIT 1)
 WHERE `dept_name` = '新沂学院';
 
 -- 35. 信息工程学院 -> 杨勇
-UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '杨勇' LIMIT 1) 
+UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '杨勇' LIMIT 1)
 WHERE `dept_name` = '信息工程学院';
 
 -- 36. 执纪审查室 -> 刘海涛
-UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '刘海涛' LIMIT 1) 
+UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '刘海涛' LIMIT 1)
 WHERE `dept_name` = '执纪审查室';
 
 -- 37. 资产经营有限公司 -> 周蕊
-UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '周蕊' LIMIT 1) 
+UPDATE `sys_dept` SET `leader_id` = (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '周蕊' LIMIT 1)
 WHERE `dept_name` = '资产经营有限公司';
 
 -- 38. 网络思想政治工作中心 -> 杨宏楼
@@ -1091,42 +1091,42 @@ WHERE `dept_name` = '网络思想政治工作中心';
 
 -- 插入项目
 INSERT INTO `biz_project` (
-  `project_name`, 
-  `project_code`, 
-  `leader_id`, 
-  `start_date`, 
-  `end_date`, 
-  `status`, 
+  `project_name`,
+  `project_code`,
+  `leader_id`,
+  `start_date`,
+  `end_date`,
+  `status`,
   `create_time`
 ) VALUES (
-  '徐州工业职业技术学院第二期“双高建设计划”', 
-  'SGJS2', 
-  (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '徐忠杰' LIMIT 1), 
-  '2025-01-01', 
-  '2029-12-31', 
-  '1', 
+  '徐州工业职业技术学院第二期“双高建设计划”',
+  'SGJS2',
+  (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '徐忠杰' LIMIT 1),
+  '2025-01-01',
+  '2029-12-31',
+  '1',
   NOW()
 );
 
 -- 插入一级任务 (SG01 - SG10)
 INSERT INTO `biz_task` (
-  `project_id`, 
-  `task_code`, 
-  `task_name`, 
-  `level`, 
-  `parent_id`, 
-  `ancestors`, 
-  `dept_id`, 
-  `principal_id`, 
-  `leader_id`, 
+  `project_id`,
+  `task_code`,
+  `task_name`,
+  `level`,
+  `parent_id`,
+  `ancestors`,
+  `dept_id`,
+  `principal_id`,
+  `leader_id`,
   `data_type`,
-  `status`, 
+  `status`,
   `create_time`
-) 
-SELECT 
-  (SELECT `project_id` FROM `biz_project` WHERE `project_name` = '徐州工业职业技术学院第二期“双高建设计划”' LIMIT 1), 
-  code, 
-  name, 
+)
+SELECT
+  (SELECT `project_id` FROM `biz_project` WHERE `project_name` = '徐州工业职业技术学院第二期“双高建设计划”' LIMIT 1),
+  code,
+  name,
   1,   -- 层级：一级
   0,   -- 父节点：根节点
   '0', -- 祖先路径
@@ -1151,20 +1151,20 @@ FROM (
 
 -- 插入二级任务 (SG0101 - SG1003，共30条)
 INSERT INTO `biz_task` (
-  `project_id`, 
-  `task_code`, 
-  `task_name`, 
-  `level`, 
-  `parent_id`, 
-  `ancestors`, 
-  `dept_id`, 
-  `principal_id`, 
-  `leader_id`, 
-  `data_type`, 
-  `status`, 
+  `project_id`,
+  `task_code`,
+  `task_name`,
+  `level`,
+  `parent_id`,
+  `ancestors`,
+  `dept_id`,
+  `principal_id`,
+  `leader_id`,
+  `data_type`,
+  `status`,
   `create_time`
 )
-SELECT 
+SELECT
   (SELECT `project_id` FROM `biz_project` WHERE `project_name` = '徐州工业职业技术学院第二期“双高建设计划”' LIMIT 1),
   t.code,
   t.name,
@@ -1175,7 +1175,7 @@ SELECT
   (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '徐忠杰' LIMIT 1), -- 统一负责人：徐忠杰
   -- 执行负责人
   (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = t.leader_name LIMIT 1),
-  '0', 
+  '0',
   '1', -- 状态：进行中
   NOW()
 FROM (
@@ -1183,47 +1183,47 @@ FROM (
   SELECT 'SG0101' AS code, '支部联建共创，拓展协同育人新路径' AS name, 'SG01' AS p_code, '赵圣洁' AS leader_name UNION ALL
   SELECT 'SG0102', '联动三个课堂，丰富育人工作新场景', 'SG01', '赵圣洁' UNION ALL
   SELECT 'SG0103', '联结虚实资源，构建立体育人新平台', 'SG01', '赵圣洁' UNION ALL
-  
+
   -- SG02
   SELECT 'SG0201', '健全合作发展机制，促进多主体深度参与', 'SG02', '褚超' UNION ALL
   SELECT 'SG0202', '健全议事决策机制，激发多主体主动作为', 'SG02', '褚超' UNION ALL
   SELECT 'SG0203', '健全项目执行机制，强化多主体协同落实', 'SG02', '褚超' UNION ALL
-  
+
   -- SG03
   SELECT 'SG0301', '对接岗位需求，共订人才培养方案', 'SG03', '李赛' UNION ALL
   SELECT 'SG0302', '对接成才需要，创新培养培训模式', 'SG03', '李赛' UNION ALL
   SELECT 'SG0303', '对接产业需要，健全持续发展机制', 'SG03', '李赛' UNION ALL
-  
+
   -- SG04
   SELECT 'SG0401', '集聚各方智慧，打造系统化一流核心课程', 'SG04', '燕硕' UNION ALL
   SELECT 'SG0402', '突出学生主体，探索多元化课堂教学模式', 'SG04', '燕硕' UNION ALL
   SELECT 'SG0403', '搭建信息平台，构建智能多维度评价体系', 'SG04', '燕硕' UNION ALL
-  
+
   -- SG05
   SELECT 'SG0501', '优化教学内容，校企合作开发多形态教材', 'SG05', '卓自明' UNION ALL
   SELECT 'SG0502', '整合平台资源，打造品高质优数字化教材', 'SG05', '卓自明' UNION ALL
   SELECT 'SG0503', '抓好过程管理，规范教材编审选用全流程', 'SG05', '卓自明' UNION ALL
-  
+
   -- SG06
   SELECT 'SG0601', '坚持第一标准，锻造品质卓越大先生', 'SG06', '周天沛' UNION ALL
   SELECT 'SG0602', '畅通引才渠道，打造技能卓越大匠师', 'SG06', '周天沛' UNION ALL
   SELECT 'SG0603', '健全培养体系，打造协同卓越大团队', 'SG06', '周天沛' UNION ALL
-  
+
   -- SG07
   SELECT 'SG0701', '虚实结合，共建产教融合实践中心', 'SG07', '陈奥林' UNION ALL
   SELECT 'SG0702', '智慧管训，推进实践教学提质增效', 'SG07', '陈奥林' UNION ALL
   SELECT 'SG0703', '协同合作，助推实践中心开放共享', 'SG07', '陈奥林' UNION ALL
-  
+
   -- SG08
   SELECT 'SG0801', '对接数字变革，推动专业数智化升级', 'SG08', '孟宝星' UNION ALL
   SELECT 'SG0802', '优化资源平台，助力教学数智化改革', 'SG08', '孟宝星' UNION ALL
   SELECT 'SG0803', '深化数据分析，促进评价数智化转型', 'SG08', '孟宝星' UNION ALL
-  
+
   -- SG09
   SELECT 'SG0901', '厚植技术优势，开展本土化技能人才培养', 'SG09', '周波' UNION ALL
   SELECT 'SG0902', '集聚资源优势，推动职教与企业标准输出', 'SG09', '周波' UNION ALL
   SELECT 'SG0903', '深化合作办学，助力徐工院品牌享誉海外', 'SG09', '周波' UNION ALL
-  
+
   -- SG10
   SELECT 'SG1001', '强化调研打造产业发展“瞭望塔”，助力政府科学决策', 'SG10', '詹国兵' UNION ALL
   SELECT 'SG1002', '聚焦智慧打造技术标准“输出源”，助力产业健康发展', 'SG10', '詹国兵' UNION ALL

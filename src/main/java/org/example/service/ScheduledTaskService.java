@@ -317,4 +317,16 @@ public class ScheduledTaskService {
     }
 
 
+    @Autowired
+    private TrendDataService trendDataService;
+    /**
+     * 趋势数据定时任务
+     * 每天23:30执行
+     */
+    @Scheduled(cron = "0 30 23 * * ?")
+    public void dailyTrendRecord() {
+        System.out.println("[" + new Date() + "] 开始执行趋势数据记录...");
+        trendDataService.recordDailyTrendData();
+    }
+
 }

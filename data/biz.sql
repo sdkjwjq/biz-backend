@@ -176,6 +176,22 @@ CREATE TABLE `biz_task` (
     CONSTRAINT `fk_task_leader` FOREIGN KEY (`leader_id`) REFERENCES `sys_user` (`user_id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='任务分解表';
 
+-- 2.4 发展趋势数据表（简化版）
+DROP TABLE IF EXISTS `biz_trend_data`;
+CREATE TABLE `biz_trend_data` (
+    `data_id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '数据ID',
+    `year` int(4) NOT NULL COMMENT '所属年份',
+    `month` int(2) NOT NULL COMMENT '所属月份',
+    `day` int(2) NOT NULL COMMENT '所属日',
+    `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '记录时间',
+    `completion_rate` decimal(5,2) DEFAULT 0.00 COMMENT '完成率(%)',
+    `is_delete` tinyint(1) DEFAULT 0 COMMENT '0:存在 1:删除',
+
+    PRIMARY KEY (`data_id`),
+    KEY `idx_year_month` (`year`, `month`),
+    KEY `idx_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='发展趋势数据表';
+
 -- ==========================================================================
 -- 第三部分：审批流转与数据填报
 -- ==========================================================================

@@ -5,8 +5,15 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="41122148-b20d-4d4e-9275-6e060cef4fba" name="更改" comment="">
+      <change afterPath="$PROJECT_DIR$/src/main/java/org/example/controller/TrendDataController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/org/example/entity/BizTrendData.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/org/example/mapper/TrendDataMapper.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/org/example/service/TrendDataService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/org/example/controller/AchievementController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/example/controller/AchievementController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/biz.sql" beforeDir="false" afterPath="$PROJECT_DIR$/data/biz.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/insert.sql" beforeDir="false" afterPath="$PROJECT_DIR$/data/insert.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/code_summary.md" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/code_summary.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/org/example/service/ScheduledTaskService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/example/service/ScheduledTaskService.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -95,7 +102,8 @@
       <workItem from="1769652592076" duration="4087000" />
       <workItem from="1769743339461" duration="32810000" />
       <workItem from="1770088296877" duration="918000" />
-      <workItem from="1770261828773" duration="29000" />
+      <workItem from="1770261828773" duration="1621000" />
+      <workItem from="1770265994731" duration="13375000" />
     </task>
     <servers />
   </component>

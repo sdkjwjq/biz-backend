@@ -1,6 +1,6 @@
 # 代码文件汇总
 
-生成时间: 2026-01-31 20:28:56
+生成时间: 2026-02-08 21:49:05
 源目录: `D:\college\0workspace\biz-backend\biz-backend\src\main`
 
 ---
@@ -19,6 +19,7 @@
 - [java\org\example\controller\DashboardController.java](#dashboardcontrollerjava)
 - [java\org\example\controller\ScheduledTaskController.java](#scheduledtaskcontrollerjava)
 - [java\org\example\controller\SysController.java](#syscontrollerjava)
+- [java\org\example\controller\TrendDataController.java](#trenddatacontrollerjava)
 - [java\org\example\entity\BizAchievement.java](#bizachievementjava)
 - [java\org\example\entity\BizAuditLog.java](#bizauditlogjava)
 - [java\org\example\entity\BizMaterialSubmission.java](#bizmaterialsubmissionjava)
@@ -27,6 +28,7 @@
 - [java\org\example\entity\BizProject.java](#bizprojectjava)
 - [java\org\example\entity\BizProjectPhase.java](#bizprojectphasejava)
 - [java\org\example\entity\BizTask.java](#biztaskjava)
+- [java\org\example\entity\BizTrendData.java](#biztrenddatajava)
 - [java\org\example\entity\dto\BizAuditDTO.java](#bizauditdtojava)
 - [java\org\example\entity\dto\BizReSubDTO.java](#bizresubdtojava)
 - [java\org\example\entity\dto\BizSubDTO.java](#bizsubdtojava)
@@ -58,10 +60,12 @@
 - [java\org\example\mapper\BizMapper.java](#bizmapperjava)
 - [java\org\example\mapper\SysMapper.java](#sysmapperjava)
 - [java\org\example\mapper\TokenBlacklistMapper.java](#tokenblacklistmapperjava)
+- [java\org\example\mapper\TrendDataMapper.java](#trenddatamapperjava)
 - [java\org\example\service\AchievementService.java](#achievementservicejava)
 - [java\org\example\service\BizService.java](#bizservicejava)
 - [java\org\example\service\ScheduledTaskService.java](#scheduledtaskservicejava)
 - [java\org\example\service\SysService.java](#sysservicejava)
+- [java\org\example\service\TrendDataService.java](#trenddataservicejava)
 - [java\org\example\utils\FileUploadUtil.java](#fileuploadutiljava)
 - [java\org\example\utils\JWTUtil.java](#jwtutiljava)
 - [resources\application.properties](#applicationproperties)
@@ -647,7 +651,7 @@ public class AchievementController {
      * @return 操作结果/错误信息
      */
     @PostMapping("/delete/{achId}")
-    public Object deleteAchievement(@PathVariable Long achId) {
+    public Object deleteAchievement(@PathVariable("achId") Long achId) {
         try {
             // 查询成果名称，用于返回友好提示
             BizAchievement achievement = achievementService.getAchievementById(achId);
@@ -1532,6 +1536,69 @@ public class SysController {
 }
 ```
 
+#### java\org\example\controller\TrendDataController.java
+
+```java
+package org.example.controller;
+
+
+
+import org.example.entity.BizTrendData;
+import org.example.entity.vo.ErrorVO;
+import org.example.service.TrendDataService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/dashboard/trend")
+public class TrendDataController {
+
+    @Autowired
+    private TrendDataService trendDataService;
+
+    /**
+     * 获取趋势数据
+     * @param year 年份（可选，默认当前年份）
+     */
+    @GetMapping("/{year}")
+    public Object getTrendData(@PathVariable(required = false) Integer year) {
+        try {
+            List<BizTrendData> trendData = trendDataService.getTrendDataByYear(year);
+            return trendData;
+        } catch (Exception e) {
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
+
+    /**
+     * 获取当前年份的趋势数据
+     */
+    @GetMapping("/")
+    public Object getCurrentYearTrendData() {
+        try {
+            List<BizTrendData> trendData = trendDataService.getTrendDataByYear(null);
+            return trendData;
+        } catch (Exception e) {
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
+
+    /**
+     * 手动记录（测试用）
+     */
+    @PostMapping("/record")
+    public Object manualRecord() {
+        try {
+            return trendDataService.triggerRecord();
+        } catch (Exception e) {
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
+}
+```
+
 #### java\org\example\entity\BizAchievement.java
 
 ```java
@@ -1834,6 +1901,30 @@ public class BizTask {
     private Integer isDelete; // 0:存在 1:删除
     private Date createTime; // 创建时间
     private Date updateTime; // 更新时间
+}
+```
+
+#### java\org\example\entity\BizTrendData.java
+
+```java
+package org.example.entity;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.util.Date;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class BizTrendData {
+    private Long dataId;
+    private Integer year;
+    private Integer month;
+    private Integer day;
+    private Date createTime;
+    private Double completionRate; // 用Double简单处理
+    private Integer isDelete;
 }
 ```
 
@@ -2969,7 +3060,7 @@ public interface BizMapper {
      * @return 待审批列表
      */
     @Select("SELECT * FROM biz_material_submission " +
-            "WHERE current_handler_id = #{userId} AND is_delete = 0 AND flow_status >= 10 AND flow_status < 40 AND is_delete = 0" +
+            "WHERE current_handler_id = #{userId} AND is_delete = 0 AND flow_status >= 10 AND flow_status < 40 AND is_delete = 0 " +
             "ORDER BY submit_time DESC, sub_id DESC")
     List<BizMaterialSubmission> getTodoAudits(@Param("userId") Long userId);
 
@@ -3381,6 +3472,51 @@ public interface TokenBlacklistMapper {
      */
     @Select("DELETE FROM token_blacklist WHERE expiry_time < NOW()")
     void cleanupExpiredTokens();
+}
+```
+
+#### java\org\example\mapper\TrendDataMapper.java
+
+```java
+package org.example.mapper;
+
+import org.apache.ibatis.annotations.*;
+import org.example.entity.BizTrendData;
+import java.util.List;
+
+@Mapper
+public interface TrendDataMapper {
+
+    /**
+     * 插入趋势数据
+     */
+    @Insert("INSERT INTO biz_trend_data (year, month, day, completion_rate) " +
+            "VALUES (#{year}, #{month}, #{day}, #{completionRate})")
+    void insertTrendData(BizTrendData trendData);
+
+    /**
+     * 根据年份获取所有数据
+     */
+    @Select("SELECT * FROM biz_trend_data WHERE year = #{year} AND is_delete = 0 " +
+            "ORDER BY year DESC, month DESC, day DESC")
+    List<BizTrendData> getTrendDataByYear(@Param("year") Integer year);
+
+    /**
+     * 获取最近一年的数据
+     */
+    @Select("SELECT * FROM biz_trend_data WHERE year = #{year} AND is_delete = 0 " +
+            "ORDER BY month, day LIMIT 365")
+    List<BizTrendData> getLatestTrendData(@Param("year") Integer year);
+
+    /**
+     * 检查今天是否已记录
+     */
+    @Select("SELECT COUNT(*) FROM biz_trend_data " +
+            "WHERE year = YEAR(CURDATE()) " +
+            "AND month = MONTH(CURDATE()) " +
+            "AND day = DAY(CURDATE()) " +
+            "AND is_delete = 0")
+    Integer checkTodayRecorded();
 }
 ```
 
@@ -5260,6 +5396,18 @@ public class ScheduledTaskService {
     }
 
 
+    @Autowired
+    private TrendDataService trendDataService;
+    /**
+     * 趋势数据定时任务
+     * 每天23:30执行
+     */
+    @Scheduled(cron = "0 30 23 * * ?")
+    public void dailyTrendRecord() {
+        System.out.println("[" + new Date() + "] 开始执行趋势数据记录...");
+        trendDataService.recordDailyTrendData();
+    }
+
 }
 ```
 
@@ -5610,6 +5758,153 @@ public class SysService {
         newUser.setStatus("1");
         newUser.setIsDelete(0);
         return newUser;
+    }
+}
+```
+
+#### java\org\example\service\TrendDataService.java
+
+```java
+package org.example.service;
+
+import org.example.entity.BizTask;
+import org.example.entity.BizTrendData;
+import org.example.mapper.BizMapper;
+import org.example.mapper.TrendDataMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.util.Date;
+import java.util.List;
+
+@Service
+public class TrendDataService {
+
+    @Autowired
+    private TrendDataMapper trendDataMapper;
+
+    @Autowired
+    private BizMapper bizMapper;
+
+    /**
+     * 每日记录趋势数据（定时任务）
+     */
+    @Transactional
+    public void recordDailyTrendData() {
+        try {
+            // 检查今天是否已记录
+            Integer count = trendDataMapper.checkTodayRecorded();
+            if (count > 0) {
+                System.out.println("今天已记录趋势数据，跳过");
+                return;
+            }
+
+            LocalDate today = LocalDate.now();
+            int year = today.getYear();
+            int month = today.getMonthValue();
+            int day = today.getDayOfMonth();
+
+            // 计算当年的三级任务完成率
+            List<BizTask> tasks = bizMapper.getTasksByPhase(year);
+
+            // 只计算三级任务
+            List<BizTask> thirdLevelTasks = tasks.stream()
+                    .filter(task -> task.getLevel() == 3 && task.getIsDelete() == 0)
+                    .toList();
+
+            if (thirdLevelTasks.isEmpty()) {
+                return; // 没有三级任务，不记录
+            }
+
+            // 计算完成率
+            double completionRate = calculateCompletionRate(thirdLevelTasks);
+
+            // 保存到数据库
+            BizTrendData trendData = new BizTrendData();
+            trendData.setYear(year);
+            trendData.setMonth(month);
+            trendData.setDay(day);
+            trendData.setCompletionRate(completionRate);
+
+            trendDataMapper.insertTrendData(trendData);
+
+            System.out.println("趋势数据记录成功：" + year + "-" + month + "-" + day +
+                    "，完成率：" + completionRate + "%");
+
+        } catch (Exception e) {
+            System.err.println("记录趋势数据失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 计算完成率（所有三级任务的平均完成率）
+     */
+    private double calculateCompletionRate(List<BizTask> tasks) {
+        if (tasks.isEmpty()) {
+            return 0.0;
+        }
+
+        BigDecimal totalRate = BigDecimal.ZERO;
+        int validTasks = 0;
+
+        for (BizTask task : tasks) {
+            BigDecimal target = task.getTargetValue();
+            BigDecimal current = task.getCurrentValue();
+
+            if (target != null && target.compareTo(BigDecimal.ZERO) > 0) {
+                // 计算单个任务的完成率
+                BigDecimal taskRate = current
+                        .multiply(BigDecimal.valueOf(100))
+                        .divide(target, 2, RoundingMode.HALF_UP);
+
+                // 限制在0-100之间
+                if (taskRate.compareTo(BigDecimal.ZERO) < 0) {
+                    taskRate = BigDecimal.ZERO;
+                } else if (taskRate.compareTo(BigDecimal.valueOf(100)) > 0) {
+                    taskRate = BigDecimal.valueOf(100);
+                }
+
+                totalRate = totalRate.add(taskRate);
+                validTasks++;
+            }
+        }
+
+        if (validTasks > 0) {
+            return totalRate.divide(BigDecimal.valueOf(validTasks), 2, RoundingMode.HALF_UP)
+                    .doubleValue();
+        }
+        return 0.0;
+    }
+
+    /**
+     * 根据年份获取趋势数据（直接返回数据库记录）
+     */
+    public List<BizTrendData> getTrendDataByYear(Integer year) {
+        try {
+            if (year == null) {
+                // 默认当前年份
+                year = LocalDate.now().getYear();
+            }
+            return trendDataMapper.getTrendDataByYear(year);
+        } catch (Exception e) {
+            throw new RuntimeException("获取趋势数据失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 手动触发记录（测试用）
+     */
+    public String triggerRecord() {
+        try {
+            recordDailyTrendData();
+            return "手动记录成功";
+        } catch (Exception e) {
+            return "手动记录失败: " + e.getMessage();
+        }
     }
 }
 ```
