@@ -176,7 +176,7 @@ CREATE TABLE `biz_task` (
     CONSTRAINT `fk_task_leader` FOREIGN KEY (`leader_id`) REFERENCES `sys_user` (`user_id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='任务分解表';
 
--- 2.4 发展趋势数据表（简化版）
+-- 2.4 发展趋势数据表
 DROP TABLE IF EXISTS `biz_trend_data`;
 CREATE TABLE `biz_trend_data` (
     `data_id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '数据ID',
@@ -184,6 +184,8 @@ CREATE TABLE `biz_trend_data` (
     `month` int(2) NOT NULL COMMENT '所属月份',
     `day` int(2) NOT NULL COMMENT '所属日',
     `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '记录时间',
+    `total_tasks` int(11) DEFAULT 0 COMMENT '当年总任务数',
+    `completion_count` int(11) DEFAULT 0 COMMENT '完成数量',
     `completion_rate` decimal(5,2) DEFAULT 0.00 COMMENT '完成率(%)',
     `is_delete` tinyint(1) DEFAULT 0 COMMENT '0:存在 1:删除',
 

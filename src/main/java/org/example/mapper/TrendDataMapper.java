@@ -10,8 +10,8 @@ public interface TrendDataMapper {
     /**
      * 插入趋势数据
      */
-    @Insert("INSERT INTO biz_trend_data (year, month, day, completion_rate) " +
-            "VALUES (#{year}, #{month}, #{day}, #{completionRate})")
+    @Insert("INSERT INTO biz_trend_data (year, month, day, total_tasks, completion_count, completion_rate) " +
+            "VALUES (#{year}, #{month}, #{day}, #{totalTasks}, #{completionCount}, #{completionRate})")
     void insertTrendData(BizTrendData trendData);
 
     /**

@@ -41,10 +41,10 @@ public class TrendDataService {
             int month = today.getMonthValue();
             int day = today.getDayOfMonth();
 
-            // 计算当年的三级任务完成率
+            // 获取今年的所有三级任务
             List<BizTask> tasks = bizMapper.getTasksByPhase(year);
 
-            // 只计算三级任务
+            // 筛选三级任务
             List<BizTask> thirdLevelTasks = tasks.stream()
                     .filter(task -> task.getLevel() == 3 && task.getIsDelete() == 0)
                     .toList();
@@ -53,19 +53,28 @@ public class TrendDataService {
                 return; // 没有三级任务，不记录
             }
 
-            // 计算完成率
-            double completionRate = calculateCompletionRate(thirdLevelTasks);
+            // 计算统计数据
+            int totalTasks = thirdLevelTasks.size(); // 总任务数
+            int completionCount = (int) thirdLevelTasks.stream()
+                    .filter(task -> "3".equals(task.getStatus()))
+                    .count(); // 完成数量
+
+            double completionRate = calculateCompletionRate(thirdLevelTasks); // 完成率
 
             // 保存到数据库
             BizTrendData trendData = new BizTrendData();
             trendData.setYear(year);
             trendData.setMonth(month);
             trendData.setDay(day);
+            trendData.setTotalTasks(totalTasks);        // 设置总任务数
+            trendData.setCompletionCount(completionCount);
             trendData.setCompletionRate(completionRate);
 
             trendDataMapper.insertTrendData(trendData);
 
             System.out.println("趋势数据记录成功：" + year + "-" + month + "-" + day +
+                    "，总任务数：" + totalTasks +
+                    "，完成数量：" + completionCount +
                     "，完成率：" + completionRate + "%");
 
         } catch (Exception e) {
@@ -112,7 +121,6 @@ public class TrendDataService {
         }
         return 0.0;
     }
-
     /**
      * 根据年份获取趋势数据（直接返回数据库记录）
      */

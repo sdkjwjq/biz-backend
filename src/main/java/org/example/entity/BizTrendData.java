@@ -14,6 +14,8 @@ public class BizTrendData {
     private Integer month;
     private Integer day;
     private Date createTime;
-    private Double completionRate; // 用Double简单处理
+    private Integer totalTasks;      // 新增：当年总任务数
+    private Integer completionCount; // 完成数量
+    private Double completionRate;   // 完成率
     private Integer isDelete;
 }

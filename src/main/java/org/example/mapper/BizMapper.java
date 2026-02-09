@@ -46,8 +46,7 @@ public interface BizMapper {
 
     // getTasksByDeptIdAndPhase
     @Select("SELECT * FROM biz_task WHERE dept_id = #{deptId} AND phase = #{phase}")
-    List<BizTask> getTasksByDeptIdAndPhase(Long deptId, Integer phase);
-
+    List<BizTask> getTasksByDeptIdAndPhase(@Param("deptId") Long deptId, @Param("phase") Integer phase);
     /**
      * 根据归口负责人获取任务
      * @param principalId 负责人ID
