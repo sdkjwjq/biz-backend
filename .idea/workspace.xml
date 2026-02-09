@@ -6,11 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="41122148-b20d-4d4e-9275-6e060cef4fba" name="更改" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/org/example/entity/vo/DeptTaskStatsVO.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/example/entity/vo/DeptTaskStatsVO.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/org/example/entity/vo/FirstLevelTaskDetailVO.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/example/entity/vo/FirstLevelTaskDetailVO.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/org/example/entity/vo/TaskCompletionVO.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/example/entity/vo/TaskCompletionVO.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/org/example/mapper/BizMapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/example/mapper/BizMapper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/org/example/service/BizService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/example/service/BizService.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -100,7 +95,7 @@
       <workItem from="1769743339461" duration="32810000" />
       <workItem from="1770088296877" duration="918000" />
       <workItem from="1770261828773" duration="1621000" />
-      <workItem from="1770265994731" duration="15443000" />
+      <workItem from="1770265994731" duration="18574000" />
     </task>
     <servers />
   </component>

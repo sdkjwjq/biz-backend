@@ -22,7 +22,7 @@ public class TrendDataController {
      * @param year 年份（可选，默认当前年份）
      */
     @GetMapping("/{year}")
-    public Object getTrendData(@PathVariable(required = false) Integer year) {
+    public Object getTrendData(@PathVariable(value = "year",required = false) Integer year) {
         try {
             List<BizTrendData> trendData = trendDataService.getTrendDataByYear(year);
             return trendData;
