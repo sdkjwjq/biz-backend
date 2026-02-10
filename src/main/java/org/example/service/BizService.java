@@ -1573,10 +1573,10 @@ public class BizService {
     }
 
 //    获取全量任务详细情况
-    public List<FirstLevelTaskDetailVO> getAllTaskDetails() {
+    public List<BizTask> getAllTaskDetails() {
 
         try {
-            return bizMapper.getAllTaskDetails();
+            return bizMapper.getAllTasks();
         } catch (Exception e) {
             throw new RuntimeException("获取全量任务详情失败: " + e.getMessage());
         }    }
