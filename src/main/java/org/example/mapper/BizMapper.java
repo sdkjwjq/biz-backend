@@ -440,9 +440,10 @@ public interface BizMapper {
             "COUNT(t.task_id) as totalTasks, " +
             "SUM(CASE WHEN t.status = '3' THEN 1 ELSE 0 END) as completedTasks " +
             "FROM sys_dept d " +
-            "LEFT JOIN biz_task t ON d.dept_id = t.dept_id AND t.is_delete = 0 " +
+            "LEFT JOIN biz_task t ON d.dept_id = t.dept_id AND t.is_delete = 0 AND t.level = 3 " +
             "WHERE d.is_delete = 0 " +
             "GROUP BY d.dept_id, d.dept_name " +
+            "HAVING COUNT(t.task_id) > 0 "+
             "ORDER BY d.dept_id")
     List<DeptTaskStatsVO> getDeptTaskStats();
 
@@ -457,9 +458,10 @@ public interface BizMapper {
             "COUNT(t.task_id) as totalTasks, " +
             "SUM(CASE WHEN t.status = '3' THEN 1 ELSE 0 END) as completedTasks " +
             "FROM sys_dept d " +
-            "LEFT JOIN biz_task t ON d.dept_id = t.dept_id AND t.phase = #{year} AND t.is_delete = 0 " +
+            "LEFT JOIN biz_task t ON d.dept_id = t.dept_id AND t.phase = #{year} AND t.level = 3 AND t.is_delete = 0 " +
             "WHERE d.is_delete = 0 " +
             "GROUP BY d.dept_id, d.dept_name " +
+            "HAVING COUNT(t.task_id) > 0 "+
             "ORDER BY d.dept_id")
     List<DeptTaskStatsVO> getDeptYearTaskStats(@Param("year") Integer year);
 
@@ -474,9 +476,10 @@ public interface BizMapper {
             "COUNT(t.task_id) as totalTasks, " +
             "SUM(CASE WHEN t.status = '3' THEN 1 ELSE 0 END) as completedTasks " +
             "FROM sys_dept d " +
-            "LEFT JOIN biz_task t ON d.dept_id = t.dept_id AND t.phase < #{endYear} AND t.is_delete = 0 " +
+            "LEFT JOIN biz_task t ON d.dept_id = t.dept_id AND t.phase < #{endYear} AND t.level = 3 AND t.is_delete = 0 " +
             "WHERE d.is_delete = 0 " +
             "GROUP BY d.dept_id, d.dept_name " +
+            "HAVING COUNT(t.task_id) > 0 "+
             "ORDER BY d.dept_id")
     List<DeptTaskStatsVO> getDeptMidTermTaskStats(@Param("endYear") Integer endYear);
 
