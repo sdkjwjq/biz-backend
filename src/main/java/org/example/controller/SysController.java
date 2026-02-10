@@ -74,7 +74,7 @@ public class SysController {
      * @return 操作结果或错误信息
      */
     @PostMapping("/users/delete/{userId}")
-    public Object deleteUser(@PathVariable Long userId) {
+    public Object deleteUser(@PathVariable("userId") Long userId) {
         try{
             sysService.deleteUser(userId);
             return "用户 "+userId+" 删除成功";

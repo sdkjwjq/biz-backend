@@ -27,7 +27,7 @@ public class AchievementController {
      * @return 成果实体/错误信息
      */
     @GetMapping("/{achId}")
-    public Object getAchievementById(@PathVariable Long achId) {
+    public Object getAchievementById(@PathVariable("achId") Long achId) {
         try {
             return achievementService.getAchievementById(achId);
         } catch (Exception e) {

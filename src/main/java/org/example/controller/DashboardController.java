@@ -59,7 +59,7 @@ public class DashboardController {
      * @return 本年度任务完成率
      */
     @GetMapping("/completion/year")
-    public Object getYearTaskCompletionRate(@RequestParam(required = false) Integer year) {
+    public Object getYearTaskCompletionRate(@RequestParam(required = false,value = "year") Integer year) {
         try {
             return bizService.getYearTaskCompletionRate(year);
         } catch (Exception e) {
@@ -73,7 +73,7 @@ public class DashboardController {
      * @return 中期任务完成率
      */
     @GetMapping("/completion/midterm")
-    public Object getMidTermTaskCompletionRate(@RequestParam(required = false) Integer endYear) {
+    public Object getMidTermTaskCompletionRate(@RequestParam(required = false,value = "year") Integer endYear) {
         try {
             return bizService.getMidTermTaskCompletionRate(endYear);
         } catch (Exception e) {
@@ -113,7 +113,7 @@ public class DashboardController {
      * @return 各部门本年度任务完成率列表
      */
     @GetMapping("/dept/year")
-    public Object getDeptYearTaskCompletionRates(@RequestParam(required = false) Integer year) {
+    public Object getDeptYearTaskCompletionRates(@RequestParam(required = false,value = "year") Integer year) {
         try {
             return bizService.getDeptYearTaskCompletionRates(year);
         } catch (Exception e) {
@@ -127,7 +127,7 @@ public class DashboardController {
      * @return 各部门中期任务完成率列表
      */
     @GetMapping("/dept/midterm")
-    public Object getDeptMidTermTaskCompletionRates(@RequestParam(required = false) Integer endYear) {
+    public Object getDeptMidTermTaskCompletionRates(@RequestParam(required = false,value = "endYear") Integer endYear) {
         try {
             return bizService.getDeptMidTermTaskCompletionRates(endYear);
         } catch (Exception e) {
@@ -164,7 +164,7 @@ public class DashboardController {
      * @return 部门统计详情
      */
     @GetMapping("/dept/{deptId}")
-    public Object getDeptStatsDetail(@PathVariable Long deptId) {
+    public Object getDeptStatsDetail(@PathVariable("deptId") Long deptId) {
         try {
             return bizService.getDeptStatsDetail(deptId);
         } catch (Exception e) {
@@ -178,7 +178,7 @@ public class DashboardController {
      * @return 部门统计列表
      */
     @GetMapping("/dept/batch")
-    public Object getBatchDeptStats(@RequestParam String deptIds) {
+    public Object getBatchDeptStats(@RequestParam("deptIds") String deptIds) {
         try {
             String[] ids = deptIds.split(",");
             List<Map<String, Object>> result = new java.util.ArrayList<>();
@@ -205,7 +205,7 @@ public class DashboardController {
      * @return 对比数据
      */
     @GetMapping("/comparison/{dimension}")
-    public Object getCompletionComparison(@PathVariable String dimension) {
+    public Object getCompletionComparison(@PathVariable("dimension") String dimension) {
         try {
             Map<String, Object> result = new java.util.HashMap<>();
 
