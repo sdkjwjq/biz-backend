@@ -148,6 +148,16 @@ public class DashboardController {
         }
     }
 
+//    获取全量任务详细情况
+    @GetMapping("/tasks/all_level")
+    public Object getAllTaskDetails() {
+        try {
+            return bizService.getAllTaskDetails();
+        } catch (Exception e) {
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
+
     /**
      * 获取单个部门详细统计信息
      * @param deptId 部门ID

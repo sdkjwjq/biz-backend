@@ -502,4 +502,22 @@ public interface BizMapper {
             "WHERE level = 1 AND is_delete = 0 " +
             "ORDER BY task_id")
     List<FirstLevelTaskDetailVO> getFirstLevelTaskDetails();
+
+//    获取全量任务详细情况
+    @Select("SELECT " +
+            "task_id as taskId, " +
+            "task_name as taskName, " +
+            "dept_id as deptId, " +
+            "(SELECT dept_name FROM sys_dept WHERE dept_id = t.dept_id) as deptName, " +
+            "status, " +
+            "target_value as targetValue, " +
+            "current_value as currentValue, " +
+            "progress, " +
+            "create_time as createTime, " +
+            "update_time as updateTime " +
+            "FROM biz_task t " +
+            "WHERE is_delete = 0 " +
+            "ORDER BY task_id"
+    )
+    List<FirstLevelTaskDetailVO> getAllTaskDetails();
 }

@@ -1572,6 +1572,15 @@ public class BizService {
         }
     }
 
+//    获取全量任务详细情况
+    public List<FirstLevelTaskDetailVO> getAllTaskDetails() {
+
+        try {
+            return bizMapper.getAllTaskDetails();
+        } catch (Exception e) {
+            throw new RuntimeException("获取全量任务详情失败: " + e.getMessage());
+        }    }
+
     /**
      * 获取单个部门的所有统计信息
      * @param deptId 部门ID
