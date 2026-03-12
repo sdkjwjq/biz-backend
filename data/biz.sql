@@ -281,6 +281,7 @@ CREATE TABLE `biz_performance` (
 
     `dept_id` bigint(20) NOT NULL COMMENT '归口部门ID',
     `principal_id` bigint(20) NOT NULL COMMENT '归口负责人ID',
+    `auditor_id` bigint(20) NOT NULL COMMENT '专业群审核人ID',
     `leader_id` bigint(20) DEFAULT NULL COMMENT '任务负责人ID',
 
     `is_delete` tinyint(1) DEFAULT 0 COMMENT '0:存在 1:删除',

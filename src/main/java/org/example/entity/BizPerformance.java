@@ -23,6 +23,7 @@ public class BizPerformance {
 
     private Long deptId; // 归口部门ID
     private Long principalId; // 归口负责人ID
+    private Long auditorId;// 审核人ID
     private Long leaderId; // 任务负责人ID
 
     private Integer isDelete; // 0:存在 1:删除
