@@ -102,7 +102,7 @@ public interface PerformanceMapper {
     List<RelTaskPerformance> getAllPerformanceByTaskId(Long taskId);
 
 //    根据taskId找到prefId
-    @Select("select perf_id from rel_task_performance where task_id = #{taskId}")
+    @Select(" select perf_id from rel_task_performance where task_id =#{taskId}")
     List<Long> getPerfIdByTaskId(Long taskId);
 
 //    根据perfId找到taskId

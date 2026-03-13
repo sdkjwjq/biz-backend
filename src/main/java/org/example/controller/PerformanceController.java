@@ -39,13 +39,26 @@ public class PerformanceController {
         }
     }
 
-    @GetMapping("/task/{taskId}")
-    public Object getPerformanceByTaskId(@PathVariable("taskId") Long taskId) {
+//    @GetMapping("/task/{taskId}")
+//    public Object getPerformanceByTaskId(@PathVariable("taskId") Long taskId) {
+//        try {
+//            return performanceService.getPerfByTaskId(taskId);
+//        } catch (Exception e) {
+//            return new ErrorVO(e.getMessage(), 500);
+//        }
+//    }
+
+    @GetMapping("/task/{prefId}")
+    public Object getTaskByPerfId(@PathVariable("prefId") Long prefId) {
         try {
-            return performanceService.getPerfByTaskId(taskId);
+            return performanceService.getTaskByPerfId(prefId);
         } catch (Exception e) {
             return new ErrorVO(e.getMessage(), 500);
         }
     }
+
+
+
+
 
 }

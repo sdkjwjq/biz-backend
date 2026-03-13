@@ -126,7 +126,7 @@ public class PerformanceService {
         if(performanceMapper.getPerformanceById(perfId).getIsDelete().equals("1")){
             throw new RuntimeException("该绩效已被删除");
         }
-        List<Long> taskIds = performanceMapper.getPerfIdByTaskId(perfId);
+        List<Long> taskIds = performanceMapper.getTaskIdByPerfId(perfId);
         List<BizTask> taskList = new ArrayList<>();
         for(Long taskId : taskIds){
             taskList.add(taskMapper.getTaskById(taskId));
