@@ -32,6 +32,9 @@ public class BizService {
     @Autowired
     private SysMapper sysMapper;
 
+    @Autowired
+    private PerformanceService performanceService;
+
     /**
      * 获取全部任务
      * @return 任务列表
@@ -220,6 +223,7 @@ public class BizService {
             bizMapper.updateTask(taskById);
             sendNotice(userId, taskById.getLeaderId(), "任务完成", "任务已完成", "任务"+taskById.getTaskName()+"已完成", "0", taskId);
             createAuditLog(taskId, userId, "任务完成", 1, 3, "任务完成");
+            performanceService.calcuateAllPerformance();
             return "任务"+taskById.getTaskName()+"已完成";
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -312,6 +316,7 @@ public class BizService {
 
             // 创建审批日志（使用封装方法）
             createAuditLog(subId, userId, "提交", 0, 10, "提交任务");
+            performanceService.updatePerformanceByTaskId(task.getTaskId());
             // 已修改，修改内容及原因：添加null检查和异常处理，避免getUserById返回null时出现空指针异常
             String resultMsg = "提交成功";
             if (handlerId != null) {
@@ -463,15 +468,19 @@ public class BizService {
             if (currentHandlerId == null) {
                 throw new RuntimeException("审批单的当前处理人未设置，无法进行审核");
             }
+            // 安全获取任务的 AuditorId
+            BizTask task = bizMapper.getTaskById(bizMaterialSubmission.getTaskId());
+            if(task==null){
+                throw new RuntimeException("任务不存在");
+            }
+            Long taskAuditorId = (task != null) ? task.getAuditorId() : null;
 
             Map<Integer, Long> nextHandlerMap = Map.of(
                     10, bizMapper.getTaskPrincipalId(bizMaterialSubmission.getTaskId()),
                     20, ADMIN_ID);
 
             // 已修改，修改内容及原因：安全获取任务的AuditorId，避免getTaskById返回null时出现空指针异常
-            // 安全获取任务的 AuditorId
-            BizTask task = bizMapper.getTaskById(bizMaterialSubmission.getTaskId());
-            Long taskAuditorId = (task != null) ? task.getAuditorId() : null;
+
 
             Map<Integer, Long> backHandlerMap = Map.of(
                     10, bizMaterialSubmission.getSubmitBy(),
@@ -523,8 +532,22 @@ public class BizService {
 
                         // 更新审批单状态（使用封装方法）
                         updateAuditStatus(subId, backHandlerId, -10);
-                        // 退回后任务不应保持"审核中"，恢复为"进行中"，允许重新提交
-                        bizMapper.updateTaskStatus(bizMaterialSubmission.getTaskId(), "1");
+
+                        task.setStatus("1");
+                // 正确写法：使用 BigDecimal 的 subtract() 方法做减法
+                        BigDecimal currentValue = task.getCurrentValue();
+                        BigDecimal reportedValue = bizMaterialSubmission.getReportedValue();
+                // 注意：需处理 null 避免空指针异常（推荐）
+                        if (currentValue == null) {
+                            currentValue = BigDecimal.ZERO;
+                        }
+                        if (reportedValue == null) {
+                            reportedValue = BigDecimal.ZERO;
+                        }
+                        task.setCurrentValue(currentValue.subtract(reportedValue));                        // 退回后任务不应保持"审核中"，恢复为"进行中"，允许重新提交
+                        bizMapper.updateTask(task);
+
+                        performanceService.updatePerformanceByTaskId(task.getTaskId());
 
                         // 发送通知（使用封装方法）
                         sendNotice(userId,
@@ -594,13 +617,25 @@ public class BizService {
                     } else {
                         // 退回到提交人的部门负责人
                         // 根据提交人id获取部门负责人id
-                        Long submitBy = bizMaterialSubmission.getSubmitBy();
                         Long backHandlerId = backHandlerMap.get(bizMaterialSubmission.getFlowStatus());
 
                         // 更新审批单状态（使用封装方法）
                         updateAuditStatus(subId, backHandlerId, -20);
                         // 退回后任务不应保持"审核中"，恢复为"进行中"，允许重新提交
-                        bizMapper.updateTaskStatus(bizMaterialSubmission.getTaskId(), "1");
+                        task.setStatus("1");
+                        // 正确写法：使用 BigDecimal 的 subtract() 方法做减法
+                        BigDecimal currentValue = task.getCurrentValue();
+                        BigDecimal reportedValue = bizMaterialSubmission.getReportedValue();
+                        // 注意：需处理 null 避免空指针异常（推荐）
+                        if (currentValue == null) {
+                            currentValue = BigDecimal.ZERO;
+                        }
+                        if (reportedValue == null) {
+                            reportedValue = BigDecimal.ZERO;
+                        }
+                        task.setCurrentValue(currentValue.subtract(reportedValue));                        // 退回后任务不应保持"审核中"，恢复为"进行中"，允许重新提交
+                        bizMapper.updateTask(task);
+                        performanceService.updatePerformanceByTaskId(task.getTaskId());
 
                         // 发送通知（使用封装方法）
                         sendNotice(userId,
@@ -671,7 +706,20 @@ public class BizService {
                         // 更新审批单状态（使用封装方法）
                         updateAuditStatus(subId, backHandlerId, -30);
                         // 退回后任务不应保持"审核中"，恢复为"进行中"，允许重新提交
-                        bizMapper.updateTaskStatus(bizMaterialSubmission.getTaskId(), "1");
+                        task.setStatus("1");
+                        // 正确写法：使用 BigDecimal 的 subtract() 方法做减法
+                        BigDecimal currentValue = task.getCurrentValue();
+                        BigDecimal reportedValue = bizMaterialSubmission.getReportedValue();
+                        // 注意：需处理 null 避免空指针异常（推荐）
+                        if (currentValue == null) {
+                            currentValue = BigDecimal.ZERO;
+                        }
+                        if (reportedValue == null) {
+                            reportedValue = BigDecimal.ZERO;
+                        }
+                        task.setCurrentValue(currentValue.subtract(reportedValue));                        // 退回后任务不应保持"审核中"，恢复为"进行中"，允许重新提交
+                        bizMapper.updateTask(task);
+                        performanceService.updatePerformanceByTaskId(task.getTaskId());
 
                         // 发送通知（使用封装方法）
                         sendNotice(userId,
@@ -778,10 +826,14 @@ public class BizService {
             if (bizMaterialSubmission == null) {
                 throw new RuntimeException("该任务不存在");
             }
+            BizTask task = bizMapper.getTaskById(bizMaterialSubmission.getTaskId());
+            if(task==null){
+                throw new RuntimeException("该任务不存在");
+            }
             Map<Integer, Long> nextHandlerMap = Map.of(
-                    -10, sysMapper.getDeptLeaderId(userId),
-                    -20, bizMapper.getTaskPrincipalId(bizMaterialSubmission.getTaskId()),
-                    -30, 1L);
+                    -10, task.getAuditorId(),
+                    -20, task.getPrincipalId(),
+                    -30, ADMIN_ID);
 
             Long nextHandlerId = nextHandlerMap.get(bizMaterialSubmission.getFlowStatus());
             if (bizMaterialSubmission.getFlowStatus() >= 0) {
@@ -803,6 +855,8 @@ public class BizService {
             if (bizTask != null) {
                 bizTask.setCurrentValue(rv);
                 bizTask.setStatus("2");
+                bizTask.setUpdateTime(new Date());
+                bizTask.setComment(resubDTOBiz.getComment());
                 bizMapper.updateCurrentTask(bizTask);
             }
 

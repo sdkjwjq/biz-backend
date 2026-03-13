@@ -5,9 +5,14 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="41122148-b20d-4d4e-9275-6e060cef4fba" name="更改" comment="">
-      <change beforePath="$PROJECT_DIR$/data/biz.sql" beforeDir="false" afterPath="$PROJECT_DIR$/data/biz.sql" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/org/example/entity/BizPerformance.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/example/entity/BizPerformance.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/application.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/data/insert_performance.sql" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/org/example/controller/PerformanceController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/org/example/mapper/PerformanceMapper.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/org/example/service/PerformanceService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/org/example/config/WebConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/example/config/WebConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/org/example/entity/dto/BizReSubDTO.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/example/entity/dto/BizReSubDTO.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/org/example/service/BizService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/example/service/BizService.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -100,11 +105,26 @@
       <workItem from="1770265994731" duration="18574000" />
       <workItem from="1770640854450" duration="5970000" />
       <workItem from="1770704742512" duration="1364000" />
-      <workItem from="1773322525381" duration="278000" />
+      <workItem from="1773322525381" duration="7593000" />
     </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="java-method">
+          <url>file://$PROJECT_DIR$/src/main/java/org/example/service/BizService.java</url>
+          <line>178</line>
+          <properties class="org.example.service.BizService" method="updateTask">
+            <option name="EMULATED" value="true" />
+            <option name="WATCH_EXIT" value="false" />
+          </properties>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
 </project>

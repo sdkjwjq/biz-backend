@@ -14,4 +14,5 @@ public class BizReSubDTO {
     private BigDecimal reported_value;
     private String data_type;
     private Long file_id;
+    private String comment;
 }
