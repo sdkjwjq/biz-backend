@@ -309,10 +309,10 @@ public class PerformanceService {
         if (performance == null) {
             throw new RuntimeException("没有找到该绩效");
         }
-        // 检查是否需要跳过
-        if (shouldSkipPerformance(performance)) {
-            throw new RuntimeException("该绩效指标被标记为跳过计算（perf_code以1.3、2、3开头）");
-        }
+//        // 检查是否需要跳过
+//        if (shouldSkipPerformance(performance)) {
+//            throw new RuntimeException("该绩效指标被标记为跳过计算（perf_code以1.3、2、3开头）");
+//        }
         return performance;
     }
 
@@ -333,7 +333,7 @@ public class PerformanceService {
         List<BizPerformance> prefList = new ArrayList<>();
         for (Long prefId : prefIds) {
             BizPerformance performance = performanceMapper.getPerformanceById(prefId);
-            if (performance != null && !shouldSkipPerformance(performance)) {
+            if (performance != null) {
                 prefList.add(performance);
             }
         }
@@ -348,9 +348,7 @@ public class PerformanceService {
         if (performance == null) {
             throw new RuntimeException("没有找到该绩效");
         }
-        if (shouldSkipPerformance(performance)) {
-            throw new RuntimeException("该绩效指标被标记为跳过计算，无法获取关联任务");
-        }
+
 
         List<Long> taskIds = performanceMapper.getTaskIdByPerfId(perfId);
         if (taskIds == null || taskIds.isEmpty()) {
@@ -410,8 +408,7 @@ public class PerformanceService {
                 continue;
             }
             BizPerformance performance = perfMap.get(prefYear.getPerfId());
-            // 过滤掉需要跳过的绩效
-            if (performance != null && !shouldSkipPerformance(performance)) {
+            if (performance != null) {
                 prefYearVOS.add(new PerformanceYearVO(performance, prefYear));
             }
         }
@@ -420,5 +417,30 @@ public class PerformanceService {
         System.out.println("getPerformanceByYear 查询年份 " + year + "，返回 " + prefYearVOS.size() + " 条记录，耗时: " + (endTime - startTime) + " ms");
 
         return prefYearVOS;
+    }
+
+    public Object submitPref(Long perfId,BigDecimal actualValue,Integer year){
+        if(actualValue.intValue()<0 || actualValue.intValue()>100 ){
+            throw new RuntimeException("请输入有效的实际完成度");
+        }
+        if(year == null){
+            throw new RuntimeException("请输入有效年份");
+        }
+
+        BizPerformance pref = performanceMapper.getPerformanceById(perfId);
+        if(pref == null){
+            throw new RuntimeException("没有找到该绩效");
+        }
+        if(pref.getPerfCode().startsWith("1.3") || pref.getPerfCode().startsWith("2") || pref.getPerfCode().startsWith("3")){
+            pref.setCurrentValue(actualValue.multiply(BigDecimal.valueOf(0.2)));
+            pref.setUpdateTime(new Date());
+            performanceMapper.updatePerformance(pref);
+            BizPerformanceYear prefYear = performanceMapper.getPerformanceYearByPerfIdAndYear(perfId,year);
+            prefYear.setActualValue(actualValue);
+            performanceMapper.updatePerformanceYear(prefYear);
+            return "提交成功";
+        }else {
+            throw new RuntimeException("该绩效指标关联任务，不可手动提交");
+        }
     }
 }
