@@ -110,6 +110,10 @@ public interface BizMapper {
     @Select("SELECT * FROM biz_task WHERE phase = #{phase}")
     List<BizTask> getTasksByPhase(Integer phase);
 
+//    getTasksByIds
+    @Select("SELECT * FROM biz_task WHERE task_id IN (#{taskIds})")
+    List<BizTask> getTasksByIds(@Param("taskIds") List<Long> taskIds);
+
     /**
      * 新增任务
      * @param task 任务实体（taskId会自增，无需传入）

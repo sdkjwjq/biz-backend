@@ -56,6 +56,19 @@ public class PerformanceController {
             return new ErrorVO(e.getMessage(), 500);
         }
     }
+//   根据年份获取绩效
+    @GetMapping("/year/{year}")
+    public Object getPerformanceByYear(@PathVariable("year") Integer year) {
+        try {
+            return performanceService.getPerformanceByYear(year);
+        } catch (Exception e) {
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
+
+
+
+//
 
 
 
