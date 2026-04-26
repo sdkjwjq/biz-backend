@@ -1,9 +1,12 @@
 package org.example.controller;
 
+import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.example.entity.vo.ErrorVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.example.service.PerformanceService;
+
+import java.math.BigDecimal;
 
 @RestController
 @RequestMapping("/performance")
@@ -61,6 +64,15 @@ public class PerformanceController {
     public Object getPerformanceByYear(@PathVariable("year") Integer year) {
         try {
             return performanceService.getPerformanceByYear(year);
+        } catch (Exception e) {
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
+
+    @PostMapping("/submit")
+    public Object submitPerformance(@RequestParam("pref_id") Long pref_id, @RequestParam("actual_value")BigDecimal actual_value, @RequestParam("year") Integer year){
+        try {
+            return performanceService.submitPref(pref_id,actual_value,year);
         } catch (Exception e) {
             return new ErrorVO(e.getMessage(), 500);
         }

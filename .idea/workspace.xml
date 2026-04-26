@@ -5,11 +5,20 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="41122148-b20d-4d4e-9275-6e060cef4fba" name="更改" comment="">
+<<<<<<< HEAD
       <change afterPath="$PROJECT_DIR$/src/main/java/org/example/entity/dto/BizNewSubDTO.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/org/example/controller/BizController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/example/controller/BizController.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/org/example/mapper/BizMapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/example/mapper/BizMapper.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/org/example/service/BizService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/example/service/BizService.java" afterDir="false" />
+=======
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data/insert_performance.sql" beforeDir="false" afterPath="$PROJECT_DIR$/data/insert_performance.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/org/example/controller/PerformanceController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/example/controller/PerformanceController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/org/example/service/PerformanceService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/example/service/PerformanceService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/application.properties" afterDir="false" />
+>>>>>>> e4571f712ccc8a516be6e53fb2a82cfdfcdf44b6
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -37,6 +46,11 @@
   </component>
   <component name="PropertiesComponent">{
   &quot;keyToString&quot;: {
+<<<<<<< HEAD
+=======
+    &quot;Maven.biz_backend [clean].executor&quot;: &quot;Run&quot;,
+    &quot;Maven.biz_backend [package].executor&quot;: &quot;Run&quot;,
+>>>>>>> e4571f712ccc8a516be6e53fb2a82cfdfcdf44b6
     &quot;RequestMappingsPanelOrder0&quot;: &quot;0&quot;,
     &quot;RequestMappingsPanelOrder1&quot;: &quot;1&quot;,
     &quot;RequestMappingsPanelWidth0&quot;: &quot;75&quot;,
@@ -112,7 +126,11 @@
       <workItem from="1773322525381" duration="14001000" />
       <workItem from="1774524854194" duration="1380000" />
       <workItem from="1774527069219" duration="16811000" />
+<<<<<<< HEAD
       <workItem from="1777204372301" duration="5814000" />
+=======
+      <workItem from="1774593562598" duration="6920000" />
+>>>>>>> e4571f712ccc8a516be6e53fb2a82cfdfcdf44b6
     </task>
     <servers />
   </component>
