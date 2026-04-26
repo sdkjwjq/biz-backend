@@ -1,10 +1,7 @@
 package org.example.service;
 
 import org.example.entity.*;
-import org.example.entity.dto.BizAuditDTO;
-import org.example.entity.dto.BizSubDTO;
-import org.example.entity.dto.BizReSubDTO;
-import org.example.entity.dto.BizTaskDTO;
+import org.example.entity.dto.*;
 import org.example.entity.vo.*;
 import org.example.mapper.BizMapper;
 import org.example.mapper.SysMapper;
@@ -244,8 +241,8 @@ public class BizService {
                 throw new RuntimeException("该任务不存在");
             }
             // 验证任务必须为三级任务，否则无法提交
-            if (bizMapper.getTaskById(bizSubDTO.getTask_id()).getLevel() != 3) {
-                throw new RuntimeException("该任务不是三级任务,无法提交");
+            if (bizMapper.getTaskById(bizSubDTO.getTask_id()).getLevel() != 3 && bizMapper.getTaskById(bizSubDTO.getTask_id()).getLevel() != 4) {
+                throw new RuntimeException("该任务不是三级或四级任务,无法提交");
             }
             // 验证任务状态，如果当前status为2，则禁止提交
             if (bizMapper.getTaskById(bizSubDTO.getTask_id()).getStatus().equals("2")) {
@@ -336,6 +333,105 @@ public class BizService {
             throw new RuntimeException(e);
         }
     }
+
+    @Transactional
+    public String subFourLevelTasks(BizNewSubDTO bizSubDTOs, Long userId){
+        BizTask ThirdLevelTask = bizMapper.getTaskById(bizSubDTOs.getThird_task_id());
+        if (ThirdLevelTask == null) {
+            throw new RuntimeException("该任务不存在");
+        }
+        if (ThirdLevelTask.getLevel() != 3) {
+            throw new RuntimeException("该任务不是三级任务");
+        }
+        if (ThirdLevelTask.getStatus().equals("2")) {
+            throw new RuntimeException("该任务状态未开始或正在审核中,无法提交");
+        }
+        if (ThirdLevelTask.getStatus().equals("3")) {
+            throw new RuntimeException("该任务状态已完成,无法提交");
+        }
+        BigDecimal totalReportedValue = BigDecimal.ZERO;
+        for(BizSubDTO bizSubDTO: bizSubDTOs.getSub_list()){
+            if (bizSubDTO.getTask_id() == null) {
+                throw new RuntimeException("任务ID不能为空");
+            }
+            BizTask task = bizMapper.getTaskById(bizSubDTO.getTask_id());
+            if (task == null) {
+                throw new RuntimeException("该任务不存在");
+            }
+            if (!task.getParentId().equals(ThirdLevelTask.getTaskId())) {
+                throw new RuntimeException("该任务不是三级任务下的四级任务");
+            }
+            // 检查文件是否存在
+            SysFile sysFile = sysMapper.getFileById(bizSubDTO.getFile_id());
+            if (sysFile == null) {
+                throw new RuntimeException("该文件不存在");
+            }
+            // 验证文件后缀，只能为pdf,doc,docx
+            if (!sysFile.getFileName().endsWith(".pdf") && !sysFile.getFileName().endsWith(".doc")
+                    && !sysFile.getFileName().endsWith(".docx")) {
+                throw new RuntimeException("文件格式错误,请上传pdf,doc,docx格式的文件");
+            }
+            BizMaterialSubmission bizMaterialSubmission = new BizMaterialSubmission();
+            bizMaterialSubmission.setTaskId(bizSubDTO.getTask_id());
+            bizMaterialSubmission.setFileId(sysMapper.getFileByName(sysFile.getFileName()).getFileId());
+
+            // 本次填报值只保留整数，并写入任务 current_value（过程即显示进度）
+            BigDecimal rv = bizSubDTO.getReported_value() != null ? bizSubDTO.getReported_value() : BigDecimal.ZERO;
+            rv = rv.setScale(0, RoundingMode.HALF_UP);
+            bizMaterialSubmission.setReportedValue(rv);
+            bizMaterialSubmission.setDataType(bizSubDTO.getData_type());
+            bizMaterialSubmission.setSubmitBy(userId);
+            bizMaterialSubmission.setSubmitDeptId(sysMapper.getUserById(userId).getDeptId());
+            bizMaterialSubmission.setManageDeptId(task.getDeptId());
+            bizMaterialSubmission.setSubmitTime(new Date());
+            bizMaterialSubmission.setFileSuffix(sysMapper.getFileByName(sysFile.getFileName()).getFileSuffix());
+            bizMaterialSubmission.setFlowStatus(10);
+            // 已修改，修改内容及原因：将部门审核人从任务的AuditorId改为提交人所在部门的负责人，确保flowStatus=10时审核人能正确收到通知
+            // flowStatus = 10 表示"待[所在部门]审批"
+            Long handlerId = task.getAuditorId();
+            bizMaterialSubmission.setCurrentHandlerId(handlerId);
+            bizMaterialSubmission.setIsDelete(0);
+
+            bizMapper.createAudit(bizMaterialSubmission);
+            Long subId = bizMapper.getNewestSubId();
+
+            // 提交后任务进入"审核中"，并把 current_value 覆盖写为本次填报值
+            BizTask bizTask = bizMapper.getTaskById(bizSubDTO.getTask_id());
+            if (bizTask != null) {
+                bizTask.setCurrentValue(rv);
+                bizTask.setStatus("2");
+                bizTask.setComment(bizSubDTO.getComment());
+                bizTask.setUpdateTime(new Date());
+                totalReportedValue = totalReportedValue.add(rv);
+                bizMapper.updateTask(bizTask);
+            }
+
+            // 发送审批信息（使用封装方法）
+            // 已修改，修改内容及原因：添加null检查，避免handlerId为null时发送通知导致数据库约束错误
+            // 只有当 handlerId 不为 null 时才发送通知
+            if (handlerId != null) {
+                sendNotice(userId,
+                        handlerId,
+                        "任务审核",
+                        "任务审核",
+                        "您有新的任务需要审核",
+                        "0",
+                        bizSubDTO.getTask_id());
+            }
+
+            // 创建审批日志（使用封装方法）
+            createAuditLog(subId, userId, "提交", 0, 10, "提交任务");
+        }
+        ThirdLevelTask.setComment(bizSubDTOs.getSub_list().get(0).getComment());
+//        所有子任务求和计算当前值
+        ThirdLevelTask.setCurrentValue(totalReportedValue);
+        ThirdLevelTask.setStatus("2");
+        ThirdLevelTask.setUpdateTime(new Date());
+        bizMapper.updateTask(ThirdLevelTask);
+        return "提交成功";
+    }
+
+
 
     /**
      * 根据taskId查询审批单
@@ -951,6 +1047,25 @@ public class BizService {
             return bizMapper.getThirdLevelTasksByParentId(parentId);
         } catch (RuntimeException e) {
             throw new RuntimeException("获取任务失败,请检查任务id是否正确");
+        }
+    }
+
+//    getForthLevelTasksByParentId
+    public List<BizTask> getForthLevelTasksByParentId(Long parentId) {
+        try {
+            if (parentId == null) {
+                throw new RuntimeException("获取任务失败,请检查任务id是否正确");
+            }
+            BizTask task = bizMapper.getTaskById(parentId);
+            if (task == null) {
+                throw new RuntimeException("获取任务失败,请检查任务id是否正确");
+            }
+            if (task.getLevel() != 3) {
+                throw new RuntimeException("获取任务失败,该任务不是三级任务");
+            }
+            return bizMapper.getForthLevelTasksByParentId(parentId);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 

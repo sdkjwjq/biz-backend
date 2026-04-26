@@ -25,7 +25,7 @@ public interface BizMapper {
      * 获取全部任务
      * @return 任务列表
      */
-    @Select("SELECT * FROM biz_task")
+    @Select("SELECT * FROM biz_task WHERE level<=3")
     List<BizTask> getAllTasks();
 
     /**
@@ -68,9 +68,8 @@ public interface BizMapper {
      * @param userId 用户ID
      * @return 任务列表
      */
-    @Select("SELECT * FROM biz_task WHERE leader_id = #{userId} OR principal_id = #{userId} OR auditor_id=#{userId}")
+    @Select("SELECT * FROM biz_task WHERE (leader_id = #{userId} OR principal_id = #{userId} OR auditor_id=#{userId}) AND level <= 3")
     List<BizTask> getTasks(Long userId);
-
     /**
      * 获取所有一级任务
      * @return 一级任务列表
@@ -101,6 +100,10 @@ public interface BizMapper {
      */
     @Select("SELECT * FROM biz_task WHERE parent_id = #{parentId} AND level=3")
     List<BizTask> getThirdLevelTasksByParentId(Long parentId);
+
+//    getForthLevelTasksByParentId
+    @Select("SELECT * FROM biz_task WHERE parent_id = #{parentId} AND level=4")
+    List<BizTask> getForthLevelTasksByParentId(Long parentId);
 
     /**
      * 根据任务阶段获取任务

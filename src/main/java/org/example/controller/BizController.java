@@ -2,10 +2,7 @@ package org.example.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.example.entity.dto.BizAuditDTO;
-import org.example.entity.dto.BizSubDTO;
-import org.example.entity.dto.BizReSubDTO;
-import org.example.entity.dto.BizTaskDTO;
+import org.example.entity.dto.*;
 import org.example.entity.vo.ErrorVO;
 import org.example.utils.JWTUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -60,6 +57,15 @@ public class BizController {
         try{
             return bizService.getAllChildrenTasks(taskId);
         }catch (Exception e){
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
+
+    @GetMapping("/tasks/forth")
+    public Object getForthLevelTasksByParentId(@RequestParam("parent_id") Long parentId){
+        try{
+            return bizService.getForthLevelTasksByParentId(parentId);
+        } catch (Exception e) {
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -149,6 +155,15 @@ public class BizController {
     public Object submitMaterial(@RequestBody BizSubDTO bizSubDTO, HttpServletRequest request){
         try{
             return bizService.submitMaterial(bizSubDTO, JWTUtil.getUserIdFromToken(request.getHeader("Authorization")) );
+        } catch (Exception e) {
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
+
+    @PostMapping("/sub")
+    public Object sub(@RequestBody BizNewSubDTO bizNewSubDTO, HttpServletRequest request){
+        try {
+            return bizService.subFourLevelTasks(bizNewSubDTO, JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
         } catch (Exception e) {
             return new ErrorVO(e.getMessage(), 500);
         }
