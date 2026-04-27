@@ -194,6 +194,32 @@ CREATE TABLE `biz_trend_data` (
     KEY `idx_create_time` (`create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='发展趋势数据表';
 
+-- 2.5 四级任务表
+DROP TABLE IF EXISTS `biz_level4_task`;
+CREATE TABLE `biz_level4_task` (
+    `task_id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '任务ID',
+    `parent_id` bigint(20) DEFAULT 0 COMMENT '父任务节点ID',
+    `phase` int(4) DEFAULT NULL COMMENT '所属年份',
+    `task_name` varchar(500) NOT NULL COMMENT '任务名称',
+    -- 组织归属
+    `leader_id` bigint(20) DEFAULT NULL COMMENT '任务负责人ID',
+    `dept_id` bigint(20) NOT NULL COMMENT '归口部门ID',
+    -- 数据需求配置
+    `data_type` char(1) DEFAULT '1' COMMENT '数据类型 0:对指标没有影响 1:数值(累加) 2:百分比(取大)',
+    `target_value` decimal(20,4) DEFAULT 0.00 COMMENT '目标值',
+    `current_value` decimal(20,4) DEFAULT 0.00 COMMENT '当前完成值(缓存统计)',
+    `progress` int(3) DEFAULT 0 COMMENT '任务进度(冗余)',
+    `status` char(1) DEFAULT '0' COMMENT '0:未开始 1:进行中 2:审核中 3:已完成',
+    `is_delete` tinyint(1) DEFAULT 0 COMMENT '0:存在 1:删除',
+    `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
+    `update_time` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`task_id`),
+    KEY `idx_parent` (`parent_id`),
+    KEY `idx_phase` (`phase`),
+    CONSTRAINT `fk_level4_task_dept` FOREIGN KEY (`dept_id`) REFERENCES `sys_dept` (`dept_id`) ON DELETE RESTRICT,
+    CONSTRAINT `fk_level4_task_leader` FOREIGN KEY (`leader_id`) REFERENCES `sys_user` (`user_id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='四级任务表';
+
 -- ==========================================================================
 -- 第三部分：审批流转与数据填报
 -- ==========================================================================

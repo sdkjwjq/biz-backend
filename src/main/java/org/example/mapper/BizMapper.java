@@ -2,6 +2,7 @@ package org.example.mapper;
 
 import org.apache.ibatis.annotations.*;
 import org.example.entity.BizAuditLog;
+import org.example.entity.BizLevel4Task;
 import org.example.entity.BizMaterialSubmission;
 import org.example.entity.BizTask;
 import org.example.entity.vo.DeptTaskStatsVO;
@@ -101,9 +102,30 @@ public interface BizMapper {
     @Select("SELECT * FROM biz_task WHERE parent_id = #{parentId} AND level=3")
     List<BizTask> getThirdLevelTasksByParentId(Long parentId);
 
+//    getLevel4TasksById
+    @Select("SELECT * FROM biz_level4_task WHERE task_id = #{taskId}")
+    BizLevel4Task getLevel4TasksById(Long taskId);
+
 //    getForthLevelTasksByParentId
-    @Select("SELECT * FROM biz_task WHERE parent_id = #{parentId} AND level=4")
-    List<BizTask> getForthLevelTasksByParentId(Long parentId);
+    @Select("SELECT * FROM biz_level4_task WHERE parent_id = #{parentId}")
+    List<BizLevel4Task> getForthLevelTasksByParentId(Long parentId);
+
+//    更新四级任务
+@Update("UPDATE biz_level4_task SET " +
+        "parent_id=#{parentId}, " +
+        "phase=#{phase}, " +
+        "task_name=#{taskName}, " +
+        "leader_id=#{leaderId}, " +
+        "dept_id=#{deptId}, " +
+        "data_type=#{dataType}, " +
+        "target_value=#{targetValue}, " +
+        "current_value=#{currentValue}, " +
+        "progress=#{progress}, " +
+        "status=#{status}, " +
+        "is_delete=#{isDelete}, " +
+        "update_time=NOW() " +
+        "WHERE task_id=#{taskId}")
+void updateLevel4Task(BizLevel4Task task);
 
     /**
      * 根据任务阶段获取任务

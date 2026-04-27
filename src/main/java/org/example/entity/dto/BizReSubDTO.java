@@ -5,14 +5,14 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 public class BizReSubDTO {
     private Long sub_id;
-    private BigDecimal reported_value;
-    private String data_type;
     private Long file_id;
     private String comment;
+    private List<BizSubForthDTO> sub_list;
 }

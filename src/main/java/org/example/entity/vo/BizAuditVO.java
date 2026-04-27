@@ -3,9 +3,11 @@ package org.example.entity.vo;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.example.entity.dto.BizSubForthDTO;
 
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.List;
 
 @Data
 @AllArgsConstructor
@@ -35,6 +37,8 @@ public class BizAuditVO {
     private Integer flowStatus;
     private Long currentHandlerId; // 当前处理人ID
     private Integer isDelete; // 0:存在 1:删除
+
+    private List<BizSubForthDTO> sub_list;
 
 
 }
