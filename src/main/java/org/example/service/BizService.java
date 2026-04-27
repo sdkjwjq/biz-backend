@@ -270,8 +270,7 @@ public class BizService {
 
             // 本次填报值只保留整数，并写入任务 current_value（过程即显示进度）
             BigDecimal rv = bizSubDTO.getReported_value() != null ? bizSubDTO.getReported_value() : BigDecimal.ZERO;
-            rv = rv.setScale(0, RoundingMode.HALF_UP);
-            bizMaterialSubmission.setReportedValue(rv);
+            rv = rv.multiply(task.getTargetValue());            bizMaterialSubmission.setReportedValue(rv);
             bizMaterialSubmission.setDataType(bizSubDTO.getData_type());
             bizMaterialSubmission.setSubmitBy(userId);
             bizMaterialSubmission.setSubmitDeptId(sysMapper.getUserById(userId).getDeptId());
@@ -398,7 +397,8 @@ public class BizService {
 
         // 本次填报值只保留整数，并写入任务 current_value（过程即显示进度）
         BigDecimal rv = averageValue != null ? averageValue : BigDecimal.ZERO;
-
+//        rv乘target_value
+        rv = rv.multiply(task.getTargetValue());
         System.out.println("本次填报值：" + rv);
         bizMaterialSubmission.setReportedValue(rv);
         bizMaterialSubmission.setDataType(task.getDataType());
@@ -994,7 +994,7 @@ public class BizService {
             );
             // 重新提交同样只保留整数，并覆盖写任务 current_value
             BigDecimal rv = averageValue != null ? averageValue : BigDecimal.ZERO;
-            rv = rv.setScale(0, RoundingMode.HALF_UP);
+            rv = rv.multiply(task.getTargetValue());
             bizMaterialSubmission.setReportedValue(rv);
             bizMaterialSubmission.setDataType(thirdTask.getDataType());
             bizMaterialSubmission.setFileId(resubDTOBiz.getFile_id());
