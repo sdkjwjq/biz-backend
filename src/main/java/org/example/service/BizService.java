@@ -349,8 +349,13 @@ public class BizService {
         if (ThirdLevelTask.getStatus().equals("3")) {
             throw new RuntimeException("该任务状态已完成,无法提交");
         }
+        // 检查文件是否存在
+        SysFile sysFile = sysMapper.getFileById(bizSubDTOs.getFile_id());
+        if (sysFile == null) {
+            throw new RuntimeException("该文件不存在");
+        }
         BigDecimal totalReportedValue = BigDecimal.ZERO;
-        for(BizSubDTO bizSubDTO: bizSubDTOs.getSub_list()){
+        for(BizSubForthDTO bizSubDTO: bizSubDTOs.getSub_list()){
             if (bizSubDTO.getTask_id() == null) {
                 throw new RuntimeException("任务ID不能为空");
             }
@@ -361,11 +366,7 @@ public class BizService {
             if (!task.getParentId().equals(ThirdLevelTask.getTaskId())) {
                 throw new RuntimeException("该任务不是三级任务下的四级任务");
             }
-            // 检查文件是否存在
-            SysFile sysFile = sysMapper.getFileById(bizSubDTO.getFile_id());
-            if (sysFile == null) {
-                throw new RuntimeException("该文件不存在");
-            }
+
             // 验证文件后缀，只能为pdf,doc,docx
             if (!sysFile.getFileName().endsWith(".pdf") && !sysFile.getFileName().endsWith(".doc")
                     && !sysFile.getFileName().endsWith(".docx")) {

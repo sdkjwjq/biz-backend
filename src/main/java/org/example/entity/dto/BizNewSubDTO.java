@@ -11,5 +11,6 @@ import java.util.List;
 @NoArgsConstructor
 public class BizNewSubDTO {
     private Long third_task_id;
-    private List<BizSubDTO> sub_list;
+    private Long file_id;
+    private List<BizSubForthDTO> sub_list;
 }
