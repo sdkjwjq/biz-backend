@@ -384,11 +384,13 @@ public class BizService {
             totalReportedValue = totalReportedValue.add(bizSubDTO.getReported_value());
         }
 
+
         BigDecimal averageValue = totalReportedValue.divide(
                 BigDecimal.valueOf(subTaskCount),
                 4,
                 java.math.RoundingMode.HALF_UP
         );
+        System.out.println("平均值：" + averageValue);
         BizTask task = bizMapper.getTaskById(bizSubDTOs.getThird_task_id());
         BizMaterialSubmission bizMaterialSubmission = new BizMaterialSubmission();
         bizMaterialSubmission.setTaskId(bizSubDTOs.getThird_task_id());
@@ -396,7 +398,8 @@ public class BizService {
 
         // 本次填报值只保留整数，并写入任务 current_value（过程即显示进度）
         BigDecimal rv = averageValue != null ? averageValue : BigDecimal.ZERO;
-        rv = rv.setScale(0, RoundingMode.HALF_UP);
+
+        System.out.println("本次填报值：" + rv);
         bizMaterialSubmission.setReportedValue(rv);
         bizMaterialSubmission.setDataType(task.getDataType());
         bizMaterialSubmission.setSubmitBy(userId);
@@ -782,7 +785,6 @@ public class BizService {
 
                         BizTask bizTask = bizMapper.getTaskById(bizMaterialSubmission.getTaskId());
                         BigDecimal rv = bizMaterialSubmission.getReportedValue() != null ? bizMaterialSubmission.getReportedValue() : BigDecimal.ZERO;
-                        rv = rv.setScale(0, RoundingMode.HALF_UP);
                         bizTask.setCurrentValue(rv);
                         if (bizTask.getCurrentValue().compareTo(bizTask.getTargetValue()) >= 0) {
                             bizTask.setStatus("3");
