@@ -401,7 +401,6 @@ public class BizService {
             if (bizTask != null) {
                 bizTask.setCurrentValue(rv);
                 bizTask.setStatus("2");
-                bizTask.setComment(bizSubDTO.getComment());
                 bizTask.setUpdateTime(new Date());
                 totalReportedValue = totalReportedValue.add(rv);
                 bizMapper.updateTask(bizTask);
@@ -423,7 +422,7 @@ public class BizService {
             // 创建审批日志（使用封装方法）
             createAuditLog(subId, userId, "提交", 0, 10, "提交任务");
         }
-        ThirdLevelTask.setComment(bizSubDTOs.getSub_list().get(0).getComment());
+        ThirdLevelTask.setComment(bizSubDTOs.getComment());
 //        所有子任务求和计算当前值
         ThirdLevelTask.setCurrentValue(totalReportedValue);
         ThirdLevelTask.setStatus("2");

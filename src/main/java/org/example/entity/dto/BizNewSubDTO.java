@@ -12,5 +12,6 @@ import java.util.List;
 public class BizNewSubDTO {
     private Long third_task_id;
     private Long file_id;
+    private String comment;
     private List<BizSubForthDTO> sub_list;
 }
