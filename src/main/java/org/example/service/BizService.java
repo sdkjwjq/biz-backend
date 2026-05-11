@@ -267,10 +267,14 @@ public class BizService {
             BizMaterialSubmission bizMaterialSubmission = new BizMaterialSubmission();
             bizMaterialSubmission.setTaskId(bizSubDTO.getTask_id());
             bizMaterialSubmission.setFileId(sysMapper.getFileByName(sysFile.getFileName()).getFileId());
-
+//            输出平均值
+            System.out.println("本次填报值：" + bizSubDTO.getReported_value());
             // 本次填报值只保留整数，并写入任务 current_value（过程即显示进度）
             BigDecimal rv = bizSubDTO.getReported_value() != null ? bizSubDTO.getReported_value() : BigDecimal.ZERO;
-            rv = rv.multiply(task.getTargetValue());            bizMaterialSubmission.setReportedValue(rv);
+            System.out.println("目标值：" + task.getTargetValue());
+            rv = rv.multiply(task.getTargetValue());
+            System.out.println("rv值：" + rv);
+            bizMaterialSubmission.setReportedValue(rv);
             bizMaterialSubmission.setDataType(bizSubDTO.getData_type());
             bizMaterialSubmission.setSubmitBy(userId);
             bizMaterialSubmission.setSubmitDeptId(sysMapper.getUserById(userId).getDeptId());
@@ -382,24 +386,42 @@ public class BizService {
             bizMapper.updateLevel4Task(level4Task);
             totalReportedValue = totalReportedValue.add(bizSubDTO.getReported_value());
         }
+        System.out.println("总填报值：" + totalReportedValue);
 
 
-        BigDecimal averageValue = totalReportedValue.divide(
-                BigDecimal.valueOf(subTaskCount),
-                4,
-                java.math.RoundingMode.HALF_UP
-        );
-        System.out.println("平均值：" + averageValue);
+//        BigDecimal averageValue = totalReportedValue.divide(
+//                BigDecimal.valueOf(subTaskCount),
+//                4,
+//                java.math.RoundingMode.HALF_UP
+//        );
+//        System.out.println("平均值：" + averageValue);
         BizTask task = bizMapper.getTaskById(bizSubDTOs.getThird_task_id());
         BizMaterialSubmission bizMaterialSubmission = new BizMaterialSubmission();
         bizMaterialSubmission.setTaskId(bizSubDTOs.getThird_task_id());
         bizMaterialSubmission.setFileId(sysMapper.getFileByName(sysFile.getFileName()).getFileId());
+        BigDecimal rv = BigDecimal.ZERO;
+//        totalReportedValue>task.getTargetValue()
 
+        if(task.getDataType().equals("1") || task.getDataType().equals("0")){
+            rv = totalReportedValue.setScale(0, BigDecimal.ROUND_DOWN);
+            if(totalReportedValue.compareTo(task.getTargetValue())>0){
+                rv = task.getTargetValue();
+            }
+            System.out.println("目标值：" + task.getTargetValue());
+            System.out.println("本次填报值：" + rv);
+        }else if(task.getDataType().equals("2")){
+            rv = totalReportedValue.divide(
+                BigDecimal.valueOf(subTaskCount),
+                4,
+                java.math.RoundingMode.HALF_UP
+            );
+            if(rv.compareTo(BigDecimal.valueOf(100.0D))>0){
+                rv = BigDecimal.valueOf(100.0D);
+            }
+        }
         // 本次填报值只保留整数，并写入任务 current_value（过程即显示进度）
-        BigDecimal rv = averageValue != null ? averageValue : BigDecimal.ZERO;
-//        rv乘target_value
-        rv = rv.multiply(task.getTargetValue());
-        System.out.println("本次填报值：" + rv);
+
+//        System.out.println("本次填报值：" + rv);
         bizMaterialSubmission.setReportedValue(rv);
         bizMaterialSubmission.setDataType(task.getDataType());
         bizMaterialSubmission.setSubmitBy(userId);
@@ -987,14 +1009,27 @@ public class BizService {
                 bizMapper.updateLevel4Task(level4Task);
                 totalReportedValue = totalReportedValue.add(bizSubDTO.getReported_value());
             }
-            BigDecimal averageValue = totalReportedValue.divide(
-                    BigDecimal.valueOf(subTaskCount),
-                    4,
-                    java.math.RoundingMode.HALF_UP
-            );
+
             // 重新提交同样只保留整数，并覆盖写任务 current_value
-            BigDecimal rv = averageValue != null ? averageValue : BigDecimal.ZERO;
-            rv = rv.multiply(task.getTargetValue());
+            BigDecimal rv = BigDecimal.ZERO;
+//        totalReportedValue>task.getTargetValue()
+
+            if(task.getDataType().equals("1")){
+                rv = totalReportedValue.setScale(0, BigDecimal.ROUND_DOWN);
+                if(totalReportedValue.compareTo(task.getTargetValue())>0){
+                    rv = task.getTargetValue();
+                }
+            }else if(task.getDataType().equals("2")){
+
+                rv = totalReportedValue.divide(
+                        BigDecimal.valueOf(subTaskCount),
+                        4,
+                        java.math.RoundingMode.HALF_UP
+                );
+                if(rv.compareTo(task.getTargetValue())>0){
+                    rv = task.getTargetValue();
+                }
+            }
             bizMaterialSubmission.setReportedValue(rv);
             bizMaterialSubmission.setDataType(thirdTask.getDataType());
             bizMaterialSubmission.setFileId(resubDTOBiz.getFile_id());
@@ -1055,7 +1090,7 @@ public class BizService {
         try{
             BizMaterialSubmission bizMaterialSubmission = bizMapper.getNewestAudit(taskId);
             if (bizMaterialSubmission == null) {
-                throw new RuntimeException("该任务不存在");
+                throw new RuntimeException("该任务未处于审核状态");
             }
             if (!bizMaterialSubmission.getSubmitBy().equals(userId)){
                 throw new RuntimeException("您不是该任务的提交人，无法撤回");
@@ -1063,6 +1098,19 @@ public class BizService {
             bizMaterialSubmission.setIsDelete(1);
             bizMapper.updateAudit(bizMaterialSubmission);
             createAuditLog(bizMaterialSubmission.getSubId(), userId, "撤回提交", bizMaterialSubmission.getFlowStatus(), -bizMaterialSubmission.getFlowStatus(), "撤回提交");
+
+            BizTask task = bizMapper.getTaskById(taskId);
+            task.setStatus("0");
+            BizMaterialSubmission latestAudit = bizMapper.getLatestAuditByTaskId(taskId);
+            if(latestAudit == null){
+                task.setCurrentValue(BigDecimal.ZERO);
+            }else {
+                task.setCurrentValue(latestAudit.getReportedValue());
+            }
+
+            task.setUpdateTime(new Date());
+            bizMapper.updateTask( task);
+
             return "已撤回提交";
         } catch (Exception e) {
             throw new RuntimeException(e);

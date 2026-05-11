@@ -1828,6 +1828,159 @@ INSERT INTO `biz_task` (`project_id`, `task_code`, `task_name`, `level`, `parent
 INSERT INTO `biz_task` (`project_id`, `task_code`, `task_name`, `level`, `parent_id`, `ancestors`, `phase`, `dept_id`, `principal_id`, `leader_id`, `auditor_id`, `exp_target`, `exp_level`, `exp_effect`, `exp_material_desc`, `data_type`, `target_value`, `current_value`, `status`, `is_delete`, `create_time`) SELECT (SELECT `project_id` FROM `biz_project` WHERE `project_name` = '徐州工业职业技术学院第二期“双高建设计划”' LIMIT 1), 'SG10030929', '10-3-9 转化教学、职业技能类标准4个', 3, p.task_id, CONCAT(p.ancestors, ',', p.task_id), 2029, (SELECT `dept_id` FROM `sys_dept` WHERE `dept_name` = '教务部、创新创业学院（合署）、招生办公室（挂靠教务部）' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '侯亚合' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '詹国兵' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '余心明' LIMIT 1),'转化教学、职业技能类标准4个', '', '完成全部核心课程与标准的对接，提升学生综合能力满意度。形成可复制推广的标准转化模式，并向兄弟院校输出，扩大项目成果的辐射范围与影响力。', '10-3-9-1 标准文本4套\n10-3-9-2 全校核心课程对标分析报告1套\n10-3-9-3 校外推广实施反馈报告1套', '1', 4.0, 0.00, '0', 0, NOW() FROM `biz_task` p WHERE p.task_code = 'SG1003';
 INSERT INTO `biz_task` (`project_id`, `task_code`, `task_name`, `level`, `parent_id`, `ancestors`, `phase`, `dept_id`, `principal_id`, `leader_id`, `auditor_id`, `exp_target`, `exp_level`, `exp_effect`, `exp_material_desc`, `data_type`, `target_value`, `current_value`, `status`, `is_delete`, `create_time`) SELECT (SELECT `project_id` FROM `biz_project` WHERE `project_name` = '徐州工业职业技术学院第二期“双高建设计划”' LIMIT 1), 'SG10031029', '10-3-10 发布《工程机械产业人才需求分析报告》', 3, p.task_id, CONCAT(p.ancestors, ',', p.task_id), 2029, (SELECT `dept_id` FROM `sys_dept` WHERE `dept_name` = '科技与产业部、服务产业研究院（合署）' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '孙婷婷' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '詹国兵' LIMIT 1), (SELECT `user_id` FROM `sys_user` WHERE `nick_name` = '余心明' LIMIT 1),'发布《工程机械产业人才需求分析报告》1个', '', '通过过去及本年度的人才需求数据，建立产业人才数据平台，实现人才需求的实时监测与发布，为政府、企业与院校提供动态、精准的人才信息服务，推动区域人才生态的智能化与协同发展。', '10-3-10-1 《工程机械产业人才需求分析报告（2029）》1份\n10-3-6-2 调研样本清单1份\n10-3-2-3 问卷/访谈提纲1份\n10-3-6-4 统计分析数据1套', '1', 1.0, 0.00, '0', 0, NOW() FROM `biz_task` p WHERE p.task_code = 'SG1003';
 
+-- ==========================================================================
+-- 为 target_value = 0 的三级任务添加目标值
+-- ==========================================================================
+
+-- 2. 持续收集意见，对专业群建设决策执行情况进行动态监测和分析 (预期产出：定期的监测报告)
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG02021228';
+
+-- 3. 引入新项目，更新核心课程项目内容
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG03011528';
+
+-- 4. 按照“育训并重、融合发展”职业培训模式框架，开展职业培训
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG03020726';
+
+-- 5. 【新增】完善“招生-培养-就业-发展”全链条服务学生成长模式
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG03021527';
+
+-- 6. 【新增】校内推广“招生-培养-就业-发展”全链条服务学生成长模式
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG03022028';
+
+-- 7. 推广“四融四通”分类培养
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG03022129';
+
+-- 8. 凝练 “育训并重、融合发展” 职业培训模式的经验，向行业推广
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG03022229';
+
+-- 9. 【新增】校外推广“招生-培养-就业-发展”全链条服务学生成长模式
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG03022529';
+
+-- 10. 成立“四合作、双循环”专业群运行机制研究小组
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG03030125';
+
+-- 11. 完善“四合作、双循环”专业群运行机制
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG03030526';
+
+-- 12. 开展常态化合作交流活动，每季度至少组织一次合作主体沟通会议 (预期：每年4次)
+UPDATE `biz_task` SET `target_value` = 4.00 WHERE `task_code` = 'SG03030927';
+
+-- 13. 优化 “四合作、双循环” 专业群运行机制，调整合作策略和方式
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG03031228';
+
+-- 14. 实施《专业群高效课程认证标准》
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG04020726';
+
+-- 15. 明确校企责权，组建由“政企校”组成的多形态教材开发小组
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG05010125';
+
+-- 16. 【新增】制定专业教材建设委员会工作机制
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG05010625';
+
+-- 17. 【新增】优化专业教材建设委员会工作机制
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG05011527';
+
+-- 18. 明确校企责权，组建由“政企校”组成的数字化教材开发小组
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG05020125';
+
+-- 19. 把现有国家规划教材《机械制图》升级为数字化教材
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG05020325';
+
+-- 20. 制定《数字化教材开发管理制度》
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG05020426';
+
+-- 21. 修订《数字化教材开发机制》、《数字化教材开发管理制度》
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG05020627';
+
+-- 22. 把现有省级教材《工业机器人现场编程》升级为数字化教材
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG05020727';
+
+-- 23. 将国家级在线课程《组态项目开发与实践》配套数字化教材
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG05020928';
+
+-- 24. 开展工程机械产业数字化和数字产业化发展需求调研
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG08010125';
+
+-- 25. 利用数字化资源开展线上线下混合式教学 (2025年)
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG08020425';
+
+-- 26. 利用数字化资源开展线上线下混合式教学 (2026年)
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG08020926';
+
+-- 27. 利用数字化资源开展线上线下混合式教学 (2028年)
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG08022728';
+
+-- 28. 利用数字化资源开展线上线下混合式教学 (2029年)
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG08023629';
+
+-- 29. 开展学生学习和教师成长数据库的调研和方案论证
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG08030125';
+
+-- 30. 更新学生学习和教师成长数据库
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG08030527';
+
+-- 31. 优化学生学习和教师成长数据库
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG08030728';
+
+-- 32. 构建教与学的评价闭环管理系统
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG08030828';
+
+-- 33. 推广“全程多元、数智融合、过程增值、数据循证”的动态学业评价
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG08030929';
+
+-- 34. 筹建“海外工程机械技术学院”
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG09030125';
+
+-- 35. 建立“海外工程机械技术学院”
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG09030626';
+
+-- 36. 凝练“定向+定制+定点”的国际生人才培养案例
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG09031728';
+
+-- 37. 筹建工程机械产业发展研究院
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG10010125';
+
+-- 38. 出台工程机械产业发展研究院章程与制度
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG10010225';
+
+-- 39. 召开产业研究院年会，发布《工程机械产业发展报告》 (2025年)
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG10010325';
+
+-- 40. 【新增】编制“技能人才需求清单”“技术创新需求清单”1套
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG10010425';
+
+-- 41. 建成工程机械产业发展研究院
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG10010526';
+
+-- 42. 召开产业研究院年会，发布《工程机械产业发展报告》 (2026年)
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG10010626';
+
+-- 43. 【新增】更新“技能人才需求清单”“技术创新需求清单” (2026年)
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG10010726';
+
+-- 44. 召开产业研究院年会，发布《工程机械产业发展报告》 (2027年)
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG10010827';
+
+-- 45. 【新增】更新“技能人才需求清单”“技术创新需求清单” (2027年)
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG10010927';
+
+-- 46. 修订工程机械产业发展研究院章程或制度
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG10011028';
+
+-- 47. 召开产业研究院年会，发布《工程机械产业发展报告》 (2028年)
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG10011128';
+
+-- 48. 【新增】更新“技能人才需求清单”“技术创新需求清单” (2028年) -- 原重复的第二个SG10011128修正为SG10011228
+UPDATE `biz_task` SET `target_value` = 1.00, `task_code` = 'SG10011228' WHERE `task_code` = 'SG10011128' AND `task_name` LIKE '%更新%技能人才需求清单%';
+
+-- 49. 调整工程机械产业研究机构
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG10011329';
+
+-- 50. 召开产业研究院年会，发布《工程机械产业发展报告》 (2029年)
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG10011429';
+
+-- 51. 【新增】更新“技能人才需求清单”“技术创新需求清单” (2029年)
+UPDATE `biz_task` SET `target_value` = 1.00 WHERE `task_code` = 'SG10011529';
 -- 插入绩效指标数据 (包含明确的 perf_id)
 -- ==========================================================================
 -- 第四部分：绩效与资金模块
