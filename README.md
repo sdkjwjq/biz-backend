@@ -788,7 +788,7 @@ https://www.postman.com/litianyi981119/biz/collection/21001135-3309c751-c3ca-4fd
 
 - **查询参数**：
 
-  - `endYear`（可选）：截止年份，默认为2028
+  - `year`（可选）：截止年份，默认为2028
 
 - **响应**：
 
@@ -944,7 +944,229 @@ https://www.postman.com/litianyi981119/biz/collection/21001135-3309c751-c3ca-4fd
   }
   ```
 
-#### 
+#### 8.11 获取全量任务详细情况
+
+- **接口**：`GET /dashboard/tasks/all_level`
+
+- **描述**：获取所有级别任务的详细信息
+
+- **请求头**：`Authorization: Bearer {token}`
+
+- **响应**：任务详情列表（同8.9格式）
+
+#### 8.12 批量获取部门统计信息
+
+- **接口**：`GET /dashboard/dept/batch`
+
+- **描述**：批量获取多个部门的统计信息
+
+- **请求头**：`Authorization: Bearer {token}`
+
+- **查询参数**：`deptIds`（部门ID列表，逗号分隔，如 "1,2,3"）
+
+- **响应**：部门统计信息列表（同8.10格式）
+
+#### 8.13 获取完成率对比数据
+
+- **接口**：`GET /dashboard/comparison/{dimension}`
+
+- **描述**：获取不同维度的任务完成率对比数据
+
+- **请求头**：`Authorization: Bearer {token}`
+
+- **路径参数**：`dimension`（对比维度：`dept`-部门对比、`year`-年度对比、`level`-任务级别对比）
+
+- **响应**：
+  ```json
+  {
+    "data": [...],
+    "dimension": "部门"
+  }
+  ```
+
+### 九、绩效数据接口
+
+#### 9.1 获取所有绩效数据
+
+- **接口**：`GET /performance`
+
+- **描述**：获取所有绩效记录
+
+- **请求头**：`Authorization: Bearer {token}`
+
+- **响应**：
+  ```json
+  [
+    {
+      "prefId": 1,
+      "deptId": 1,
+      "deptName": "技术部",
+      "year": 2025,
+      "actualValue": 100.00,
+      "targetValue": 100.00,
+      "rate": 1.00,
+      "weight": 0.5,
+      "createTime": "2024-01-01 00:00:00",
+      "updateTime": "2024-01-01 00:00:00"
+    }
+  ]
+  ```
+
+#### 9.2 刷新绩效计算
+
+- **接口**：`POST /performance/refresh`
+
+- **描述**：重新计算所有绩效数据
+
+- **请求头**：`Authorization: Bearer {token}`
+
+- **响应**：`"绩效数据刷新成功"`
+
+#### 9.3 根据ID获取绩效
+
+- **接口**：`GET /performance/{perfId}`
+
+- **描述**：根据绩效ID获取绩效详情
+
+- **请求头**：`Authorization: Bearer {token}`
+
+- **路径参数**：`perfId`（绩效ID）
+
+- **响应**：单个绩效对象（同9.1格式）
+
+#### 9.4 根据绩效ID获取关联任务
+
+- **接口**：`GET /performance/task/{prefId}`
+
+- **描述**：获取指定绩效关联的任务列表
+
+- **请求头**：`Authorization: Bearer {token}`
+
+- **路径参数**：`prefId`（绩效ID）
+
+- **响应**：任务列表（同2.1格式）
+
+#### 9.5 根据年份获取绩效
+
+- **接口**：`GET /performance/year/{year}`
+
+- **描述**：获取指定年份的绩效数据
+
+- **请求头**：`Authorization: Bearer {token}`
+
+- **路径参数**：`year`（年份）
+
+- **响应**：绩效列表（同9.1格式）
+
+#### 9.6 提交绩效
+
+- **接口**：`POST /performance/submit`
+
+- **描述**：提交绩效实际值
+
+- **请求头**：`Authorization: Bearer {token}`
+
+- **表单参数**：
+  - `pref_id`：绩效ID
+  - `actual_value`：实际值
+  - `year`：年份
+
+- **响应**：`"绩效提交成功"`
+
+### 十、趋势数据接口
+
+#### 10.1 获取指定年份趋势数据
+
+- **接口**：`GET /dashboard/trend/{year}`
+
+- **描述**：获取指定年份的趋势数据
+
+- **请求头**：`Authorization: Bearer {token}`
+
+- **路径参数**：`year`（年份，可选，默认当前年份）
+
+- **响应**：
+  ```json
+  [
+    {
+      "id": 1,
+      "year": 2025,
+      "month": 1,
+      "totalTasks": 100,
+      "completedTasks": 65,
+      "completionRate": 65.00,
+      "recordTime": "2025-01-01 00:00:00"
+    }
+  ]
+  ```
+
+#### 10.2 获取当前年份趋势数据
+
+- **接口**：`GET /dashboard/trend/`
+
+- **描述**：获取当前年份的趋势数据
+
+- **请求头**：`Authorization: Bearer {token}`
+
+- **响应**：趋势数据列表（同10.1格式）
+
+#### 10.3 手动记录趋势数据（测试用）
+
+- **接口**：`POST /dashboard/trend/record`
+
+- **描述**：手动触发记录当前趋势数据（用于测试）
+
+- **请求头**：`Authorization: Bearer {token}`
+
+- **响应**：`"趋势数据记录成功"`
+
+### 十一、四级任务接口
+
+#### 11.1 获取四级子任务
+
+- **接口**：`GET /biz/tasks/forth`
+
+- **描述**：根据父任务ID获取四级子任务列表
+
+- **请求头**：`Authorization: Bearer {token}`
+
+- **查询参数**：`parent_id`（父任务ID）
+
+- **响应**：
+  ```json
+  [
+    {
+      "taskId": 1,
+      "parentId": 10,
+      "taskName": "四级任务示例",
+      "targetValue": 50.00,
+      "currentValue": 30.00,
+      "progress": 60,
+      "status": "1"
+    }
+  ]
+  ```
+
+#### 11.2 提交四级任务
+
+- **接口**：`POST /biz/sub`
+
+- **描述**：提交四级任务的审批材料
+
+- **请求头**：`Authorization: Bearer {token}`
+
+- **请求体**：
+  ```json
+  {
+    "taskId": 1,
+    "reportedValue": 30,
+    "dataType": "1",
+    "fileId": 1,
+    "comment": "备注信息"
+  }
+  ```
+
+- **响应**：`"提交成功，下一位审批人是张三"`
 
 ## 通用说明
 

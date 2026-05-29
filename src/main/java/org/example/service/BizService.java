@@ -208,9 +208,7 @@ public class BizService {
             if (bizMapper.getTaskById(taskId) == null) {
                 throw new RuntimeException("该任务不存在");
             }
-            if (bizMapper.getTaskById(taskId).getStatus().equals("2")) {
-                throw new RuntimeException("该任务正在审核中，请先完成审核");
-            }
+
             if (bizMapper.getTaskById(taskId).getStatus().equals("3")) {
                 throw new RuntimeException("该任务已完成，请勿重复提交");
             }
@@ -218,6 +216,14 @@ public class BizService {
             taskById.setStatus("3");
             taskById.setCurrentValue(taskById.getTargetValue());
             bizMapper.updateTask(taskById);
+            BizMaterialSubmission audit = bizMapper.getNewestAudit(taskId);
+            audit.setCurrentHandlerId(userId);
+            audit.setFlowStatus(40);
+
+
+            bizMapper.updateAudit(audit);
+
+
             sendNotice(userId, taskById.getLeaderId(), "任务完成", "任务已完成", "任务"+taskById.getTaskName()+"已完成", "0", taskId);
             createAuditLog(taskId, userId, "任务完成", 1, 3, "任务完成");
             performanceService.calcuateAllPerformance();

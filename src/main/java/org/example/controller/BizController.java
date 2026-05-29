@@ -151,15 +151,6 @@ public class BizController {
      * @param request HTTP请求
      * @return 操作结果或错误信息
      */
-    @PostMapping("/submit")
-    public Object submitMaterial(@RequestBody BizSubDTO bizSubDTO, HttpServletRequest request){
-        try{
-            return bizService.submitMaterial(bizSubDTO, JWTUtil.getUserIdFromToken(request.getHeader("Authorization")) );
-        } catch (Exception e) {
-            return new ErrorVO(e.getMessage(), 500);
-        }
-    }
-
     @PostMapping("/sub")
     public Object sub(@RequestBody BizNewSubDTO bizNewSubDTO, HttpServletRequest request){
         try {
