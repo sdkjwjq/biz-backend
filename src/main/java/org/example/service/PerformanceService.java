@@ -37,8 +37,8 @@ public class PerformanceService {
     private SysMapper sysMapper;
 
     /**
-     * 閸掋倖鏌囩紒鈺傛櫏閹稿洦鐖ｉ弰顖氭儊闂団偓鐟曚浇鐑︽潻鍥吀缁?
-     * 鐠哄疇绻冮弶鈥叉閿涙erf_code 娴?"1.3"閵?"2"閵?"3" 瀵偓婢?
+     * 判断绩效是否需要手动填报。
+     * 目前 1.3、2、3 开头的绩效暂不参与任务自动汇总。
      */
     private boolean isManualPerformance(BizPerformance pref) {
         if (pref == null || pref.getPerfCode() == null) {
@@ -248,265 +248,14 @@ public class PerformanceService {
 
     @Transactional
     public Object calcuateAllPerformance() {
-        if (System.currentTimeMillis() >= 0) {
-            return calculateAllPerformanceV2();
-        }
-        try {
-            System.out.println("========== 瀵偓婵顓哥粻妤佸閺堝鍝楅弫鍫熸殶閹?==========");
-            long startTime = System.currentTimeMillis();
-
-            // 1. 閸旂姾娴囬幍鈧張澶夋崲閸?
-            List<BizTask> allTasks = taskMapper.getAllTasks();
-            System.out.println("閸旂姾娴囨禒璇插閺佷即鍣? " + allTasks.size());
-
-            // 2. 閸旂姾娴囬幍鈧張澶屽摋閺佸牊瀵氶弽?
-            List<BizPerformance> allPerformance = performanceMapper.getAllPerformance();
-            System.out.println("閸旂姾娴囩紒鈺傛櫏閹稿洦鐖ｉ弫浼村櫤: " + allPerformance.size());
-
-            // 3. 鏉╁洦鎶ら幒澶愭付鐟曚浇鐑︽潻鍥╂畱缂佲晜鏅ラ幐鍥ㄧ垼
-            List<BizPerformance> validPerformances = new ArrayList<>();
-            List<Long> skipPerfIds = new ArrayList<>();
-            for (BizPerformance pref : allPerformance) {
-                if (pref == null) {
-                    continue;
-                }
-                if (shouldSkipPerformance(pref)) {
-                    skipPerfIds.add(pref.getPerfId());
-                    System.out.println("鐠哄疇绻冪紒鈺傛櫏: perf_id=" + pref.getPerfId() + ", perf_code=" + pref.getPerfCode());
-                } else {
-                    validPerformances.add(pref);
-                }
-            }
-            System.out.println("閺堝鏅ョ紒鈺傛櫏閹稿洦鐖ｉ弫浼村櫤: " + validPerformances.size());
-            System.out.println("鐠哄疇绻冮惃鍕摋閺佸牊瀵氶弽鍥ㄦ殶闁? " + skipPerfIds.size());
-
-            // 4. 閸旂姾娴囬幍鈧張澶婂彠閼辨柨鍙х化?
-            List<RelTaskPerformance> allRelList = performanceMapper.getAllRelTaskPerformance();
-            System.out.println("閸旂姾娴囬崗瀹犱粓閸忓磭閮撮弫浼村櫤: " + allRelList.size());
-
-            // 5. 鏉╁洦鎶ら幒澶庮潶鐠哄疇绻冪紒鈺傛櫏閻ㄥ嫬鍙ч懕鏂垮彠缁?
-            Set<Long> skipPerfIdSet = new HashSet<>(skipPerfIds);
-            List<RelTaskPerformance> validRelList = new ArrayList<>();
-            for (RelTaskPerformance rel : allRelList) {
-                if (!skipPerfIdSet.contains(rel.getPerfId())) {
-                    validRelList.add(rel);
-                }
-            }
-            System.out.println("閺堝鏅ラ崗瀹犱粓閸忓磭閮撮弫浼村櫤: " + validRelList.size());
-            System.out.println("鐠哄疇绻冮惃鍕彠閼辨柨鍙х化缁樻殶闁? " + (allRelList.size() - validRelList.size()));
-
-            // 6. 閸旂姾娴囬幍鈧張澶婂嬀鎼达妇鍝楅弫?
-            List<BizPerformanceYear> allPerfYearList = performanceMapper.getAllPerformanceYear();
-            System.out.println("閸旂姾娴囬獮鏉戝缂佲晜鏅ラ弫浼村櫤: " + allPerfYearList.size());
-
-            // 7. 鏉╁洦鎶ら幒澶庮潶鐠哄疇绻冪紒鈺傛櫏閻ㄥ嫬鍕炬惔锔惧摋閺?
-            List<BizPerformanceYear> validPerfYearList = new ArrayList<>();
-            for (BizPerformanceYear perfYear : allPerfYearList) {
-                if (!skipPerfIdSet.contains(perfYear.getPerfId())) {
-                    validPerfYearList.add(perfYear);
-                }
-            }
-            System.out.println("閺堝鏅ラ獮鏉戝缂佲晜鏅ラ弫浼村櫤: " + validPerfYearList.size());
-            System.out.println("鐠哄疇绻冮惃鍕嬀鎼达妇鍝楅弫鍫熸殶闁? " + (allPerfYearList.size() - validPerfYearList.size()));
-
-            // 8. 閸掓繂顫愰崠鏍ㄦ箒閺佸牏鍝楅弫鍫㈡畱瑜版挸澧犻崐闂磋礋0
-            for (BizPerformance pref : validPerformances) {
-                if (pref != null) {
-                    pref.setCurrentValue(BigDecimal.ZERO);
-                }
-            }
-
-            // 9. 閺嬪嫬缂撴禒璇插Map (閹稿〖askId缁便垹绱?
-            Map<Long, BizTask> taskMap = new HashMap<>();
-            for (BizTask task : allTasks) {
-                if (task != null && task.getLevel() != null && task.getLevel() != 1 && task.getLevel() != 2) {
-                    taskMap.put(task.getTaskId(), task);
-                }
-            }
-            System.out.println("閺堝鏅ユ禒璇插閺佷即鍣? " + taskMap.size());
-
-            // 10. 閺嬪嫬缂撶紒鈺傛櫏Map (閹稿「erfId缁便垹绱?
-            Map<Long, BizPerformance> perfMap = new HashMap<>();
-            for (BizPerformance pref : validPerformances) {
-                if (pref != null) {
-                    perfMap.put(pref.getPerfId(), pref);
-                }
-            }
-
-            // 11. 閺嬪嫬缂撻崗瀹犱粓閸忓磭閮碝ap (閹稿〖askId閸掑棛绮?
-            Map<Long, List<RelTaskPerformance>> relByTaskMap = new HashMap<>();
-            // 閺嬪嫬缂撻崗瀹犱粓閸忓磭閮碝ap (閹稿「erfId閸掑棛绮嶉敍宀€鏁ゆ禍搴″嬀鎼达妇鍝楅弫鍫ｎ吀缁?
-            Map<Long, List<RelTaskPerformance>> relByPerfMap = new HashMap<>();
-            for (RelTaskPerformance rel : validRelList) {
-                relByTaskMap.computeIfAbsent(rel.getTaskId(), k -> new ArrayList<>()).add(rel);
-                relByPerfMap.computeIfAbsent(rel.getPerfId(), k -> new ArrayList<>()).add(rel);
-            }
-
-            // 12. 閺嬪嫬缂撻獮鏉戝缂佲晜鏅ap (閹稿「erfId_year缁便垹绱?
-            Map<String, BizPerformanceYear> perfYearMap = new HashMap<>();
-            // 閺嬪嫬缂撻獮鏉戝缂佲晜鏅ap (閹稿「erfId閸掑棛绮?
-            Map<Long, List<BizPerformanceYear>> perfYearByPerfIdMap = new HashMap<>();
-            for (BizPerformanceYear perfYear : validPerfYearList) {
-                String key = perfYear.getPerfId() + "_" + perfYear.getYear();
-                perfYearMap.put(key, perfYear);
-                perfYearByPerfIdMap.computeIfAbsent(perfYear.getPerfId(), k -> new ArrayList<>()).add(perfYear);
-            }
-
-            // ========== 缁楊兛绔村銉窗鐠侊紕鐣荤紒鈺傛櫏閻?current_value ==========
-            System.out.println("---------- 瀵偓婵顓哥粻妤冨摋閺?current_value ----------");
-            int perfUpdateCount = 0;
-            int perfFailCount = 0;
-
-            for (Map.Entry<Long, BizTask> taskEntry : taskMap.entrySet()) {
-                Long taskId = taskEntry.getKey();
-                BizTask task = taskEntry.getValue();
-
-                // 閼惧嘲褰囨禒璇插閸忓疇浠堥惃鍕摋閺佸牆鍙х化?
-                List<RelTaskPerformance> relList = relByTaskMap.get(taskId);
-                if (relList == null || relList.isEmpty()) {
-                    continue;
-                }
-
-                BigDecimal taskCurrentValue = task.getCurrentValue();
-                if (taskCurrentValue == null) {
-                    taskCurrentValue = BigDecimal.ZERO;
-                }
-
-                for (RelTaskPerformance rel : relList) {
-                    try {
-                        Long perfId = rel.getPerfId();
-                        BizPerformance pref = perfMap.get(perfId);
-
-                        if (pref == null) {
-                            continue;
-                        }
-
-                        String dataType = pref.getDataType();
-                        if (dataType == null || dataType.equals("0")) {
-                            continue;
-                        }
-
-                        if (pref.getCurrentValue() == null) {
-                            pref.setCurrentValue(BigDecimal.ZERO);
-                        }
-
-                        if (dataType.equals("1")) {
-                            // 閺佹澘鈧偐鐤崝?
-                            BigDecimal newValue = pref.getCurrentValue().add(taskCurrentValue);
-                            pref.setCurrentValue(newValue);
-                            pref.setUpdateTime(new Date());
-                            perfUpdateCount++;
-                        } else if (dataType.equals("2")) {
-                            // 閻ф儳鍨庡В鏂垮絿婢?
-                            if (taskCurrentValue.compareTo(pref.getCurrentValue()) > 0) {
-                                pref.setCurrentValue(taskCurrentValue);
-                                pref.setUpdateTime(new Date());
-                                perfUpdateCount++;
-                            }
-                        }
-                    } catch (Exception e) {
-                        perfFailCount++;
-                        System.err.println("婢跺嫮鎮婃禒璇插 " + taskId + " 閸滃瞼鍝楅弫?" + rel.getPerfId() + " 閺冭泛鍤柨? " + e.getMessage());
-                    }
-                }
-            }
-
-            // 閹靛綊鍣洪弴瀛樻煀缂佲晜鏅ラ惃?current_value
-            System.out.println("闂団偓鐟曚焦娲块弬鎵畱缂佲晜鏅ラ弫浼村櫤: " + perfUpdateCount);
-            int actualUpdateCount = 0;
-            for (BizPerformance pref : perfMap.values()) {
-                if (pref.getUpdateTime() != null) {
-                    performanceMapper.updatePerformance(pref);
-                    actualUpdateCount++;
-                }
-            }
-            System.out.println("缂佲晜鏅?current_value 閺囧瓨鏌婄€瑰本鍨氶敍灞界杽闂勫懏娲块弬? " + actualUpdateCount + "閿涘本鍨氶崝? " + perfUpdateCount + "閿涘苯銇戠拹? " + perfFailCount);
-
-            // ========== 缁楊兛绨╁銉窗缂佺喍绔撮柌宥嗘煀鐠侊紕鐣婚獮鏉戝缂佲晜鏅ラ惃?actual_value ==========
-            System.out.println("---------- 瀵偓婵鍣搁弬鎷岊吀缁犳鍕炬惔锔惧摋閺?actual_value ----------");
-            int yearUpdateCount = 0;
-            int yearFailCount = 0;
-
-            for (Map.Entry<Long, List<BizPerformanceYear>> entry : perfYearByPerfIdMap.entrySet()) {
-                Long perfId = entry.getKey();
-                List<BizPerformanceYear> perfYears = entry.getValue();
-
-                // 閼惧嘲褰囩拠銉у摋閺佸牏娈戦幍鈧張澶婂彠閼辨柧鎹㈤崝?
-                List<RelTaskPerformance> relList = relByPerfMap.get(perfId);
-
-                if (relList == null || relList.isEmpty()) {
-                    // 濞屸剝婀侀崗瀹犱粓娴犺濮熼敍灞惧閺堝鍕炬惔锔惧摋閺佸牐顔曟稉?
-                    for (BizPerformanceYear perfYear : perfYears) {
-                        try {
-                            perfYear.setActualValue(BigDecimal.ZERO);
-                            performanceMapper.updatePerformanceYear(perfYear);
-                            yearUpdateCount++;
-                        } catch (Exception e) {
-                            yearFailCount++;
-                            System.err.println("閺囧瓨鏌婇獮鏉戝缂佲晜鏅?" + perfYear.getYearId() + " 婢惰精瑙? " + e.getMessage());
-                        }
-                    }
-                    continue;
-                }
-
-                // 閹稿鍕炬惔锕€鍨庣紒鍕彠閼辨柧鎹㈤崝?(yearId -> List<taskId>)
-                Map<Long, List<Long>> tasksByYearMap = new HashMap<>();
-                for (RelTaskPerformance rel : relList) {
-                    tasksByYearMap.computeIfAbsent(rel.getYearId(), k -> new ArrayList<>()).add(rel.getTaskId());
-                }
-
-                // 鐠侊紕鐣诲В蹇庨嚋楠炴潙瀹抽惃鍕杽闂勫懎鈧?
-                for (BizPerformanceYear perfYear : perfYears) {
-                    try {
-                        List<Long> taskIdsForYear = tasksByYearMap.get(perfYear.getYearId());
-                        BigDecimal totalActualValue = BigDecimal.ZERO;
-
-                        if (taskIdsForYear != null && !taskIdsForYear.isEmpty()) {
-                            // 閹靛綊鍣洪懢宄板絿鏉╂瑤绨烘禒璇插
-                            List<BizTask> tasks = taskMapper.getTasksByIds(taskIdsForYear);
-                            for (BizTask task : tasks) {
-                                if (task != null && task.getCurrentValue() != null) {
-                                    totalActualValue = totalActualValue.add(task.getCurrentValue());
-                                }
-                            }
-                        }
-
-                        perfYear.setActualValue(totalActualValue);
-                        performanceMapper.updatePerformanceYear(perfYear);
-                        yearUpdateCount++;
-                    } catch (Exception e) {
-                        yearFailCount++;
-                        System.err.println("閺囧瓨鏌婇獮鏉戝缂佲晜鏅?" + perfYear.getYearId() + " 婢惰精瑙? " + e.getMessage());
-                    }
-                }
-            }
-
-            long endTime = System.currentTimeMillis();
-            System.out.println("========== 缂佲晜鏅ョ拋锛勭暬鐎瑰本鍨?==========");
-            System.out.println("跳过绩效指标 " + skipPerfIds.size() + " 条");
-            System.out.println("绩效更新: 成功 " + perfUpdateCount + " 条, 失败 " + perfFailCount + " 条");
-            System.out.println("年度绩效更新: 成功 " + yearUpdateCount + " 条, 失败 " + yearFailCount + " 条");
-            System.out.println("閹槒鈧妞? " + (endTime - startTime) + " ms");
-
-            return "缂佲晜鏅ラ弫鐗堝祦瀹稿弶娲块弬鐧╪" +
-                    "鐠哄疇绻冮惃鍕摋閺佸牊瀵氶弽? " + skipPerfIds.size() + " 閺?(perf_code娴?.3閵?閵?瀵偓婢?\n" +
-                    "缂佲晜鏅ラ弴瀛樻煀: 閹存劕濮?" + perfUpdateCount + " 閺夆槄绱濇径杈Е " + perfFailCount + " 閺夘摙n" +
-                    "楠炴潙瀹崇紒鈺傛櫏閺囧瓨鏌? 閹存劕濮?" + yearUpdateCount + " 閺夆槄绱濇径杈Е " + yearFailCount + " 閺夘摙n" +
-                    "閹槒鈧妞? " + (endTime - startTime) + " ms";
-
-        } catch (Exception e) {
-            System.err.println("缂佲晜鏅ョ拋锛勭暬婢惰精瑙? " + e.getMessage());
-            e.printStackTrace();
-            throw new RuntimeException("缂佲晜鏅ョ拋锛勭暬婢惰精瑙? " + e.getMessage(), e);
-        }
+        return calculateAllPerformanceV2();
     }
 
     public Object updatePerformanceByTaskId(Long taskId) {
         if (taskId == null) {
-            throw new RuntimeException("鐠囩柉绶崗銉︽箒閺佸牏娈戞禒璇插ID");
+            throw new RuntimeException("任务ID不能为空");
         }
 
-        // 闁插秵鏌婄拋锛勭暬閹碘偓閺堝鍝楅弫鍫礉閸ョ姳璐熼崡鏇氶嚋娴犺濮熼弴瀛樻煀閸欘垵鍏樿ぐ鍗炴惙婢舵矮閲滅紒鈺傛櫏
         Object result = calcuateAllPerformance();
         BizTask task = taskMapper.getTaskById(taskId);
         BusinessLogUtil.info("任务影响绩效",
@@ -531,13 +280,12 @@ public class PerformanceService {
 
     public Object getPerformanceById(Long perfId) {
         if (perfId == null) {
-            throw new RuntimeException("鐠囩柉绶崗銉︽箒閺佸牏娈戠紒鈺傛櫏ID");
+            throw new RuntimeException("绩效ID不能为空");
         }
         BizPerformance performance = performanceMapper.getPerformanceById(perfId);
         if (performance == null) {
             throw new RuntimeException("没有找到该绩效");
         }
-//        // 濡偓閺屻儲妲搁崥锕傛付鐟曚浇鐑︽潻?
 //        if (shouldSkipPerformance(performance)) {
 //            throw new RuntimeException("该绩效暂不参与自动计算");
 //        }
@@ -554,7 +302,7 @@ public class PerformanceService {
 
     public Object getPerfByTaskId(Long taskId) {
         if (taskId == null) {
-            throw new RuntimeException("鐠囩柉绶崗銉︽箒閺佸牏娈戞禒璇插ID");
+            throw new RuntimeException("任务ID不能为空");
         }
         BizTask task = taskMapper.getTaskById(taskId);
         if (task == null) {
@@ -578,7 +326,7 @@ public class PerformanceService {
 
     public Object getTaskByPerfId(Long perfId) {
         if (perfId == null) {
-            throw new RuntimeException("鐠囩柉绶崗銉︽箒閺佸牏娈戠紒鈺傛櫏ID");
+            throw new RuntimeException("绩效ID不能为空");
         }
         BizPerformance performance = performanceMapper.getPerformanceById(perfId);
         if (performance == null) {
@@ -603,11 +351,11 @@ public class PerformanceService {
 
     public Object getTaskByPerfId(Long perfId, Integer year) {
         if (perfId == null) {
-            throw new RuntimeException("閻犲洨鏌夌欢顓㈠礂閵夛附绠掗柡浣哥墢濞堟垹绱掗埡鍌涙珡ID");
+            throw new RuntimeException("绩效ID不能为空");
         }
         BizPerformance performance = performanceMapper.getPerformanceById(perfId);
         if (performance == null) {
-            throw new RuntimeException("婵炲备鍓濆﹢渚€骞嶉幆褍鐓傞悹鍥ュ劤閸濇寮?");
+            throw new RuntimeException("没有找到该绩效");
         }
 
         List<Long> taskIds = year == null
@@ -636,31 +384,26 @@ public class PerformanceService {
     }
 
     /**
-     * 娴兼ê瀵查崥搴ｆ畱閺嶈宓侀獮缈犲敜閼惧嘲褰囩紒鈺傛櫏閺傝纭?
-     * 娴ｈ法鏁ら幍褰掑櫤閺屻儴顕楁禒锝嗘禌瀵邦亞骞嗛弻銉嚄閿涘矁袙閸愮爟+1闂傤噣顣?
+     * 按年度查看某个绩效关联的任务。
      */
     public Object getTaskByPerfIdForYear(Long perfId, Integer year, Long userId) {
         BizPerformance performance = performanceMapper.getPerformanceById(perfId);
         if (!canViewPerformance(performance, userId)) {
-            throw new RuntimeException("闁哄啰濮靛鍫ュ蓟閵壯勭畽閻犲洢鍎抽崫妤呭极閸繂褰犻柤杈ㄦ煣閹广垽宕?");
+            throw new RuntimeException("无权查看该绩效关联任务");
         }
         return getTaskByPerfId(perfId, year);
     }
 
     public Object getPerformanceByYear(Integer year) {
         if (year == null) {
-            throw new RuntimeException("璇疯緭鍏ユ湁鏁堢殑骞翠唤");
+            throw new RuntimeException("请输入有效年份");
         }
 
-        long startTime = System.currentTimeMillis();
-
-        // 1. 閺屻儴顕楅幐鍥х暰楠炵繝鍞ら惃鍕閺堝鍕炬惔锔惧摋閺佸牐顔囪ぐ?
         List<BizPerformanceYear> prefYears = performanceMapper.getPerformanceYearByYear(year);
         if (prefYears == null || prefYears.isEmpty()) {
             return new ArrayList<>();
         }
 
-        // 2. 閺€鍫曟肠閹碘偓閺堝娓剁憰浣圭叀鐠囥垻娈戠紒鈺傛櫏ID
         List<Long> perfIds = new ArrayList<>();
         for (BizPerformanceYear prefYear : prefYears) {
             if (prefYear != null && prefYear.getPerfId() != null) {
@@ -668,10 +411,8 @@ public class PerformanceService {
             }
         }
 
-        // 3. 閹靛綊鍣洪弻銉嚄閹碘偓閺堝娴夐崗宕囨畱缂佲晜鏅ラ幐鍥ㄧ垼閿涘牅绔村▎鈩冣偓褎鐓＄拠顫礉闁灝鍘+1閿?
         List<BizPerformance> allPerformances = performanceMapper.getAllPerformance();
 
-        // 4. 閺嬪嫬缂撶紒鈺傛櫏Map閿涘奔绌舵禍搴℃彥闁喐鐓￠幍?
         Map<Long, BizPerformance> perfMap = new HashMap<>();
         for (BizPerformance perf : allPerformances) {
             if (perf != null) {
@@ -679,7 +420,6 @@ public class PerformanceService {
             }
         }
 
-        // 5. 缂佸嫯顥婃潻鏂挎礀缂佹挻鐏?
         List<PerformanceYearVO> prefYearVOS = new ArrayList<>();
         for (BizPerformanceYear prefYear : prefYears) {
             if (prefYear == null) {
@@ -690,9 +430,6 @@ public class PerformanceService {
                 prefYearVOS.add(new PerformanceYearVO(performance, prefYear));
             }
         }
-
-        long endTime = System.currentTimeMillis();
-        System.out.println("getPerformanceByYear 閺屻儴顕楅獮缈犲敜 " + year + "閿涘矁绻戦崶?" + prefYearVOS.size() + " 閺壜ゎ唶瑜版洩绱濋懓妤佹: " + (endTime - startTime) + " ms");
 
         return prefYearVOS;
     }
@@ -733,15 +470,15 @@ public class PerformanceService {
             BizPerformanceYear prefYear = performanceMapper.getPerformanceYearByPerfIdAndYear(perfId,year);
             prefYear.setActualValue(actualValue);
             performanceMapper.updatePerformanceYear(prefYear);
-            return "閹绘劒姘﹂幋鎰";
+            return "填报成功";
         }else {
-            throw new RuntimeException("鐠囥儳鍝楅弫鍫熷瘹閺嶅洤鍙ч懕鏂炬崲閸斺槄绱濇稉宥呭讲閹靛濮╅幓鎰唉");
+            throw new RuntimeException("该绩效由任务自动计算，不可手动填报");
         }
     }
     @Transactional
     public Object submitPref(Long perfId, BigDecimal actualValue, Integer year, Long userId, String comment) {
         if (perfId == null) {
-            throw new RuntimeException("鐠囩柉绶崗銉︽箒閺佸牏娈戠紒鈺傛櫏ID");
+            throw new RuntimeException("绩效ID不能为空");
         }
         if (actualValue == null || actualValue.compareTo(BigDecimal.ZERO) < 0) {
             throw new RuntimeException("请输入有效的实际值");
@@ -762,7 +499,7 @@ public class PerformanceService {
         }
 
         if ("2".equals(performance.getDataType()) && actualValue.compareTo(BigDecimal.valueOf(100)) > 0) {
-            throw new RuntimeException("閻ф儳鍨庡В鏃傚摋閺佸牆锝為幎銉モ偓闂寸瑝閼冲€熺Т鏉?00");
+            throw new RuntimeException("百分比类型绩效不能超过100");
         }
         if (performance.getAuditorId() == null) {
             throw new RuntimeException("该绩效未设置专业群审核人，无法提交");

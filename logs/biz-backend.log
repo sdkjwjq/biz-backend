@@ -17,3 +17,260 @@
 2026-05-31 21:17:15 INFO  [c.z.h.p.HikariPool] HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@5e1fd3f9
 2026-05-31 21:17:15 INFO  [c.z.h.HikariDataSource] HikariPool-1 - Start completed.
 2026-05-31 21:17:17 INFO  [BUSINESS] [业务日志] action=用户登录 result=成功 userId=110228 userName=徐忠杰 nickName=徐忠杰 role=0 deptId=100
+2026-05-31 21:17:53 INFO  [BUSINESS] [业务日志] action=绩效刷新 result=完成 performanceUpdateCount=141 yearUpdateCount=690 validRelationCount=1001 skippedManualPerformanceCount=23 skippedMissingRelationCount=53 skippedTaskDataType0Count=53 skippedYearMismatchCount=0 elapsedMs=1517
+2026-05-31 21:18:04 WARN  [o.s.w.s.m.s.DefaultHandlerExceptionResolver] Resolved [org.springframework.web.context.request.async.AsyncRequestNotUsableException: ServletOutputStream failed to write: java.io.IOException: Connection reset by peer]
+2026-05-31 21:24:42 INFO  [o.s.b.d.a.LocalDevToolsAutoConfiguration$RestartingClassPathChangeChangedEventListener] Restarting due to 1 class path change (0 additions, 0 deletions, 1 modification)
+2026-05-31 21:24:44 INFO  [c.z.h.HikariDataSource] HikariPool-1 - Shutdown initiated...
+2026-05-31 21:24:44 INFO  [c.z.h.HikariDataSource] HikariPool-1 - Shutdown completed.
+2026-05-31 21:24:44 INFO  [o.e.BizApplication] Starting BizApplication using Java 17.0.12 with PID 26060 (D:\college\2026\shuanggao\biz-backend\target\classes started by LTY in D:\college\2026\shuanggao\biz-backend)
+2026-05-31 21:24:44 INFO  [o.e.BizApplication] No active profile set, falling back to 1 default profile: "default"
+2026-05-31 21:24:45 INFO  [o.s.b.w.e.t.TomcatWebServer] Tomcat initialized with port 8080 (http)
+2026-05-31 21:24:45 INFO  [o.a.c.c.StandardService] Starting service [Tomcat]
+2026-05-31 21:24:45 INFO  [o.a.c.c.StandardEngine] Starting Servlet engine: [Apache Tomcat/10.1.26]
+2026-05-31 21:24:45 INFO  [o.a.c.c.C.[.[.[/api]] Initializing Spring embedded WebApplicationContext
+2026-05-31 21:24:45 INFO  [o.s.b.w.s.c.ServletWebServerApplicationContext] Root WebApplicationContext: initialization completed in 979 ms
+2026-05-31 21:24:46 WARN  [o.s.b.w.s.c.AnnotationConfigServletWebServerApplicationContext] Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'bizController': Unsatisfied dependency expressed through field 'bizService': Error creating bean with name 'bizService' defined in file [D:\college\2026\shuanggao\biz-backend\target\classes\org\example\service\BizService.class]: Post-processing of merged bean definition failed
+2026-05-31 21:24:46 INFO  [o.a.c.c.StandardService] Stopping service [Tomcat]
+2026-05-31 21:24:46 INFO  [o.s.b.a.l.ConditionEvaluationReportLogger] 
+
+Error starting ApplicationContext. To display the condition evaluation report re-run your application with 'debug' enabled.
+2026-05-31 21:24:46 ERROR [o.s.b.SpringApplication] Application run failed
+org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'bizController': Unsatisfied dependency expressed through field 'bizService': Error creating bean with name 'bizService' defined in file [D:\college\2026\shuanggao\biz-backend\target\classes\org\example\service\BizService.class]: Post-processing of merged bean definition failed
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.resolveFieldValue(AutowiredAnnotationBeanPostProcessor.java:787) ~[spring-beans-6.1.11.jar:6.1.11]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.inject(AutowiredAnnotationBeanPostProcessor.java:767) ~[spring-beans-6.1.11.jar:6.1.11]
+	at org.springframework.beans.factory.annotation.InjectionMetadata.inject(InjectionMetadata.java:145) ~[spring-beans-6.1.11.jar:6.1.11]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor.postProcessProperties(AutowiredAnnotationBeanPostProcessor.java:508) ~[spring-beans-6.1.11.jar:6.1.11]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.populateBean(AbstractAutowireCapableBeanFactory.java:1439) ~[spring-beans-6.1.11.jar:6.1.11]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:599) ~[spring-beans-6.1.11.jar:6.1.11]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:522) ~[spring-beans-6.1.11.jar:6.1.11]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:337) ~[spring-beans-6.1.11.jar:6.1.11]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234) ~[spring-beans-6.1.11.jar:6.1.11]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:335) ~[spring-beans-6.1.11.jar:6.1.11]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:200) ~[spring-beans-6.1.11.jar:6.1.11]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.preInstantiateSingletons(DefaultListableBeanFactory.java:975) ~[spring-beans-6.1.11.jar:6.1.11]
+	at org.springframework.context.support.AbstractApplicationContext.finishBeanFactoryInitialization(AbstractApplicationContext.java:971) ~[spring-context-6.1.11.jar:6.1.11]
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:625) ~[spring-context-6.1.11.jar:6.1.11]
+	at org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext.refresh(ServletWebServerApplicationContext.java:146) ~[spring-boot-3.3.2.jar:3.3.2]
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:754) ~[spring-boot-3.3.2.jar:3.3.2]
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:456) ~[spring-boot-3.3.2.jar:3.3.2]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:335) ~[spring-boot-3.3.2.jar:3.3.2]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1363) ~[spring-boot-3.3.2.jar:3.3.2]
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:1352) ~[spring-boot-3.3.2.jar:3.3.2]
+	at org.example.BizApplication.main(BizApplication.java:18) ~[classes/:na]
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method) ~[na:na]
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77) ~[na:na]
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:568) ~[na:na]
+	at org.springframework.boot.devtools.restart.RestartLauncher.run(RestartLauncher.java:50) ~[spring-boot-devtools-3.3.2.jar:3.3.2]
+Caused by: org.springframework.beans.factory.BeanCreationException: Error creating bean with name 'bizService' defined in file [D:\college\2026\shuanggao\biz-backend\target\classes\org\example\service\BizService.class]: Post-processing of merged bean definition failed
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:577) ~[spring-beans-6.1.11.jar:6.1.11]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.createBean(AbstractAutowireCapableBeanFactory.java:522) ~[spring-beans-6.1.11.jar:6.1.11]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.lambda$doGetBean$0(AbstractBeanFactory.java:337) ~[spring-beans-6.1.11.jar:6.1.11]
+	at org.springframework.beans.factory.support.DefaultSingletonBeanRegistry.getSingleton(DefaultSingletonBeanRegistry.java:234) ~[spring-beans-6.1.11.jar:6.1.11]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.doGetBean(AbstractBeanFactory.java:335) ~[spring-beans-6.1.11.jar:6.1.11]
+	at org.springframework.beans.factory.support.AbstractBeanFactory.getBean(AbstractBeanFactory.java:200) ~[spring-beans-6.1.11.jar:6.1.11]
+	at org.springframework.beans.factory.config.DependencyDescriptor.resolveCandidate(DependencyDescriptor.java:254) ~[spring-beans-6.1.11.jar:6.1.11]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.doResolveDependency(DefaultListableBeanFactory.java:1443) ~[spring-beans-6.1.11.jar:6.1.11]
+	at org.springframework.beans.factory.support.DefaultListableBeanFactory.resolveDependency(DefaultListableBeanFactory.java:1353) ~[spring-beans-6.1.11.jar:6.1.11]
+	at org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor$AutowiredFieldElement.resolveFieldValue(AutowiredAnnotationBeanPostProcessor.java:784) ~[spring-beans-6.1.11.jar:6.1.11]
+	... 25 common frames omitted
+Caused by: java.lang.IllegalStateException: Failed to introspect Class [org.example.service.BizService] from ClassLoader [org.springframework.boot.devtools.restart.classloader.RestartClassLoader@5d349953]
+	at org.springframework.util.ReflectionUtils.getDeclaredFields(ReflectionUtils.java:757) ~[spring-core-6.1.11.jar:6.1.11]
+	at org.springframework.util.ReflectionUtils.doWithLocalFields(ReflectionUtils.java:689) ~[spring-core-6.1.11.jar:6.1.11]
+	at org.springframework.context.annotation.CommonAnnotationBeanPostProcessor.buildResourceMetadata(CommonAnnotationBeanPostProcessor.java:431) ~[spring-context-6.1.11.jar:6.1.11]
+	at org.springframework.context.annotation.CommonAnnotationBeanPostProcessor.findResourceMetadata(CommonAnnotationBeanPostProcessor.java:412) ~[spring-context-6.1.11.jar:6.1.11]
+	at org.springframework.context.annotation.CommonAnnotationBeanPostProcessor.postProcessMergedBeanDefinition(CommonAnnotationBeanPostProcessor.java:312) ~[spring-context-6.1.11.jar:6.1.11]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.applyMergedBeanDefinitionPostProcessors(AbstractAutowireCapableBeanFactory.java:1103) ~[spring-beans-6.1.11.jar:6.1.11]
+	at org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory.doCreateBean(AbstractAutowireCapableBeanFactory.java:574) ~[spring-beans-6.1.11.jar:6.1.11]
+	... 34 common frames omitted
+Caused by: java.lang.NoClassDefFoundError: org/example/service/PerformanceService
+	at java.base/java.lang.Class.getDeclaredFields0(Native Method) ~[na:na]
+	at java.base/java.lang.Class.privateGetDeclaredFields(Class.java:3297) ~[na:na]
+	at java.base/java.lang.Class.getDeclaredFields(Class.java:2371) ~[na:na]
+	at org.springframework.util.ReflectionUtils.getDeclaredFields(ReflectionUtils.java:752) ~[spring-core-6.1.11.jar:6.1.11]
+	... 40 common frames omitted
+Caused by: java.lang.ClassNotFoundException: org.example.service.PerformanceService
+	at java.base/jdk.internal.loader.BuiltinClassLoader.loadClass(BuiltinClassLoader.java:641) ~[na:na]
+	at java.base/jdk.internal.loader.ClassLoaders$AppClassLoader.loadClass(ClassLoaders.java:188) ~[na:na]
+	at java.base/java.lang.ClassLoader.loadClass(ClassLoader.java:525) ~[na:na]
+	at java.base/java.lang.Class.forName0(Native Method) ~[na:na]
+	at java.base/java.lang.Class.forName(Class.java:467) ~[na:na]
+	at org.springframework.boot.devtools.restart.classloader.RestartClassLoader.loadClass(RestartClassLoader.java:121) ~[spring-boot-devtools-3.3.2.jar:3.3.2]
+	at java.base/java.lang.ClassLoader.loadClass(ClassLoader.java:525) ~[na:na]
+	... 44 common frames omitted
+2026-05-31 21:24:47 INFO  [o.e.BizApplication] Starting BizApplication using Java 17.0.12 with PID 26060 (D:\college\2026\shuanggao\biz-backend\target\classes started by LTY in D:\college\2026\shuanggao\biz-backend)
+2026-05-31 21:24:47 INFO  [o.e.BizApplication] No active profile set, falling back to 1 default profile: "default"
+2026-05-31 21:24:48 INFO  [o.s.b.w.e.t.TomcatWebServer] Tomcat initialized with port 8080 (http)
+2026-05-31 21:24:48 INFO  [o.a.c.c.StandardService] Starting service [Tomcat]
+2026-05-31 21:24:48 INFO  [o.a.c.c.StandardEngine] Starting Servlet engine: [Apache Tomcat/10.1.26]
+2026-05-31 21:24:48 INFO  [o.a.c.c.C.[.[.[/api]] Initializing Spring embedded WebApplicationContext
+2026-05-31 21:24:48 INFO  [o.s.b.w.s.c.ServletWebServerApplicationContext] Root WebApplicationContext: initialization completed in 870 ms
+2026-05-31 21:24:48 WARN  [o.s.b.w.s.c.AnnotationConfigServletWebServerApplicationContext] Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'bizController': Unsatisfied dependency expressed through field 'bizService': Error creating bean with name 'bizService': Unsatisfied dependency expressed through field 'performanceService': No qualifying bean of type 'org.example.service.PerformanceService' available: expected at least 1 bean which qualifies as autowire candidate. Dependency annotations: {@org.springframework.beans.factory.annotation.Autowired(required=true)}
+2026-05-31 21:24:48 INFO  [o.a.c.c.StandardService] Stopping service [Tomcat]
+2026-05-31 21:24:49 INFO  [o.s.b.a.l.ConditionEvaluationReportLogger] 
+
+Error starting ApplicationContext. To display the condition evaluation report re-run your application with 'debug' enabled.
+2026-05-31 21:24:49 ERROR [o.s.b.d.LoggingFailureAnalysisReporter] 
+
+***************************
+APPLICATION FAILED TO START
+***************************
+
+Description:
+
+Field performanceService in org.example.service.BizService required a bean of type 'org.example.service.PerformanceService' that could not be found.
+
+The injection point has the following annotations:
+	- @org.springframework.beans.factory.annotation.Autowired(required=true)
+
+
+Action:
+
+Consider defining a bean of type 'org.example.service.PerformanceService' in your configuration.
+
+2026-05-31 21:24:50 INFO  [o.e.BizApplication] Starting BizApplication using Java 17.0.12 with PID 26060 (D:\college\2026\shuanggao\biz-backend\target\classes started by LTY in D:\college\2026\shuanggao\biz-backend)
+2026-05-31 21:24:50 INFO  [o.e.BizApplication] No active profile set, falling back to 1 default profile: "default"
+2026-05-31 21:24:51 INFO  [o.s.b.w.e.t.TomcatWebServer] Tomcat initialized with port 8080 (http)
+2026-05-31 21:24:51 INFO  [o.a.c.c.StandardService] Starting service [Tomcat]
+2026-05-31 21:24:51 INFO  [o.a.c.c.StandardEngine] Starting Servlet engine: [Apache Tomcat/10.1.26]
+2026-05-31 21:24:51 INFO  [o.a.c.c.C.[.[.[/api]] Initializing Spring embedded WebApplicationContext
+2026-05-31 21:24:51 INFO  [o.s.b.w.s.c.ServletWebServerApplicationContext] Root WebApplicationContext: initialization completed in 925 ms
+2026-05-31 21:24:52 INFO  [o.s.b.d.a.OptionalLiveReloadServer] LiveReload server is running on port 35729
+2026-05-31 21:24:52 INFO  [o.s.b.w.e.t.TomcatWebServer] Tomcat started on port 8080 (http) with context path '/api'
+2026-05-31 21:24:52 INFO  [o.e.BizApplication] Started BizApplication in 1.731 seconds (process running for 496.491)
+2026-05-31 21:24:52 INFO  [o.s.b.d.a.ConditionEvaluationDeltaLoggingListener] Condition evaluation unchanged
+2026-05-31 21:26:58 INFO  [o.s.b.d.a.LocalDevToolsAutoConfiguration$RestartingClassPathChangeChangedEventListener] Restarting due to 1 class path change (0 additions, 0 deletions, 1 modification)
+2026-05-31 21:27:00 INFO  [o.e.BizApplication] Starting BizApplication using Java 17.0.12 with PID 26060 (D:\college\2026\shuanggao\biz-backend\target\classes started by LTY in D:\college\2026\shuanggao\biz-backend)
+2026-05-31 21:27:00 INFO  [o.e.BizApplication] No active profile set, falling back to 1 default profile: "default"
+2026-05-31 21:27:00 INFO  [o.s.b.w.e.t.TomcatWebServer] Tomcat initialized with port 8080 (http)
+2026-05-31 21:27:00 INFO  [o.a.c.c.StandardService] Starting service [Tomcat]
+2026-05-31 21:27:00 INFO  [o.a.c.c.StandardEngine] Starting Servlet engine: [Apache Tomcat/10.1.26]
+2026-05-31 21:27:00 INFO  [o.a.c.c.C.[.[.[/api]] Initializing Spring embedded WebApplicationContext
+2026-05-31 21:27:00 INFO  [o.s.b.w.s.c.ServletWebServerApplicationContext] Root WebApplicationContext: initialization completed in 602 ms
+2026-05-31 21:27:01 INFO  [o.s.b.d.a.OptionalLiveReloadServer] LiveReload server is running on port 35729
+2026-05-31 21:27:01 INFO  [o.s.b.w.e.t.TomcatWebServer] Tomcat started on port 8080 (http) with context path '/api'
+2026-05-31 21:27:01 INFO  [o.e.BizApplication] Started BizApplication in 1.187 seconds (process running for 625.671)
+2026-05-31 21:27:01 INFO  [o.s.b.d.a.ConditionEvaluationDeltaLoggingListener] Condition evaluation unchanged
+2026-05-31 21:27:11 INFO  [o.s.b.d.a.LocalDevToolsAutoConfiguration$RestartingClassPathChangeChangedEventListener] Restarting due to 1 class path change (0 additions, 0 deletions, 1 modification)
+2026-05-31 21:27:12 INFO  [o.e.BizApplication] Starting BizApplication using Java 17.0.12 with PID 26060 (D:\college\2026\shuanggao\biz-backend\target\classes started by LTY in D:\college\2026\shuanggao\biz-backend)
+2026-05-31 21:27:12 INFO  [o.e.BizApplication] No active profile set, falling back to 1 default profile: "default"
+2026-05-31 21:27:13 INFO  [o.s.b.w.e.t.TomcatWebServer] Tomcat initialized with port 8080 (http)
+2026-05-31 21:27:13 INFO  [o.a.c.c.StandardService] Starting service [Tomcat]
+2026-05-31 21:27:13 INFO  [o.a.c.c.StandardEngine] Starting Servlet engine: [Apache Tomcat/10.1.26]
+2026-05-31 21:27:13 INFO  [o.a.c.c.C.[.[.[/api]] Initializing Spring embedded WebApplicationContext
+2026-05-31 21:27:13 INFO  [o.s.b.w.s.c.ServletWebServerApplicationContext] Root WebApplicationContext: initialization completed in 626 ms
+2026-05-31 21:27:13 INFO  [o.s.b.d.a.OptionalLiveReloadServer] LiveReload server is running on port 35729
+2026-05-31 21:27:13 INFO  [o.s.b.w.e.t.TomcatWebServer] Tomcat started on port 8080 (http) with context path '/api'
+2026-05-31 21:27:13 INFO  [o.e.BizApplication] Started BizApplication in 1.174 seconds (process running for 637.985)
+2026-05-31 21:27:13 INFO  [o.s.b.d.a.ConditionEvaluationDeltaLoggingListener] Condition evaluation unchanged
+2026-05-31 21:28:13 INFO  [o.s.b.d.a.LocalDevToolsAutoConfiguration$RestartingClassPathChangeChangedEventListener] Restarting due to 1 class path change (0 additions, 0 deletions, 1 modification)
+2026-05-31 21:28:14 INFO  [o.e.BizApplication] Starting BizApplication using Java 17.0.12 with PID 26060 (D:\college\2026\shuanggao\biz-backend\target\classes started by LTY in D:\college\2026\shuanggao\biz-backend)
+2026-05-31 21:28:14 INFO  [o.e.BizApplication] No active profile set, falling back to 1 default profile: "default"
+2026-05-31 21:28:15 INFO  [o.s.b.w.e.t.TomcatWebServer] Tomcat initialized with port 8080 (http)
+2026-05-31 21:28:15 INFO  [o.a.c.c.StandardService] Starting service [Tomcat]
+2026-05-31 21:28:15 INFO  [o.a.c.c.StandardEngine] Starting Servlet engine: [Apache Tomcat/10.1.26]
+2026-05-31 21:28:15 INFO  [o.a.c.c.C.[.[.[/api]] Initializing Spring embedded WebApplicationContext
+2026-05-31 21:28:15 INFO  [o.s.b.w.s.c.ServletWebServerApplicationContext] Root WebApplicationContext: initialization completed in 752 ms
+2026-05-31 21:28:16 INFO  [o.s.b.d.a.OptionalLiveReloadServer] LiveReload server is running on port 35729
+2026-05-31 21:28:16 INFO  [o.s.b.w.e.t.TomcatWebServer] Tomcat started on port 8080 (http) with context path '/api'
+2026-05-31 21:28:16 INFO  [o.e.BizApplication] Started BizApplication in 1.432 seconds (process running for 700.571)
+2026-05-31 21:28:16 INFO  [o.s.b.d.a.ConditionEvaluationDeltaLoggingListener] Condition evaluation unchanged
+2026-05-31 21:28:27 INFO  [o.s.b.d.a.LocalDevToolsAutoConfiguration$RestartingClassPathChangeChangedEventListener] Restarting due to 1 class path change (0 additions, 0 deletions, 1 modification)
+2026-05-31 21:28:28 INFO  [o.e.BizApplication] Starting BizApplication using Java 17.0.12 with PID 26060 (D:\college\2026\shuanggao\biz-backend\target\classes started by LTY in D:\college\2026\shuanggao\biz-backend)
+2026-05-31 21:28:28 INFO  [o.e.BizApplication] No active profile set, falling back to 1 default profile: "default"
+2026-05-31 21:28:29 INFO  [o.s.b.w.e.t.TomcatWebServer] Tomcat initialized with port 8080 (http)
+2026-05-31 21:28:29 INFO  [o.a.c.c.StandardService] Starting service [Tomcat]
+2026-05-31 21:28:29 INFO  [o.a.c.c.StandardEngine] Starting Servlet engine: [Apache Tomcat/10.1.26]
+2026-05-31 21:28:29 INFO  [o.a.c.c.C.[.[.[/api]] Initializing Spring embedded WebApplicationContext
+2026-05-31 21:28:29 INFO  [o.s.b.w.s.c.ServletWebServerApplicationContext] Root WebApplicationContext: initialization completed in 904 ms
+2026-05-31 21:28:30 INFO  [o.s.b.d.a.OptionalLiveReloadServer] LiveReload server is running on port 35729
+2026-05-31 21:28:30 INFO  [o.s.b.w.e.t.TomcatWebServer] Tomcat started on port 8080 (http) with context path '/api'
+2026-05-31 21:28:30 INFO  [o.e.BizApplication] Started BizApplication in 1.756 seconds (process running for 714.517)
+2026-05-31 21:28:30 INFO  [o.s.b.d.a.ConditionEvaluationDeltaLoggingListener] Condition evaluation unchanged
+2026-05-31 21:28:42 INFO  [o.a.c.c.C.[.[.[/api]] Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-05-31 21:28:42 INFO  [o.s.w.s.DispatcherServlet] Initializing Servlet 'dispatcherServlet'
+2026-05-31 21:28:42 INFO  [o.s.w.s.DispatcherServlet] Completed initialization in 3 ms
+2026-05-31 21:28:42 INFO  [c.z.h.HikariDataSource] HikariPool-2 - Starting...
+2026-05-31 21:28:42 INFO  [c.z.h.p.HikariPool] HikariPool-2 - Added connection com.mysql.cj.jdbc.ConnectionImpl@44649ed9
+2026-05-31 21:28:42 INFO  [c.z.h.HikariDataSource] HikariPool-2 - Start completed.
+2026-05-31 21:29:56 INFO  [o.s.b.d.a.LocalDevToolsAutoConfiguration$RestartingClassPathChangeChangedEventListener] Restarting due to 1 class path change (0 additions, 0 deletions, 1 modification)
+2026-05-31 21:29:58 INFO  [c.z.h.HikariDataSource] HikariPool-2 - Shutdown initiated...
+2026-05-31 21:29:58 INFO  [c.z.h.HikariDataSource] HikariPool-2 - Shutdown completed.
+2026-05-31 21:29:58 INFO  [o.e.BizApplication] Starting BizApplication using Java 17.0.12 with PID 26060 (D:\college\2026\shuanggao\biz-backend\target\classes started by LTY in D:\college\2026\shuanggao\biz-backend)
+2026-05-31 21:29:58 INFO  [o.e.BizApplication] No active profile set, falling back to 1 default profile: "default"
+2026-05-31 21:29:59 INFO  [o.s.b.w.e.t.TomcatWebServer] Tomcat initialized with port 8080 (http)
+2026-05-31 21:29:59 INFO  [o.a.c.c.StandardService] Starting service [Tomcat]
+2026-05-31 21:29:59 INFO  [o.a.c.c.StandardEngine] Starting Servlet engine: [Apache Tomcat/10.1.26]
+2026-05-31 21:29:59 INFO  [o.a.c.c.C.[.[.[/api]] Initializing Spring embedded WebApplicationContext
+2026-05-31 21:29:59 INFO  [o.s.b.w.s.c.ServletWebServerApplicationContext] Root WebApplicationContext: initialization completed in 832 ms
+2026-05-31 21:29:59 INFO  [o.s.b.d.a.OptionalLiveReloadServer] LiveReload server is running on port 35729
+2026-05-31 21:30:00 INFO  [o.s.b.w.e.t.TomcatWebServer] Tomcat started on port 8080 (http) with context path '/api'
+2026-05-31 21:30:00 INFO  [o.e.BizApplication] Started BizApplication in 1.775 seconds (process running for 804.23)
+2026-05-31 21:30:00 INFO  [o.s.b.d.a.ConditionEvaluationDeltaLoggingListener] Condition evaluation unchanged
+2026-05-31 21:32:40 INFO  [o.s.b.d.a.LocalDevToolsAutoConfiguration$RestartingClassPathChangeChangedEventListener] Restarting due to 1 class path change (0 additions, 0 deletions, 1 modification)
+2026-05-31 21:32:42 INFO  [o.e.BizApplication] Starting BizApplication using Java 17.0.12 with PID 26060 (D:\college\2026\shuanggao\biz-backend\target\classes started by LTY in D:\college\2026\shuanggao\biz-backend)
+2026-05-31 21:32:42 INFO  [o.e.BizApplication] No active profile set, falling back to 1 default profile: "default"
+2026-05-31 21:32:43 INFO  [o.s.b.w.e.t.TomcatWebServer] Tomcat initialized with port 8080 (http)
+2026-05-31 21:32:43 INFO  [o.a.c.c.StandardService] Starting service [Tomcat]
+2026-05-31 21:32:43 INFO  [o.a.c.c.StandardEngine] Starting Servlet engine: [Apache Tomcat/10.1.26]
+2026-05-31 21:32:43 INFO  [o.a.c.c.C.[.[.[/api]] Initializing Spring embedded WebApplicationContext
+2026-05-31 21:32:43 INFO  [o.s.b.w.s.c.ServletWebServerApplicationContext] Root WebApplicationContext: initialization completed in 1001 ms
+2026-05-31 21:32:43 INFO  [o.s.b.d.a.OptionalLiveReloadServer] LiveReload server is running on port 35729
+2026-05-31 21:32:44 INFO  [o.s.b.w.e.t.TomcatWebServer] Tomcat started on port 8080 (http) with context path '/api'
+2026-05-31 21:32:44 INFO  [o.e.BizApplication] Started BizApplication in 1.871 seconds (process running for 968.242)
+2026-05-31 21:32:44 INFO  [o.s.b.d.a.ConditionEvaluationDeltaLoggingListener] Condition evaluation unchanged
+2026-05-31 21:34:59 INFO  [o.s.b.d.a.LocalDevToolsAutoConfiguration$RestartingClassPathChangeChangedEventListener] Restarting due to 3 class path changes (0 additions, 0 deletions, 3 modifications)
+2026-05-31 21:35:04 INFO  [o.e.BizApplication] Starting BizApplication using Java 17.0.12 with PID 26060 (D:\college\2026\shuanggao\biz-backend\target\classes started by LTY in D:\college\2026\shuanggao\biz-backend)
+2026-05-31 21:35:04 INFO  [o.e.BizApplication] No active profile set, falling back to 1 default profile: "default"
+2026-05-31 21:35:06 INFO  [o.s.b.w.e.t.TomcatWebServer] Tomcat initialized with port 8080 (http)
+2026-05-31 21:35:06 INFO  [o.a.c.c.StandardService] Starting service [Tomcat]
+2026-05-31 21:35:06 INFO  [o.a.c.c.StandardEngine] Starting Servlet engine: [Apache Tomcat/10.1.26]
+2026-05-31 21:35:06 INFO  [o.a.c.c.C.[.[.[/api]] Initializing Spring embedded WebApplicationContext
+2026-05-31 21:35:06 INFO  [o.s.b.w.s.c.ServletWebServerApplicationContext] Root WebApplicationContext: initialization completed in 2042 ms
+2026-05-31 21:35:07 INFO  [o.s.b.d.a.OptionalLiveReloadServer] LiveReload server is running on port 35729
+2026-05-31 21:35:07 INFO  [o.s.b.w.e.t.TomcatWebServer] Tomcat started on port 8080 (http) with context path '/api'
+2026-05-31 21:35:07 INFO  [o.e.BizApplication] Started BizApplication in 3.225 seconds (process running for 1111.851)
+2026-05-31 21:35:07 INFO  [o.s.b.d.a.ConditionEvaluationDeltaLoggingListener] Condition evaluation unchanged
+2026-05-31 21:35:52 INFO  [o.s.b.d.a.LocalDevToolsAutoConfiguration$RestartingClassPathChangeChangedEventListener] Restarting due to 1 class path change (0 additions, 0 deletions, 1 modification)
+2026-05-31 21:35:54 INFO  [o.e.BizApplication] Starting BizApplication using Java 17.0.12 with PID 26060 (D:\college\2026\shuanggao\biz-backend\target\classes started by LTY in D:\college\2026\shuanggao\biz-backend)
+2026-05-31 21:35:54 INFO  [o.e.BizApplication] No active profile set, falling back to 1 default profile: "default"
+2026-05-31 21:35:55 INFO  [o.s.b.w.e.t.TomcatWebServer] Tomcat initialized with port 8080 (http)
+2026-05-31 21:35:55 INFO  [o.a.c.c.StandardService] Starting service [Tomcat]
+2026-05-31 21:35:55 INFO  [o.a.c.c.StandardEngine] Starting Servlet engine: [Apache Tomcat/10.1.26]
+2026-05-31 21:35:55 INFO  [o.a.c.c.C.[.[.[/api]] Initializing Spring embedded WebApplicationContext
+2026-05-31 21:35:55 INFO  [o.s.b.w.s.c.ServletWebServerApplicationContext] Root WebApplicationContext: initialization completed in 1358 ms
+2026-05-31 21:35:56 INFO  [o.s.b.d.a.OptionalLiveReloadServer] LiveReload server is running on port 35729
+2026-05-31 21:35:56 INFO  [o.s.b.w.e.t.TomcatWebServer] Tomcat started on port 8080 (http) with context path '/api'
+2026-05-31 21:35:56 INFO  [o.e.BizApplication] Started BizApplication in 2.038 seconds (process running for 1160.664)
+2026-05-31 21:35:56 INFO  [o.s.b.d.a.ConditionEvaluationDeltaLoggingListener] Condition evaluation unchanged
+2026-05-31 21:36:41 INFO  [o.s.b.d.a.LocalDevToolsAutoConfiguration$RestartingClassPathChangeChangedEventListener] Restarting due to 75 class path changes (0 additions, 0 deletions, 75 modifications)
+2026-05-31 21:36:43 INFO  [o.e.BizApplication] Starting BizApplication using Java 17.0.12 with PID 26060 (D:\college\2026\shuanggao\biz-backend\target\classes started by LTY in D:\college\2026\shuanggao\biz-backend)
+2026-05-31 21:36:43 INFO  [o.e.BizApplication] No active profile set, falling back to 1 default profile: "default"
+2026-05-31 21:36:44 INFO  [o.s.b.w.e.t.TomcatWebServer] Tomcat initialized with port 8080 (http)
+2026-05-31 21:36:44 INFO  [o.a.c.c.StandardService] Starting service [Tomcat]
+2026-05-31 21:36:44 INFO  [o.a.c.c.StandardEngine] Starting Servlet engine: [Apache Tomcat/10.1.26]
+2026-05-31 21:36:44 INFO  [o.a.c.c.C.[.[.[/api]] Initializing Spring embedded WebApplicationContext
+2026-05-31 21:36:44 INFO  [o.s.b.w.s.c.ServletWebServerApplicationContext] Root WebApplicationContext: initialization completed in 1055 ms
+2026-05-31 21:36:45 INFO  [o.s.b.d.a.OptionalLiveReloadServer] LiveReload server is running on port 35729
+2026-05-31 21:36:45 INFO  [o.s.b.w.e.t.TomcatWebServer] Tomcat started on port 8080 (http) with context path '/api'
+2026-05-31 21:36:45 INFO  [o.e.BizApplication] Started BizApplication in 2.04 seconds (process running for 1209.825)
+2026-05-31 21:36:45 INFO  [o.s.b.d.a.ConditionEvaluationDeltaLoggingListener] Condition evaluation unchanged
+2026-05-31 21:38:18 INFO  [o.e.BizApplication] Starting BizApplication using Java 17.0.12 with PID 10640 (D:\college\2026\shuanggao\biz-backend\target\classes started by LTY in D:\college\2026\shuanggao\biz-backend)
+2026-05-31 21:38:18 INFO  [o.e.BizApplication] No active profile set, falling back to 1 default profile: "default"
+2026-05-31 21:38:18 INFO  [o.s.b.d.e.DevToolsPropertyDefaultsPostProcessor] Devtools property defaults active! Set 'spring.devtools.add-properties' to 'false' to disable
+2026-05-31 21:38:18 INFO  [o.s.b.d.e.DevToolsPropertyDefaultsPostProcessor] For additional web related logging consider setting the 'logging.level.web' property to 'DEBUG'
+2026-05-31 21:38:23 INFO  [o.s.b.w.e.t.TomcatWebServer] Tomcat initialized with port 8080 (http)
+2026-05-31 21:38:23 INFO  [o.a.c.c.StandardService] Starting service [Tomcat]
+2026-05-31 21:38:23 INFO  [o.a.c.c.StandardEngine] Starting Servlet engine: [Apache Tomcat/10.1.26]
+2026-05-31 21:38:23 INFO  [o.a.c.c.C.[.[.[/api]] Initializing Spring embedded WebApplicationContext
+2026-05-31 21:38:23 INFO  [o.s.b.w.s.c.ServletWebServerApplicationContext] Root WebApplicationContext: initialization completed in 4319 ms
+2026-05-31 21:38:25 INFO  [o.s.b.d.a.OptionalLiveReloadServer] LiveReload server is running on port 35729
+2026-05-31 21:38:25 INFO  [o.s.b.w.e.t.TomcatWebServer] Tomcat started on port 8080 (http) with context path '/api'
+2026-05-31 21:38:25 INFO  [o.e.BizApplication] Started BizApplication in 7.73 seconds (process running for 9.801)
+2026-05-31 21:38:27 INFO  [o.a.c.c.C.[.[.[/api]] Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-05-31 21:38:27 INFO  [o.s.w.s.DispatcherServlet] Initializing Servlet 'dispatcherServlet'
+2026-05-31 21:38:27 INFO  [o.s.w.s.DispatcherServlet] Completed initialization in 2 ms
+2026-05-31 21:38:27 INFO  [c.z.h.HikariDataSource] HikariPool-1 - Starting...
+2026-05-31 21:38:28 INFO  [c.z.h.p.HikariPool] HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@649a0464
+2026-05-31 21:38:28 INFO  [c.z.h.HikariDataSource] HikariPool-1 - Start completed.
+2026-05-31 21:38:34 INFO  [BUSINESS] [业务日志] action=用户登录 result=成功 userId=110228 userName=徐忠杰 nickName=徐忠杰 role=0 deptId=100
