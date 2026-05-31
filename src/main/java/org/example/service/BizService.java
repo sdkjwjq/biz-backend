@@ -5,6 +5,7 @@ import org.example.entity.dto.*;
 import org.example.entity.vo.*;
 import org.example.mapper.BizMapper;
 import org.example.mapper.SysMapper;
+import org.example.utils.BusinessLogUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -213,20 +214,56 @@ public class BizService {
                 throw new RuntimeException("该任务已完成，请勿重复提交");
             }
             BizTask taskById = bizMapper.getTaskById(taskId);
+            BizMaterialSubmission audit = bizMapper.getNewestAudit(taskId);
+            if (audit == null || (audit.getIsDelete() != null && audit.getIsDelete() == 1)) {
+                throw new RuntimeException("该任务没有可完结的审批单，请先提交材料");
+            }
+            if (audit.getFlowStatus() == null || audit.getFlowStatus() <= 0 || audit.getFlowStatus() >= 40) {
+                throw new RuntimeException("当前审批单状态不可完结");
+            }
+            Long auditorId = taskById.getAuditorId();
+            Long principalId = taskById.getPrincipalId();
+            if (auditorId == null) {
+                throw new RuntimeException("该任务未设置专业群审核人，无法模拟完整审核流程");
+            }
+            if (principalId == null) {
+                throw new RuntimeException("该任务未设置归口负责人，无法模拟完整审核流程");
+            }
+
+            BusinessLogUtil.info("管理员一键完结",
+                    "result", "开始",
+                    "operatorId", userId,
+                    "taskId", taskById.getTaskId(),
+                    "taskName", taskById.getTaskName(),
+                    "subId", audit.getSubId(),
+                    "startFlowStatus", audit.getFlowStatus());
+
+            completeAuditStepIfNeeded(audit, 10, 20, auditorId, principalId, "同意");
+            completeAuditStepIfNeeded(audit, 20, 30, principalId, ADMIN_ID, "同意");
+            completeAuditStepIfNeeded(audit, 30, 40, ADMIN_ID, ADMIN_ID, "同意");
+
             taskById.setStatus("3");
             taskById.setCurrentValue(taskById.getTargetValue());
+            taskById.setProgress(calculateCappedProgress(taskById.getCurrentValue(), taskById.getTargetValue()));
             bizMapper.updateTask(taskById);
-            BizMaterialSubmission audit = bizMapper.getNewestAudit(taskId);
-            audit.setCurrentHandlerId(userId);
+            audit.setReportedValue(taskById.getTargetValue());
+            audit.setCurrentHandlerId(ADMIN_ID);
             audit.setFlowStatus(40);
-
-
             bizMapper.updateAudit(audit);
-
+            syncAncestorTaskStatus(taskById.getTaskId());
 
             sendNotice(userId, taskById.getLeaderId(), "任务完成", "任务已完成", "任务"+taskById.getTaskName()+"已完成", "0", taskId);
-            createAuditLog(taskId, userId, "任务完成", 1, 3, "任务完成");
             performanceService.calcuateAllPerformance();
+            BusinessLogUtil.info("任务完结",
+                    "result", "成功",
+                    "operatorId", userId,
+                    "taskId", taskById.getTaskId(),
+                    "taskName", taskById.getTaskName(),
+                    "subId", audit.getSubId(),
+                    "currentValue", taskById.getCurrentValue(),
+                    "targetValue", taskById.getTargetValue(),
+                    "flowStatus", audit.getFlowStatus(),
+                    "performance", "已触发刷新");
             return "任务"+taskById.getTaskName()+"已完成";
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -254,10 +291,6 @@ public class BizService {
             if (bizMapper.getTaskById(bizSubDTO.getTask_id()).getStatus().equals("2")) {
                 throw new RuntimeException("该任务状态未开始或正在审核中,无法提交");
             }
-            // 验证任务状态，如果当前status为3，则禁止提交
-            if (bizMapper.getTaskById(bizSubDTO.getTask_id()).getStatus().equals("3")) {
-                throw new RuntimeException("该任务状态已完成,无法提交");
-            }
             // 检查文件是否存在
             SysFile sysFile = sysMapper.getFileById(bizSubDTO.getFile_id());
             if (sysFile == null) {
@@ -270,6 +303,8 @@ public class BizService {
             }
 
             BizTask task = bizMapper.getTaskById(bizSubDTO.getTask_id());
+            ensureTaskSubmitter(task, userId);
+            ensureNoActiveAudit(task.getTaskId());
             BizMaterialSubmission bizMaterialSubmission = new BizMaterialSubmission();
             bizMaterialSubmission.setTaskId(bizSubDTO.getTask_id());
             bizMaterialSubmission.setFileId(sysMapper.getFileByName(sysFile.getFileName()).getFileId());
@@ -295,16 +330,19 @@ public class BizService {
             bizMaterialSubmission.setIsDelete(0);
 
             bizMapper.createAudit(bizMaterialSubmission);
-            Long subId = bizMapper.getNewestSubId();
+            Long subId = resolveCreatedSubId(bizMaterialSubmission);
+            createAuditSnapshot(newTaskSnapshot(subId, task));
 
             // 提交后任务进入"审核中"，并把 current_value 覆盖写为本次填报值
             BizTask bizTask = bizMapper.getTaskById(bizSubDTO.getTask_id());
             if (bizTask != null) {
                 bizTask.setCurrentValue(rv);
+                bizTask.setProgress(calculateCappedProgress(rv, bizTask.getTargetValue()));
                 bizTask.setStatus("2");
                 bizTask.setComment(bizSubDTO.getComment());
                 bizTask.setUpdateTime(new Date());
                 bizMapper.updateTask(bizTask);
+                syncAncestorTaskStatus(bizTask.getTaskId());
             }
 
             // 发送审批信息（使用封装方法）
@@ -337,6 +375,16 @@ public class BizService {
                     resultMsg += "，下一位审批人ID为" + handlerId;
                 }
             }
+            BusinessLogUtil.info("任务填报",
+                    "result", "成功",
+                    "userId", userId,
+                    "taskId", task.getTaskId(),
+                    "taskName", task.getTaskName(),
+                    "subId", subId,
+                    "reportedValue", rv,
+                    "targetValue", task.getTargetValue(),
+                    "nextHandlerId", handlerId,
+                    "performance", "已触发刷新");
             return resultMsg;
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -352,11 +400,10 @@ public class BizService {
         if (ThirdLevelTask.getLevel() != 3) {
             throw new RuntimeException("该任务不是三级任务");
         }
+        ensureTaskSubmitter(ThirdLevelTask, userId);
+        ensureNoActiveAudit(ThirdLevelTask.getTaskId());
         if (ThirdLevelTask.getStatus().equals("2")) {
             throw new RuntimeException("该任务状态未开始或正在审核中,无法提交");
-        }
-        if (ThirdLevelTask.getStatus().equals("3")) {
-            throw new RuntimeException("该任务状态已完成,无法提交");
         }
         SysFile sysFile = sysMapper.getFileById(bizSubDTOs.getFile_id());
         if (sysFile == null) {
@@ -369,10 +416,25 @@ public class BizService {
         }
 
         BigDecimal totalReportedValue = BigDecimal.ZERO;
+        List<BizAuditSnapshot> pendingSnapshots = new ArrayList<>();
+        Set<Long> submittedLevel4TaskIds = new HashSet<>();
         for(BizSubForthDTO bizSubDTO : bizSubDTOs.getSub_list()){
+            if (bizSubDTO == null || bizSubDTO.getTask_id() == null) {
+                throw new RuntimeException("四级任务ID不能为空");
+            }
+            if (!submittedLevel4TaskIds.add(bizSubDTO.getTask_id())) {
+                throw new RuntimeException("四级任务不能重复提交");
+            }
+            if (bizSubDTO.getReported_value() == null || bizSubDTO.getReported_value().compareTo(BigDecimal.ZERO) < 0) {
+                throw new RuntimeException("填报值不能小于0");
+            }
             BizLevel4Task level4Task = bizMapper.getLevel4TasksById(bizSubDTO.getTask_id());
             if (level4Task == null) {
                 throw new RuntimeException("该任务不存在");
+            }
+
+            if ("2".equals(level4Task.getDataType()) && bizSubDTO.getReported_value().compareTo(BigDecimal.valueOf(100)) > 0) {
+                throw new RuntimeException("百分比任务填报值不能超过100");
             }
 
             if (!level4Task.getParentId().equals(bizSubDTOs.getThird_task_id())) {
@@ -381,13 +443,10 @@ public class BizService {
             if (level4Task.getStatus().equals("2")) {
                 throw new RuntimeException("该任务状态未开始或正在审核中,无法提交");
             }
-            if (level4Task.getStatus().equals("3")) {
-                throw new RuntimeException("该任务状态已完成,无法提交");
-            }
+            pendingSnapshots.add(newLevel4TaskSnapshot(null, level4Task));
             level4Task.setCurrentValue(bizSubDTO.getReported_value());
-            if(level4Task.getStatus().equals("0")){
-                level4Task.setStatus("1");
-            }
+            level4Task.setProgress(calculateCappedProgress(level4Task.getCurrentValue(), level4Task.getTargetValue()));
+            level4Task.setStatus("1");
             level4Task.setUpdateTime(new Date());
             bizMapper.updateLevel4Task(level4Task);
             totalReportedValue = totalReportedValue.add(bizSubDTO.getReported_value());
@@ -410,9 +469,6 @@ public class BizService {
 
         if(task.getDataType().equals("1") || task.getDataType().equals("0")){
             rv = totalReportedValue.setScale(0, BigDecimal.ROUND_DOWN);
-            if(totalReportedValue.compareTo(task.getTargetValue())>0){
-                rv = task.getTargetValue();
-            }
             System.out.println("目标值：" + task.getTargetValue());
             System.out.println("本次填报值：" + rv);
         }else if(task.getDataType().equals("2")){
@@ -447,16 +503,20 @@ public class BizService {
         bizMaterialSubmission.setIsDelete(0);
 
         bizMapper.createAudit(bizMaterialSubmission);
-        Long subId = bizMapper.getNewestSubId();
+        Long subId = resolveCreatedSubId(bizMaterialSubmission);
+        pendingSnapshots.add(newTaskSnapshot(null, task));
+        saveAuditSnapshots(subId, pendingSnapshots);
 
         // 提交后任务进入"审核中"，并把 current_value 覆盖写为本次填报值
         BizTask bizTask = bizMapper.getTaskById(bizSubDTOs.getThird_task_id());
         if (bizTask != null) {
             bizTask.setCurrentValue(rv);
+            bizTask.setProgress(calculateCappedProgress(rv, bizTask.getTargetValue()));
             bizTask.setStatus("2");
             bizTask.setComment(bizSubDTOs.getComment());
             bizTask.setUpdateTime(new Date());
             bizMapper.updateTask(bizTask);
+            syncAncestorTaskStatus(bizTask.getTaskId());
         }
 
         // 发送审批信息（使用封装方法）
@@ -489,6 +549,17 @@ public class BizService {
                 resultMsg += "，下一位审批人ID为" + handlerId;
             }
         }
+        BusinessLogUtil.info("任务填报",
+                "result", "成功",
+                "userId", userId,
+                "taskId", task.getTaskId(),
+                "taskName", task.getTaskName(),
+                "subId", subId,
+                "reportedValue", rv,
+                "targetValue", task.getTargetValue(),
+                "level4Count", subTaskCount,
+                "nextHandlerId", handlerId,
+                "performance", "已触发刷新");
         return resultMsg;
     }
 
@@ -638,13 +709,6 @@ public class BizService {
 
             Long submitBy = bizMaterialSubmission.getSubmitBy();
 
-            Map<Integer, Long> backHandlerMap = Map.of(
-                    10, submitBy,
-                    20, submitBy,
-                    30, submitBy,
-                    -20, submitBy,
-                    -30, submitBy);
-
             if (currentHandlerId.equals(userId)) {
                 if (bizMaterialSubmission.getFlowStatus() == 10) {
                     if (bizAuditDTO.getIs_pass()) {
@@ -661,6 +725,15 @@ public class BizService {
                                 bizMaterialSubmission.getTaskId());
 
                         createAuditLog(subId, userId, "通过", 10, 20, bizAuditDTO.getTitle());
+                        BusinessLogUtil.info("任务审核",
+                                "result", "通过",
+                                "operatorId", userId,
+                                "taskId", task.getTaskId(),
+                                "taskName", task.getTaskName(),
+                                "subId", subId,
+                                "preStatus", 10,
+                                "postStatus", 20,
+                                "nextHandlerId", nextHandlerId);
 
                         System.out.println("已审批，下一位审批人id为" + nextHandlerId);
                         String resultMsg = "已审批";
@@ -678,53 +751,7 @@ public class BizService {
                         }
                         return resultMsg;
                     } else {
-                        Long backHandlerId = backHandlerMap.get(bizMaterialSubmission.getFlowStatus());
-
-                        updateAuditStatus(subId, backHandlerId, -10);
-
-                        task.setStatus("1");
-                        BigDecimal currentValue = task.getCurrentValue();
-                        BigDecimal reportedValue = bizMaterialSubmission.getReportedValue();
-                        if (currentValue == null) {
-                            currentValue = BigDecimal.ZERO;
-                        }
-                        if (reportedValue == null) {
-                            reportedValue = BigDecimal.ZERO;
-                        }
-                        task.setCurrentValue(currentValue.subtract(reportedValue));
-                        bizMapper.updateTask(task);
-                        List<BizLevel4Task> level4Tasks = bizMapper.getForthLevelTasksByParentId(task.getTaskId());
-                        for (BizLevel4Task level4Task : level4Tasks) {
-                            level4Task.setCurrentValue(BigDecimal.ZERO);
-                            bizMapper.updateLevel4Task(level4Task);
-                        }
-                        performanceService.updatePerformanceByTaskId(task.getTaskId());
-
-                        sendNotice(userId,
-                                backHandlerId,
-                                "任务退回",
-                                "任务退回",
-                                "您提交的材料被退回",
-                                "0",
-                                bizMaterialSubmission.getTaskId());
-
-                        createAuditLog(subId, userId, "退回", 10, -10, bizAuditDTO.getTitle());
-
-                        System.out.println("已退回，退回到id为" + backHandlerId);
-                        String resultMsg = "已退回";
-                        if (backHandlerId != null) {
-                            try {
-                                SysUser backUser = sysMapper.getUserById(backHandlerId);
-                                if (backUser != null) {
-                                    resultMsg += "，退回到" + backUser.getUserName();
-                                } else {
-                                    resultMsg += "，退回到ID为" + backHandlerId;
-                                }
-                            } catch (Exception e) {
-                                resultMsg += "，退回到ID为" + backHandlerId;
-                            }
-                        }
-                        return resultMsg;
+                        return rejectAuditToSubmitter(bizMaterialSubmission, userId, 10, bizAuditDTO.getTitle());
                     }
                 } else if (bizMaterialSubmission.getFlowStatus() == 20) {
                     if (bizAuditDTO.getIs_pass()) {
@@ -741,6 +768,15 @@ public class BizService {
                                 bizMaterialSubmission.getTaskId());
 
                         createAuditLog(subId, userId, "通过", 20, 30, bizAuditDTO.getTitle());
+                        BusinessLogUtil.info("任务审核",
+                                "result", "通过",
+                                "operatorId", userId,
+                                "taskId", task.getTaskId(),
+                                "taskName", task.getTaskName(),
+                                "subId", subId,
+                                "preStatus", 20,
+                                "postStatus", 30,
+                                "nextHandlerId", nextHandlerId);
 
                         System.out.println("已审批，下一位审批人id为" + nextHandlerId);
                         String resultMsg = "已审批";
@@ -758,52 +794,7 @@ public class BizService {
                         }
                         return resultMsg;
                     } else {
-                        Long backHandlerId = backHandlerMap.get(bizMaterialSubmission.getFlowStatus());
-
-                        updateAuditStatus(subId, backHandlerId, -10);
-
-                        task.setStatus("1");
-                        BigDecimal currentValue = task.getCurrentValue();
-                        BigDecimal reportedValue = bizMaterialSubmission.getReportedValue();
-                        if (currentValue == null) {
-                            currentValue = BigDecimal.ZERO;
-                        }
-                        if (reportedValue == null) {
-                            reportedValue = BigDecimal.ZERO;
-                        }
-                        task.setCurrentValue(currentValue.subtract(reportedValue));
-                        bizMapper.updateTask(task);
-                        performanceService.updatePerformanceByTaskId(task.getTaskId());
-                        List<BizLevel4Task> level4Tasks = bizMapper.getForthLevelTasksByParentId(task.getTaskId());
-                        for (BizLevel4Task level4Task : level4Tasks) {
-                            level4Task.setCurrentValue(BigDecimal.ZERO);
-                            bizMapper.updateLevel4Task(level4Task);
-                        }
-                        sendNotice(userId,
-                                backHandlerId,
-                                "任务退回",
-                                "任务退回",
-                                "您提交的材料被退回",
-                                "0",
-                                bizMaterialSubmission.getTaskId());
-
-                        createAuditLog(subId, userId, "退回", 20, -10, bizAuditDTO.getTitle());
-
-                        System.out.println("已退回，退回到id为" + backHandlerId);
-                        String resultMsg = "已退回";
-                        if (backHandlerId != null) {
-                            try {
-                                SysUser backUser = sysMapper.getUserById(backHandlerId);
-                                if (backUser != null) {
-                                    resultMsg += "，退回到" + backUser.getUserName();
-                                } else {
-                                    resultMsg += "，退回到ID为" + backHandlerId;
-                                }
-                            } catch (Exception e) {
-                                resultMsg += "，退回到ID为" + backHandlerId;
-                            }
-                        }
-                        return resultMsg;
+                        return rejectAuditToSubmitter(bizMaterialSubmission, userId, 20, bizAuditDTO.getTitle());
                     }
                 } else if (bizMaterialSubmission.getFlowStatus() == 30) {
                     if (bizAuditDTO.getIs_pass()) {
@@ -814,12 +805,14 @@ public class BizService {
                         BizTask bizTask = bizMapper.getTaskById(bizMaterialSubmission.getTaskId());
                         BigDecimal rv = bizMaterialSubmission.getReportedValue() != null ? bizMaterialSubmission.getReportedValue() : BigDecimal.ZERO;
                         bizTask.setCurrentValue(rv);
+                        bizTask.setProgress(calculateCappedProgress(rv, bizTask.getTargetValue()));
                         if (bizTask.getCurrentValue().compareTo(bizTask.getTargetValue()) >= 0) {
                             bizTask.setStatus("3");
                         } else {
                             bizTask.setStatus("1");
                         }
                         bizMapper.updateCurrentTask(bizTask);
+                        syncAncestorTaskStatus(bizTask.getTaskId());
 
                         sendNotice(userId,
                                 bizMaterialSubmission.getSubmitBy(),
@@ -830,123 +823,35 @@ public class BizService {
                                 bizMaterialSubmission.getTaskId());
 
                         createAuditLog(subId, userId, "通过", 30, 40, bizAuditDTO.getTitle());
+                        performanceService.updatePerformanceByTaskId(bizTask.getTaskId());
+                        BusinessLogUtil.info("任务审核",
+                                "result", "归档完成",
+                                "operatorId", userId,
+                                "taskId", bizTask.getTaskId(),
+                                "taskName", bizTask.getTaskName(),
+                                "subId", subId,
+                                "preStatus", 30,
+                                "postStatus", 40,
+                                "reportedValue", rv,
+                                "taskStatus", bizTask.getStatus(),
+                                "performance", "已触发刷新");
 
                         System.out.println("审批完成");
                         return "审批完成";
                     } else {
-                        Long backHandlerId = backHandlerMap.get(bizMaterialSubmission.getFlowStatus());
-
-                        updateAuditStatus(subId, backHandlerId, -10);
-
-                        task.setStatus("1");
-                        BigDecimal currentValue = task.getCurrentValue();
-                        BigDecimal reportedValue = bizMaterialSubmission.getReportedValue();
-                        if (currentValue == null) {
-                            currentValue = BigDecimal.ZERO;
-                        }
-                        if (reportedValue == null) {
-                            reportedValue = BigDecimal.ZERO;
-                        }
-                        task.setCurrentValue(currentValue.subtract(reportedValue));
-                        bizMapper.updateTask(task);
-                        performanceService.updatePerformanceByTaskId(task.getTaskId());
-                        List<BizLevel4Task> level4Tasks = bizMapper.getForthLevelTasksByParentId(task.getTaskId());
-                        for (BizLevel4Task level4Task : level4Tasks) {
-                            level4Task.setCurrentValue(BigDecimal.ZERO);
-                            bizMapper.updateLevel4Task(level4Task);
-                        }
-                        sendNotice(userId,
-                                backHandlerId,
-                                "任务退回",
-                                "任务退回",
-                                "您提交的材料被退回",
-                                "0",
-                                bizMaterialSubmission.getTaskId());
-
-                        createAuditLog(subId, userId, "退回", 30, -10, bizAuditDTO.getTitle());
-
-                        System.out.println("已退回，退回到id为" + backHandlerId);
-                        String resultMsg = "已退回";
-                        if (backHandlerId != null) {
-                            try {
-                                SysUser backUser = sysMapper.getUserById(backHandlerId);
-                                if (backUser != null) {
-                                    resultMsg += "，退回到" + backUser.getUserName();
-                                } else {
-                                    resultMsg += "，退回到ID为" + backHandlerId;
-                                }
-                            } catch (Exception e) {
-                                resultMsg += "，退回到ID为" + backHandlerId;
-                            }
-                        }
-                        return resultMsg;
+                        return rejectAuditToSubmitter(bizMaterialSubmission, userId, 30, bizAuditDTO.getTitle());
                     }
                 } else if (bizMaterialSubmission.getFlowStatus() == -20) {
                     if (bizAuditDTO.getIs_pass()) {
                         throw new RuntimeException("请重新提交材料");
                     } else {
-                        Long backHandlerId = backHandlerMap.get(bizMaterialSubmission.getFlowStatus());
-                        updateAuditStatus(subId, backHandlerId, -10);
-                        bizMapper.updateTaskStatus(bizMaterialSubmission.getTaskId(), "1");
-                        sendNotice(userId,
-                                backHandlerId,
-                                "任务退回",
-                                "任务退回",
-                                "您提交的材料被退回",
-                                "0",
-                                bizMaterialSubmission.getTaskId());
-                        createAuditLog(subId, userId, "退回", -20, -10, bizAuditDTO.getTitle());
-                        System.out.println("已退回，退回到id为" + backHandlerId);
-                        String resultMsg = "已退回";
-                        if (backHandlerId != null) {
-                            try {
-                                SysUser backUser = sysMapper.getUserById(backHandlerId);
-                                if (backUser != null) {
-                                    resultMsg += "，退回到" + backUser.getUserName();
-                                } else {
-                                    resultMsg += "，退回到ID为" + backHandlerId;
-                                }
-                            } catch (Exception e) {
-                                resultMsg += "，退回到ID为" + backHandlerId;
-                            }
-                        }
-                        return resultMsg;
+                        return rejectAuditToSubmitter(bizMaterialSubmission, userId, -20, bizAuditDTO.getTitle());
                     }
                 } else if (bizMaterialSubmission.getFlowStatus() == -30) {
                     if (bizAuditDTO.getIs_pass()) {
                         throw new RuntimeException("请重新提交材料");
                     }
-                    Long backHandlerId = backHandlerMap.get(bizMaterialSubmission.getFlowStatus());
-                    updateAuditStatus(subId, backHandlerId, -10);
-                    bizMapper.updateTaskStatus(bizMaterialSubmission.getTaskId(), "1");
-                    sendNotice(userId,
-                            backHandlerId,
-                            "任务退回",
-                            "任务退回",
-                            "您提交的材料被退回",
-                            "0",
-                            bizMaterialSubmission.getTaskId());
-                    List<BizLevel4Task> level4Tasks = bizMapper.getForthLevelTasksByParentId(task.getTaskId());
-                    for (BizLevel4Task level4Task : level4Tasks) {
-                        level4Task.setCurrentValue(BigDecimal.ZERO);
-                        bizMapper.updateLevel4Task(level4Task);
-                    }
-                    createAuditLog(subId, userId, "退回", -30, -10, bizAuditDTO.getTitle());
-                    System.out.println("已退回，退回到id为" + backHandlerId);
-                    String resultMsg = "已退回";
-                    if (backHandlerId != null) {
-                        try {
-                            SysUser backUser = sysMapper.getUserById(backHandlerId);
-                            if (backUser != null) {
-                                resultMsg += "，退回到" + backUser.getUserName();
-                            } else {
-                                resultMsg += "，退回到ID为" + backHandlerId;
-                            }
-                        } catch (Exception e) {
-                            resultMsg += "，退回到ID为" + backHandlerId;
-                        }
-                    }
-                    return resultMsg;
+                    return rejectAuditToSubmitter(bizMaterialSubmission, userId, -30, bizAuditDTO.getTitle());
                 } else {
                     throw new RuntimeException("不支持的审批流程状态：" + bizMaterialSubmission.getFlowStatus());
                 }
@@ -969,21 +874,18 @@ public class BizService {
     @Transactional
     public String reSubmitMaterial(BizReSubDTO resubDTOBiz, Long userId) {
         try {
-            BizMaterialSubmission bizMaterialSubmission = bizMapper.getAuditBySubId(resubDTOBiz.getSub_id());
-            if (bizMaterialSubmission == null) {
+            BizMaterialSubmission oldSubmission = bizMapper.getAuditBySubIdIncludingDeleted(resubDTOBiz.getSub_id());
+            if (oldSubmission == null) {
                 throw new RuntimeException("该任务不存在");
             }
-            BizTask task = bizMapper.getTaskById(bizMaterialSubmission.getTaskId());
+            BizTask task = bizMapper.getTaskById(oldSubmission.getTaskId());
             if(task==null){
                 throw new RuntimeException("该任务不存在");
             }
-            Map<Integer, Long> nextHandlerMap = Map.of(
-                    -10, task.getAuditorId(),
-                    -20, task.getPrincipalId(),
-                    -30, ADMIN_ID);
-
+            ensureTaskSubmitter(task, userId);
+            ensureNoActiveAudit(task.getTaskId());
             Long nextHandlerId = task.getAuditorId();
-            if (bizMaterialSubmission.getFlowStatus() >= 0) {
+            if (oldSubmission.getFlowStatus() >= 0) {
                 throw new RuntimeException("该任务状态不是退回状态,无法重新提交");
             }
             int subTaskCount = resubDTOBiz.getSub_list().size();
@@ -991,11 +893,26 @@ public class BizService {
                 throw new RuntimeException("子任务列表不能为空");
             }
             BigDecimal totalReportedValue = BigDecimal.ZERO;
-            BizTask thirdTask = bizMapper.getTaskById(bizMaterialSubmission.getTaskId());
+            BizTask thirdTask = bizMapper.getTaskById(oldSubmission.getTaskId());
+            List<BizAuditSnapshot> pendingSnapshots = new ArrayList<>();
+            Set<Long> submittedLevel4TaskIds = new HashSet<>();
             for(BizSubForthDTO bizSubDTO : resubDTOBiz.getSub_list()){
+                if (bizSubDTO == null || bizSubDTO.getTask_id() == null) {
+                    throw new RuntimeException("四级任务ID不能为空");
+                }
+                if (!submittedLevel4TaskIds.add(bizSubDTO.getTask_id())) {
+                    throw new RuntimeException("四级任务不能重复提交");
+                }
+                if (bizSubDTO.getReported_value() == null || bizSubDTO.getReported_value().compareTo(BigDecimal.ZERO) < 0) {
+                    throw new RuntimeException("填报值不能小于0");
+                }
                 BizLevel4Task level4Task = bizMapper.getLevel4TasksById(bizSubDTO.getTask_id());
                 if (level4Task == null) {
                     throw new RuntimeException("该任务不存在");
+                }
+
+                if ("2".equals(level4Task.getDataType()) && bizSubDTO.getReported_value().compareTo(BigDecimal.valueOf(100)) > 0) {
+                    throw new RuntimeException("百分比任务填报值不能超过100");
                 }
 
                 if (!level4Task.getParentId().equals(thirdTask.getTaskId())) {
@@ -1004,13 +921,10 @@ public class BizService {
                 if (level4Task.getStatus().equals("2")) {
                     throw new RuntimeException("该任务状态未开始或正在审核中,无法提交");
                 }
-                if (level4Task.getStatus().equals("3")) {
-                    throw new RuntimeException("该任务状态已完成,无法提交");
-                }
+                pendingSnapshots.add(newLevel4TaskSnapshot(null, level4Task));
                 level4Task.setCurrentValue(bizSubDTO.getReported_value());
-                if(level4Task.getStatus().equals("0")){
-                    level4Task.setStatus("1");
-                }
+                level4Task.setProgress(calculateCappedProgress(level4Task.getCurrentValue(), level4Task.getTargetValue()));
+                level4Task.setStatus("1");
                 level4Task.setUpdateTime(new Date());
                 bizMapper.updateLevel4Task(level4Task);
                 totalReportedValue = totalReportedValue.add(bizSubDTO.getReported_value());
@@ -1022,9 +936,6 @@ public class BizService {
 
             if(task.getDataType().equals("1")){
                 rv = totalReportedValue.setScale(0, BigDecimal.ROUND_DOWN);
-                if(totalReportedValue.compareTo(task.getTargetValue())>0){
-                    rv = task.getTargetValue();
-                }
             }else if(task.getDataType().equals("2")){
 
                 rv = totalReportedValue.divide(
@@ -1032,26 +943,49 @@ public class BizService {
                         4,
                         java.math.RoundingMode.HALF_UP
                 );
-                if(rv.compareTo(task.getTargetValue())>0){
-                    rv = task.getTargetValue();
+                if(rv.compareTo(BigDecimal.valueOf(100.0D))>0){
+                    rv = BigDecimal.valueOf(100.0D);
                 }
             }
-            bizMaterialSubmission.setReportedValue(rv);
-            bizMaterialSubmission.setDataType(thirdTask.getDataType());
-            bizMaterialSubmission.setFileId(resubDTOBiz.getFile_id());
-            bizMaterialSubmission.setSubmitTime(new Date());
-            bizMaterialSubmission.setFlowStatus(10);
-            bizMaterialSubmission.setCurrentHandlerId(nextHandlerId);
-            bizMapper.updateAudit(bizMaterialSubmission);
+
+            SysFile sysFile = sysMapper.getFileById(resubDTOBiz.getFile_id());
+            if (sysFile == null) {
+                throw new RuntimeException("该文件不存在");
+            }
+
+            if (oldSubmission.getIsDelete() == null || oldSubmission.getIsDelete() == 0) {
+                oldSubmission.setIsDelete(1);
+                bizMapper.updateAudit(oldSubmission);
+            }
+
+            BizMaterialSubmission newSubmission = new BizMaterialSubmission();
+            newSubmission.setTaskId(oldSubmission.getTaskId());
+            newSubmission.setFileId(resubDTOBiz.getFile_id());
+            newSubmission.setReportedValue(rv);
+            newSubmission.setDataType(thirdTask.getDataType());
+            newSubmission.setSubmitBy(userId);
+            newSubmission.setSubmitDeptId(sysMapper.getUserById(userId).getDeptId());
+            newSubmission.setManageDeptId(task.getDeptId());
+            newSubmission.setSubmitTime(new Date());
+            newSubmission.setFileSuffix(sysFile.getFileSuffix());
+            newSubmission.setFlowStatus(10);
+            newSubmission.setCurrentHandlerId(nextHandlerId);
+            newSubmission.setIsDelete(0);
+            bizMapper.createAudit(newSubmission);
+            Long newSubId = resolveCreatedSubId(newSubmission);
+            pendingSnapshots.add(newTaskSnapshot(null, task));
+            saveAuditSnapshots(newSubId, pendingSnapshots);
 
             // 重新提交后恢复任务状态为"审核中"，并覆盖写 current_value
-            BizTask bizTask = bizMapper.getTaskById(bizMaterialSubmission.getTaskId());
+            BizTask bizTask = bizMapper.getTaskById(oldSubmission.getTaskId());
             if (bizTask != null) {
                 bizTask.setCurrentValue(rv);
+                bizTask.setProgress(calculateCappedProgress(rv, bizTask.getTargetValue()));
                 bizTask.setStatus("2");
                 bizTask.setUpdateTime(new Date());
                 bizTask.setComment(resubDTOBiz.getComment());
                 bizMapper.updateCurrentTask(bizTask);
+                syncAncestorTaskStatus(bizTask.getTaskId());
             }
 
             // 已修改，修改内容及原因：添加null检查，避免nextHandlerId为null时发送通知导致数据库约束错误
@@ -1063,11 +997,21 @@ public class BizService {
                         "任务审核",
                         "您有新的任务需要审核",
                         "0",
-                        bizMaterialSubmission.getTaskId());
+                        oldSubmission.getTaskId());
             }
 
-            createAuditLog(resubDTOBiz.getSub_id(), userId, "重新提交", -bizMaterialSubmission.getFlowStatus(),
-                    bizMaterialSubmission.getFlowStatus(), "重新提交");
+            createAuditLog(newSubId, userId, "重新提交", 0, 10, "重新提交");
+            BusinessLogUtil.info("任务重新提交",
+                    "result", "成功",
+                    "userId", userId,
+                    "taskId", task.getTaskId(),
+                    "taskName", task.getTaskName(),
+                    "oldSubId", oldSubmission.getSubId(),
+                    "newSubId", newSubId,
+                    "reportedValue", rv,
+                    "targetValue", task.getTargetValue(),
+                    "level4Count", subTaskCount,
+                    "nextHandlerId", nextHandlerId);
             // 已修改，修改内容及原因：添加null检查和异常处理，避免getUserById返回null时出现空指针异常
             String resultMsg = "已重新提交";
             if (nextHandlerId != null) {
@@ -1101,21 +1045,23 @@ public class BizService {
             if (!bizMaterialSubmission.getSubmitBy().equals(userId)){
                 throw new RuntimeException("您不是该任务的提交人，无法撤回");
             }
+            BizTask task = bizMapper.getTaskById(taskId);
+            ensureTaskSubmitter(task, userId);
             bizMaterialSubmission.setIsDelete(1);
             bizMapper.updateAudit(bizMaterialSubmission);
             createAuditLog(bizMaterialSubmission.getSubId(), userId, "撤回提交", bizMaterialSubmission.getFlowStatus(), -bizMaterialSubmission.getFlowStatus(), "撤回提交");
 
-            BizTask task = bizMapper.getTaskById(taskId);
-            task.setStatus("0");
-            BizMaterialSubmission latestAudit = bizMapper.getLatestAuditByTaskId(taskId);
-            if(latestAudit == null){
-                task.setCurrentValue(BigDecimal.ZERO);
-            }else {
-                task.setCurrentValue(latestAudit.getReportedValue());
-            }
-
-            task.setUpdateTime(new Date());
-            bizMapper.updateTask( task);
+            restoreFromAuditSnapshots(bizMaterialSubmission);
+            syncAncestorTaskStatus(taskId);
+            performanceService.updatePerformanceByTaskId(taskId);
+            BusinessLogUtil.info("任务撤回",
+                    "result", "成功",
+                    "userId", userId,
+                    "taskId", taskId,
+                    "taskName", task == null ? null : task.getTaskName(),
+                    "subId", bizMaterialSubmission.getSubId(),
+                    "preStatus", bizMaterialSubmission.getFlowStatus(),
+                    "performance", "已触发刷新");
 
             return "已撤回提交";
         } catch (Exception e) {
@@ -1194,6 +1140,225 @@ public class BizService {
     }
 
     /**
+     * 校验当前用户是否为任务提交人。
+     */
+    private void ensureTaskSubmitter(BizTask task, Long userId) {
+        if (task == null) {
+            throw new RuntimeException("任务不存在");
+        }
+        if (userId == null) {
+            throw new RuntimeException("用户ID为空");
+        }
+        if (task.getLeaderId() == null || !task.getLeaderId().equals(userId)) {
+            throw new RuntimeException("您不是该任务的提交人，无法提交");
+        }
+    }
+
+    /**
+     * 同一任务只允许存在一条进行中的审批流。
+     */
+    private void ensureNoActiveAudit(Long taskId) {
+        BizMaterialSubmission activeAudit = bizMapper.getActiveAuditByTaskId(taskId);
+        if (activeAudit != null) {
+            throw new RuntimeException("该任务已有正在审核中的提交，请勿重复提交");
+        }
+    }
+
+    /**
+     * 获取刚创建的审批单ID，优先使用MyBatis回填的主键。
+     */
+    private Long resolveCreatedSubId(BizMaterialSubmission submission) {
+        if (submission != null && submission.getSubId() != null) {
+            return submission.getSubId();
+        }
+        return bizMapper.getNewestSubId();
+    }
+
+    private BizAuditSnapshot newTaskSnapshot(Long subId, BizTask task) {
+        BizAuditSnapshot snapshot = new BizAuditSnapshot();
+        snapshot.setSubId(subId);
+        snapshot.setTargetType("TASK");
+        snapshot.setTargetId(task.getTaskId());
+        snapshot.setPreviousValue(task.getCurrentValue());
+        snapshot.setPreviousStatus(task.getStatus());
+        snapshot.setPreviousComment(task.getComment());
+        snapshot.setCreateTime(new Date());
+        return snapshot;
+    }
+
+    private BizAuditSnapshot newLevel4TaskSnapshot(Long subId, BizLevel4Task task) {
+        BizAuditSnapshot snapshot = new BizAuditSnapshot();
+        snapshot.setSubId(subId);
+        snapshot.setTargetType("LEVEL4_TASK");
+        snapshot.setTargetId(task.getTaskId());
+        snapshot.setPreviousValue(task.getCurrentValue());
+        snapshot.setPreviousStatus(task.getStatus());
+        snapshot.setCreateTime(new Date());
+        return snapshot;
+    }
+
+    private void createAuditSnapshot(BizAuditSnapshot snapshot) {
+        if (snapshot != null) {
+            bizMapper.createAuditSnapshot(snapshot);
+        }
+    }
+
+    private void saveAuditSnapshots(Long subId, List<BizAuditSnapshot> snapshots) {
+        if (snapshots == null || snapshots.isEmpty()) {
+            return;
+        }
+        for (BizAuditSnapshot snapshot : snapshots) {
+            if (snapshot == null) {
+                continue;
+            }
+            snapshot.setSubId(subId);
+            createAuditSnapshot(snapshot);
+        }
+    }
+
+    private Object rejectAuditToSubmitter(BizMaterialSubmission submission, Long userId, Integer preStatus, String comment) {
+        Long subId = submission.getSubId();
+        Long backHandlerId = submission.getSubmitBy();
+
+        submission.setCurrentHandlerId(backHandlerId);
+        submission.setFlowStatus(-10);
+        submission.setIsDelete(1);
+        bizMapper.updateAudit(submission);
+
+        restoreFromAuditSnapshots(submission);
+        syncAncestorTaskStatus(submission.getTaskId());
+        performanceService.updatePerformanceByTaskId(submission.getTaskId());
+
+        sendNotice(userId,
+                backHandlerId,
+                "任务退回",
+                "任务退回",
+                "您提交的材料被退回",
+                "0",
+                submission.getTaskId());
+
+        createAuditLog(subId, userId, "退回", preStatus, -10, comment);
+
+        System.out.println("已退回，退回到id为" + backHandlerId);
+        String resultMsg = "已退回";
+        if (backHandlerId != null) {
+            try {
+                SysUser backUser = sysMapper.getUserById(backHandlerId);
+                if (backUser != null) {
+                    resultMsg += "，退回到" + backUser.getUserName();
+                } else {
+                    resultMsg += "，退回到ID为" + backHandlerId;
+                }
+            } catch (Exception e) {
+                resultMsg += "，退回到ID为" + backHandlerId;
+            }
+        }
+        BizTask task = bizMapper.getTaskById(submission.getTaskId());
+        BusinessLogUtil.info("任务审核",
+                "result", "退回",
+                "operatorId", userId,
+                "taskId", submission.getTaskId(),
+                "taskName", task == null ? null : task.getTaskName(),
+                "subId", subId,
+                "preStatus", preStatus,
+                "postStatus", -10,
+                "nextHandlerId", backHandlerId,
+                "performance", "已触发刷新");
+        return resultMsg;
+    }
+
+    private void restoreFromAuditSnapshots(BizMaterialSubmission submission) {
+        List<BizAuditSnapshot> snapshots = bizMapper.getAuditSnapshotsBySubId(submission.getSubId());
+        if (snapshots == null || snapshots.isEmpty()) {
+            BizTask task = bizMapper.getTaskById(submission.getTaskId());
+            if (task != null) {
+                task.setStatus("1");
+                task.setProgress(calculateCappedProgress(task.getCurrentValue(), task.getTargetValue()));
+                task.setUpdateTime(new Date());
+                bizMapper.updateTask(task);
+            }
+            return;
+        }
+
+        for (BizAuditSnapshot snapshot : snapshots) {
+            if ("TASK".equals(snapshot.getTargetType())) {
+                BizTask task = bizMapper.getTaskById(snapshot.getTargetId());
+                if (task == null) {
+                    continue;
+                }
+                task.setCurrentValue(snapshot.getPreviousValue() != null ? snapshot.getPreviousValue() : BigDecimal.ZERO);
+                task.setProgress(calculateCappedProgress(task.getCurrentValue(), task.getTargetValue()));
+                task.setStatus(snapshot.getPreviousStatus());
+                task.setComment(snapshot.getPreviousComment());
+                task.setUpdateTime(new Date());
+                bizMapper.updateTask(task);
+            } else if ("LEVEL4_TASK".equals(snapshot.getTargetType())) {
+                BizLevel4Task level4Task = bizMapper.getLevel4TasksById(snapshot.getTargetId());
+                if (level4Task == null) {
+                    continue;
+                }
+                level4Task.setCurrentValue(snapshot.getPreviousValue() != null ? snapshot.getPreviousValue() : BigDecimal.ZERO);
+                level4Task.setProgress(calculateCappedProgress(level4Task.getCurrentValue(), level4Task.getTargetValue()));
+                level4Task.setStatus(snapshot.getPreviousStatus());
+                level4Task.setUpdateTime(new Date());
+                bizMapper.updateLevel4Task(level4Task);
+            }
+        }
+    }
+
+    private void syncAncestorTaskStatus(Long taskId) {
+        BizTask child = bizMapper.getTaskById(taskId);
+        if (child == null || child.getParentId() == null || child.getParentId() <= 0) {
+            return;
+        }
+
+        BizTask parent = bizMapper.getTaskById(child.getParentId());
+        if (parent == null) {
+            return;
+        }
+
+        List<BizTask> children = bizMapper.getActiveChildTasksByParentId(parent.getTaskId());
+        if (children == null || children.isEmpty()) {
+            return;
+        }
+
+        boolean hasAuditing = false;
+        boolean hasStarted = false;
+        boolean allCompleted = true;
+        for (BizTask item : children) {
+            String status = item.getStatus();
+            if ("2".equals(status)) {
+                hasAuditing = true;
+            }
+            if ("1".equals(status) || "2".equals(status) || "3".equals(status)) {
+                hasStarted = true;
+            }
+            if (!"3".equals(status)) {
+                allCompleted = false;
+            }
+        }
+
+        String newStatus;
+        if (allCompleted) {
+            newStatus = "3";
+        } else if (hasAuditing) {
+            newStatus = "2";
+        } else if (hasStarted) {
+            newStatus = "1";
+        } else {
+            newStatus = "0";
+        }
+
+        if (!Objects.equals(parent.getStatus(), newStatus)) {
+            parent.setStatus(newStatus);
+            parent.setUpdateTime(new Date());
+            bizMapper.updateTask(parent);
+        }
+
+        syncAncestorTaskStatus(parent.getTaskId());
+    }
+
+    /**
      * 封装方法：发送系统通知
      * @param fromUserId 发送人ID
      * @param toUserId 接收人ID
@@ -1203,6 +1368,22 @@ public class BizService {
      * @param sourceType 来源类型
      * @param sourceId 来源ID
      */
+    private int calculateCappedProgress(BigDecimal currentValue, BigDecimal targetValue) {
+        if (currentValue == null || targetValue == null || targetValue.compareTo(BigDecimal.ZERO) <= 0) {
+            return 0;
+        }
+        BigDecimal percent = currentValue
+                .multiply(BigDecimal.valueOf(100))
+                .divide(targetValue, 0, RoundingMode.HALF_UP);
+        if (percent.compareTo(BigDecimal.ZERO) < 0) {
+            return 0;
+        }
+        if (percent.compareTo(BigDecimal.valueOf(100)) > 0) {
+            return 100;
+        }
+        return percent.intValue();
+    }
+
     private void sendNotice(Long fromUserId, Long toUserId, String triggerEvent,
                             String title, String content, String sourceType, Long sourceId) {
         // 已修改，修改内容及原因：添加toUserId的null检查，避免toUserId为null时插入数据库导致约束错误
@@ -1247,6 +1428,20 @@ public class BizService {
         bizAuditLog.setCreateTime(new Date());
 
         bizMapper.createAuditLog(bizAuditLog);
+    }
+
+    private void completeAuditStepIfNeeded(BizMaterialSubmission submission, Integer preStatus, Integer postStatus,
+                                           Long operatorId, Long nextHandlerId, String comment) {
+        if (submission == null || submission.getFlowStatus() == null || submission.getFlowStatus() > preStatus) {
+            return;
+        }
+        if (!submission.getFlowStatus().equals(preStatus)) {
+            throw new RuntimeException("审批单当前状态与完整流转顺序不一致，无法完结");
+        }
+        submission.setFlowStatus(postStatus);
+        submission.setCurrentHandlerId(nextHandlerId);
+        bizMapper.updateAudit(submission);
+        createAuditLog(submission.getSubId(), operatorId, "通过", preStatus, postStatus, comment);
     }
 
     /**

@@ -12,6 +12,7 @@ import org.example.entity.vo.SysLoginVO;
 import org.example.mapper.BizMapper;
 import org.example.mapper.SysMapper;
 import org.example.mapper.TokenBlacklistMapper;
+import org.example.utils.BusinessLogUtil;
 import org.example.utils.FileUploadUtil;
 import org.example.utils.JWTUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -74,10 +75,26 @@ public class SysService {
         SysUser user = sysMapper.getUserById(userId);
         if (user != null && user.getPassword().equals(password)) {
             SysLoginVO sysLoginVo = new SysLoginVO(user.getNickName(), JWTUtil.generateJwtToken(user));
+            BusinessLogUtil.info("用户登录",
+                    "result", "成功",
+                    "userId", userId,
+                    "userName", user.getUserName(),
+                    "nickName", user.getNickName(),
+                    "role", user.getRole(),
+                    "deptId", user.getDeptId());
             return sysLoginVo;
         } else if (user == null){
+            BusinessLogUtil.warn("用户登录",
+                    "result", "失败",
+                    "reason", "用户不存在",
+                    "userId", userId);
             throw new RuntimeException("用户不存在");
         } else if (!user.getPassword().equals(password)){
+            BusinessLogUtil.warn("用户登录",
+                    "result", "失败",
+                    "reason", "密码错误",
+                    "userId", userId,
+                    "userName", user.getUserName());
             throw new RuntimeException("密码错误");
         }
         return null;
@@ -138,9 +155,16 @@ public class SysService {
             Long userId = JWTUtil.getUserIdFromToken(request.getHeader("Authorization"));
             sysFile.setUploadBy(userId);
             sysFile.setUploadTime(new Date());
-            System.out.println(sysFile);
             sysMapper.uploadFile(sysFile);
-            return new FileUploadVO(sysMapper.getFileByName(sysFile.getFileName()).getFileId(), fileUploadDTO.getFilename(), fileUploadDTO.getFilepath());
+            SysFile savedFile = sysMapper.getFileByName(sysFile.getFileName());
+            BusinessLogUtil.info("文件上传",
+                    "result", "成功",
+                    "userId", userId,
+                    "taskId", taskId,
+                    "fileId", savedFile == null ? null : savedFile.getFileId(),
+                    "fileName", fileUploadDTO.getFilename(),
+                    "fileSize", file.getSize());
+            return new FileUploadVO(savedFile.getFileId(), fileUploadDTO.getFilename(), fileUploadDTO.getFilepath());
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

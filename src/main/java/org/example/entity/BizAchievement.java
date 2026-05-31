@@ -51,6 +51,9 @@ public class BizAchievement {
     private Integer budDengDengCi; // 不定等次数量
 
     private Long createBy; // 创建人ID(关联sys_user表userId)
+    private Integer auditStatus; // 10:待管理员归档 30:已归档 -10:已退回
+    private Long currentHandlerId; // 当前审核处理人ID
     private Integer isDelete; // 0:存在 1:删除
     private Date createTime; // 创建时间(默认当前时间)
+    private Date updateTime; // 更新时间
 }

@@ -2,6 +2,7 @@ package org.example.mapper;
 
 import org.apache.ibatis.annotations.*;
 import org.example.entity.BizAuditLog;
+import org.example.entity.BizAuditSnapshot;
 import org.example.entity.BizLevel4Task;
 import org.example.entity.BizMaterialSubmission;
 import org.example.entity.BizTask;
@@ -85,6 +86,9 @@ public interface BizMapper {
      */
     @Select("SELECT * FROM biz_task WHERE parent_id = #{taskId}")
     List<BizTask> getAllChildrenTasks(Long taskId);
+
+    @Select("SELECT * FROM biz_task WHERE parent_id = #{parentId} AND is_delete = 0")
+    List<BizTask> getActiveChildTasksByParentId(@Param("parentId") Long parentId);
 
     /**
      * 根据一级任务id获取其二级子任务
@@ -172,7 +176,7 @@ void updateLevel4Task(BizLevel4Task task);
      * 提交后更新任务
      * @param task 任务实体
      */
-    @Update("UPDATE biz_task SET current_value = #{currentValue}, status = #{status}, update_time = NOW() WHERE task_id = #{taskId}")
+    @Update("UPDATE biz_task SET current_value = #{currentValue}, progress = #{progress}, status = #{status}, update_time = NOW() WHERE task_id = #{taskId}")
     void updateCurrentTask(BizTask task);
 
     /**
@@ -243,6 +247,7 @@ void updateLevel4Task(BizLevel4Task task);
             "#{taskId}, #{fileId}, #{reportedValue}, #{dataType}, #{submitBy}, #{submitDeptId}, " +
             "#{manageDeptId}, #{submitTime}, #{fileSuffix}, #{flowStatus}, #{currentHandlerId}, #{isDelete}" +
             ")")
+    @Options(useGeneratedKeys = true, keyProperty = "subId", keyColumn = "sub_id")
     void createAudit(BizMaterialSubmission bizMaterialSubmission);
 
     /**
@@ -323,6 +328,14 @@ void updateLevel4Task(BizLevel4Task task);
     BizMaterialSubmission getAuditBySubId(Long subId);
 
     /**
+     * 根据subId获取审批单，包含已删除记录
+     * @param subId 提交ID
+     * @return 材料提交对象
+     */
+    @Select("SELECT * FROM biz_material_submission WHERE sub_id = #{subId}")
+    BizMaterialSubmission getAuditBySubIdIncludingDeleted(Long subId);
+
+    /**
      * 根据subId获取提交人
      * @param subId 提交ID
      * @return 提交人ID
@@ -337,6 +350,50 @@ void updateLevel4Task(BizLevel4Task task);
      */
     @Select("SELECT * FROM biz_material_submission WHERE task_id = #{taskId} AND is_delete = 0 ORDER BY sub_id DESC LIMIT 1")
     BizMaterialSubmission getLatestAuditByTaskId(Long taskId);
+
+    /**
+     * 获取任务当前未完成的审批单
+     * @param taskId 任务ID
+     * @return 当前活跃审批单
+     */
+    @Select("SELECT * FROM biz_material_submission " +
+            "WHERE task_id = #{taskId} AND is_delete = 0 AND flow_status IN (10, 20, 30) " +
+            "ORDER BY sub_id DESC LIMIT 1")
+    BizMaterialSubmission getActiveAuditByTaskId(@Param("taskId") Long taskId);
+
+    /**
+     * 创建审批快照
+     * @param snapshot 审批快照
+     */
+    @Insert("INSERT INTO biz_audit_snapshot(" +
+            "sub_id, target_type, target_id, previous_value, previous_status, previous_comment, create_time" +
+            ") VALUES(" +
+            "#{subId}, #{targetType}, #{targetId}, #{previousValue}, #{previousStatus}, #{previousComment}, #{createTime}" +
+            ")")
+    @Options(useGeneratedKeys = true, keyProperty = "snapshotId", keyColumn = "snapshot_id")
+    void createAuditSnapshot(BizAuditSnapshot snapshot);
+
+    /**
+     * 获取某审批单全部快照
+     * @param subId 审批单ID
+     * @return 快照列表
+     */
+    @Select("SELECT * FROM biz_audit_snapshot WHERE sub_id = #{subId} ORDER BY snapshot_id")
+    List<BizAuditSnapshot> getAuditSnapshotsBySubId(@Param("subId") Long subId);
+
+    /**
+     * 获取某审批单下指定对象快照
+     * @param subId 审批单ID
+     * @param targetType 对象类型
+     * @param targetId 对象ID
+     * @return 快照
+     */
+    @Select("SELECT * FROM biz_audit_snapshot " +
+            "WHERE sub_id = #{subId} AND target_type = #{targetType} AND target_id = #{targetId} " +
+            "LIMIT 1")
+    BizAuditSnapshot getAuditSnapshot(@Param("subId") Long subId,
+                                      @Param("targetType") String targetType,
+                                      @Param("targetId") Long targetId);
 
     /**
      * 根据任务id获取最近的、且状态为40的审批单

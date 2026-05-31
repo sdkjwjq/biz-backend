@@ -1,4 +1,4 @@
--- MySQL dump 10.13  Distrib 8.0.44, for Linux (x86_64)
+﻿-- MySQL dump 10.13  Distrib 8.0.44, for Linux (x86_64)
 --
 -- Host: localhost    Database: biz
 -- ------------------------------------------------------
@@ -21,7 +21,7 @@
 
 CREATE DATABASE /*!32312 IF NOT EXISTS*/ `biz` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
 
-USE `biz`;
+USE `biz_original_check`;
 
 --
 -- Table structure for table `biz_achievement`
@@ -706,3 +706,4 @@ UNLOCK TABLES;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
 -- Dump completed on 2026-05-29 15:46:07
+

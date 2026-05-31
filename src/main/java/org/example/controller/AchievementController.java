@@ -2,6 +2,7 @@ package org.example.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.example.entity.BizAchievement;
+import org.example.entity.dto.BizAuditDTO;
 import org.example.entity.vo.ErrorVO;
 import org.example.service.AchievementService;
 import org.example.utils.JWTUtil;
@@ -40,9 +41,9 @@ public class AchievementController {
      * @return 成果实体列表/错误信息
      */
     @GetMapping("/")
-    public Object listAllAchievements() {
+    public Object listAllAchievements(HttpServletRequest request) {
         try {
-            List<BizAchievement> achievementList = achievementService.listAllAchievements();
+            List<BizAchievement> achievementList = achievementService.listAllAchievements(currentUserId(request));
             return achievementList;
         } catch (Exception e) {
             return new ErrorVO(e.getMessage(), 500);
@@ -70,9 +71,9 @@ public class AchievementController {
      * @return 操作结果/错误信息
      */
     @PostMapping("/update/{id}")
-    public Object updateAchievement(@PathVariable("id") Long id,@RequestBody BizAchievement achievement) {
+    public Object updateAchievement(@PathVariable("id") Long id,@RequestBody BizAchievement achievement, HttpServletRequest request) {
         try {
-            achievementService.updateAchievement(id,achievement);
+            achievementService.updateAchievement(id, achievement, currentUserId(request));
             return "标志性成果「" + achievement.getAchName() + "」修改成功";
         } catch (Exception e) {
             return new ErrorVO(e.getMessage(), 500);
@@ -85,14 +86,63 @@ public class AchievementController {
      * @return 操作结果/错误信息
      */
     @PostMapping("/delete/{achId}")
-    public Object deleteAchievement(@PathVariable("achId") Long achId) {
+    public Object deleteAchievement(@PathVariable("achId") Long achId, HttpServletRequest request) {
         try {
             // 查询成果名称，用于返回友好提示
             BizAchievement achievement = achievementService.getAchievementById(achId);
-            achievementService.deleteAchievement(achId);
+            achievementService.deleteAchievement(achId, currentUserId(request));
             return "标志性成果「" + achievement.getAchName() + "」删除成功";
         } catch (Exception e) {
             return new ErrorVO(e.getMessage(), 500);
         }
+    }
+
+    @GetMapping("/audit/todo")
+    public Object getTodoAchievementAudits(HttpServletRequest request) {
+        try {
+            return achievementService.getTodoAchievementAudits(currentUserId(request));
+        } catch (Exception e) {
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
+
+    @GetMapping("/audit/records")
+    public Object getAchievementAuditRecords(HttpServletRequest request) {
+        try {
+            return achievementService.getAchievementAuditRecords(currentUserId(request));
+        } catch (Exception e) {
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
+
+    @GetMapping("/audit/achievement/{achId}")
+    public Object getAchievementAuditsByAchId(@PathVariable("achId") Long achId, HttpServletRequest request) {
+        try {
+            return achievementService.getAchievementAuditsByAchId(achId, currentUserId(request));
+        } catch (Exception e) {
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
+
+    @GetMapping("/audit/logs/{subId}")
+    public Object getAchievementAuditLogs(@PathVariable("subId") Long subId, HttpServletRequest request) {
+        try {
+            return achievementService.getAchievementAuditLogs(subId, currentUserId(request));
+        } catch (Exception e) {
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
+
+    @PostMapping("/audit")
+    public Object auditAchievement(@RequestBody BizAuditDTO auditDTO, HttpServletRequest request) {
+        try {
+            return achievementService.auditAchievement(auditDTO, currentUserId(request));
+        } catch (Exception e) {
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
+
+    private Long currentUserId(HttpServletRequest request) {
+        return JWTUtil.getUserIdFromToken(request.getHeader("Authorization"));
     }
 }
