@@ -1,0 +1,19 @@
+2026-05-31 21:16:38 INFO  [o.e.BizApplication] Starting BizApplication using Java 17.0.12 with PID 26060 (D:\college\2026\shuanggao\biz-backend\target\classes started by LTY in D:\college\2026\shuanggao\biz-backend)
+2026-05-31 21:16:38 INFO  [o.e.BizApplication] No active profile set, falling back to 1 default profile: "default"
+2026-05-31 21:16:38 INFO  [o.s.b.d.e.DevToolsPropertyDefaultsPostProcessor] Devtools property defaults active! Set 'spring.devtools.add-properties' to 'false' to disable
+2026-05-31 21:16:38 INFO  [o.s.b.d.e.DevToolsPropertyDefaultsPostProcessor] For additional web related logging consider setting the 'logging.level.web' property to 'DEBUG'
+2026-05-31 21:16:41 INFO  [o.s.b.w.e.t.TomcatWebServer] Tomcat initialized with port 8080 (http)
+2026-05-31 21:16:41 INFO  [o.a.c.c.StandardService] Starting service [Tomcat]
+2026-05-31 21:16:41 INFO  [o.a.c.c.StandardEngine] Starting Servlet engine: [Apache Tomcat/10.1.26]
+2026-05-31 21:16:41 INFO  [o.a.c.c.C.[.[.[/api]] Initializing Spring embedded WebApplicationContext
+2026-05-31 21:16:41 INFO  [o.s.b.w.s.c.ServletWebServerApplicationContext] Root WebApplicationContext: initialization completed in 3059 ms
+2026-05-31 21:16:43 INFO  [o.s.b.d.a.OptionalLiveReloadServer] LiveReload server is running on port 35729
+2026-05-31 21:16:44 INFO  [o.s.b.w.e.t.TomcatWebServer] Tomcat started on port 8080 (http) with context path '/api'
+2026-05-31 21:16:44 INFO  [o.e.BizApplication] Started BizApplication in 6.599 seconds (process running for 8.335)
+2026-05-31 21:17:14 INFO  [o.a.c.c.C.[.[.[/api]] Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-05-31 21:17:14 INFO  [o.s.w.s.DispatcherServlet] Initializing Servlet 'dispatcherServlet'
+2026-05-31 21:17:14 INFO  [o.s.w.s.DispatcherServlet] Completed initialization in 2 ms
+2026-05-31 21:17:14 INFO  [c.z.h.HikariDataSource] HikariPool-1 - Starting...
+2026-05-31 21:17:15 INFO  [c.z.h.p.HikariPool] HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@5e1fd3f9
+2026-05-31 21:17:15 INFO  [c.z.h.HikariDataSource] HikariPool-1 - Start completed.
+2026-05-31 21:17:17 INFO  [BUSINESS] [业务日志] action=用户登录 result=成功 userId=110228 userName=徐忠杰 nickName=徐忠杰 role=0 deptId=100

@@ -71,9 +71,50 @@
    - 若历史环境已创建过 `990201`、`990202`、`990203` 三个旧成果账号，本脚本会将其作废，避免继续误用旧账号。
    - 三个账号所属部门为 `机电工程学院`（`dept_id=118`）。
 
-## 执行命令
+## 部署脚本选择
+
+### A. 服务器上线：不修改历史提交数据
+
+如果目标是给已有线上库上线本轮功能，同时不改动原来的填报、审批、日志、消息等历史提交数据，执行：
+
+```bash
+mysql --default-character-set=utf8mb4 -u root -p biz --execute="source data/migrations/2026-05-31-deploy-server-no-history-data.sql"
+```
+
+该脚本只执行：
+
+- `2026-05-30-audit-snapshot.sql`
+- `2026-05-30-audit-snapshot-comment.sql`
+- `2026-05-30-performance-audit.sql`
+- `2026-05-31-achievement-audit.sql`
+
+它不会执行历史数据修正脚本，因此不会清理 2027 年及以后填报数据，也不会重写 2025 年审核日志。
+
+### B. 新电脑初始化：尚未创建数据库
+
+如果目标电脑没有创建数据库，需要直接初始化一套可测试/可演示数据，执行：
+
+```bash
+mysql --default-character-set=utf8mb4 -u root -p --execute="source data/migrations/2026-05-31-deploy-fresh-database.sql"
+```
+
+该脚本会先导入 `data/biz_2026-05-29_154602.sql` 这份服务器原始数据快照，再执行本轮完整迁移。
+
+注意：这个脚本会创建并初始化 `biz` 数据库，不要在已有重要数据的数据库环境中执行。
+
+### C. 完整迁移：包含历史数据修正
+
+如果已经明确需要执行本轮所有历史数据清理、纠偏、2025 审核流规范化，则执行：
+
+```bash
+mysql --default-character-set=utf8mb4 -u root -p biz --execute="source data/migrations/2026-05-31-deploy-all.sql"
+```
+
+## 逐条执行命令
 
 在服务器进入 `biz-backend` 目录后执行。请把用户名、密码、库名替换为线上实际值。
+
+下面的逐条命令保留给排查或单独补跑时使用。
 
 ```bash
 mysql --default-character-set=utf8mb4 -u root -p biz --execute="source data/migrations/2026-05-30-audit-snapshot.sql"
