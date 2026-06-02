@@ -16,16 +16,19 @@
 
 SET NAMES utf8mb4;
 
-SELECT '01/04 任务审核快照表' AS migration_step;
+SELECT '01/05 任务审核快照表' AS migration_step;
 source data/migrations/2026-05-30-audit-snapshot.sql;
 
-SELECT '02/04 任务审核快照表补充 previous_comment' AS migration_step;
+SELECT '02/05 任务审核快照表补充 previous_comment' AS migration_step;
 source data/migrations/2026-05-30-audit-snapshot-comment.sql;
 
-SELECT '03/04 绩效手动填报审核表' AS migration_step;
+SELECT '03/05 绩效手动填报审核表' AS migration_step;
 source data/migrations/2026-05-30-performance-audit.sql;
 
-SELECT '04/04 成果归档审核与固定上传账号' AS migration_step;
+SELECT '04/05 成果归档审核与固定上传账号' AS migration_step;
 source data/migrations/2026-05-31-achievement-audit.sql;
+
+SELECT '05/05 预算Excel导入表结构' AS migration_step;
+source data/migrations/2026-05-31-budget.sql;
 
 SELECT '服务器上线迁移完成：已跳过历史提交数据清理/重写类脚本。' AS migration_step;

@@ -71,6 +71,14 @@
    - 若历史环境已创建过 `990201`、`990202`、`990203` 三个旧成果账号，本脚本会将其作废，避免继续误用旧账号。
    - 三个账号所属部门为 `机电工程学院`（`dept_id=118`）。
 
+10. `2026-05-31-budget.sql`
+
+   新增预算 Excel 导入相关表：
+   - `biz_budget_sheet`
+   - `biz_budget_source_item`
+   - `biz_budget_task_item`
+   - 用于按年度、月份保存一张预算表的结构化数据、锁定状态和原始上传文件。
+
 ## 部署脚本选择
 
 ### A. 服务器上线：不修改历史提交数据
@@ -87,6 +95,7 @@ mysql --default-character-set=utf8mb4 -u root -p biz --execute="source data/migr
 - `2026-05-30-audit-snapshot-comment.sql`
 - `2026-05-30-performance-audit.sql`
 - `2026-05-31-achievement-audit.sql`
+- `2026-05-31-budget.sql`
 
 它不会执行历史数据修正脚本，因此不会清理 2027 年及以后填报数据，也不会重写 2025 年审核日志。
 
@@ -141,6 +150,9 @@ SHOW TABLES LIKE 'biz_performance_audit_snapshot';
 SHOW TABLES LIKE 'biz_performance_audit_log';
 SHOW TABLES LIKE 'biz_achievement_submission';
 SHOW TABLES LIKE 'biz_achievement_audit_log';
+SHOW TABLES LIKE 'biz_budget_sheet';
+SHOW TABLES LIKE 'biz_budget_source_item';
+SHOW TABLES LIKE 'biz_budget_task_item';
 ```
 
 ### 2. 2027 年及以后填报数据清理检查
@@ -211,6 +223,18 @@ WHERE is_delete = 0;
 ```
 
 `800001`、`800002`、`800003` 三个成果上传账号应显示为中文名称；若存在旧 `990xxx` 成果账号，应显示为作废或已删除状态。历史成果应默认归档。
+
+### 7. 预算表结构检查
+
+执行 `2026-05-31-budget.sql` 后检查：
+
+```sql
+SHOW CREATE TABLE biz_budget_sheet;
+SHOW CREATE TABLE biz_budget_source_item;
+SHOW CREATE TABLE biz_budget_task_item;
+```
+
+`biz_budget_sheet` 应存在 `uk_budget_sheet_year_month` 唯一键；两个明细表应通过 `sheet_id` 关联到预算主表。
 
 ## 上线注意
 

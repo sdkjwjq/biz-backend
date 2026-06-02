@@ -10,31 +10,34 @@
 
 SET NAMES utf8mb4;
 
-SELECT '01/09 任务审核快照表' AS migration_step;
+SELECT '01/10 任务审核快照表' AS migration_step;
 source data/migrations/2026-05-30-audit-snapshot.sql;
 
-SELECT '02/09 任务审核快照表补充 previous_comment' AS migration_step;
+SELECT '02/10 任务审核快照表补充 previous_comment' AS migration_step;
 source data/migrations/2026-05-30-audit-snapshot-comment.sql;
 
-SELECT '03/09 绩效手动填报审核表' AS migration_step;
+SELECT '03/10 绩效手动填报审核表' AS migration_step;
 source data/migrations/2026-05-30-performance-audit.sql;
 
-SELECT '04/09 绩效年度目标、年度关联、未来填报数据清理' AS migration_step;
+SELECT '04/10 绩效年度目标、年度关联、未来填报数据清理' AS migration_step;
 source data/migrations/2026-05-30-performance-relation-year-fix.sql;
 
-SELECT '05/09 任务进度封顶到100%' AS migration_step;
+SELECT '05/10 任务进度封顶到100%' AS migration_step;
 source data/migrations/2026-05-30-task-progress-cap.sql;
 
-SELECT '06/09 百分比类型数据封顶到100' AS migration_step;
+SELECT '06/10 百分比类型数据封顶到100' AS migration_step;
 source data/migrations/2026-05-30-percent-value-cap.sql;
 
-SELECT '07/09 绩效审核消息中文化与清理' AS migration_step;
+SELECT '07/10 绩效审核消息中文化与清理' AS migration_step;
 source data/migrations/2026-05-31-performance-notice-zh.sql;
 
-SELECT '08/09 2025年任务审核流规范化' AS migration_step;
+SELECT '08/10 2025年任务审核流规范化' AS migration_step;
 source data/migrations/2026-05-31-2025-task-audit-flow-normalize.sql;
 
-SELECT '09/09 成果归档审核与固定上传账号' AS migration_step;
+SELECT '09/10 成果归档审核与固定上传账号' AS migration_step;
 source data/migrations/2026-05-31-achievement-audit.sql;
+
+SELECT '10/10 预算Excel导入表结构' AS migration_step;
+source data/migrations/2026-05-31-budget.sql;
 
 SELECT '2026-05-31 数据库迁移脚本执行完成，请按 README-2026-05-31-deploy.md 执行检查 SQL。' AS migration_step;
