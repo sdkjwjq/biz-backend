@@ -67,7 +67,16 @@ public class PerformanceService {
         return isAdmin(userId)
                 || Objects.equals(performance.getLeaderId(), userId)
                 || Objects.equals(performance.getAuditorId(), userId)
-                || Objects.equals(performance.getPrincipalId(), userId);
+                || Objects.equals(performance.getPrincipalId(), userId)
+                || managesDept(userId, performance.getDeptId());
+    }
+
+    private boolean managesDept(Long userId, Long deptId) {
+        if (userId == null || deptId == null) {
+            return false;
+        }
+        List<Long> deptIds = sysMapper.getDeptIdsByLeaderId(userId);
+        return deptIds != null && deptIds.stream().anyMatch(id -> Objects.equals(id, deptId));
     }
 
     private boolean canModifyPerformance(BizPerformance performance, Long userId) {
@@ -444,7 +453,8 @@ public class PerformanceService {
         for (PerformanceYearVO vo : list) {
             if (Objects.equals(vo.getLeaderId(), userId)
                     || Objects.equals(vo.getAuditorId(), userId)
-                    || Objects.equals(vo.getPrincipalId(), userId)) {
+                    || Objects.equals(vo.getPrincipalId(), userId)
+                    || managesDept(userId, vo.getDeptId())) {
                 visible.add(vo);
             }
         }

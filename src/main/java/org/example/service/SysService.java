@@ -248,9 +248,12 @@ public class SysService {
      * 设为已读setRead
      * @param noticeId 通知ID
      */
-    public void setRead(Long noticeId) {
+    public void setRead(Long noticeId, Long userId) {
         try{
-            sysMapper.setRead(noticeId);
+            int updated = sysMapper.setRead(noticeId, userId);
+            if (updated == 0) {
+                throw new RuntimeException("通知不存在或无权操作");
+            }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -322,7 +325,8 @@ public class SysService {
      * @param user 用户数据传输对象
      */
     public void updateUser(SysUserDTO  user) {
-        if(sysMapper.getUserByName(user.getUserName()) != null){
+        SysUser sameNameUser = sysMapper.getUserByName(user.getUserName());
+        if(sameNameUser != null && !sameNameUser.getUserId().equals(user.getUserId())){
             throw new RuntimeException("用户名已存在，请添加文字进行区分");
         }
         if(sysMapper.getDeptById(user.getDeptId()) == null){

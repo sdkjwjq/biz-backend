@@ -12,7 +12,8 @@ public interface PerformanceMapper {
     List<BizPerformance> getAllPerformance();
 
     @Select("select * from biz_performance where is_delete = 0 and " +
-            "(leader_id = #{userId} or auditor_id = #{userId} or principal_id = #{userId})")
+            "(leader_id = #{userId} or auditor_id = #{userId} or principal_id = #{userId} " +
+            "or dept_id in (select dept_id from sys_dept where leader_id = #{userId} and is_delete = 0))")
     List<BizPerformance> getVisiblePerformance(@Param("userId") Long userId);
 
     @Select("select * from biz_performance where perf_id = #{perfId}")

@@ -13,6 +13,8 @@ import java.util.List;
 public class BizReSubDTO {
     private Long sub_id;
     private Long file_id;
+    private BigDecimal reported_value;
+    private String data_type;
     private String comment;
     private List<BizSubForthDTO> sub_list;
 }

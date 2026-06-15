@@ -154,7 +154,20 @@ public class BizController {
     @PostMapping("/sub")
     public Object sub(@RequestBody BizNewSubDTO bizNewSubDTO, HttpServletRequest request){
         try {
-            return bizService.subFourLevelTasks(bizNewSubDTO, JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
+            Long userId = JWTUtil.getUserIdFromToken(request.getHeader("Authorization"));
+            if (bizNewSubDTO.getSub_list() != null && !bizNewSubDTO.getSub_list().isEmpty()) {
+                return bizService.subFourLevelTasks(bizNewSubDTO, userId);
+            }
+            if (bizNewSubDTO.getTask_id() != null) {
+                BizSubDTO dto = new BizSubDTO();
+                dto.setTask_id(bizNewSubDTO.getTask_id());
+                dto.setFile_id(bizNewSubDTO.getFile_id());
+                dto.setReported_value(bizNewSubDTO.getReported_value());
+                dto.setData_type(bizNewSubDTO.getData_type());
+                dto.setComment(bizNewSubDTO.getComment());
+                return bizService.submitMaterial(dto, userId);
+            }
+            return bizService.subFourLevelTasks(bizNewSubDTO, userId);
         } catch (Exception e) {
             return new ErrorVO(e.getMessage(), 500);
         }

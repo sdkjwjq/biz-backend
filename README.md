@@ -343,7 +343,7 @@ https://www.postman.com/litianyi981119/biz/collection/21001135-3309c751-c3ca-4fd
 ### 三、审批流程接口
 
 #### 3.1 提交审批材料
-- **接口**：`POST /biz/submit`
+- **接口**：`POST /biz/sub`
 - **描述**：提交任务审批材料，启动审批流程
 - **请求头**：`Authorization: Bearer {token}`
 - **请求体**：

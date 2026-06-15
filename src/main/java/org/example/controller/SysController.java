@@ -218,9 +218,10 @@ public class SysController {
      * @return 操作结果或错误信息
      */
     @PostMapping("/notice/{notice_id}")
-    public Object setRead(@PathVariable("notice_id") Long noticeId){
+    public Object setRead(@PathVariable("notice_id") Long noticeId, HttpServletRequest request){
         try{
-            sysService.setRead(noticeId);
+            Long userId = JWTUtil.getUserIdFromToken(request.getHeader("Authorization"));
+            sysService.setRead(noticeId, userId);
             return "已读";
         } catch (Exception e) {
             return new ErrorVO(e.getMessage(), 500);

@@ -67,12 +67,11 @@ class AuditFlowApiTest {
                 level4TaskId
         );
 
-        BizNewSubDTO dto = new BizNewSubDTO(
-                thirdTaskId,
-                1L,
-                "parent status sync test",
-                List.of(new BizSubForthDTO(level4TaskId, BigDecimal.ONE, "1"))
-        );
+        BizNewSubDTO dto = new BizNewSubDTO();
+        dto.setThird_task_id(thirdTaskId);
+        dto.setFile_id(1L);
+        dto.setComment("parent status sync test");
+        dto.setSub_list(List.of(new BizSubForthDTO(level4TaskId, BigDecimal.ONE, "1")));
 
         String response = bizService.subFourLevelTasks(dto, submitterId);
 

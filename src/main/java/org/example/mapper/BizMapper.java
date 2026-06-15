@@ -72,6 +72,18 @@ public interface BizMapper {
      */
     @Select("SELECT * FROM biz_task WHERE (leader_id = #{userId} OR principal_id = #{userId} OR auditor_id=#{userId}) AND level <= 3")
     List<BizTask> getTasks(Long userId);
+
+    /**
+     * 获取用户可浏览任务：本人负责/审核/归口的任务 + 本人作为部门负责人管理部门下的任务
+     * @param userId 用户ID
+     * @return 任务列表
+     */
+    @Select("SELECT DISTINCT t.* FROM biz_task t " +
+            "WHERE t.level <= 3 AND (" +
+            "t.leader_id = #{userId} OR t.principal_id = #{userId} OR t.auditor_id = #{userId} " +
+            "OR t.dept_id IN (SELECT d.dept_id FROM sys_dept d WHERE d.leader_id = #{userId} AND d.is_delete = 0)" +
+            ")")
+    List<BizTask> getVisibleTasks(@Param("userId") Long userId);
     /**
      * 获取所有一级任务
      * @return 一级任务列表

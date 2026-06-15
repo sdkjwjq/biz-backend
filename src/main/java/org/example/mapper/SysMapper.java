@@ -2,6 +2,7 @@ package org.example.mapper;
 
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 import org.apache.ibatis.annotations.Options;
@@ -65,6 +66,14 @@ public interface SysMapper {
 //    获取所有的部门负责人ID
     @Select("SELECT leader_id FROM sys_dept")
     public List<Long> getAllDeptLeaders();
+
+    /**
+     * 获取某用户作为部门负责人的部门ID列表
+     * @param leaderId 部门负责人ID
+     * @return 部门ID列表
+     */
+    @Select("SELECT dept_id FROM sys_dept WHERE leader_id = #{leaderId} AND is_delete = 0")
+    public List<Long> getDeptIdsByLeaderId(Long leaderId);
 
     /**
      * 根据id获取用户
@@ -168,6 +177,6 @@ public interface SysMapper {
      * 设为已读
      * @param noticeId 通知ID
      */
-    @Update("UPDATE sys_notice SET is_read = 1 WHERE notice_id = #{noticeId}")
-    public void setRead(Long noticeId);
+    @Update("UPDATE sys_notice SET is_read = 1 WHERE notice_id = #{noticeId} AND to_user_id = #{userId} AND is_delete = 0")
+    public int setRead(@Param("noticeId") Long noticeId, @Param("userId") Long userId);
 }
