@@ -25,6 +25,11 @@ public class JWTUtil {
      * @return Token字符串
      */
     public static String generateJwtToken(SysUser user) {
+        return generateJwtToken(user, false, false, false);
+    }
+
+    public static String generateJwtToken(SysUser user, boolean isDepartmentAccount,
+                                          boolean canViewAchievement, boolean canUploadAchievement) {
         long nowMillis = System.currentTimeMillis();
         long expMillis = nowMillis + 3600000; // 令牌有效期为 1 小时
         Date exp = new Date(expMillis);
@@ -34,6 +39,11 @@ public class JWTUtil {
                 .withClaim("id",user.getUserId())
                 .withClaim("username", user.getUserName())
                 .withClaim("role", user.getRole())
+                .withClaim("deptId", user.getDeptId())
+                .withClaim("isDepartmentAccount", isDepartmentAccount)
+                .withClaim("canViewAchievement", canViewAchievement)
+                .withClaim("canUploadAchievement", canUploadAchievement)
+                .withClaim("canAuditAchievement", AchievementPermissionUtil.isAchievementAuditor(user))
                 .withIssuer("auth0")
                 .withExpiresAt(exp)
                 .sign(algorithm);

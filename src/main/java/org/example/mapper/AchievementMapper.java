@@ -34,6 +34,9 @@ public interface AchievementMapper {
     @Select("SELECT * FROM biz_achievement WHERE is_delete = 0")
     List<BizAchievement> listAllAchievements();
 
+    @Select("SELECT * FROM biz_achievement WHERE is_delete = 0 AND dept_id = #{deptId}")
+    List<BizAchievement> listAchievementsByDeptId(Long deptId);
+
     @Select("SELECT * FROM biz_achievement WHERE is_delete = 0 AND COALESCE(audit_status, 30) = 30")
     List<BizAchievement> listApprovedAchievements();
 
@@ -105,9 +108,15 @@ public interface AchievementMapper {
     @Select("SELECT * FROM biz_achievement_submission WHERE current_handler_id = #{userId} AND is_delete = 0 AND flow_status = 10 ORDER BY submit_time DESC")
     List<BizAchievementSubmission> getTodoAchievementSubmissions(Long userId);
 
+    @Select("SELECT * FROM biz_achievement_submission WHERE is_delete = 0 AND flow_status = 10 ORDER BY submit_time DESC")
+    List<BizAchievementSubmission> getAllTodoAchievementSubmissions();
+
     @Select("SELECT * FROM biz_achievement_submission WHERE (submit_by = #{userId} OR current_handler_id = #{userId}) " +
             "AND is_delete = 0 AND (flow_status = 30 OR flow_status < 0) ORDER BY submit_time DESC")
     List<BizAchievementSubmission> getAchievementSubmissionRecords(Long userId);
+
+    @Select("SELECT * FROM biz_achievement_submission WHERE is_delete = 0 AND (flow_status = 30 OR flow_status < 0) ORDER BY submit_time DESC")
+    List<BizAchievementSubmission> getAllAchievementSubmissionRecords();
 
     @Select("SELECT s.sub_id AS subId, s.ach_id AS achId, a.category, a.level, a.ach_name AS achName, " +
             "a.department, a.got_time AS gotTime, a.dept_id AS deptId, a.file_id AS fileId, " +

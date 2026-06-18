@@ -14,6 +14,7 @@ import org.example.mapper.SysMapper;
 import org.example.mapper.TokenBlacklistMapper;
 import org.example.utils.BusinessLogUtil;
 import org.example.utils.FileUploadUtil;
+import org.example.utils.AchievementPermissionUtil;
 import org.example.utils.JWTUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -74,7 +75,14 @@ public class SysService {
     public SysLoginVO login(Long userId, String password) {
         SysUser user = sysMapper.getUserById(userId);
         if (user != null && user.getPassword().equals(password)) {
-            SysLoginVO sysLoginVo = new SysLoginVO(user.getNickName(), JWTUtil.generateJwtToken(user));
+            SysDept dept = user.getDeptId() == null ? null : sysMapper.getDeptById(user.getDeptId());
+            boolean isDepartmentAccount = AchievementPermissionUtil.isAchievementUploadAccount(user, dept);
+            boolean canViewAchievement = AchievementPermissionUtil.canViewAchievement(user, dept);
+            boolean canUploadAchievement = AchievementPermissionUtil.canUploadAchievement(user, dept);
+            SysLoginVO sysLoginVo = new SysLoginVO(
+                    user.getNickName(),
+                    JWTUtil.generateJwtToken(user, isDepartmentAccount, canViewAchievement, canUploadAchievement)
+            );
             BusinessLogUtil.info("用户登录",
                     "result", "成功",
                     "userId", userId,

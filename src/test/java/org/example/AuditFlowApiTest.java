@@ -1,5 +1,6 @@
 package org.example;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -15,6 +16,7 @@ import org.example.entity.dto.BizSubForthDTO;
 import org.example.service.BizService;
 
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -22,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = "spring.datasource.password=981119"
+        properties = "spring.datasource.password=Lty981119"
 )
 class AuditFlowApiTest {
 
@@ -37,6 +39,34 @@ class AuditFlowApiTest {
 
     @Autowired
     private BizService bizService;
+
+    @BeforeEach
+    void resetAuditFlowTestData() {
+        deleteAuditArtifactsForTaskIds(List.of(41L, 53L, 54L));
+        jdbcTemplate.update(
+                "update biz_task set status = '0', current_value = 0, progress = 0 where task_id in (41, 53, 54)"
+        );
+        jdbcTemplate.update(
+                "update biz_level4_task set status = '0', current_value = 0, progress = 0 where task_id in (1, 19, 20)"
+        );
+    }
+
+    private void deleteAuditArtifactsForTaskIds(List<Long> taskIds) {
+        String taskPlaceholders = String.join(",", Collections.nCopies(taskIds.size(), "?"));
+        List<Long> subIds = jdbcTemplate.queryForList(
+                "select sub_id from biz_material_submission where task_id in (" + taskPlaceholders + ")",
+                Long.class,
+                taskIds.toArray()
+        );
+        if (subIds.isEmpty()) {
+            return;
+        }
+        String placeholders = String.join(",", Collections.nCopies(subIds.size(), "?"));
+        Object[] args = subIds.toArray();
+        jdbcTemplate.update("delete from biz_audit_log where sub_id in (" + placeholders + ")", args);
+        jdbcTemplate.update("delete from biz_audit_snapshot where sub_id in (" + placeholders + ")", args);
+        jdbcTemplate.update("delete from biz_material_submission where sub_id in (" + placeholders + ")", args);
+    }
 
     @Test
     @Transactional

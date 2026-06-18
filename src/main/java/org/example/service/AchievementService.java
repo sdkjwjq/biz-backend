@@ -3,12 +3,14 @@ package org.example.service;
 import org.example.entity.BizAchievement;
 import org.example.entity.BizAchievementAuditLog;
 import org.example.entity.BizAchievementSubmission;
+import org.example.entity.SysDept;
 import org.example.entity.SysNotice;
 import org.example.entity.SysUser;
 import org.example.entity.dto.BizAuditDTO;
 import org.example.entity.vo.AchievementAuditVO;
 import org.example.mapper.AchievementMapper;
 import org.example.mapper.SysMapper;
+import org.example.utils.AchievementPermissionUtil;
 import org.example.utils.BusinessLogUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -16,10 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 
 /**
  * 标志性成果业务服务类
@@ -27,14 +27,7 @@ import java.util.Set;
  */
 @Service
 public class AchievementService {
-    private static final Long ADMIN_ID = 110228L;
-    private static final Set<Long> ACHIEVEMENT_UPLOAD_USER_IDS = new HashSet<>();
-
-    static {
-        ACHIEVEMENT_UPLOAD_USER_IDS.add(800001L);
-        ACHIEVEMENT_UPLOAD_USER_IDS.add(800002L);
-        ACHIEVEMENT_UPLOAD_USER_IDS.add(800003L);
-    }
+    private static final Long ADMIN_ID = AchievementPermissionUtil.PRIMARY_AUDITOR_ID;
 
     /**
      * 注入成果Mapper接口，操作数据库
@@ -45,16 +38,39 @@ public class AchievementService {
     @Autowired
     private SysMapper sysMapper;
 
-    private boolean isAdmin(Long userId) {
+    private SysUser getActiveUser(Long userId) {
         if (userId == null) {
-            return false;
+            return null;
         }
         SysUser user = sysMapper.getUserById(userId);
-        return user != null && "0".equals(user.getRole());
+        return AchievementPermissionUtil.isActiveUser(user) ? user : null;
+    }
+
+    private SysDept getActiveDept(SysUser user) {
+        if (user == null || user.getDeptId() == null) {
+            return null;
+        }
+        SysDept dept = sysMapper.getDeptById(user.getDeptId());
+        return AchievementPermissionUtil.isActiveDept(dept) ? dept : null;
+    }
+
+    private boolean isDepartmentAchievementAccount(Long userId) {
+        SysUser user = getActiveUser(userId);
+        return AchievementPermissionUtil.isDepartmentAchievementAccount(user, getActiveDept(user));
     }
 
     private boolean canUploadAchievement(Long userId) {
-        return isAdmin(userId) || ACHIEVEMENT_UPLOAD_USER_IDS.contains(userId);
+        SysUser user = getActiveUser(userId);
+        return AchievementPermissionUtil.canUploadAchievement(user, getActiveDept(user));
+    }
+
+    private boolean canViewAchievement(Long userId) {
+        SysUser user = getActiveUser(userId);
+        return AchievementPermissionUtil.canViewAchievement(user, getActiveDept(user));
+    }
+
+    private boolean canAuditAchievement(Long userId) {
+        return AchievementPermissionUtil.isAchievementAuditor(getActiveUser(userId));
     }
 
     /**
@@ -90,10 +106,12 @@ public class AchievementService {
 
     public List<BizAchievement> listAllAchievements(Long userId) {
         try {
-            if (canUploadAchievement(userId)) {
-                return achievementMapper.listAllAchievements();
+            SysUser user = getActiveUser(userId);
+            SysDept dept = getActiveDept(user);
+            if (!AchievementPermissionUtil.canViewAchievement(user, dept)) {
+                throw new RuntimeException("无权访问成果模块");
             }
-            return achievementMapper.listApprovedAchievements();
+            return achievementMapper.listAllAchievements();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -107,7 +125,9 @@ public class AchievementService {
      */
     @Transactional
     public Long addAchievement(BizAchievement achievement, Long createBy) {
-        if (!canUploadAchievement(createBy)) {
+        SysUser user = getActiveUser(createBy);
+        SysDept dept = getActiveDept(user);
+        if (!AchievementPermissionUtil.canUploadAchievement(user, dept)) {
             throw new RuntimeException("仅成果上传账号或管理员可以新增成果");
         }
         // 核心参数非空校验
@@ -129,6 +149,7 @@ public class AchievementService {
         // 自动填充公共字段
         Date now = new Date();
         achievement.setCreateBy(createBy);
+        achievement.setDeptId(user.getDeptId());
         achievement.setAuditStatus(10);
         achievement.setCurrentHandlerId(ADMIN_ID);
         achievement.setIsDelete(0); // 默认未删除
@@ -173,18 +194,28 @@ public class AchievementService {
      * @param achievement 标志性成果实体（含成果ID和需修改字段）
      */
     public void updateAchievement(Long id, BizAchievement achievement, Long userId) {
-        if (!canUploadAchievement(userId)) {
+        SysUser user = getActiveUser(userId);
+        SysDept dept = getActiveDept(user);
+        if (!AchievementPermissionUtil.canUploadAchievement(user, dept)) {
             throw new RuntimeException("仅成果上传账号或管理员可以修改成果");
         }
         // 核心参数非空校验
         if (achievement == null) {
             throw new RuntimeException("修改成果信息不能为空");
         }
-        if (achievementMapper.getAchievementById(id) == null) {
+        BizAchievement existing = achievementMapper.getAchievementById(id);
+        if (existing == null) {
             throw new RuntimeException("成果ID不存在，无法修改");
+        }
+        if (!Objects.equals(existing.getCreateBy(), userId) || !Objects.equals(existing.getDeptId(), user.getDeptId())) {
+            throw new RuntimeException("仅允许修改本部门账号创建的成果");
         }
         try {
             achievement.setAchId(id);
+            achievement.setCreateBy(existing.getCreateBy());
+            achievement.setDeptId(user.getDeptId());
+            achievement.setAuditStatus(existing.getAuditStatus());
+            achievement.setCurrentHandlerId(existing.getCurrentHandlerId());
             achievement.setUpdateTime(new Date());
             achievementMapper.updateAchievement(achievement);
             BusinessLogUtil.info("成果修改",
@@ -207,7 +238,9 @@ public class AchievementService {
      * @param achId 成果ID
      */
     public void deleteAchievement(Long achId, Long userId) {
-        if (!canUploadAchievement(userId)) {
+        SysUser user = getActiveUser(userId);
+        SysDept dept = getActiveDept(user);
+        if (!AchievementPermissionUtil.canUploadAchievement(user, dept)) {
             throw new RuntimeException("仅成果上传账号或管理员可以删除成果");
         }
         // 参数非空校验
@@ -215,8 +248,12 @@ public class AchievementService {
             throw new RuntimeException("成果ID不能为空");
         }
         // 校验成果是否存在
-        if (achievementMapper.getAchievementById(achId) == null) {
+        BizAchievement existing = achievementMapper.getAchievementById(achId);
+        if (existing == null) {
             throw new RuntimeException("标志性成果不存在或已被删除，无法删除");
+        }
+        if (!Objects.equals(existing.getCreateBy(), userId) || !Objects.equals(existing.getDeptId(), user.getDeptId())) {
+            throw new RuntimeException("仅允许删除本部门账号创建的成果");
         }
         try {
             achievementMapper.deleteAchievement(achId);
@@ -238,7 +275,7 @@ public class AchievementService {
         if (auditDTO == null || auditDTO.getSub_id() == null) {
             throw new RuntimeException("成果审核单ID不能为空");
         }
-        if (!isAdmin(userId)) {
+        if (!canAuditAchievement(userId)) {
             throw new RuntimeException("仅管理员可以审核成果归档");
         }
         BizAchievementSubmission submission = achievementMapper.getAchievementSubmissionById(auditDTO.getSub_id());
@@ -248,9 +285,6 @@ public class AchievementService {
         BizAchievement achievement = achievementMapper.getAchievementById(submission.getAchId());
         if (achievement == null) {
             throw new RuntimeException("成果不存在或已删除");
-        }
-        if (!Objects.equals(submission.getCurrentHandlerId(), userId) && !isAdmin(userId)) {
-            throw new RuntimeException("当前用户不是该成果审核单处理人");
         }
         Integer preStatus = submission.getFlowStatus();
         if (preStatus == null || preStatus != 10) {
@@ -305,15 +339,15 @@ public class AchievementService {
     }
 
     public Object getTodoAchievementAudits(Long userId) {
-        if (!isAdmin(userId)) {
+        if (!canAuditAchievement(userId)) {
             return new ArrayList<AchievementAuditVO>();
         }
-        return toAchievementAuditVOs(achievementMapper.getTodoAchievementSubmissions(userId));
+        return toAchievementAuditVOs(achievementMapper.getAllTodoAchievementSubmissions());
     }
 
     public Object getAchievementAuditRecords(Long userId) {
-        if (isAdmin(userId)) {
-            return toAchievementAuditVOs(achievementMapper.getAchievementSubmissionRecords(userId));
+        if (canAuditAchievement(userId)) {
+            return toAchievementAuditVOs(achievementMapper.getAllAchievementSubmissionRecords());
         }
         return new ArrayList<AchievementAuditVO>();
     }
@@ -323,7 +357,12 @@ public class AchievementService {
         if (achievement == null) {
             throw new RuntimeException("成果不存在或已删除");
         }
-        if (!canUploadAchievement(userId) && !Objects.equals(achievement.getCreateBy(), userId)) {
+        SysUser user = getActiveUser(userId);
+        SysDept dept = getActiveDept(user);
+        boolean canSee = AchievementPermissionUtil.isAchievementAuditor(user)
+                || (AchievementPermissionUtil.isAchievementUploadAccount(user, dept)
+                && Objects.equals(achievement.getDeptId(), user.getDeptId()));
+        if (!canSee) {
             throw new RuntimeException("无权查看该成果审核记录");
         }
         return toAchievementAuditVOs(achievementMapper.getAchievementSubmissionsByAchId(achId));
@@ -334,7 +373,15 @@ public class AchievementService {
         if (submission == null) {
             throw new RuntimeException("成果审核单不存在");
         }
-        if (!isAdmin(userId) && !Objects.equals(submission.getSubmitBy(), userId)) {
+        SysUser user = getActiveUser(userId);
+        SysDept dept = getActiveDept(user);
+        BizAchievement achievement = achievementMapper.getAchievementById(submission.getAchId());
+        boolean canSee = AchievementPermissionUtil.isAchievementAuditor(user)
+                || (achievement != null
+                && AchievementPermissionUtil.isAchievementUploadAccount(user, dept)
+                && Objects.equals(achievement.getDeptId(), user.getDeptId())
+                && Objects.equals(submission.getSubmitBy(), userId));
+        if (!canSee) {
             throw new RuntimeException("无权查看该成果审核日志");
         }
         return achievementMapper.getAchievementAuditLogs(subId);
