@@ -123,7 +123,7 @@ public interface AchievementMapper {
             "a.comment AS achievementComment, s.submit_by AS submitBy, s.submit_time AS submitTime, " +
             "s.flow_status AS flowStatus, s.current_handler_id AS currentHandlerId, s.comment, s.is_delete AS isDelete " +
             "FROM biz_achievement_submission s JOIN biz_achievement a ON s.ach_id = a.ach_id " +
-            "WHERE s.sub_id = #{subId}")
+            "WHERE s.sub_id = #{subId} AND a.is_delete = 0")
     AchievementAuditVO getAchievementAuditVO(Long subId);
 
     @Insert("INSERT INTO biz_achievement_audit_log(sub_id, operator_id, action_type, pre_status, post_status, comment, create_time) " +
