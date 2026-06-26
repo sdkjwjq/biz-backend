@@ -34,11 +34,13 @@ class AchievementFlowApiTest {
         String achievementName = "成果审核接口测试-" + System.currentTimeMillis();
         Long uploaderId = 990118L;
         Long auditorId = 110050L;
+        Long primaryAdminId = 110228L;
         Long normalId = 112212L;
         Long oldUploaderId = 800001L;
 
         String uploaderToken = login(uploaderId);
         String auditorToken = login(auditorId);
+        String primaryAdminToken = login(primaryAdminId);
         String normalToken = login(normalId);
         String oldUploaderToken = login(oldUploaderId);
 
@@ -67,6 +69,16 @@ class AchievementFlowApiTest {
             );
             assertAchievementDept(oldAchId, 118L, "江苏省委");
 
+            String adminUpdatedName = oldAchievementName + "-admin-updated";
+            String adminUpdate = postJson("/api/achievement/update/" + oldAchId,
+                    primaryAdminToken,
+                    achievementPayload(adminUpdatedName));
+            assertSuccess(adminUpdate);
+            assertAchievementName(oldAchId, adminUpdatedName);
+
+            String adminDelete = postJson("/api/achievement/delete/" + oldAchId, primaryAdminToken, null);
+            assertSuccess(adminDelete);
+            assertAchievementDeleted(oldAchId);
             String addResponse = postJson("/api/achievement/add", uploaderToken, payload);
             assertSuccess(addResponse);
 
@@ -199,6 +211,23 @@ class AchievementFlowApiTest {
         assertEquals(department, row.get("department"));
     }
 
+    private void assertAchievementName(Long achId, String achName) {
+        String actual = jdbcTemplate.queryForObject(
+                "select ach_name from biz_achievement where ach_id = ?",
+                String.class,
+                achId
+        );
+        assertEquals(achName, actual);
+    }
+
+    private void assertAchievementDeleted(Long achId) {
+        Integer isDelete = jdbcTemplate.queryForObject(
+                "select is_delete from biz_achievement where ach_id = ?",
+                Integer.class,
+                achId
+        );
+        assertEquals(1, isDelete);
+    }
     private boolean containsSubId(Map<?, ?>[] rows, Long subId) {
         if (rows == null) return false;
         for (Map<?, ?> row : rows) {

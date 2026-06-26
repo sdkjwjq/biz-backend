@@ -196,7 +196,8 @@ public class AchievementService {
     public void updateAchievement(Long id, BizAchievement achievement, Long userId) {
         SysUser user = getActiveUser(userId);
         SysDept dept = getActiveDept(user);
-        if (!AchievementPermissionUtil.canUploadAchievement(user, dept)) {
+        boolean primaryAdmin = AchievementPermissionUtil.isPrimaryAchievementAdmin(user);
+        if (!primaryAdmin && !AchievementPermissionUtil.canUploadAchievement(user, dept)) {
             throw new RuntimeException("仅成果上传账号或管理员可以修改成果");
         }
         // 核心参数非空校验
@@ -207,13 +208,15 @@ public class AchievementService {
         if (existing == null) {
             throw new RuntimeException("成果ID不存在，无法修改");
         }
-        if (!Objects.equals(existing.getCreateBy(), userId) || !Objects.equals(existing.getDeptId(), user.getDeptId())) {
+        if (!primaryAdmin && (!Objects.equals(existing.getCreateBy(), userId) || !Objects.equals(existing.getDeptId(), user.getDeptId()))) {
             throw new RuntimeException("仅允许修改本部门账号创建的成果");
         }
         try {
             achievement.setAchId(id);
             achievement.setCreateBy(existing.getCreateBy());
-            achievement.setDeptId(user.getDeptId());
+            achievement.setDeptId(primaryAdmin
+                    ? (achievement.getDeptId() != null ? achievement.getDeptId() : existing.getDeptId())
+                    : user.getDeptId());
             achievement.setAuditStatus(existing.getAuditStatus());
             achievement.setCurrentHandlerId(existing.getCurrentHandlerId());
             achievement.setUpdateTime(new Date());
@@ -240,7 +243,8 @@ public class AchievementService {
     public void deleteAchievement(Long achId, Long userId) {
         SysUser user = getActiveUser(userId);
         SysDept dept = getActiveDept(user);
-        if (!AchievementPermissionUtil.canUploadAchievement(user, dept)) {
+        boolean primaryAdmin = AchievementPermissionUtil.isPrimaryAchievementAdmin(user);
+        if (!primaryAdmin && !AchievementPermissionUtil.canUploadAchievement(user, dept)) {
             throw new RuntimeException("仅成果上传账号或管理员可以删除成果");
         }
         // 参数非空校验
@@ -252,7 +256,7 @@ public class AchievementService {
         if (existing == null) {
             throw new RuntimeException("标志性成果不存在或已被删除，无法删除");
         }
-        if (!Objects.equals(existing.getCreateBy(), userId) || !Objects.equals(existing.getDeptId(), user.getDeptId())) {
+        if (!primaryAdmin && (!Objects.equals(existing.getCreateBy(), userId) || !Objects.equals(existing.getDeptId(), user.getDeptId()))) {
             throw new RuntimeException("仅允许删除本部门账号创建的成果");
         }
         try {
