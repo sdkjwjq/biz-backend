@@ -275,6 +275,9 @@ public class AchievementService {
         if (auditDTO == null || auditDTO.getSub_id() == null) {
             throw new RuntimeException("成果审核单ID不能为空");
         }
+        if (auditDTO.getIs_pass() == null) {
+            throw new RuntimeException("审核结果不能为空");
+        }
         if (!canAuditAchievement(userId)) {
             throw new RuntimeException("仅管理员可以审核成果归档");
         }

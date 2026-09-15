@@ -596,6 +596,65 @@ class ReviewBatchRegressionApiTest {
         }
     }
 
+    @Test
+    void performanceReviewRequiresExplicitDecision() throws Exception {
+        for (int status : new int[]{10, 20}) {
+            seed();
+            seedManualPerformance("1");
+            long subId = submitPerformance(2026, "3", login(USER));
+            String auditor = login(AUDITOR);
+            if (status == 20) assertSuccess(reviewPerformance(subId, true, auditor), "已通过专业群审核");
+            String handler = status == 10 ? auditor : login(ADMIN);
+            Map<String, List<Map<String, Object>>> before = performanceFlowState();
+            Map<String, Object> payload = new LinkedHashMap<>(Map.of("sub_id", subId, "title", "Review decision"));
+            for (boolean explicitNull : new boolean[]{false, true}) {
+                if (explicitNull) payload.put("is_pass", null);
+                ResponseEntity<String> response = request(HttpMethod.POST, "/performance/audit", handler, payload);
+                assertEquals(before, performanceFlowState(), "Missing decision must not change performance data");
+                assertTrue(response.getBody().contains("审核结果不能为空"), response.getBody());
+                assertEquals(500, body(response).path("code").asInt());
+            }
+            assertSuccess(reviewPerformance(subId, false, handler), "已退回");
+            assertDecimal("0", "SELECT actual_value FROM biz_performance_year WHERE year_id=950002");
+            assertEquals(-status, jdbc.queryForObject("SELECT flow_status FROM biz_performance_submission WHERE sub_id=?", Integer.class, subId));
+        }
+    }
+
+    private Map<String, List<Map<String, Object>>> achievementFlowState() {
+        Map<String, List<Map<String, Object>>> state = new LinkedHashMap<>();
+        for (String table : List.of("biz_achievement", "biz_achievement_submission", "biz_achievement_audit_log", "sys_notice")) {
+            state.put(table, jdbc.queryForList("SELECT * FROM " + table + " ORDER BY 1"));
+        }
+        return state;
+    }
+
+    @Test
+    void achievementReviewRequiresExplicitDecision() throws Exception {
+        seedUser(990000L + DEPT, "1");
+        String uploader = login(990000L + DEPT);
+        String admin = login(ADMIN);
+        for (boolean pass : new boolean[]{true, false}) {
+            assertSuccess(request(HttpMethod.POST, "/achievement/add", uploader,
+                    Map.of("category", 1, "level", "省级", "achName", "Review achievement", "gotTime", 1767225600000L,
+                            "department", "Review organization", "comment", "Review")), "添加成功");
+            long subId = jdbc.queryForObject("SELECT MAX(sub_id) FROM biz_achievement_submission", Long.class);
+            Map<String, List<Map<String, Object>>> before = achievementFlowState();
+            Map<String, Object> payload = new LinkedHashMap<>(Map.of("sub_id", subId, "title", "Review decision"));
+            for (boolean explicitNull : new boolean[]{false, true}) {
+                if (explicitNull) payload.put("is_pass", null);
+                ResponseEntity<String> response = request(HttpMethod.POST, "/achievement/audit", admin, payload);
+                assertEquals(before, achievementFlowState(), "Missing decision must not change achievement data");
+                assertTrue(response.getBody().contains("审核结果不能为空"), response.getBody());
+                assertEquals(500, body(response).path("code").asInt());
+            }
+            payload.put("is_pass", pass);
+            assertSuccess(request(HttpMethod.POST, "/achievement/audit", admin, payload), pass ? "已归档" : "已退回");
+            assertEquals(pass ? 30 : -10, jdbc.queryForObject("SELECT flow_status FROM biz_achievement_submission WHERE sub_id=?", Integer.class, subId));
+            assertEquals(pass ? 30 : -10, jdbc.queryForObject("SELECT audit_status FROM biz_achievement WHERE ach_id="
+                    + "(SELECT ach_id FROM biz_achievement_submission WHERE sub_id=?)", Integer.class, subId));
+        }
+    }
+
     private void seedAnnualTasks() {
         seedTasks();
         for (long id = 970001L; id <= 970008L; id++) {
