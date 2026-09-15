@@ -1128,6 +1128,7 @@ public class BizService {
      * @param userId 用户ID
      * @return 操作结果
      */
+    @Transactional
     public Object drawbackSubmit(Long taskId, Long userId){
         try{
             BizMaterialSubmission bizMaterialSubmission = bizMapper.getNewestAudit(taskId);
@@ -1136,6 +1137,10 @@ public class BizService {
             }
             if (!bizMaterialSubmission.getSubmitBy().equals(userId)){
                 throw new RuntimeException("您不是该任务的提交人，无法撤回");
+            }
+            Integer flowStatus = bizMaterialSubmission.getFlowStatus();
+            if (flowStatus == null || (flowStatus != 10 && flowStatus != 20 && flowStatus != 30)) {
+                throw new RuntimeException("当前状态不可撤回");
             }
             BizTask task = bizMapper.getTaskById(taskId);
             ensureTaskSubmitter(task, userId);

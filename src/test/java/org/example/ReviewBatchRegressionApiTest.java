@@ -438,4 +438,77 @@ class ReviewBatchRegressionApiTest {
             }
         }
     }
+
+    private Map<String, List<Map<String, Object>>> taskFlowState() {
+        Map<String, List<Map<String, Object>>> state = new LinkedHashMap<>();
+        for (String table : List.of("biz_task", "biz_level4_task", "biz_material_submission", "biz_audit_snapshot",
+                "biz_audit_log", "sys_notice", "biz_performance", "biz_performance_year")) {
+            state.put(table, jdbc.queryForList("SELECT * FROM " + table + " ORDER BY 1"));
+        }
+        return state;
+    }
+
+    @Test
+    void archivedTasksCannotBeWithdrawn() throws Exception {
+        seedSubmissionFlow();
+        String user = login(USER);
+        assertSuccess(request(HttpMethod.POST, "/biz/sub", user, submission("10")), "提交成功");
+        long subId = newestSubmission();
+        review(subId, true, login(AUDITOR));
+        review(subId, true, login(LEADER));
+        review(subId, true, login(ADMIN));
+        assertTaskAndPerformance("10", 100, "3");
+        Map<String, List<Map<String, Object>>> before = taskFlowState();
+        JsonNode error = body(request(HttpMethod.POST, "/biz/drawback/930002", user, null));
+        assertEquals(500, error.path("code").asInt());
+        assertTrue(error.path("message").asText().contains("当前状态不可撤回"));
+        assertEquals(before, taskFlowState());
+    }
+
+    @Test
+    void activeTaskWithdrawalRestoresValuesAtEveryReviewStage() throws Exception {
+        for (int status : new int[]{10, 20, 30}) {
+            seed();
+            seedSubmissionFlow();
+            String user = login(USER);
+            assertSuccess(request(HttpMethod.POST, "/biz/sub", user, submission("3")), "提交成功");
+            long subId = newestSubmission();
+            if (status >= 20) review(subId, true, login(AUDITOR));
+            if (status >= 30) review(subId, true, login(LEADER));
+            Map<String, List<Map<String, Object>>> before = taskFlowState();
+            assertEquals(500, body(request(HttpMethod.POST, "/biz/drawback/930002", login(LEADER), null)).path("code").asInt());
+            assertEquals(before, taskFlowState());
+            assertSuccess(request(HttpMethod.POST, "/biz/drawback/930002", user, null), "已撤回提交");
+            assertTaskAndPerformance("0", 0, "1");
+            assertEquals(1, jdbc.queryForObject("SELECT is_delete FROM biz_material_submission WHERE sub_id=?", Integer.class, subId));
+            assertEquals(-status, jdbc.queryForObject("SELECT post_status FROM biz_audit_log WHERE sub_id=? ORDER BY log_id DESC LIMIT 1", Integer.class, subId));
+            before = taskFlowState();
+            assertEquals(500, body(request(HttpMethod.POST, "/biz/drawback/930002", user, null)).path("code").asInt());
+            assertEquals(before, taskFlowState());
+            assertSuccess(request(HttpMethod.POST, "/biz/sub", user, submission("4")), "提交成功");
+            assertNotEquals(subId, newestSubmission());
+            assertTaskAndPerformance("4", 40, "2");
+        }
+    }
+
+    @Test
+    void taskWithdrawalRollsBackOnDatabaseFailure() throws Exception {
+        seedSubmissionFlow();
+        String user = login(USER);
+        assertSuccess(request(HttpMethod.POST, "/biz/sub", user, submission("3")), "提交成功");
+        Map<String, List<Map<String, Object>>> before = taskFlowState();
+        // 在隔离库内让绩效写入失败，验证此前审核单、日志和任务更新也被回滚。
+        jdbc.execute("CREATE TRIGGER review_fail_performance BEFORE UPDATE ON biz_performance FOR EACH ROW "
+                + "SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='review rollback failure'");
+        try {
+            JsonNode error = body(request(HttpMethod.POST, "/biz/drawback/930002", user, null));
+            assertEquals(500, error.path("code").asInt());
+            assertTrue(error.path("message").asText().contains("review rollback failure"));
+        } finally {
+            jdbc.execute("DROP TRIGGER review_fail_performance");
+        }
+        assertEquals(before, taskFlowState());
+        assertSuccess(request(HttpMethod.POST, "/biz/drawback/930002", user, null), "已撤回提交");
+        assertTaskAndPerformance("0", 0, "1");
+    }
 }
