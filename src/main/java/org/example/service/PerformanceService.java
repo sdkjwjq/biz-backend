@@ -587,6 +587,9 @@ public class PerformanceService {
         }
 
         Integer preStatus = submission.getFlowStatus();
+        if (preStatus == null || (preStatus != 10 && preStatus != 20)) {
+            throw new RuntimeException("当前状态不可审核");
+        }
         boolean pass = Boolean.TRUE.equals(auditDTO.getIs_pass());
         String auditComment = auditDTO.getTitle() != null ? auditDTO.getTitle() : auditDTO.getContent();
 

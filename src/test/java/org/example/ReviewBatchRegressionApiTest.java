@@ -511,4 +511,70 @@ class ReviewBatchRegressionApiTest {
         assertSuccess(request(HttpMethod.POST, "/biz/drawback/930002", user, null), "已撤回提交");
         assertTaskAndPerformance("0", 0, "1");
     }
+
+    private Map<String, List<Map<String, Object>>> performanceFlowState() {
+        Map<String, List<Map<String, Object>>> state = new LinkedHashMap<>();
+        for (String table : List.of("biz_performance", "biz_performance_year", "biz_performance_submission",
+                "biz_performance_audit_snapshot", "biz_performance_audit_log", "sys_notice")) {
+            state.put(table, jdbc.queryForList("SELECT * FROM " + table + " ORDER BY 1"));
+        }
+        return state;
+    }
+
+    private void assertPerformanceAuditDenied(long subId, String token) throws Exception {
+        Map<String, List<Map<String, Object>>> before = performanceFlowState();
+        for (boolean pass : new boolean[]{false, true}) {
+            ResponseEntity<String> response = reviewPerformance(subId, pass, token);
+            assertEquals(HttpStatus.OK, response.getStatusCode());
+            assertTrue(response.getBody().contains("当前状态不可审核"), response.getBody());
+            assertEquals(500, body(response).path("code").asInt());
+            assertEquals(before, performanceFlowState());
+        }
+    }
+
+    @Test
+    void performanceAuditRejectsArchivedAndReturnedSubmissions() throws Exception {
+        seedManualPerformance("1");
+        String user = login(USER);
+        String auditor = login(AUDITOR);
+        String admin = login(ADMIN);
+        long archived = submitPerformance(2026, "3", user);
+        assertSuccess(reviewPerformance(archived, true, auditor), "已通过专业群审核");
+        assertSuccess(reviewPerformance(archived, true, admin), "已完结归档");
+        assertEquals(30, jdbc.queryForObject("SELECT flow_status FROM biz_performance_submission WHERE sub_id=?", Integer.class, archived));
+        assertPerformanceAuditDenied(archived, admin);
+        assertDecimal("3", "SELECT current_value FROM biz_performance WHERE perf_id=950001");
+
+        long returned = submitPerformance(2026, "4", user);
+        assertSuccess(reviewPerformance(returned, false, auditor), "已退回");
+        long current = submitPerformance(2026, "5", user);
+        assertPerformanceAuditDenied(returned, user);
+        assertPerformanceAuditDenied(returned, admin);
+        assertDecimal("5", "SELECT current_value FROM biz_performance WHERE perf_id=950001");
+        assertEquals(10, jdbc.queryForObject("SELECT flow_status FROM biz_performance_submission WHERE sub_id=?", Integer.class, current));
+
+        assertSuccess(request(HttpMethod.POST, "/performance/audit/withdraw/" + current, user, null), "已撤回");
+        Map<String, List<Map<String, Object>>> before = performanceFlowState();
+        assertEquals(500, body(reviewPerformance(current, false, admin)).path("code").asInt());
+        assertEquals(before, performanceFlowState());
+    }
+
+    @Test
+    void performanceActiveReviewStagesStillAllowRejection() throws Exception {
+        for (int status : new int[]{10, 20}) {
+            seed();
+            seedManualPerformance("1");
+            String user = login(USER);
+            String auditor = login(AUDITOR);
+            long subId = submitPerformance(2026, "3", user);
+            if (status == 20) assertSuccess(reviewPerformance(subId, true, auditor), "已通过专业群审核");
+            Map<String, List<Map<String, Object>>> before = performanceFlowState();
+            assertEquals(500, body(reviewPerformance(subId, false, login(LEADER))).path("code").asInt());
+            assertEquals(before, performanceFlowState());
+            assertSuccess(reviewPerformance(subId, false, status == 10 ? auditor : login(ADMIN)), "已退回");
+            assertEquals(-status, jdbc.queryForObject("SELECT flow_status FROM biz_performance_submission WHERE sub_id=?", Integer.class, subId));
+            assertDecimal("0", "SELECT actual_value FROM biz_performance_year WHERE year_id=950002");
+            assertDecimal("0", "SELECT current_value FROM biz_performance WHERE perf_id=950001");
+        }
+    }
 }
