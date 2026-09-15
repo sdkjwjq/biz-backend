@@ -296,8 +296,8 @@ public class ScheduledTaskService {
 
 
     /**
-     * 每年更新任务状态
-     * 每天凌晨10:00执行
+     * 启用当年未开始的任务
+     * 每年1月1日上午10:00执行
      */
     @Scheduled(cron = "0 0 10 1 1 ?")
     @Transactional
@@ -305,14 +305,11 @@ public class ScheduledTaskService {
         try {
             System.out.println("[" + new Date() + "] 开始更新任务状态...");
             int currentYear = java.time.LocalDate.now().getYear();
-            List<BizTask> tasks = bizMapper.getTasksByPhase(currentYear);
-            for (BizTask task : tasks) {
-                task.setStatus("1");
-                bizMapper.updateTask(task);
-            }
-            System.out.println("已将"+currentYear+"所有任务的状态修改为进行中");
+            int updatedCount = bizMapper.startPendingTasksByPhase(currentYear);
+            System.out.println("已将"+currentYear+"年"+updatedCount+"个未开始任务的状态修改为进行中");
         } catch (Exception e) {
             System.err.println("更新任务状态时发生错误: " + e.getMessage());
+            throw new RuntimeException("更新任务状态失败", e);
         }
     }
 

@@ -151,6 +151,11 @@ void updateLevel4Task(BizLevel4Task task);
     @Select("SELECT * FROM biz_task WHERE phase = #{phase}")
     List<BizTask> getTasksByPhase(Integer phase);
 
+    /** 只启用指定年份未开始且未删除的任务，保留其他任务状态和业务字段。 */
+    @Update("UPDATE biz_task SET status = '1', update_time = NOW() " +
+            "WHERE phase = #{phase} AND status = '0' AND (is_delete = 0 OR is_delete IS NULL)")
+    int startPendingTasksByPhase(@Param("phase") Integer phase);
+
 //    getTasksByIds
     @Select("SELECT * FROM biz_task WHERE task_id IN (#{taskIds})")
     List<BizTask> getTasksByIds(@Param("taskIds") List<Long> taskIds);

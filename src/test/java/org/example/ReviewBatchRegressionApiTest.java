@@ -2,25 +2,30 @@ package org.example;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.example.service.ScheduledTaskService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
+import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.*;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.scheduling.config.TaskManagementConfigUtils;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.LinkedHashMap;
@@ -30,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** 本批修复的真实 HTTP / MySQL 回归；仅由隔离库脚本显式开启。 */
 @EnabledIfEnvironmentVariable(named = "SHUANGGAO_REVIEW_TEST", matches = "true")
+@Import(ReviewBatchRegressionApiTest.NoAutomaticSchedules.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {"logging.file.name=target/review-regression.log",
                 "logging.level.org.springframework=WARN", "logging.level.org.springframework.web=WARN",
@@ -57,7 +63,19 @@ class ReviewBatchRegressionApiTest {
     @Autowired private TestRestTemplate http;
     @Autowired private JdbcTemplate jdbc;
     @Autowired private ObjectMapper json;
-    @MockBean private ScheduledTaskService scheduledTaskService;
+
+    /** 保留真实调度服务供 HTTP 测试调用，只关闭测试进程的自动定时触发。 */
+    @TestConfiguration(proxyBeanMethods = false)
+    static class NoAutomaticSchedules {
+        @Bean
+        static BeanFactoryPostProcessor disableAutomaticSchedules() {
+            return beanFactory -> {
+                BeanDefinitionRegistry registry = (BeanDefinitionRegistry) beanFactory;
+                String name = TaskManagementConfigUtils.SCHEDULED_ANNOTATION_PROCESSOR_BEAN_NAME;
+                if (registry.containsBeanDefinition(name)) registry.removeBeanDefinition(name);
+            };
+        }
+    }
 
     @BeforeEach
     void seed() {
@@ -576,5 +594,70 @@ class ReviewBatchRegressionApiTest {
             assertDecimal("0", "SELECT actual_value FROM biz_performance_year WHERE year_id=950002");
             assertDecimal("0", "SELECT current_value FROM biz_performance WHERE perf_id=950001");
         }
+    }
+
+    private void seedAnnualTasks() {
+        seedTasks();
+        for (long id = 970001L; id <= 970008L; id++) {
+            seedTask(id, 930001L, 3);
+        }
+        int year = LocalDate.now().getYear();
+        jdbc.update("UPDATE biz_task SET phase=?, status='0', comment='Keep task content', current_value=2, progress=20 "
+                + "WHERE task_id BETWEEN 970001 AND 970008", year);
+        jdbc.update("UPDATE biz_task SET status='2' WHERE task_id=970002");
+        jdbc.update("UPDATE biz_task SET status='3' WHERE task_id=970003");
+        jdbc.update("UPDATE biz_task SET is_delete=1 WHERE task_id=970004");
+        jdbc.update("UPDATE biz_task SET phase=? WHERE task_id=970005", year - 1);
+        jdbc.update("UPDATE biz_task SET phase=? WHERE task_id=970006", year + 1);
+        jdbc.update("UPDATE biz_task SET status=NULL WHERE task_id=970007");
+        jdbc.update("UPDATE biz_task SET is_delete=NULL WHERE task_id=970008");
+    }
+
+    @Test
+    void annualActivationOnlyStartsPendingTasksInCurrentYear() throws Exception {
+        seedAnnualTasks();
+        List<Map<String, Object>> before = jdbc.queryForList("SELECT * FROM biz_task ORDER BY task_id");
+        String path = "/scheduled/update_task_status";
+        assertEquals(HttpStatus.UNAUTHORIZED, request(HttpMethod.POST, path, null, null).getStatusCode());
+        for (long id : new long[]{USER, LEADER}) {
+            assertEquals(500, body(request(HttpMethod.POST, path, login(id), null)).path("code").asInt());
+            assertEquals(before, jdbc.queryForList("SELECT * FROM biz_task ORDER BY task_id"));
+        }
+        String admin = login(ADMIN);
+        assertSuccess(request(HttpMethod.POST, path, admin, null), "任务状态更新完成");
+        for (Map<String, Object> old : before) {
+            long id = ((Number) old.get("task_id")).longValue();
+            Map<String, Object> updated = jdbc.queryForMap("SELECT * FROM biz_task WHERE task_id=?", id);
+            if (id == 970001L || id == 970008L) {
+                assertEquals("1", updated.get("status"));
+                Map<String, Object> oldContent = new LinkedHashMap<>(old);
+                oldContent.keySet().removeAll(List.of("status", "update_time"));
+                updated.keySet().removeAll(List.of("status", "update_time"));
+                assertEquals(oldContent, updated);
+            } else {
+                assertEquals(old, updated, "Task " + id + " must remain unchanged");
+            }
+        }
+        List<Map<String, Object>> firstResult = jdbc.queryForList("SELECT * FROM biz_task ORDER BY task_id");
+        assertSuccess(request(HttpMethod.POST, path, admin, null), "任务状态更新完成");
+        assertEquals(firstResult, jdbc.queryForList("SELECT * FROM biz_task ORDER BY task_id"));
+    }
+
+    @Test
+    void annualActivationReportsDatabaseFailureWithoutPartialUpdates() throws Exception {
+        seedAnnualTasks();
+        List<Map<String, Object>> before = jdbc.queryForList("SELECT * FROM biz_task ORDER BY task_id");
+        jdbc.execute("CREATE TRIGGER review_fail_activation BEFORE UPDATE ON biz_task FOR EACH ROW "
+                + "SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='review activation failure'");
+        try {
+            ResponseEntity<String> response = request(HttpMethod.POST, "/scheduled/update_task_status", login(ADMIN), null);
+            assertTrue(response.getBody().contains("更新任务状态失败"), response.getBody());
+            assertEquals(500, body(response).path("code").asInt());
+        } finally {
+            jdbc.execute("DROP TRIGGER review_fail_activation");
+        }
+        assertEquals(before, jdbc.queryForList("SELECT * FROM biz_task ORDER BY task_id"));
+        assertSuccess(request(HttpMethod.POST, "/scheduled/update_task_status", login(ADMIN), null), "任务状态更新完成");
+        assertEquals("1", jdbc.queryForObject("SELECT status FROM biz_task WHERE task_id=970001", String.class));
     }
 }
