@@ -142,9 +142,11 @@ public class BizService {
      * 添加任务
      * 只能添加三级任务,根据parent字段判断二级任务是否正确
      * @param taskDTO 任务数据
+     * @param userId 当前用户ID
      */
-    public void addTask(BizTaskDTO taskDTO) {
+    public void addTask(BizTaskDTO taskDTO, Long userId) {
         try {
+            ensureTaskManager(userId);
             // 只能添加三级任务,根据parent字段判断二级任务是否正确
             if (bizMapper.getTaskById(taskDTO.getParentId()) == null) {
                 throw new RuntimeException("该二级任务不存在");
@@ -152,7 +154,7 @@ public class BizService {
             if (bizMapper.getTaskById(taskDTO.getParentId()).getLevel() != 2) {
                 throw new RuntimeException("该任务不是二级任务,无法添加");
             }
-            if (bizMapper.getTaskById(taskDTO.getParentId()).getDeptId() != taskDTO.getDeptId()) {
+            if (!Objects.equals(bizMapper.getTaskById(taskDTO.getParentId()).getDeptId(), taskDTO.getDeptId())) {
                 throw new RuntimeException("该任务所属部门与二级任务部门不一致");
             }
             if(taskDTO.getProjectId()!=1){
@@ -172,17 +174,33 @@ public class BizService {
     /**
      * 更新任务
      * @param taskDTO 任务数据
+     * @param userId 当前用户ID
      */
-    public void updateTask(BizTaskDTO taskDTO) {
+    public void updateTask(BizTaskDTO taskDTO, Long userId) {
         try {
-            if (bizMapper.getTaskById(taskDTO.getTaskId()) == null) {
+            ensureTaskManager(userId);
+            BizTask existingTask = bizMapper.getTaskById(taskDTO.getTaskId());
+            if (existingTask == null) {
                 throw new RuntimeException("该任务不存在");
             }
             BizTask task = taskDTO2Task(taskDTO);
+            task.setIsDelete(existingTask.getIsDelete());
+            task.setCreateTime(existingTask.getCreateTime());
             task.setUpdateTime(new Date());
             bizMapper.updateTask(task);
         } catch (Exception e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    /** 任务管理以数据库中的当前角色为准。 */
+    private void ensureTaskManager(Long userId) {
+        SysUser user = userId == null ? null : sysMapper.getUserById(userId);
+        if (user == null || Integer.valueOf(1).equals(user.getIsDelete())) {
+            throw new RuntimeException("用户不存在");
+        }
+        if (!"0".equals(user.getRole())) {
+            throw new RuntimeException("仅限管理员访问");
         }
     }
 
@@ -307,13 +325,9 @@ public class BizService {
             BizMaterialSubmission bizMaterialSubmission = new BizMaterialSubmission();
             bizMaterialSubmission.setTaskId(bizSubDTO.getTask_id());
             bizMaterialSubmission.setFileId(sysMapper.getFileByName(sysFile.getFileName()).getFileId());
-//            输出平均值
-            System.out.println("本次填报值：" + bizSubDTO.getReported_value());
-            // 本次填报值只保留整数，并写入任务 current_value（过程即显示进度）
-            BigDecimal rv = bizSubDTO.getReported_value() != null ? bizSubDTO.getReported_value() : BigDecimal.ZERO;
-            System.out.println("目标值：" + task.getTargetValue());
-            rv = rv.multiply(task.getTargetValue());
-            System.out.println("rv值：" + rv);
+            // 直接填报的是实际完成值，目标值仅用于计算进度。
+            BigDecimal rv = bizSubDTO.getReported_value();
+            validateReportedValue(task, rv);
             bizMaterialSubmission.setReportedValue(rv);
             bizMaterialSubmission.setDataType(bizSubDTO.getData_type());
             bizMaterialSubmission.setSubmitBy(userId);
@@ -889,21 +903,13 @@ public class BizService {
             }
             boolean hasLevel4SubList = resubDTOBiz.getSub_list() != null && !resubDTOBiz.getSub_list().isEmpty();
             if (!hasLevel4SubList) {
-                if (resubDTOBiz.getReported_value() == null) {
-                    throw new RuntimeException("填报值不能为空");
-                }
-                if (resubDTOBiz.getReported_value().compareTo(BigDecimal.ZERO) < 0) {
-                    throw new RuntimeException("填报值不能小于0");
-                }
+                BigDecimal rv = resubDTOBiz.getReported_value();
+                validateReportedValue(task, rv);
 
                 SysFile sysFile = sysMapper.getFileById(resubDTOBiz.getFile_id());
                 if (sysFile == null) {
                     throw new RuntimeException("该文件不存在");
                 }
-
-                BigDecimal rv = resubDTOBiz.getReported_value().multiply(
-                        task.getTargetValue() == null ? BigDecimal.ZERO : task.getTargetValue()
-                );
 
                 if (oldSubmission.getIsDelete() == null || oldSubmission.getIsDelete() == 0) {
                     oldSubmission.setIsDelete(1);
@@ -1085,6 +1091,7 @@ public class BizService {
             }
 
             createAuditLog(newSubId, userId, "重新提交", 0, 10, "重新提交");
+            performanceService.updatePerformanceByTaskId(task.getTaskId());
             BusinessLogUtil.info("任务重新提交",
                     "result", "成功",
                     "userId", userId,
@@ -1095,7 +1102,8 @@ public class BizService {
                     "reportedValue", rv,
                     "targetValue", task.getTargetValue(),
                     "level4Count", subTaskCount,
-                    "nextHandlerId", nextHandlerId);
+                    "nextHandlerId", nextHandlerId,
+                    "performance", "已触发刷新");
             // 已修改，修改内容及原因：添加null检查和异常处理，避免getUserById返回null时出现空指针异常
             String resultMsg = "已重新提交";
             if (nextHandlerId != null) {
@@ -1220,6 +1228,19 @@ public class BizService {
             return bizMapper.getTasksByPrincipalId(principalId);
         } catch (Exception e) {
             throw new RuntimeException("获取任务失败,请检查负责人id是否正确");
+        }
+    }
+
+    /** 直接填报和退回重提沿用相同的实际值校验。 */
+    private void validateReportedValue(BizTask task, BigDecimal reportedValue) {
+        if (reportedValue == null) {
+            throw new RuntimeException("填报值不能为空");
+        }
+        if (reportedValue.compareTo(BigDecimal.ZERO) < 0) {
+            throw new RuntimeException("填报值不能小于0");
+        }
+        if ("2".equals(task.getDataType()) && reportedValue.compareTo(BigDecimal.valueOf(100)) > 0) {
+            throw new RuntimeException("百分比任务填报值不能超过100");
         }
     }
 

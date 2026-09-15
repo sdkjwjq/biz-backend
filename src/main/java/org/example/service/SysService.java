@@ -74,7 +74,10 @@ public class SysService {
      */
     public SysLoginVO login(Long userId, String password) {
         SysUser user = sysMapper.getUserById(userId);
-        if (user != null && user.getPassword().equals(password)) {
+        if (user != null && Integer.valueOf(1).equals(user.getIsDelete())) {
+            user = null;
+        }
+        if (user != null && user.getPassword() != null && user.getPassword().equals(password)) {
             SysDept dept = user.getDeptId() == null ? null : sysMapper.getDeptById(user.getDeptId());
             boolean isDepartmentAccount = AchievementPermissionUtil.isAchievementUploadAccount(user, dept);
             boolean canViewAchievement = AchievementPermissionUtil.canViewAchievement(user, dept);
@@ -97,7 +100,7 @@ public class SysService {
                     "reason", "用户不存在",
                     "userId", userId);
             throw new RuntimeException("用户不存在");
-        } else if (!user.getPassword().equals(password)){
+        } else {
             BusinessLogUtil.warn("用户登录",
                     "result", "失败",
                     "reason", "密码错误",
@@ -105,7 +108,6 @@ public class SysService {
                     "userName", user.getUserName());
             throw new RuntimeException("密码错误");
         }
-        return null;
     }
 
     /**

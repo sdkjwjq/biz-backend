@@ -4,7 +4,9 @@ import com.auth0.jwt.interfaces.DecodedJWT;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.example.entity.SysUser;
 import org.example.entity.vo.ErrorVO;
+import org.example.mapper.SysMapper;
 import org.example.mapper.TokenBlacklistMapper;
 import org.example.utils.JWTUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +26,9 @@ public class JwtInterceptor implements HandlerInterceptor {
 
     @Autowired
     private TokenBlacklistMapper tokenBlacklistMapper;
+
+    @Autowired
+    private SysMapper sysMapper;
 
     /**
      * 前置处理：验证Token
@@ -53,6 +58,11 @@ public class JwtInterceptor implements HandlerInterceptor {
 
         try {
             DecodedJWT decodedJWT = JWTUtil.verifyJwtToken(token);
+            SysUser user = sysMapper.getUserById(decodedJWT.getClaim("id").asLong());
+            if (user == null || Integer.valueOf(1).equals(user.getIsDelete())) {
+                sendError(response, 401, "Invalid Token");
+                return false;
+            }
             request.setAttribute("userRole", decodedJWT.getClaim("role").asString());
             return true;
         } catch (Exception e) {

@@ -107,7 +107,7 @@ public class BizController {
     @PostMapping("/tasks/manage/add")
     public Object addTask(@RequestBody BizTaskDTO task, HttpServletRequest request){
         try{
-            bizService.addTask(task);
+            bizService.addTask(task, JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
             return "任务"+task.getTaskName()+"添加成功";
         } catch (Exception e) {
             return new ErrorVO(e.getMessage(), 500);
@@ -123,7 +123,7 @@ public class BizController {
     @PostMapping("/tasks/manage/update")
     public Object updateTask(@RequestBody BizTaskDTO task, HttpServletRequest request){
         try{
-            bizService.updateTask(task);
+            bizService.updateTask(task, JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
             return "任务"+task.getTaskName()+"更新成功";
         } catch (Exception e) {
             return new ErrorVO(e.getMessage(), 500);

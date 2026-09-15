@@ -19,7 +19,7 @@ public interface SysMapper {
      * 获取所有用户
      * @return 用户列表
      */
-    @Select("SELECT * FROM sys_user")
+    @Select("SELECT user_id, dept_id, user_name, nick_name, email, role, status, is_delete, create_time, update_time FROM sys_user")
     public List<SysUser> getAllUsers();
 
 
