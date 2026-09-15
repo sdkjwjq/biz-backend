@@ -389,4 +389,53 @@ class ReviewBatchRegressionApiTest {
         assertNotEquals(first, newestSubmission());
         assertTaskAndPerformance("5", 50, "2");
     }
+
+    private void seedManualPerformance(String dataType) {
+        seedSubmissionFlow();
+        jdbc.update("UPDATE biz_performance SET perf_code='2.review', data_type=? WHERE perf_id=950001", dataType);
+        jdbc.update("UPDATE biz_performance_year SET data_type=? WHERE year_id=950002", dataType);
+        jdbc.update("INSERT INTO biz_performance_year (year_id, perf_id, year, target_value, data_type) "
+                + "VALUES (950003, 950001, 2027, 10, ?)", dataType);
+    }
+
+    private long submitPerformance(int year, String value, String token) {
+        assertSuccess(request(HttpMethod.POST, "/performance/submit?pref_id=950001&actual_value=" + value
+                + "&year=" + year + "&comment=Review", token, null), "提交");
+        return jdbc.queryForObject("SELECT MAX(sub_id) FROM biz_performance_submission WHERE perf_id=950001 AND year=?", Long.class, year);
+    }
+
+    private ResponseEntity<String> reviewPerformance(long subId, boolean pass, String token) {
+        return request(HttpMethod.POST, "/performance/audit", token,
+                Map.of("sub_id", subId, "is_pass", pass, "title", "Review decision"));
+    }
+
+    @Test
+    void performanceRollbackPreservesOtherYearsAndCurrentTargets() throws Exception {
+        for (String dataType : List.of("1", "2")) {
+            for (boolean withdraw : new boolean[]{true, false}) {
+                seed();
+                seedManualPerformance(dataType);
+                String user = login(USER);
+                long first = submitPerformance(2026, "3", user);
+                long second = submitPerformance(2027, "5", user);
+                assertDecimal("1".equals(dataType) ? "8" : "5", "SELECT current_value FROM biz_performance WHERE perf_id=950001");
+                Map<String, Object> otherYear = jdbc.queryForMap("SELECT * FROM biz_performance_year WHERE year_id=950003");
+                Map<String, Object> otherSubmission = jdbc.queryForMap("SELECT * FROM biz_performance_submission WHERE sub_id=?", second);
+                // 填报后另行调整的目标，不应被撤回实际值的动作覆盖。
+                jdbc.update("UPDATE biz_performance_year SET target_value=20 WHERE year_id=950002");
+                if (withdraw) {
+                    assertSuccess(request(HttpMethod.POST, "/performance/audit/withdraw/" + first, user, null), "已撤回");
+                } else {
+                    assertSuccess(reviewPerformance(first, false, login(AUDITOR)), "已退回");
+                }
+                assertDecimal("0", "SELECT actual_value FROM biz_performance_year WHERE year_id=950002");
+                assertDecimal("5", "SELECT current_value FROM biz_performance WHERE perf_id=950001");
+                assertDecimal("20", "SELECT target_value FROM biz_performance_year WHERE year_id=950002");
+                assertEquals(otherYear, jdbc.queryForMap("SELECT * FROM biz_performance_year WHERE year_id=950003"));
+                assertEquals(otherSubmission, jdbc.queryForMap("SELECT * FROM biz_performance_submission WHERE sub_id=?", second));
+                assertEquals(withdraw ? 0 : -10, jdbc.queryForObject("SELECT flow_status FROM biz_performance_submission WHERE sub_id=?", Integer.class, first));
+                assertEquals(3, jdbc.queryForObject("SELECT COUNT(*) FROM biz_performance_audit_log", Integer.class));
+            }
+        }
+    }
 }

@@ -741,11 +741,9 @@ public class PerformanceService {
             throw new RuntimeException("绩效或年度绩效不存在，无法恢复");
         }
         year.setActualValue(zeroIfNull(snapshot.getPreviousYearActualValue()));
-        year.setTargetValue(zeroIfNull(snapshot.getPreviousYearTargetValue()));
         performanceMapper.updatePerformanceYear(year);
-        performance.setCurrentValue(zeroIfNull(snapshot.getPreviousPerformanceValue()));
-        performance.setUpdateTime(snapshot.getPreviousPerformanceUpdateTime());
-        performanceMapper.updatePerformance(performance);
+        // 只恢复本次填报的年度实际值，保留其他年度贡献及当前目标配置。
+        recalculateSinglePerformanceFromYears(performance);
     }
 
     private void recalculateSinglePerformanceFromYears(BizPerformance performance) {
