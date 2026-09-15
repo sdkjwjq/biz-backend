@@ -38,6 +38,10 @@ public interface BizMapper {
     @Select("SELECT * FROM biz_task WHERE task_id = #{taskId}")
     BizTask getTaskById(Long taskId);
 
+    /** 在提交事务开始时锁定任务，使同一任务的提交依次校验和写入。 */
+    @Select("SELECT * FROM biz_task WHERE task_id = #{taskId} FOR UPDATE")
+    BizTask getTaskByIdForUpdate(Long taskId);
+
     /**
      * 根据部门id获取任务
      * @param deptId 部门ID
@@ -351,6 +355,10 @@ void updateLevel4Task(BizLevel4Task task);
      */
     @Select("SELECT * FROM biz_material_submission WHERE sub_id = #{subId}")
     BizMaterialSubmission getAuditBySubIdIncludingDeleted(Long subId);
+
+    /** 重提时使用当前读，避免在等待任务锁前建立旧的事务快照。 */
+    @Select("SELECT * FROM biz_material_submission WHERE sub_id = #{subId} FOR UPDATE")
+    BizMaterialSubmission getAuditBySubIdIncludingDeletedForUpdate(Long subId);
 
     /**
      * 根据subId获取提交人

@@ -497,7 +497,7 @@ public class PerformanceService {
             throw new RuntimeException("请输入有效年份");
         }
 
-        BizPerformance performance = performanceMapper.getPerformanceById(perfId);
+        BizPerformance performance = performanceMapper.getPerformanceByIdForUpdate(perfId);
         if (performance == null) {
             throw new RuntimeException("没有找到该绩效");
         }

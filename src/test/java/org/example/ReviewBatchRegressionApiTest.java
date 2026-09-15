@@ -30,6 +30,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -63,10 +68,16 @@ class ReviewBatchRegressionApiTest {
     @Autowired private TestRestTemplate http;
     @Autowired private JdbcTemplate jdbc;
     @Autowired private ObjectMapper json;
+    @Autowired private ReviewSubmissionRaceGate submissionRaceGate;
 
     /** 保留真实调度服务供 HTTP 测试调用，只关闭测试进程的自动定时触发。 */
     @TestConfiguration(proxyBeanMethods = false)
     static class NoAutomaticSchedules {
+        @Bean
+        ReviewSubmissionRaceGate submissionRaceGate() {
+            return new ReviewSubmissionRaceGate();
+        }
+
         @Bean
         static BeanFactoryPostProcessor disableAutomaticSchedules() {
             return beanFactory -> {
@@ -652,6 +663,188 @@ class ReviewBatchRegressionApiTest {
             assertEquals(pass ? 30 : -10, jdbc.queryForObject("SELECT flow_status FROM biz_achievement_submission WHERE sub_id=?", Integer.class, subId));
             assertEquals(pass ? 30 : -10, jdbc.queryForObject("SELECT audit_status FROM biz_achievement WHERE ach_id="
                     + "(SELECT ach_id FROM biz_achievement_submission WHERE sub_id=?)", Integer.class, subId));
+        }
+    }
+
+    private List<ResponseEntity<String>> concurrentRequests(String queryName,
+            Callable<ResponseEntity<String>> first, Callable<ResponseEntity<String>> second) throws Exception {
+        ReviewSubmissionRaceGate.Race race = new ReviewSubmissionRaceGate.Race(queryName);
+        submissionRaceGate.current = race;
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            Future<ResponseEntity<String>> firstResponse = executor.submit(() -> {
+                try {
+                    return first.call();
+                } finally {
+                    race.firstFinished.countDown();
+                }
+            });
+            assertTrue(race.firstChecked.await(10, TimeUnit.SECONDS), "First request must reach the active submission check");
+            Future<ResponseEntity<String>> secondResponse = executor.submit(second);
+            return List.of(firstResponse.get(30, TimeUnit.SECONDS), secondResponse.get(30, TimeUnit.SECONDS));
+        } finally {
+            race.firstFinished.countDown();
+            race.secondChecked.countDown();
+            executor.shutdownNow();
+            assertTrue(executor.awaitTermination(10, TimeUnit.SECONDS), "Concurrent HTTP requests must finish");
+            submissionRaceGate.current = null;
+        }
+    }
+
+    private Map<String, Object> level4Submission(int first, int second) {
+        return new LinkedHashMap<>(Map.of("third_task_id", 930002L, "file_id", 940001L, "comment", "Review level4",
+                "sub_list", List.of(Map.of("task_id", 960001L, "reported_value", first, "data_type", "1"),
+                        Map.of("task_id", 960002L, "reported_value", second, "data_type", "1"))));
+    }
+
+    @Test
+    void concurrentTaskSubmissionsKeepOneActiveSubmission() throws Exception {
+        for (String mode : List.of("direct", "level4", "resubDirect", "resubLevel4", "mixed", "resubMixed")) {
+            seed();
+            seedSubmissionFlow();
+            boolean level4 = List.of("level4", "resubLevel4", "mixed").contains(mode);
+            if (level4) {
+                for (long id : new long[]{960001L, 960002L}) {
+                    jdbc.update("INSERT INTO biz_level4_task (task_id, parent_id, phase, task_name, leader_id, dept_id, "
+                                    + "data_type, target_value, current_value, progress, status) VALUES (?, 930002, 2026, ?, ?, ?, '1', 5, 0, 0, '1')",
+                            id, "Review level4 " + id, USER, DEPT);
+                }
+            }
+            String user = login(USER);
+            String auditor = login(AUDITOR);
+            Map<String, Object> first = level4 ? level4Submission(2, 1) : submission("3");
+            Map<String, Object> second = level4 && !"mixed".equals(mode) ? level4Submission(4, 5) : submission("9");
+            boolean resub = mode.startsWith("resub");
+            boolean mixedResub = "resubMixed".equals(mode);
+            if (resub) {
+                assertSuccess(request(HttpMethod.POST, "/biz/sub", user, first), "提交成功");
+                long oldSubId = newestSubmission();
+                review(oldSubId, false, auditor);
+                for (Map<String, Object> payload : mixedResub ? List.of(second) : List.of(first, second)) {
+                    payload.remove("task_id");
+                    payload.remove("third_task_id");
+                    payload.put("sub_id", oldSubId);
+                }
+            }
+            Map<String, List<Map<String, Object>>> before = taskFlowState();
+            String firstPath = resub && !mixedResub ? "/biz/resub" : "/biz/sub";
+            String secondPath = resub ? "/biz/resub" : "/biz/sub";
+            List<ResponseEntity<String>> responses = concurrentRequests("getActiveAuditByTaskId",
+                    () -> request(HttpMethod.POST, firstPath, user, first),
+                    () -> request(HttpMethod.POST, secondPath, user, second));
+            assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM biz_material_submission WHERE task_id=930002 "
+                    + "AND is_delete=0 AND flow_status IN (10,20,30)", Integer.class), mode);
+            assertSuccess(responses.get(0), resub && !mixedResub ? "已重新提交" : "提交成功");
+            assertTrue(responses.get(1).getBody().contains("正在审核"), responses.get(1).getBody());
+            assertEquals(500, body(responses.get(1)).path("code").asInt());
+            Map<String, List<Map<String, Object>>> after = taskFlowState();
+            for (String table : List.of("biz_material_submission", "biz_audit_log", "sys_notice")) {
+                assertEquals(before.get(table).size() + 1, after.get(table).size(), mode + ": " + table);
+            }
+            assertEquals(before.get("biz_audit_snapshot").size() + (level4 ? 3 : 1), after.get("biz_audit_snapshot").size(), mode);
+            assertTaskAndPerformance("3", 30, "2");
+            if (level4) {
+                assertDecimal("2", "SELECT current_value FROM biz_level4_task WHERE task_id=960001");
+                assertDecimal("1", "SELECT current_value FROM biz_level4_task WHERE task_id=960002");
+            }
+            review(newestSubmission(), false, auditor);
+            assertTaskAndPerformance("0", 0, "1");
+            if (level4) {
+                assertDecimal("0", "SELECT current_value FROM biz_level4_task WHERE task_id=960001");
+                assertDecimal("0", "SELECT current_value FROM biz_level4_task WHERE task_id=960002");
+            }
+        }
+    }
+
+    @Test
+    void concurrentPerformanceSubmissionsKeepOneActiveSubmission() throws Exception {
+        for (String dataType : List.of("1", "2")) {
+            seed();
+            seedManualPerformance(dataType);
+            String user = login(USER);
+            List<ResponseEntity<String>> responses = concurrentRequests("getActivePerformanceSubmission",
+                    () -> request(HttpMethod.POST, "/performance/submit?pref_id=950001&year=2026&actual_value=3", user, null),
+                    () -> request(HttpMethod.POST, "/performance/submit?pref_id=950001&year=2026&actual_value=9", user, null));
+            assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM biz_performance_submission "
+                    + "WHERE perf_id=950001 AND year=2026 AND is_delete=0 AND flow_status IN (10,20)", Integer.class));
+            assertSuccess(responses.get(0), "绩效已提交");
+            assertTrue(responses.get(1).getBody().contains("已有正在审核中的绩效填报"), responses.get(1).getBody());
+            assertEquals(500, body(responses.get(1)).path("code").asInt());
+            for (String table : List.of("biz_performance_submission", "biz_performance_audit_snapshot", "biz_performance_audit_log", "sys_notice")) {
+                assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM " + table, Integer.class), table);
+            }
+            assertDecimal("3", "SELECT actual_value FROM biz_performance_year WHERE year_id=950002");
+            assertDecimal("3", "SELECT current_value FROM biz_performance WHERE perf_id=950001");
+            long subId = jdbc.queryForObject("SELECT MAX(sub_id) FROM biz_performance_submission", Long.class);
+            assertSuccess(reviewPerformance(subId, false, login(AUDITOR)), "已退回");
+            assertDecimal("0", "SELECT actual_value FROM biz_performance_year WHERE year_id=950002");
+            assertDecimal("0", "SELECT current_value FROM biz_performance WHERE perf_id=950001");
+            submitPerformance(2026, "4", user);
+        }
+    }
+
+    @Test
+    void concurrentPerformanceYearsPreserveCombinedValue() throws Exception {
+        for (String dataType : List.of("1", "2")) {
+            seed();
+            seedManualPerformance(dataType);
+            String user = login(USER);
+            List<ResponseEntity<String>> responses = concurrentRequests("getActivePerformanceSubmission",
+                    () -> request(HttpMethod.POST, "/performance/submit?pref_id=950001&year=2026&actual_value=7", user, null),
+                    () -> request(HttpMethod.POST, "/performance/submit?pref_id=950001&year=2027&actual_value=5", user, null));
+            for (ResponseEntity<String> response : responses) assertSuccess(response, "绩效已提交");
+            assertEquals(2, jdbc.queryForObject("SELECT COUNT(*) FROM biz_performance_submission", Integer.class));
+            assertDecimal("7", "SELECT actual_value FROM biz_performance_year WHERE year_id=950002");
+            assertDecimal("5", "SELECT actual_value FROM biz_performance_year WHERE year_id=950003");
+            assertDecimal("1".equals(dataType) ? "12" : "7", "SELECT current_value FROM biz_performance WHERE perf_id=950001");
+        }
+    }
+
+    @Test
+    void failedConcurrentSubmissionRollsBackAndReleasesLock() throws Exception {
+        for (boolean performance : new boolean[]{false, true}) {
+            seed();
+            if (performance) seedManualPerformance("1");
+            else seedSubmissionFlow();
+            String user = login(USER);
+            String table = performance ? "biz_performance_year" : "biz_task";
+            String condition = performance ? "NEW.year_id=950002 AND NEW.actual_value=3"
+                    : "NEW.task_id=930002 AND NEW.current_value=3";
+            jdbc.execute("CREATE TRIGGER review_fail_submission BEFORE UPDATE ON " + table + " FOR EACH ROW BEGIN IF "
+                    + condition + " THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='review submission failure'; END IF; END");
+            List<ResponseEntity<String>> responses;
+            try {
+                responses = concurrentRequests(performance ? "getActivePerformanceSubmission" : "getActiveAuditByTaskId",
+                        () -> request(HttpMethod.POST, performance
+                                ? "/performance/submit?pref_id=950001&year=2026&actual_value=3" : "/biz/sub",
+                                user, performance ? null : submission("3")),
+                        () -> request(HttpMethod.POST, performance
+                                ? "/performance/submit?pref_id=950001&year=2026&actual_value=9" : "/biz/sub",
+                                user, performance ? null : submission("9")));
+            } finally {
+                jdbc.execute("DROP TRIGGER review_fail_submission");
+            }
+            assertEquals(500, body(responses.get(0)).path("code").asInt());
+            assertTrue(responses.get(0).getBody().contains("review submission failure"), responses.get(0).getBody());
+            assertSuccess(responses.get(1), performance ? "绩效已提交" : "提交成功");
+            List<String> writtenTables = performance
+                    ? List.of("biz_performance_submission", "biz_performance_audit_snapshot", "biz_performance_audit_log", "sys_notice")
+                    : List.of("biz_material_submission", "biz_audit_snapshot", "biz_audit_log", "sys_notice");
+            for (String writtenTable : writtenTables) {
+                assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM " + writtenTable, Integer.class), writtenTable);
+            }
+            assertDecimal("9", "SELECT current_value FROM biz_performance WHERE perf_id=950001");
+            assertDecimal("9", "SELECT actual_value FROM biz_performance_year WHERE year_id=950002");
+            if (performance) {
+                long subId = jdbc.queryForObject("SELECT MAX(sub_id) FROM biz_performance_submission", Long.class);
+                assertSuccess(reviewPerformance(subId, false, login(AUDITOR)), "已退回");
+            } else {
+                assertTaskAndPerformance("9", 90, "2");
+                review(newestSubmission(), false, login(AUDITOR));
+                assertTaskAndPerformance("0", 0, "1");
+            }
+            assertDecimal("0", "SELECT current_value FROM biz_performance WHERE perf_id=950001");
+            assertDecimal("0", "SELECT actual_value FROM biz_performance_year WHERE year_id=950002");
         }
     }
 

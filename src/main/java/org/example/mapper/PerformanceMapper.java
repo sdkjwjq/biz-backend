@@ -19,6 +19,10 @@ public interface PerformanceMapper {
     @Select("select * from biz_performance where perf_id = #{perfId}")
     BizPerformance getPerformanceById(Long perfId);
 
+    /** 锁定绩效后再读取年度和审核单，同时保护同一绩效的跨年度汇总。 */
+    @Select("select * from biz_performance where perf_id = #{perfId} FOR UPDATE")
+    BizPerformance getPerformanceByIdForUpdate(Long perfId);
+
     @Update(
             "update biz_performance set " +
                     "perf_code = #{perfCode}, " +

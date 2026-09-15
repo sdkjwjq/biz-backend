@@ -297,15 +297,16 @@ public class BizService {
     public String submitMaterial(BizSubDTO bizSubDTO, Long userId) {
         try {
             // 检查taskid是否存在
-            if (bizMapper.getTaskById(bizSubDTO.getTask_id()) == null) {
+            BizTask task = bizMapper.getTaskByIdForUpdate(bizSubDTO.getTask_id());
+            if (task == null) {
                 throw new RuntimeException("该任务不存在");
             }
             // 验证任务必须为三级任务，否则无法提交
-            if (bizMapper.getTaskById(bizSubDTO.getTask_id()).getLevel() != 3 && bizMapper.getTaskById(bizSubDTO.getTask_id()).getLevel() != 4) {
+            if (task.getLevel() != 3 && task.getLevel() != 4) {
                 throw new RuntimeException("该任务不是三级或四级任务,无法提交");
             }
             // 验证任务状态，如果当前status为2，则禁止提交
-            if (bizMapper.getTaskById(bizSubDTO.getTask_id()).getStatus().equals("2")) {
+            if (task.getStatus().equals("2")) {
                 throw new RuntimeException("该任务状态未开始或正在审核中,无法提交");
             }
             // 检查文件是否存在
@@ -319,7 +320,6 @@ public class BizService {
                 throw new RuntimeException("文件格式错误,请上传pdf,doc,docx格式的文件");
             }
 
-            BizTask task = bizMapper.getTaskById(bizSubDTO.getTask_id());
             ensureTaskSubmitter(task, userId);
             ensureNoActiveAudit(task.getTaskId());
             BizMaterialSubmission bizMaterialSubmission = new BizMaterialSubmission();
@@ -406,7 +406,7 @@ public class BizService {
 
     @Transactional
     public String subFourLevelTasks(BizNewSubDTO bizSubDTOs, Long userId){
-        BizTask ThirdLevelTask = bizMapper.getTaskById(bizSubDTOs.getThird_task_id());
+        BizTask ThirdLevelTask = bizMapper.getTaskByIdForUpdate(bizSubDTOs.getThird_task_id());
         if (ThirdLevelTask == null) {
             throw new RuntimeException("该任务不存在");
         }
@@ -887,11 +887,12 @@ public class BizService {
     @Transactional
     public String reSubmitMaterial(BizReSubDTO resubDTOBiz, Long userId) {
         try {
-            BizMaterialSubmission oldSubmission = bizMapper.getAuditBySubIdIncludingDeleted(resubDTOBiz.getSub_id());
+            // 前两次查询均为当前读，取得任务锁后再建立一致性读快照。
+            BizMaterialSubmission oldSubmission = bizMapper.getAuditBySubIdIncludingDeletedForUpdate(resubDTOBiz.getSub_id());
             if (oldSubmission == null) {
                 throw new RuntimeException("该任务不存在");
             }
-            BizTask task = bizMapper.getTaskById(oldSubmission.getTaskId());
+            BizTask task = bizMapper.getTaskByIdForUpdate(oldSubmission.getTaskId());
             if(task==null){
                 throw new RuntimeException("该任务不存在");
             }
