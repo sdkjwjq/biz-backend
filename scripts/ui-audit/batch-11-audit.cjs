@@ -3,6 +3,8 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const assert = require('node:assert/strict');
 const output = path.resolve(__dirname, '../../target/ui-audit/evidence-batch-11');
+const fixed = process.argv.includes('--fixed');
+const stay = process.argv.includes('--stay');
 
 async function main() {
   const browser = await chromium.launch({ channel: 'msedge', headless: true });
@@ -35,36 +37,40 @@ async function main() {
     });
     const open = name => page.locator('.el-table__row').filter({ hasText: name }).getByRole('button', { name: '查看', exact: true }).click();
     const drawer = page.getByRole('dialog', { name: '任务详情与反馈' });
-    await open('填报竞态A');
+    await open(stay ? '填报竞态B' : '填报竞态A');
     await drawer.locator('.el-loading-mask').waitFor({ state: 'hidden' });
     await drawer.getByRole('spinbutton').fill('3');
     await drawer.getByPlaceholder('请输入完成情况（50字以内）').fill('A本次填报3');
     await drawer.locator('input[type=file]').setInputFiles({ name: 'synthetic.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n% Synthetic audit fixture\n%%EOF') });
     await drawer.getByRole('button', { name: '提交反馈', exact: true }).click();
     await started;
+    if (!stay) {
     await drawer.getByRole('button', { name: /close/i }).click();
     await drawer.waitFor({ state: 'hidden' });
     await open('填报竞态B');
     await drawer.locator('.el-loading-mask').waitFor({ state: 'hidden' });
     result.bValue = await drawer.getByRole('spinbutton').inputValue();
     await drawer.getByPlaceholder('请输入完成情况（50字以内）').fill('B尚未提交的草稿');
+    }
     await page.screenshot({ path: path.join(output, 'before-upload-return.png'), fullPage: true });
     const posted = page.waitForRequest(req => req.method() === 'POST' && new URL(req.url()).pathname === '/api/biz/sub');
+    const submitted = page.waitForResponse(res => res.request().method() === 'POST' && new URL(res.url()).pathname === '/api/biz/sub');
     release();
     result.payload = (await posted).postDataJSON();
-    await page.getByText('材料已提交（已进入审核流程）', { exact: true }).waitFor();
+    await submitted;
+    await page.waitForTimeout(700);
     result.bDraftAfter = await drawer.getByPlaceholder('请输入完成情况（50字以内）').inputValue();
-    result.saved = await page.evaluate(async () => {
+    result.saved = await page.evaluate(async taskId => {
       const api = await import('/src/api/audit.js');
-      return api.getAuditByTaskId(932001);
-    });
-    assert.equal(Number(result.payload.task_id), 932001);
-    assert.equal(Number(result.payload.reported_value), 7);
-    assert.equal(Number(result.saved[0].reportedValue), 7);
-    assert.equal(result.bDraftAfter, '');
+      return api.getAuditByTaskId(taskId);
+    }, stay ? 932002 : 932001);
+    assert.equal(Number(result.payload.task_id), stay ? 932002 : 932001);
+    assert.equal(Number(result.payload.reported_value), fixed ? 3 : 7);
+    assert.equal(Number(result.saved[0].reportedValue), fixed ? 3 : 7);
+    if (!stay) assert.equal(result.bDraftAfter, fixed ? 'B尚未提交的草稿' : '');
     assert.deepEqual(result.errors, []);
-    await fs.writeFile(path.join(output, 'feedback-upload-race.json'), JSON.stringify(result, null, 2));
-    console.log(JSON.stringify({ reproduced: true, enteredA: 3, savedA: 7, bDraftCleared: true }));
+    await fs.writeFile(path.join(output, stay ? 'feedback-stay-fixed.json' : fixed ? 'feedback-upload-race-fixed.json' : 'feedback-upload-race.json'), JSON.stringify(result, null, 2));
+    console.log(JSON.stringify({ fixed, stay, passed: true, saved: Number(result.saved[0].reportedValue) }));
   } catch (error) { console.error(await page.locator('body').innerText()); throw error;
   } finally { release(); await context.close(); await browser.close(); }
 }

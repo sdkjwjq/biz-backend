@@ -1,5 +1,7 @@
 # 第十一批：任务填报上传期间切换任务
 
+后续状态：11-1 已按用户授权修复，前端提交 `b96483e`，见 [修复闭环记录](fix-batch-11.md)。下文保留原始审计证据。
+
 ## 11-1【高 / BUG】A 填报 3，切到 B 后实际保存为 7
 
 - 位置：`biz/src/components/Works.vue:2705` 的 `submitFeedback`，上传返回后读取 `feedbackForm.progress`、`forthTasks`、`latestAudit`，提交成功后无条件清空当前表单。
