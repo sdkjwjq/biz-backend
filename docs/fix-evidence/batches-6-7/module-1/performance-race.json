@@ -1,0 +1,87 @@
+{
+  "case": "performance-race",
+  "errors": [],
+  "requests": [
+    {
+      "method": "POST",
+      "path": "/api/system/login"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/tasks"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/allUsers"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/notice"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/audit/todo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/allUsers"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/audit/todo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/performance/year/2026"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/allUsers"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/dept/920001"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/tasks"
+    },
+    {
+      "method": "GET",
+      "path": "/api/performance/audit/perf/950011"
+    },
+    {
+      "method": "GET",
+      "path": "/api/performance/audit/perf/950021"
+    },
+    {
+      "method": "POST",
+      "path": "/api/performance/audit"
+    },
+    {
+      "method": "GET",
+      "path": "/api/performance/audit/perf/950011"
+    },
+    {
+      "method": "GET",
+      "path": "/api/performance/audit/perf/950021"
+    }
+  ],
+  "listText": "“双高建设计划”项目平台\n数据大屏\n工作中心 (我的任务)\n任务\n绩效\n消息中心\n审核中心\n督办中心\n管理后台\n/\n工作中心 (绩效)\n审\n审计审核人\n提示\n绩效指标库 - 三级指标由任务自动汇总，一级/二级指标为分类展示\n徐州工业职业技术学院\"双高建设计划\"任务与绩效目标管理\n周期: 2025-01-01 至 2029-12-31\n责任部门：\"双高\"建设办公室\n共 3 条\n任务\n绩效\n成果\n预算\n年度:\n2026年\n数据类型:\n全部\n搜索\n绩效指标名称\n\t\n目标值/完成值\n\t\n完成率\n\t\n数据类型\n\t\n归口部门\n\t\n负责人\n\t\n操作\n[2]效益指标（1）\n\t\n—\n\t\n—\n\t\n—\n\t\n—\n\t\n—\n\t\n\n\n[2.1]社会效益指标（3）\n\t\n—\n\t\n—\n\t\n—\n\t\n—\n\t\n—\n\t\n\n\n[2.1.1]审计手动绩效\n\t\n10.00\n/\n3.00\n\t\n30%\n\t\n数值\n\t\n审计测试部门A\n\t\n审\n审计用户A\n\t\n查看\n刷新\n\n\n[2.1.2]审计零值绩效B\n\t\n10.00\n/\n0.00\n\t\n0%\n\t\n数值\n\t\n审计测试部门A\n\t\n审\n审计用户A\n\t\n查看\n刷新\n\n\n[2.1.3]审计待填绩效C\n\t\n10.00\n/\n0.00\n\t\n0%\n\t\n数值\n\t\n审计测试部门A\n\t\n审\n审计用户A\n\t\n查看\n刷新",
+  "beforeRecord": [
+    "审核单 971002"
+  ],
+  "lateResponsePerfIds": [
+    950011
+  ],
+  "currentInfo": "指标编码：\n2.1.2\n指标名称：\n审计零值绩效B\n目标值：\n10.00\n当前完成值：\n0.00\n完成率：\n0%\n数据类型：\n数值\n归口部门：\n审计测试部门A\n负责人：\n审计用户A",
+  "afterRecord": [
+    "审核单 971002"
+  ],
+  "approvalFormVisible": true,
+  "submittedAuditId": 971002,
+  "aFlowStatusAfter": 10,
+  "approvalResponse": "绩效已通过专业群审核，待完结归档",
+  "aCommentAfterBResponse": "保留 A 的审批意见",
+  "bFlowStatusAfter": 20
+}

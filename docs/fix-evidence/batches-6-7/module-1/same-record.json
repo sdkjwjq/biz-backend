@@ -1,0 +1,8 @@
+{
+  "case": "same-record",
+  "errors": [],
+  "checks": [
+    "A→B→A 后，旧 A 响应不能结束新 A 的加载",
+    "重新打开的 A 只接受本次请求"
+  ]
+}

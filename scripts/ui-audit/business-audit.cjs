@@ -92,7 +92,8 @@ async function main() {
           const oldResponse = page.waitForResponse(response => new URL(response.url()).pathname === '/api/performance/audit/perf/950011');
           release();
           result.lateResponsePerfIds = (await (await oldResponse).json()).map(row => row.perfId);
-          await page.getByText('审核单 971001', { exact: true }).waitFor();
+          await (await oldResponse).finished();
+          await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
           await settleDrawer();
           result.currentInfo = await drawer.locator('.task-info-box').innerText();
           result.afterRecord = await drawer.locator('.log-user').allTextContents();
@@ -100,28 +101,52 @@ async function main() {
           assert.ok(result.currentInfo.includes('审计零值绩效B'));
           assert.deepEqual(result.lateResponsePerfIds.map(Number), [950011]);
           assert.deepEqual(result.beforeRecord.map(text => text.trim()), ['审核单 971002']);
-          assert.deepEqual(result.afterRecord.map(text => text.trim()), ['审核单 971001']);
+          assert.deepEqual(result.afterRecord.map(text => text.trim()), ['审核单 971002']);
           await screenshot('performance-race-after.png');
-          // 在合成数据上真实提交一次，验证错配会影响实际审批目标。
-          const auditRequest = page.waitForRequest(request => new URL(request.url()).pathname === '/api/performance/audit' && request.method() === 'POST');
-          const auditResponse = page.waitForResponse(response => new URL(response.url()).pathname === '/api/performance/audit' && response.request().method() === 'POST');
-          const bRefresh = page.waitForResponse(response => new URL(response.url()).pathname === '/api/performance/audit/perf/950021');
-          await drawer.getByRole('button', { name: '确认提交', exact: true }).click();
-          result.submittedAuditId = (await auditRequest).postDataJSON().sub_id;
-          result.approvalResponse = await (await auditResponse).text();
-          result.bFlowStatusAfter = (await (await bRefresh).json())[0].flowStatus;
-          assert.equal(result.submittedAuditId, 971001);
-          assert.ok(result.approvalResponse.includes('已通过专业群审核'));
-          assert.equal(result.bFlowStatusAfter, 10);
-          await drawer.locator('.el-drawer__close-btn').click();
-          await drawer.waitFor({ state: 'hidden' });
-          const aRefresh = page.waitForResponse(response => new URL(response.url()).pathname === '/api/performance/audit/perf/950011');
-          await page.getByText('审计手动绩效', { exact: true }).click();
-          result.aFlowStatusAfter = (await (await aRefresh).json())[0].flowStatus;
-          assert.equal(result.aFlowStatusAfter, 20);
-          await page.getByText('审核单 971001', { exact: true }).waitFor();
-          await settleDrawer();
-          await screenshot('performance-race-wrong-approval.png');
+          // 实际审批 B，并在响应返回前切回 A；审批完成不能改写 A 的表单。
+          let releaseApproval;
+          const approvalGate = new Promise(resolve => { releaseApproval = resolve; });
+          let approvalReached;
+          const approvalEntered = new Promise(resolve => { approvalReached = resolve; });
+          await page.route('**/api/performance/audit', async route => {
+            const response = await route.fetch();
+            approvalReached();
+            await approvalGate;
+            await route.fulfill({ response });
+          });
+          try {
+            const auditRequest = page.waitForRequest(request => new URL(request.url()).pathname === '/api/performance/audit' && request.method() === 'POST');
+            const auditResponse = page.waitForResponse(response => new URL(response.url()).pathname === '/api/performance/audit' && response.request().method() === 'POST');
+            await drawer.getByRole('button', { name: '确认提交', exact: true }).click();
+            result.submittedAuditId = (await auditRequest).postDataJSON().sub_id;
+            await approvalEntered;
+            await drawer.locator('.el-drawer__close-btn').click();
+            await drawer.waitFor({ state: 'hidden' });
+            const aRefresh = page.waitForResponse(response => new URL(response.url()).pathname === '/api/performance/audit/perf/950011');
+            await page.getByText('审计手动绩效', { exact: true }).click();
+            result.aFlowStatusAfter = (await (await aRefresh).json())[0].flowStatus;
+            assert.equal(result.aFlowStatusAfter, 10);
+            await page.getByText('审核单 971001', { exact: true }).waitFor();
+            await settleDrawer();
+            await drawer.getByPlaceholder('请输入审批意见（必填）...').fill('保留 A 的审批意见');
+            releaseApproval();
+            result.approvalResponse = await (await auditResponse).text();
+            await (await auditResponse).finished();
+            await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+            result.aCommentAfterBResponse = await drawer.getByPlaceholder('请输入审批意见（必填）...').inputValue();
+            assert.equal(result.aCommentAfterBResponse, '保留 A 的审批意见');
+            assert.deepEqual((await drawer.locator('.log-user').allTextContents()).map(text => text.trim()), ['审核单 971001']);
+            await drawer.locator('.el-drawer__close-btn').click();
+            await drawer.waitFor({ state: 'hidden' });
+            const bRefresh = page.waitForResponse(response => new URL(response.url()).pathname === '/api/performance/audit/perf/950021');
+            await page.getByText('审计零值绩效B', { exact: true }).click();
+            result.bFlowStatusAfter = (await (await bRefresh).json())[0].flowStatus;
+            assert.equal(result.submittedAuditId, 971002);
+            assert.ok(result.approvalResponse.includes('已通过专业群审核'));
+            assert.equal(result.bFlowStatusAfter, 20);
+            await settleDrawer();
+            await screenshot('performance-race-correct-approval.png');
+          } finally { releaseApproval(); await page.unroute('**/api/performance/audit'); }
         } finally { release(); await page.unroute(slowPath); }
       }
     } else {
