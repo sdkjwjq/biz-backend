@@ -1,0 +1,91 @@
+{
+  "case": "dashboard-unmount",
+  "errors": [
+    {
+      "message": "Initialize failed: invalid dom.",
+      "stack": [
+        "Error: Initialize failed: invalid dom.",
+        "    at Module.init2 (http://127.0.0.1:15173/node_modules/.vite/deps/echarts.js?v=5183ece7:25446:15)",
+        "    at initAllCharts (http://127.0.0.1:15173/src/views/Dashboard.vue:315:36)",
+        "    at http://127.0.0.1:15173/src/views/Dashboard.vue:525:11"
+      ]
+    }
+  ],
+  "requests": [
+    {
+      "method": "POST",
+      "path": "/api/system/login"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/tasks"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/allUsers"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/notice"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/audit/todo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/allUsers"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/audit/todo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/dashboard/tasks/all_level"
+    },
+    {
+      "method": "GET",
+      "path": "/api/dashboard/trend/2026"
+    },
+    {
+      "method": "GET",
+      "path": "/api/achievement/"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/allUsers"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/notice"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/audit/todo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/tasks"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/audit/todo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/dashboard/dept/year"
+    },
+    {
+      "method": "GET",
+      "path": "/api/dashboard/tasks/first-level"
+    },
+    {
+      "method": "GET",
+      "path": "/api/achievement/"
+    }
+  ],
+  "dashboardRemovedBeforeResponse": true,
+  "errorAfterLeaving": "Initialize failed: invalid dom.",
+  "returnedUrl": "http://127.0.0.1:15173/home/works"
+}

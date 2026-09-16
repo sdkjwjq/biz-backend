@@ -34,6 +34,27 @@ node scripts/ui-audit/browser-audit.cjs polling
 
 每次启动全新浏览器上下文；跨账号缓存测试在同一个标签页内真实登录和退出。外部网络资源被阻止，截图和请求路径写入 `target/ui-audit/evidence`，不记录 JWT 或本地数据库密码。`inspect` 可用于查看基础页面结构。
 
+### 业务页面专项（第六批）
+
+先停止上一轮环境，再加载扩展的合成绩效数据：
+
+```powershell
+python scripts/ui-audit/serve.py --fixture business
+```
+
+出现 `UI_AUDIT_READY` 后，按下面顺序在另一个终端执行：
+
+```powershell
+node scripts/ui-audit/business-audit.cjs zero-audit
+node scripts/ui-audit/business-audit.cjs performance-year
+node scripts/ui-audit/business-audit.cjs dashboard-unmount
+node scripts/ui-audit/business-audit.cjs performance-race
+```
+
+`zero-audit` 对比真实接口的零值与审核列表显示；`performance-year` 是正常年份显示的对照检查；`dashboard-unmount` 使用普通时钟验证离开页面后的延迟响应。`performance-race` 延迟真实请求，随后实际点击审批按钮，检查错误审批对象及两条记录的真实状态。它会改变合成记录的状态，每个新环境只运行一次；再次运行或随后重跑 `zero-audit` 前，请停止并重启隔离环境。
+
+结果保存在 `target/ui-audit/evidence-business`。其中 3 个缺陷复现场景断言通过表示问题仍存在，年份检查通过表示该疑点已排除。
+
 结束时执行：
 
 ```powershell

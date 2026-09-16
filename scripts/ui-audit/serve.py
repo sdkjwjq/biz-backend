@@ -4,6 +4,7 @@ Requires the regression test classes, target/ui-audit-classpath.txt, existing Vu
 dependencies and SHUANGGAO_TEST_DB_PASSWORD. Business records are never copied.
 """
 import importlib.util
+import argparse
 import json
 import os
 from pathlib import Path
@@ -23,6 +24,9 @@ SPEC.loader.exec_module(RUNNER)
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--fixture", choices=["base", "business"], default="base")
+    args = parser.parse_args()
     password = os.environ.get("SHUANGGAO_TEST_DB_PASSWORD")
     if password is None:
         raise RuntimeError("Set SHUANGGAO_TEST_DB_PASSWORD")
@@ -53,6 +57,8 @@ def main():
     try:
         subprocess.run(mysql + [schema], input=dump, env=env, check=True, capture_output=True)
         sql((ROOT / "scripts/ui-audit/fixture.sql").read_text(encoding="utf-8"), schema)
+        if args.fixture == "business":
+            sql((ROOT / "scripts/ui-audit/fixture-business.sql").read_text(encoding="utf-8"), schema)
         cp = os.pathsep.join([str(WORK), str(ROOT / "target/classes"), str(ROOT / "target/test-classes"),
                               (ROOT / "target/ui-audit-classpath.txt").read_text().strip()])
         subprocess.run([RUNNER.executable("javac"), "-encoding", "UTF-8", "-cp", cp, "-d", str(WORK),
