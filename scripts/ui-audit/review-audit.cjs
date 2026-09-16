@@ -66,6 +66,18 @@ async function main() {
       await count.press('Tab');
       result.visibleCountBeforeSubmit = await count.inputValue();
       await screenshot(name + '-before.png');
+      if (!isValidation) {
+        await dialog.locator('input[type=file]').setInputFiles({ name: 'quantity-regression.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n% synthetic quantity test\n%%EOF') });
+        const before = result.requests.filter(item => item.method === 'POST').length;
+        await dialog.getByRole('button', { name: '提交审核', exact: true }).click();
+        await page.getByText('成果数量必须为 1～999 的整数，请修改后再提交', { exact: true }).waitFor();
+        assert.equal(await count.inputValue(), '1.5');
+        assert.equal(result.requests.filter(item => item.method === 'POST').length, before);
+        result.fractionRejectedBeforeUpload = true;
+        await screenshot(name + '-rejected.png');
+        await count.fill('2');
+        await count.press('Tab');
+      }
       const addRequest = page.waitForRequest(request => new URL(request.url()).pathname === '/api/achievement/add');
       const addResponse = responseFor('/api/achievement/add');
       const listResponse = responseFor('/api/achievement/');
@@ -80,13 +92,13 @@ async function main() {
       result.savedAchievementId = saved?.achId;
       await dialog.waitFor({ state: 'hidden' });
       assert.equal(result.visibleCountBeforeSubmit, isValidation ? '2' : '1.5');
-      assert.equal(result.sentCount, isValidation ? 2 : 1.5);
-      assert.equal(result.savedCount, isValidation ? 2 : 1);
+      assert.equal(result.sentCount, 2);
+      assert.equal(result.savedCount, 2);
       await page.locator('.el-table__body tr').filter({ hasText: '1.落实立德树人根本任务' }).locator('.el-table__expand-icon').click();
       const savedRow = page.locator('.el-table__body tr').filter({ hasText: achievementName }).last();
       await savedRow.waitFor();
       result.visibleSavedRow = await savedRow.innerText();
-      assert.ok(result.visibleSavedRow.includes(isValidation ? '一等奖×2' : '一等奖×1'));
+      assert.ok(result.visibleSavedRow.includes('一等奖×2'));
       await screenshot(name + '-after.png');
     } else {
       await page.waitForURL('**/home/works');

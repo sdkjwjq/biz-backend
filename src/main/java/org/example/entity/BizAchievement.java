@@ -1,5 +1,7 @@
 package org.example.entity;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import org.example.utils.AchievementQuantityDeserializer;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -40,14 +42,23 @@ public class BizAchievement {
      */
     private Integer isCompetition; // 是否竞赛
 
+    @JsonDeserialize(using = AchievementQuantityDeserializer.class)
     private Integer teDengJiang; // 特等奖数量
+    @JsonDeserialize(using = AchievementQuantityDeserializer.class)
     private Integer yiDengJiang; // 一等奖数量
+    @JsonDeserialize(using = AchievementQuantityDeserializer.class)
     private Integer erDengJiang; // 二等奖数量
+    @JsonDeserialize(using = AchievementQuantityDeserializer.class)
     private Integer sanDengJiang; // 三等奖数量
+    @JsonDeserialize(using = AchievementQuantityDeserializer.class)
     private Integer jinJiang; // 金奖数量
+    @JsonDeserialize(using = AchievementQuantityDeserializer.class)
     private Integer yinJiang; // 银奖数量
+    @JsonDeserialize(using = AchievementQuantityDeserializer.class)
     private Integer tongJiang; // 铜奖数量
+    @JsonDeserialize(using = AchievementQuantityDeserializer.class)
     private Integer youShengJiang; // 优胜奖数量
+    @JsonDeserialize(using = AchievementQuantityDeserializer.class)
     private Integer budDengDengCi; // 不定等次数量
 
     private Long createBy; // 创建人ID(关联sys_user表userId)

@@ -6,6 +6,9 @@ import org.example.entity.dto.BizAuditDTO;
 import org.example.entity.vo.ErrorVO;
 import org.example.service.AchievementService;
 import org.example.utils.JWTUtil;
+import org.example.utils.AchievementQuantityDeserializer.InvalidQuantityException;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,6 +21,18 @@ import java.util.List;
 @RestController
 @RequestMapping("/achievement")
 public class AchievementController {
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorVO> handleQuantityParseError(HttpMessageNotReadableException exception) {
+        Throwable cause = exception;
+        while (cause != null) {
+            if (cause instanceof InvalidQuantityException quantityException) {
+                return ResponseEntity.badRequest().body(new ErrorVO(quantityException.getOriginalMessage(), 400));
+            }
+            cause = cause.getCause();
+        }
+        throw exception;
+    }
 
     @Autowired
     private AchievementService achievementService;

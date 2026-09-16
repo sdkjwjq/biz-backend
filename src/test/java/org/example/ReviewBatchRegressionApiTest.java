@@ -144,6 +144,75 @@ class ReviewBatchRegressionApiTest {
     }
 
     @Test
+    void achievementQuantitiesRejectInvalidWithoutWrites() throws Exception {
+        seedUser(990000L + DEPT, "1");
+        String token = login(990000L + DEPT);
+        Map<String, Object> payload = achievementQuantityPayload();
+        assertSuccess(request(HttpMethod.POST, "/achievement/add", token, payload), "添加成功");
+        long id = jdbc.queryForObject("SELECT MAX(ach_id) FROM biz_achievement", Long.class);
+        Map<String, List<Map<String, Object>>> before = achievementFlowState();
+        for (String field : achievementQuantityFields()) {
+            for (Object invalid : List.of(new BigDecimal("1.5"), "1.5", -1, "-1", 2147483648L,
+                    "2147483648", "abc", "", true, List.of(2), Map.of("count", 2))) {
+                for (String path : List.of("/achievement/add", "/achievement/update/" + id)) {
+                    Map<String, Object> changed = new LinkedHashMap<>(payload);
+                    changed.put(field, invalid);
+                    ResponseEntity<String> response = request(HttpMethod.POST, path, token, changed);
+                    assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode(), field + "=" + invalid);
+                    JsonNode error = json.readTree(response.getBody());
+                    assertEquals(400, error.path("code").asInt());
+                    assertTrue(error.path("message").asText().contains(field));
+                    assertTrue(error.path("message").asText().contains("整数"));
+                    assertEquals(before, achievementFlowState(), "Rejected quantity must not change business data");
+                }
+            }
+        }
+    }
+
+    @Test
+    void achievementQuantitiesPreserveCompatibleInputs() throws Exception {
+        seedUser(990000L + DEPT, "1");
+        String token = login(990000L + DEPT);
+        Object[] values = {2, "2", 0, "0", null, new BigDecimal("1.0"), "1.0", 1998, Integer.MAX_VALUE};
+        for (Object value : values) {
+            Map<String, Object> payload = achievementQuantityPayload();
+            for (String field : achievementQuantityFields()) payload.put(field, value);
+            assertSuccess(request(HttpMethod.POST, "/achievement/add", token, payload), "添加成功");
+            long id = jdbc.queryForObject("SELECT MAX(ach_id) FROM biz_achievement", Long.class);
+            JsonNode added = body(request(HttpMethod.GET, "/achievement/" + id, token, null));
+            assertSuccess(request(HttpMethod.POST, "/achievement/update/" + id, token, payload), "修改成功");
+            JsonNode updated = body(request(HttpMethod.GET, "/achievement/" + id, token, null));
+            for (String field : achievementQuantityFields()) {
+                if (value == null) {
+                    assertTrue(added.path(field).isNull());
+                    assertTrue(updated.path(field).isNull());
+                } else {
+                    int expected = new BigDecimal(value.toString()).intValueExact();
+                    assertEquals(expected, added.path(field).asInt());
+                    assertEquals(expected, updated.path(field).asInt());
+                }
+            }
+        }
+        Map<String, Object> missing = achievementQuantityPayload();
+        assertSuccess(request(HttpMethod.POST, "/achievement/add", token, missing), "添加成功");
+        long id = jdbc.queryForObject("SELECT MAX(ach_id) FROM biz_achievement", Long.class);
+        assertSuccess(request(HttpMethod.POST, "/achievement/update/" + id, token, missing), "修改成功");
+        JsonNode saved = body(request(HttpMethod.GET, "/achievement/" + id, token, null));
+        for (String field : achievementQuantityFields()) assertTrue(saved.path(field).isNull());
+    }
+
+    private List<String> achievementQuantityFields() {
+        return List.of("teDengJiang", "yiDengJiang", "erDengJiang", "sanDengJiang", "jinJiang",
+                "yinJiang", "tongJiang", "youShengJiang", "budDengDengCi");
+    }
+
+    private Map<String, Object> achievementQuantityPayload() {
+        return new LinkedHashMap<>(Map.of("category", 1, "level", "省级", "achName", "Quantity regression",
+                "gotTime", 1767225600000L, "department", "Synthetic department", "isCompetition", 1,
+                "comment", "Synthetic quantity regression"));
+    }
+
+    @Test
     void userDirectoryNeverReturnsPasswords() throws Exception {
         assertEquals(HttpStatus.UNAUTHORIZED, request(HttpMethod.GET, "/system/allUsers", null, null).getStatusCode());
         for (long userId : new long[]{USER, LEADER, ADMIN}) {
