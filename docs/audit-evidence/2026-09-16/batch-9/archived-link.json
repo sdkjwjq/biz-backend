@@ -1,0 +1,38 @@
+{
+  "case": "archived-link",
+  "errors": [],
+  "routes": [
+    "/login",
+    "/login",
+    "/login",
+    "/home/works",
+    "/home/works",
+    "/home/notice",
+    "/home/notice",
+    "/home/audit?type=performance&subId=972099",
+    "/home/audit"
+  ],
+  "notice": {
+    "noticeId": 989101,
+    "fromUserId": 110228,
+    "toUserId": 910001,
+    "type": "3",
+    "triggerEvent": "绩效归档完成",
+    "title": "审计归档通知：绩效已完结归档",
+    "content": "请查看已归档绩效详情",
+    "sourceType": "2",
+    "sourceId": 972099,
+    "isRead": "1",
+    "isDelete": 0,
+    "createTime": "2026-09-16 14:13:19"
+  },
+  "jumpMessage": "该绩效暂无与您相关的审批单（可能已流转给下一位或不在您的待办中）",
+  "openApprovalDialogs": 0,
+  "availableHistory": [
+    {
+      "subId": 972099,
+      "perfName": "已归档历史绩效",
+      "flowStatus": 30
+    }
+  ]
+}
