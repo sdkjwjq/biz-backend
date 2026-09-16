@@ -1,0 +1,47 @@
+{
+  "kind": "manual-submit",
+  "errors": [],
+  "before": "指标编码：\n2.1.4\n指标名称：\n审计待填绩效D\n目标值：\n20.00\n当前完成值：\n0.00\n完成率：\n0%\n数据类型：\n数值\n归口部门：\n审计测试部门A\n负责人：\n审计用户A",
+  "after": "指标编码：\n2.1.4\n指标名称：\n审计待填绩效D\n目标值：\n20.00\n当前完成值：\n7.00\n完成率：\n35%\n数据类型：\n数值\n归口部门：\n审计测试部门A\n负责人：\n审计用户A",
+  "inputAfter": "0",
+  "yearData": [
+    {
+      "perfId": 950031,
+      "projectId": 1,
+      "parentId": 0,
+      "ancestors": "0,2,2.1",
+      "perfCode": "2.1.3",
+      "perfName": "审计待填绩效C",
+      "year": "2026",
+      "targetValue": 10,
+      "currentValue": 7,
+      "dataType": "1",
+      "deptId": 920001,
+      "principalId": 910002,
+      "auditorId": 910003,
+      "leaderId": 910001,
+      "isDelete": 0,
+      "createTime": "2026-09-16 21:15:32",
+      "updateTime": "2026-09-16 21:18:49"
+    },
+    {
+      "perfId": 950041,
+      "projectId": 1,
+      "parentId": 0,
+      "ancestors": "0,2,2.1",
+      "perfCode": "2.1.4",
+      "perfName": "审计待填绩效D",
+      "year": "2026",
+      "targetValue": 20,
+      "currentValue": 7,
+      "dataType": "1",
+      "deptId": 920001,
+      "principalId": 910002,
+      "auditorId": 910003,
+      "leaderId": 910001,
+      "isDelete": 0,
+      "createTime": "2026-09-16 21:18:00",
+      "updateTime": "2026-09-16 21:20:20"
+    }
+  ]
+}

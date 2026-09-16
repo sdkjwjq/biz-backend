@@ -1,0 +1,31 @@
+{
+  "kind": "related-upload",
+  "errors": [],
+  "bValue": "7",
+  "payload": {
+    "task_id": 932001,
+    "file_id": 164,
+    "reported_value": 3,
+    "data_type": "1",
+    "comment": ""
+  },
+  "saved": [
+    {
+      "subId": 162,
+      "taskId": 932001,
+      "fileId": 164,
+      "filename": "batch13(1).pdf",
+      "reportedValue": 3,
+      "dataType": "1",
+      "submitBy": 910001,
+      "submitDeptId": 920001,
+      "manageDeptId": 920001,
+      "submitTime": "2026-09-16 21:18:15",
+      "fileSuffix": "pdf",
+      "flowStatus": 10,
+      "currentHandlerId": 910003,
+      "isDelete": 0,
+      "sub_list": []
+    }
+  ]
+}

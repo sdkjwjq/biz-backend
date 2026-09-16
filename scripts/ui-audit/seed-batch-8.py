@@ -10,7 +10,7 @@ import subprocess
 
 ROOT = Path(__file__).resolve().parents[2]
 parser = argparse.ArgumentParser()
-parser.add_argument('--batch', choices=['8', '9', '10', '11', '12', '13'], default='8')
+parser.add_argument('--batch', choices=['8', '9', '10', '11', '12', '13', '13-regression', '13-year'], default='8')
 batch = parser.parse_args().batch
 schema = json.loads((ROOT / 'target/ui-audit/state.json').read_text())['schema']
 if not re.fullmatch(r'biz_review_test_[0-9a-f]{32}', schema):

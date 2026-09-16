@@ -1,0 +1,60 @@
+{
+  "kind": "related-upload",
+  "errors": [],
+  "bValue": "7",
+  "payload": {
+    "third_task_id": 933001,
+    "file_id": 166,
+    "comment": "",
+    "sub_list": [
+      {
+        "task_id": 963001,
+        "reported_value": 3,
+        "data_type": 1
+      }
+    ]
+  },
+  "saved": [
+    {
+      "subId": 164,
+      "taskId": 933001,
+      "fileId": 166,
+      "filename": "batch13(3).pdf",
+      "reportedValue": 3,
+      "dataType": "1",
+      "submitBy": 910001,
+      "submitDeptId": 920001,
+      "manageDeptId": 920001,
+      "submitTime": "2026-09-16 21:22:14",
+      "fileSuffix": "pdf",
+      "flowStatus": 10,
+      "currentHandlerId": 910003,
+      "isDelete": 0,
+      "sub_list": [
+        {
+          "task_id": 963001,
+          "reported_value": 3,
+          "data_type": "1"
+        }
+      ]
+    }
+  ],
+  "children": [
+    {
+      "taskId": 963001,
+      "parentId": 933001,
+      "phase": 2026,
+      "taskName": "合成四级子任务",
+      "leaderId": 910001,
+      "deptId": 920001,
+      "dataType": "1",
+      "targetValue": 5,
+      "currentValue": 3,
+      "progress": 60,
+      "status": "1",
+      "isDelete": 0,
+      "createTime": "2026-09-16 21:20:46",
+      "updateTime": "2026-09-16 21:22:13"
+    }
+  ]
+}
