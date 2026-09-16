@@ -3,6 +3,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const assert = require('node:assert/strict');
 const output = path.resolve(__dirname, '../../target/ui-audit/evidence-batch-10');
+const fixed = process.argv.includes('--fixed');
 
 async function main() {
   const browser = await chromium.launch({ channel: 'msedge', headless: true });
@@ -59,11 +60,12 @@ async function main() {
     await page.getByText('审批通过', { exact: true }).waitFor();
     await page.unroute('**/api/biz/audit/task/931001');
     result.after = await page.evaluate(async () => Promise.all([931001, 931002].map(id => window.auditApi.getAuditByTaskId(id))));
-    assert.equal(Number(result.posted.sub_id), 981001);
-    assert.equal(Number(result.after[0][0].flowStatus), 20);
-    assert.equal(Number(result.after[1][0].flowStatus), 10);
-    await fs.writeFile(path.join(output, 'task-approval-race.json'), JSON.stringify(result, null, 2));
-    console.log(JSON.stringify({ reproduced: true, shownTask: 931002, approvedTask: 931001 }));
+    assert.equal(Number(result.posted.sub_id), fixed ? 981002 : 981001);
+    assert.equal(Number(result.after[0][0].flowStatus), fixed ? 10 : 20);
+    assert.equal(Number(result.after[1][0].flowStatus), fixed ? 20 : 10);
+    assert.deepEqual(result.errors, []);
+    await fs.writeFile(path.join(output, fixed ? 'task-approval-race-fixed.json' : 'task-approval-race.json'), JSON.stringify(result, null, 2));
+    console.log(JSON.stringify({ fixed, passed: true, shownTask: 931002, approvedTask: fixed ? 931002 : 931001 }));
   } catch (error) {
     console.error(await page.locator('body').innerText());
     throw error;

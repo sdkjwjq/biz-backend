@@ -1,0 +1,22 @@
+[
+  {
+    "kind": "audit-success",
+    "passed": true,
+    "errors": []
+  },
+  {
+    "kind": "audit-failure",
+    "passed": true,
+    "errors": []
+  },
+  {
+    "kind": "children",
+    "passed": true,
+    "errors": []
+  },
+  {
+    "kind": "unmount",
+    "passed": true,
+    "errors": []
+  }
+]
