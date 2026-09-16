@@ -1,0 +1,64 @@
+{
+  "case": "budget-race",
+  "fixed": true,
+  "errors": [],
+  "currentApi": {
+    "sheet": {
+      "sheetId": 989002,
+      "year": 2026,
+      "month": 2,
+      "locked": 0,
+      "fileId": null,
+      "importBy": null,
+      "importTime": "2026-09-16 14:09:33",
+      "updateTime": null,
+      "isDelete": 0
+    },
+    "sources": [
+      {
+        "itemId": 37,
+        "sheetId": 989002,
+        "sourceKey": "audit",
+        "sourceName": "审计资金来源",
+        "displayOrder": 1,
+        "fiveYearTotal": 222,
+        "available": 222,
+        "annualPlan": 222,
+        "carryover": 0,
+        "arrived": 222
+      }
+    ],
+    "tasks": []
+  },
+  "before": "年度:\n2026年\n月份\n2月\n锁定\n导入\n数据导出\n模板下载\n\t资金来源\t合计数\t审计资金来源\n预算\n安排\n（万元）\t五年项目总预算\t222.00\t222.00\n2026年可使用资金\t222.00\t222.00\n其中\t2026年预算安排\t222.00\t\n\n上年结转结余资金\t0.00\t0.00\n\t到位数\t222.00\t\n资金\n支持\n方向\t改革任务\t合计数\t1 落实立德树人根本任务\t2 创新产教融合机制\t3 打造高水平专业群\t4 建设一流核心课程\t5 开发优质新形态教材\t6 建设高水平双师队伍\t7 建设产教融合实训基地\t8 构建数字化教学新生态\t9 拓展国际交流与合作\t10 打造一流区域型高端智库\n金额(万元)\t0.00\t0.00\t0.00\t0.00\t0.00\t0.00\t0.00\t0.00\t0.00\t0.00\t0.00\n支出\n经济\n分类\t其中：商品和服务支出\t0.00\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\n资本性支出\t0.00\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\n其他支出\t0.00\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\n资金使用有效性：选取一个最具代表性的核心产出指标\t指标名称\t——\t\t\t\t\t\t\t\t\t\t\n项目期满的目标值\t——\t\t\t\t\t\t\t\t\t\t\n截至2026 年年末目标累计实现情况\t——\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t",
+  "lateApi": {
+    "sheet": {
+      "sheetId": 989001,
+      "year": 2026,
+      "month": 1,
+      "locked": 1,
+      "fileId": null,
+      "importBy": null,
+      "importTime": "2026-09-16 14:09:33",
+      "updateTime": null,
+      "isDelete": 0
+    },
+    "sources": [
+      {
+        "itemId": 36,
+        "sheetId": 989001,
+        "sourceKey": "audit",
+        "sourceName": "审计资金来源",
+        "displayOrder": 1,
+        "fiveYearTotal": 111,
+        "available": 111,
+        "annualPlan": 111,
+        "carryover": 0,
+        "arrived": 111
+      }
+    ],
+    "tasks": []
+  },
+  "selectedMonth": "2月",
+  "after": "年度:\n2026年\n月份\n2月\n锁定\n导入\n数据导出\n模板下载\n\t资金来源\t合计数\t审计资金来源\n预算\n安排\n（万元）\t五年项目总预算\t222.00\t222.00\n2026年可使用资金\t222.00\t222.00\n其中\t2026年预算安排\t222.00\t\n\n上年结转结余资金\t0.00\t0.00\n\t到位数\t222.00\t\n资金\n支持\n方向\t改革任务\t合计数\t1 落实立德树人根本任务\t2 创新产教融合机制\t3 打造高水平专业群\t4 建设一流核心课程\t5 开发优质新形态教材\t6 建设高水平双师队伍\t7 建设产教融合实训基地\t8 构建数字化教学新生态\t9 拓展国际交流与合作\t10 打造一流区域型高端智库\n金额(万元)\t0.00\t0.00\t0.00\t0.00\t0.00\t0.00\t0.00\t0.00\t0.00\t0.00\t0.00\n支出\n经济\n分类\t其中：商品和服务支出\t0.00\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\n资本性支出\t0.00\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\n其他支出\t0.00\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\n资金使用有效性：选取一个最具代表性的核心产出指标\t指标名称\t——\t\t\t\t\t\t\t\t\t\t\n项目期满的目标值\t——\t\t\t\t\t\t\t\t\t\t\n截至2026 年年末目标累计实现情况\t——\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t\n\t"
+}

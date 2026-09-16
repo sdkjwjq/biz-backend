@@ -1,0 +1,12 @@
+{
+  "case": "delayed-init",
+  "errors": [],
+  "cancellationErrors": [],
+  "timer": {
+    "hold": false,
+    "pending": [],
+    "cleared": 1,
+    "fired": 0
+  },
+  "chartsAfterReentry": 5
+}

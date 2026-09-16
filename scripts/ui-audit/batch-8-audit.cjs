@@ -6,12 +6,13 @@ const OUTPUT = path.resolve(__dirname, '../../target/ui-audit/evidence-batch-8')
 
 async function main() {
   const name = process.argv[2];
+  const fixed = process.argv.includes('--fixed');
   assert(['empty-trend', 'year-race', 'budget-race'].includes(name));
   const browser = await chromium.launch({ channel: 'msedge', headless: true });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1100 }, reducedMotion: 'reduce' });
   await context.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort());
   const page = await context.newPage();
-  const result = { case: name, errors: [] };
+  const result = { case: name, fixed, errors: [] };
   let echartsUrl;
   page.on('request', req => { if (/\/echarts\.js\?/.test(req.url())) echartsUrl = req.url(); });
   page.on('pageerror', error => result.errors.push(error.message));
@@ -54,12 +55,14 @@ async function main() {
       result.before = await page.locator('.budget-table-card').innerText();
       const old = responseFor(url => url.pathname === '/api/budget' && url.searchParams.get('month') === '1');
       release(); result.lateApi = await (await old).json();
-      await page.waitForFunction(() => document.querySelector('.budget-table-card').textContent.includes('111'));
+      await (await old).finished();
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
       result.selectedMonth = await month.innerText();
       result.after = await page.locator('.budget-table-card').innerText();
       assert.ok(result.selectedMonth.includes('2月'));
       assert.equal(result.currentApi.sheet.month, 2); assert.equal(result.lateApi.sheet.month, 1);
-      assert.ok(result.after.includes('111')); assert.ok(result.after.includes('解锁'));
+      assert.ok(result.after.includes(fixed ? '222' : '111'));
+      assert.equal(result.after.includes('解锁'), !fixed);
     } else {
       const initial = responseFor(url => url.pathname === '/api/dashboard/trend/2026');
       await page.getByRole('menuitem', { name: '数据大屏', exact: true }).click();
@@ -85,12 +88,18 @@ async function main() {
         })).jsonValue();
         const old = responseFor(url => url.pathname === '/api/dashboard/trend/2025');
         release(); result.lateApi = await (await old).json();
+        if (fixed) {
+          await (await old).finished();
+          await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+          result.after = await page.evaluate(readTrend, { moduleUrl: echartsUrl });
+        } else {
         result.after = await (await page.waitForFunction(() => {
           const ec = window.__auditEcharts;
           return [...document.querySelectorAll('[_echarts_instance_]')].map(el => ec.getInstanceByDom(el)?.getOption()?.series?.[0]).find(series => series?.type === 'line' && series?.data?.[0] === 77)?.data;
         })).jsonValue();
+        }
         result.selectedYear = await page.locator('.dropdown-wrap .nav-btn').innerText();
-        assert.ok(result.selectedYear.includes('2027')); assert.deepEqual(result.before, [33]); assert.deepEqual(result.after, [77]);
+        assert.ok(result.selectedYear.includes('2027')); assert.deepEqual(result.before, [33]); assert.deepEqual(result.after, fixed ? [33] : [77]);
       }
     }
     assert.deepEqual(result.errors, []);
@@ -98,7 +107,7 @@ async function main() {
       await page.mouse.move(700, 50);
       await page.waitForTimeout(1200); // 等待图表入场动画结束，复核稳定值并保存可读截图。
       result.stableChartData = await page.evaluate(readTrend, { moduleUrl: echartsUrl });
-      assert.deepEqual(result.stableChartData, name === 'year-race' ? [77] : [10, 15, 12, 25, 20, 45]);
+      assert.deepEqual(result.stableChartData, name === 'year-race' ? (fixed ? [33] : [77]) : [10, 15, 12, 25, 20, 45]);
       await page.evaluate(() => {
         for (const el of document.querySelectorAll('[_echarts_instance_]')) {
           const chart = window.__auditEcharts.getInstanceByDom(el);
@@ -106,9 +115,9 @@ async function main() {
         }
       });
     }
-    await page.screenshot({ path: path.join(OUTPUT, name + '.png'), fullPage: true });
-    await fs.writeFile(path.join(OUTPUT, name + '.json'), JSON.stringify(result, null, 2));
-    console.log(JSON.stringify({ case: name, reproduced: true, errors: result.errors }));
+    await page.screenshot({ path: path.join(OUTPUT, name + (fixed ? '-fixed' : '') + '.png'), fullPage: true });
+    await fs.writeFile(path.join(OUTPUT, name + (fixed ? '-fixed' : '') + '.json'), JSON.stringify(result, null, 2));
+    console.log(JSON.stringify({ case: name, fixed, passed: true, errors: result.errors }));
   } catch (error) {
     console.error(JSON.stringify({ result, url: page.url() }));
     await page.screenshot({ path: path.join(OUTPUT, name + '-failure.png'), fullPage: true });
