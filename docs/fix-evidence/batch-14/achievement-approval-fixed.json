@@ -1,0 +1,110 @@
+{
+  "kind": "achievement-approval",
+  "errors": [],
+  "seedResponses": [],
+  "achievements": [
+    {
+      "achId": 12,
+      "category": 1,
+      "level": "省级",
+      "achName": "成果竞态A",
+      "department": "合成颁发单位",
+      "gotTime": "2026-09-16 10:00:00",
+      "deptId": 920001,
+      "fileId": null,
+      "comment": "合成审批测试",
+      "isCompetition": 1,
+      "teDengJiang": null,
+      "yiDengJiang": 2,
+      "erDengJiang": null,
+      "sanDengJiang": null,
+      "jinJiang": null,
+      "yinJiang": null,
+      "tongJiang": null,
+      "youShengJiang": null,
+      "budDengDengCi": null,
+      "createBy": 1910001,
+      "auditStatus": 10,
+      "currentHandlerId": 110228,
+      "isDelete": 0,
+      "createTime": "2026-09-16 23:06:48",
+      "updateTime": "2026-09-16 23:06:48"
+    },
+    {
+      "achId": 13,
+      "category": 1,
+      "level": "省级",
+      "achName": "成果竞态B",
+      "department": "合成颁发单位",
+      "gotTime": "2026-09-16 10:00:00",
+      "deptId": 920001,
+      "fileId": null,
+      "comment": "合成审批测试",
+      "isCompetition": 1,
+      "teDengJiang": null,
+      "yiDengJiang": 2,
+      "erDengJiang": null,
+      "sanDengJiang": null,
+      "jinJiang": null,
+      "yinJiang": null,
+      "tongJiang": null,
+      "youShengJiang": null,
+      "budDengDengCi": null,
+      "createBy": 1910001,
+      "auditStatus": 10,
+      "currentHandlerId": 110228,
+      "isDelete": 0,
+      "createTime": "2026-09-16 23:06:48",
+      "updateTime": "2026-09-16 23:06:48"
+    }
+  ],
+  "visible": "成果竞态B",
+  "payload": {
+    "sub_id": 10,
+    "is_pass": true,
+    "title": "同意",
+    "content": "同意"
+  },
+  "saved": [
+    [
+      {
+        "subId": 9,
+        "achId": 12,
+        "category": 1,
+        "level": "省级",
+        "achName": "成果竞态A",
+        "department": "合成颁发单位",
+        "gotTime": "2026-09-16 10:00:00",
+        "deptId": 920001,
+        "fileId": null,
+        "achievementComment": "合成审批测试",
+        "submitBy": 1910001,
+        "submitTime": "2026-09-16 23:06:48",
+        "flowStatus": 10,
+        "currentHandlerId": 110228,
+        "comment": "合成审批测试",
+        "isDelete": 0
+      }
+    ],
+    [
+      {
+        "subId": 10,
+        "achId": 13,
+        "category": 1,
+        "level": "省级",
+        "achName": "成果竞态B",
+        "department": "合成颁发单位",
+        "gotTime": "2026-09-16 10:00:00",
+        "deptId": 920001,
+        "fileId": null,
+        "achievementComment": "合成审批测试",
+        "submitBy": 1910001,
+        "submitTime": "2026-09-16 23:06:48",
+        "flowStatus": 30,
+        "currentHandlerId": 110228,
+        "comment": "同意",
+        "isDelete": 0
+      }
+    ]
+  ]
+}

@@ -3,10 +3,15 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const assert = require('node:assert/strict');
 const output = path.resolve(__dirname, '../../target/ui-audit/evidence-batch-14');
+const fixed = process.argv.includes('--fixed');
+const stay = process.argv.includes('--stay');
+const fail = process.argv.includes('--fail');
 
 async function main() {
   const kind = process.argv[2];
   assert(['achievement-approval', 'achievement-upload', 'report-draft'].includes(kind));
+  assert(!fail || (fixed && kind === 'report-draft'), '--fail requires report-draft --fixed');
+  assert(!stay || (fixed && kind !== 'achievement-approval'), '--stay requires a fixed form scenario');
   const browser = await chromium.launch({ channel: 'msedge', headless: true });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1100 }, reducedMotion: 'reduce' });
   await context.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort());
@@ -19,7 +24,11 @@ async function main() {
     const started = new Promise(resolve => { reached = resolve; });
     const gate = new Promise(resolve => { release = resolve; });
     const ready = page.route(pattern, async route => {
-      const response = await route.fetch(); reached(); await gate; await route.fulfill({ response });
+      if (fail && kind === 'report-draft' && route.request().method() !== 'POST') return route.continue();
+      const response = fail ? null : await route.fetch();
+      reached(); await gate;
+      if (fail) await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ message: 'Synthetic failure' }) });
+      else await route.fulfill({ response });
     });
     return { ready, started };
   };
@@ -45,16 +54,20 @@ async function main() {
       const posted = page.waitForRequest(req => req.method() === 'POST' && new URL(req.url()).pathname === '/api/system/notice');
       await page.getByRole('button', { name: '发送督办', exact: true }).click();
       await held.started; result.payload = (await posted).postDataJSON();
+      if (!stay) {
       await page.getByRole('button', { name: '重置', exact: true }).click();
       await page.locator('.report-form .el-select').click();
       await page.getByRole('option', { name: '仅用户A可见的三级任务', exact: true }).click();
       await title.fill('第二条尚未发送的草稿'); await content.fill('不能丢失的新内容');
+      }
       result.before = { title: await title.inputValue(), content: await content.inputValue() };
       await shot('before'); release();
-      await page.getByText('督办信息已发送', { exact: true }).waitFor();
+      if (!fail) await page.getByText('督办信息已发送', { exact: true }).waitFor();
+      await page.waitForFunction(() => !document.querySelector('.report-form .el-button.is-loading'));
       result.after = { title: await title.inputValue(), content: await content.inputValue() };
       assert.equal(result.payload.title, '第一条合成督办');
-      assert.equal(result.after.title, ''); assert.equal(result.after.content, '');
+      assert.equal(result.after.title, fixed && (!stay || fail) ? result.before.title : '');
+      assert.equal(result.after.content, fixed && (!stay || fail) ? result.before.content : '');
       await shot('after');
     } else {
       await page.evaluate(async () => { window.achievementApi = await import('/src/api/achievement.js'); });
@@ -109,12 +122,13 @@ async function main() {
         await page.getByText('成果已归档', { exact: true }).waitFor();
         await page.unroute(`**/api/achievement/audit/achievement/${a.achId}`);
         result.saved = await page.evaluate(async ids => Promise.all(ids.map(id => window.achievementApi.getAchievementAuditsByAchId(id))), [a.achId,b.achId]);
-        assert.equal(Number(result.payload.sub_id), Number(result.saved[0][0].subId));
-        assert.equal(Number(result.saved[0][0].flowStatus), 30);
-        assert.equal(Number(result.saved[1][0].flowStatus), 10);
+        assert.equal(Number(result.payload.sub_id), Number(result.saved[fixed ? 1 : 0][0].subId));
+        assert.equal(Number(result.saved[0][0].flowStatus), fixed ? 10 : 30);
+        assert.equal(Number(result.saved[1][0].flowStatus), fixed ? 30 : 10);
       } else {
         const dialog = page.getByRole('dialog', { name: '新增成果', exact: true });
         const fill = async (name, count) => {
+          await dialog.locator('.el-radio').filter({ has: page.getByText('是竞赛', { exact: true }) }).click();
           await dialog.locator('.el-form-item').filter({ hasText: '成果类别' }).locator('.el-select').click();
           await page.getByRole('option', { name: '1.落实立德树人根本任务', exact: true }).click();
           await dialog.locator('.el-form-item').filter({ hasText: '级别' }).locator('.el-select').click();
@@ -135,28 +149,37 @@ async function main() {
         const held = hold('**/api/system/upload/0'); await held.ready;
         await dialog.getByRole('button', { name: '提交审核', exact: true }).click();
         await held.started;
+        if (!stay) {
         await dialog.getByRole('button', { name: '取消', exact: true }).click();
         await dialog.waitFor({ state: 'hidden' });
         await page.getByRole('button', { name: '新增', exact: true }).click();
         await fill('尚未提交的成果D', 5);
+        }
         await shot('before');
         const posted = page.waitForRequest(req => req.method() === 'POST' && new URL(req.url()).pathname === '/api/achievement/add');
+        const completed = page.waitForResponse(res => res.request().method() === 'POST' && new URL(res.url()).pathname === '/api/achievement/add');
         release(); result.payload = (await posted).postDataJSON();
-        await page.getByText('成果已提交，待管理员归档审核', { exact: true }).waitFor();
+        await completed;
+        if (!fixed) await page.getByText('成果已提交，待管理员归档审核', { exact: true }).waitFor();
         result.saved = await page.evaluate(async () => (await window.achievementApi.getAllAchievements()).filter(row => ['正在提交的成果C','尚未提交的成果D'].includes(row.achName)));
         result.saved = result.saved.filter(row => Number(row.fileId) === Number(result.payload.fileId));
-        assert.equal(result.payload.achName, '尚未提交的成果D');
+        assert.equal(result.payload.achName, fixed ? '正在提交的成果C' : '尚未提交的成果D');
         assert.equal(result.saved.length, 1);
-        assert.equal(result.saved[0].achName, '尚未提交的成果D');
-        assert.notEqual(Number(result.saved[0].yiDengJiang), 5);
+        assert.equal(result.saved[0].achName, fixed ? '正在提交的成果C' : '尚未提交的成果D');
+        if (fixed) assert.equal(Number(result.saved[0].yiDengJiang), 2);
+        else assert.notEqual(Number(result.saved[0].yiDengJiang), 5);
         assert.ok(result.saved[0].fileId);
-        await dialog.waitFor({ state: 'hidden' });
+        if (fixed && !stay) {
+          assert.ok(await dialog.isVisible());
+          assert.equal(await dialog.getByPlaceholder('请输入建设成果名称', { exact: true }).inputValue(), '尚未提交的成果D');
+          assert.equal(await dialog.getByRole('spinbutton').inputValue(), '5');
+        } else await dialog.waitFor({ state: 'hidden' });
         await shot('after');
       }
     }
     assert.deepEqual(result.errors, []);
-    await fs.writeFile(path.join(output, kind + '.json'), JSON.stringify(result, null, 2));
-    console.log(JSON.stringify({ kind, reproduced: true }));
+    await fs.writeFile(path.join(output, kind + (fixed ? '-fixed' : '') + (stay ? '-stay' : '') + (fail ? '-fail' : '') + '.json'), JSON.stringify(result, null, 2));
+    console.log(JSON.stringify({ kind, fixed, stay, fail, passed: true }));
   } catch (error) { console.error(JSON.stringify({ result, text: await page.locator('body').innerText() })); throw error;
   } finally { release(); await context.close(); await browser.close(); }
 }
