@@ -3,10 +3,13 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const assert = require('node:assert/strict');
 const output = path.resolve(__dirname, '../../target/ui-audit/evidence-batch-12');
+const fixed = process.argv.includes('--fixed');
+const lifecycle = process.argv.includes('--lifecycle');
+const failOld = process.argv.includes('--fail-old');
 
 async function main() {
   const kind = process.argv[2];
-  assert(['approval-dialog', 'file-preview', 'related-task'].includes(kind));
+  assert(['approval-dialog', 'approval-normal', 'file-preview', 'related-task'].includes(kind));
   const browser = await chromium.launch({ channel: 'msedge', headless: true });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1100 }, reducedMotion: 'reduce' });
   await context.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort());
@@ -19,7 +22,9 @@ async function main() {
     const started = new Promise(resolve => { reached = resolve; });
     const gate = new Promise(resolve => { release = resolve; });
     await page.route(pattern, async route => {
-      const response = await route.fetch(); reached(); await gate; await route.fulfill({ response });
+      const response = await route.fetch(); reached(); await gate;
+      if (failOld) await route.fulfill({ status: 503, json: { message: '合成旧请求失败' } });
+      else await route.fulfill({ response });
     });
     return { started };
   };
@@ -37,9 +42,20 @@ async function main() {
     if (kind !== 'related-task') {
       await page.getByRole('menuitem', { name: /审核中心/ }).click();
       await page.locator('.audit-container .el-loading-mask').waitFor({ state: 'hidden' });
-      await page.getByPlaceholder('搜索任务名称、提交人...').fill(kind === 'file-preview' ? '填报竞态' : '审计手动绩效');
+      await page.getByPlaceholder('搜索任务名称、提交人...').fill(kind === 'file-preview' ? '填报竞态' : kind === 'approval-normal' ? '审计零值绩效B' : '审计手动绩效');
     }
-    if (kind === 'approval-dialog') {
+    if (kind === 'approval-normal') {
+      await rows.filter({ hasText: '审计零值绩效B' }).getByRole('button', { name: '审批', exact: true }).click();
+      await dialog.getByPlaceholder('请输入审批意见（必填）...').fill('合成正常审批测试');
+      await dialog.getByRole('button', { name: '确认提交', exact: true }).click();
+      await page.getByText('审批通过', { exact: true }).waitFor();
+      await dialog.waitFor({ state: 'hidden' });
+      result.saved = await page.evaluate(async () => {
+        const api = await import('/src/api/performance.js');
+        return api.getPerformanceAuditsByPerfAndYear(950021, 2026);
+      });
+      assert.equal(Number(result.saved[0].flowStatus), 20);
+    } else if (kind === 'approval-dialog') {
       await rows.filter({ hasText: '审计手动绩效' }).getByRole('button', { name: '审批', exact: true }).click();
       const held = await hold('**/api/performance/audit');
       const submitted = page.waitForRequest(req => req.method() === 'POST' && new URL(req.url()).pathname === '/api/performance/audit');
@@ -55,10 +71,14 @@ async function main() {
       result.before = await dialog.innerText();
       await screenshot('before');
       release();
-      await page.getByText('已驳回', { exact: true }).waitFor();
-      await dialog.waitFor({ state: 'hidden' });
-      result.displayedOutcome = '已驳回';
-      result.bClosedWithoutSubmission = true;
+      await page.getByText(fixed ? '审批通过' : '已驳回', { exact: true }).waitFor();
+      if (fixed) {
+        assert.ok(await dialog.isVisible());
+        assert.equal(await dialog.getByPlaceholder('请输入审批意见（必填）...').inputValue(), 'B审批草稿，尚未提交');
+        assert.ok(await dialog.getByRole('radio', { name: '驳回', exact: true }).isChecked());
+      } else await dialog.waitFor({ state: 'hidden' });
+      result.displayedOutcome = fixed ? '审批通过' : '已驳回';
+      result.bClosedWithoutSubmission = !fixed;
       result.saved = await page.evaluate(async () => {
         const api = await import('/src/api/performance.js');
         return Promise.all([950011, 950021].map(id => api.getPerformanceAuditsByPerfAndYear(id, 2026)));
@@ -105,7 +125,7 @@ async function main() {
       await task.getByRole('button', { name: '返回绩效指标详情', exact: true }).click();
       await detail.waitFor();
       await open('竞态任务B');
-      await task.getByRole('button', { name: '确认提交', exact: true }).waitFor();
+      if (!lifecycle) await task.getByRole('button', { name: '确认提交', exact: true }).waitFor();
       await task.locator('.el-loading-mask').waitFor({ state: 'hidden' });
       const old = page.waitForResponse(res => res.url().includes('/biz/audit/task/931001'));
       release(); await old;
@@ -113,6 +133,17 @@ async function main() {
       result.visible = await task.locator('.task-info-box').innerText();
       assert.ok(result.visible.includes('竞态任务B'));
       await screenshot('before-approval');
+      if (lifecycle) {
+        assert.equal(await task.getByRole('button', { name: '确认提交', exact: true }).count(), 0);
+        await page.unroute('**/api/biz/audit/task/931001');
+        await task.getByRole('button', { name: '返回绩效指标详情', exact: true }).click();
+        await detail.waitFor();
+        await open('竞态任务A');
+        await task.getByRole('button', { name: '确认提交', exact: true }).waitFor();
+        await task.locator('.el-loading-mask').waitFor({ state: 'hidden' });
+        assert.ok(await task.getByRole('button', { name: '确认提交', exact: true }).isEnabled());
+        result.reopenedOriginalTask = true;
+      } else {
       const posted = page.waitForRequest(req => req.method() === 'POST' && new URL(req.url()).pathname === '/api/biz/audit');
       await task.getByRole('button', { name: '确认提交', exact: true }).click();
       result.payload = (await posted).postDataJSON();
@@ -122,13 +153,14 @@ async function main() {
         const api = await import('/src/api/audit.js');
         return Promise.all([931001,931002].map(id => api.getAuditByTaskId(id)));
       });
-      assert.equal(Number(result.payload.sub_id), 981001);
-      assert.equal(Number(result.saved[0][0].flowStatus), 20);
-      assert.equal(Number(result.saved[1][0].flowStatus), 10);
+      assert.equal(Number(result.payload.sub_id), fixed ? 981002 : 981001);
+      assert.equal(Number(result.saved[0][0].flowStatus), fixed ? 10 : 20);
+      assert.equal(Number(result.saved[1][0].flowStatus), fixed ? 20 : 10);
+      }
     }
     assert.deepEqual(result.errors, []);
-    await fs.writeFile(path.join(output, kind + '.json'), JSON.stringify(result, null, 2));
-    console.log(JSON.stringify({ kind, reproduced: true }));
+    await fs.writeFile(path.join(output, kind + (fixed ? '-fixed' : '') + (lifecycle ? '-lifecycle' : '') + (failOld ? '-failure' : '') + '.json'), JSON.stringify(result, null, 2));
+    console.log(JSON.stringify({ kind, fixed, lifecycle, failOld, passed: true }));
   } catch (error) { console.error(await page.locator('body').innerText()); throw error;
   } finally { release(); await context.close(); await browser.close(); }
 }

@@ -1,0 +1,24 @@
+{
+  "kind": "approval-normal",
+  "errors": [],
+  "saved": [
+    {
+      "subId": 971002,
+      "perfId": 950021,
+      "yearId": 950022,
+      "year": 2026,
+      "perfCode": "2.1.2",
+      "perfName": "审计零值绩效B",
+      "actualValue": 0,
+      "submitBy": 910001,
+      "submitTime": "2026-09-16 20:21:37",
+      "flowStatus": 20,
+      "currentHandlerId": 110228,
+      "comment": "合成正常审批测试",
+      "isDelete": 0,
+      "leaderId": 910001,
+      "auditorId": 910003,
+      "principalId": 910002
+    }
+  ]
+}

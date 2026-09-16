@@ -1,0 +1,55 @@
+{
+  "kind": "approval-dialog",
+  "errors": [],
+  "payload": {
+    "sub_id": 971001,
+    "is_pass": true,
+    "title": "同意",
+    "content": "同意"
+  },
+  "before": "业务审批\n申请详情\n申请单号\t971002\t业务类型\t绩效填报\n提交人员\t审计用户A\t所属部门\t\n填报数值/金额\t0\n完成情况\t绩效B已明确填报零\n佐证材料\t\n审批处理\n审核结果\n通过\n驳回\n审批意见\n关闭\n确认提交",
+  "displayedOutcome": "审批通过",
+  "bClosedWithoutSubmission": false,
+  "saved": [
+    [
+      {
+        "subId": 971001,
+        "perfId": 950011,
+        "yearId": 950012,
+        "year": 2026,
+        "perfCode": "2.1.1",
+        "perfName": "审计手动绩效",
+        "actualValue": 3,
+        "submitBy": 910001,
+        "submitTime": "2026-09-16 20:21:37",
+        "flowStatus": 20,
+        "currentHandlerId": 110228,
+        "comment": "同意",
+        "isDelete": 0,
+        "leaderId": 910001,
+        "auditorId": 910003,
+        "principalId": 910002
+      }
+    ],
+    [
+      {
+        "subId": 971002,
+        "perfId": 950021,
+        "yearId": 950022,
+        "year": 2026,
+        "perfCode": "2.1.2",
+        "perfName": "审计零值绩效B",
+        "actualValue": 0,
+        "submitBy": 910001,
+        "submitTime": "2026-09-16 20:21:37",
+        "flowStatus": 10,
+        "currentHandlerId": 910003,
+        "comment": "绩效B已明确填报零",
+        "isDelete": 0,
+        "leaderId": 910001,
+        "auditorId": 910003,
+        "principalId": 910002
+      }
+    ]
+  ]
+}

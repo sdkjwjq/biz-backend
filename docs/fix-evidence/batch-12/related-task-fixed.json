@@ -1,0 +1,51 @@
+{
+  "kind": "related-task",
+  "errors": [],
+  "visible": "任务编号：\n1.1.3\n任务名称：\n竞态任务B\n当前进度：\n70%\n归口部门：\n审计测试部门A\n预期达成目标：\n—\n预期成果成效：\n—\n预期佐证清单：\n—",
+  "payload": {
+    "sub_id": 981002,
+    "is_pass": true,
+    "title": "同意",
+    "content": "同意"
+  },
+  "saved": [
+    [
+      {
+        "subId": 981001,
+        "taskId": 931001,
+        "fileId": 940101,
+        "filename": "race.pdf",
+        "reportedValue": 3,
+        "dataType": "1",
+        "submitBy": 910001,
+        "submitDeptId": 920001,
+        "manageDeptId": 920001,
+        "submitTime": "2026-09-16 20:23:42",
+        "fileSuffix": "pdf",
+        "flowStatus": 10,
+        "currentHandlerId": 910003,
+        "isDelete": 0,
+        "sub_list": []
+      }
+    ],
+    [
+      {
+        "subId": 981002,
+        "taskId": 931002,
+        "fileId": 940101,
+        "filename": "race.pdf",
+        "reportedValue": 7,
+        "dataType": "1",
+        "submitBy": 910001,
+        "submitDeptId": 920001,
+        "manageDeptId": 920001,
+        "submitTime": "2026-09-16 20:23:42",
+        "fileSuffix": "pdf",
+        "flowStatus": 20,
+        "currentHandlerId": 910002,
+        "isDelete": 0,
+        "sub_list": []
+      }
+    ]
+  ]
+}
