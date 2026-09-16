@@ -1,0 +1,32 @@
+{
+  "case": "feedback-upload-race",
+  "errors": [],
+  "bValue": "7",
+  "payload": {
+    "task_id": 932001,
+    "file_id": 164,
+    "reported_value": 7,
+    "data_type": "1",
+    "comment": "A本次填报3"
+  },
+  "bDraftAfter": "",
+  "saved": [
+    {
+      "subId": 162,
+      "taskId": 932001,
+      "fileId": 164,
+      "filename": "synthetic.pdf",
+      "reportedValue": 7,
+      "dataType": "1",
+      "submitBy": 910001,
+      "submitDeptId": 920001,
+      "manageDeptId": 920001,
+      "submitTime": "2026-09-16 18:04:16",
+      "fileSuffix": "pdf",
+      "flowStatus": 10,
+      "currentHandlerId": 910003,
+      "isDelete": 0,
+      "sub_list": []
+    }
+  ]
+}
