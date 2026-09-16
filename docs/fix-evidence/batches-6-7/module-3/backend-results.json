@@ -1,0 +1,29 @@
+{
+  "tests": [
+    {
+      "test": "achievementQuantitiesRejectInvalidWithoutWrites",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "isolatedSchemaRemoved": true
+    },
+    {
+      "test": "achievementQuantitiesPreserveCompatibleInputs",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "isolatedSchemaRemoved": true
+    }
+  ],
+  "rejectedRequests": 198,
+  "rejectedWriteChecks": [
+    "biz_achievement",
+    "biz_achievement_submission",
+    "biz_achievement_audit_log",
+    "sys_notice"
+  ],
+  "compatibleCasesPerEndpoint": 10,
+  "fieldsPerCase": 9
+}

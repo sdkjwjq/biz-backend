@@ -1,0 +1,49 @@
+{
+  "case": "achievement-count",
+  "errors": [],
+  "requests": [
+    {
+      "method": "POST",
+      "path": "/api/system/login"
+    },
+    {
+      "method": "GET",
+      "path": "/api/achievement/"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/allUsers"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/allUsers"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/dept/920001"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/dept/920002"
+    },
+    {
+      "method": "POST",
+      "path": "/api/system/upload/0"
+    },
+    {
+      "method": "POST",
+      "path": "/api/achievement/add"
+    },
+    {
+      "method": "GET",
+      "path": "/api/achievement/"
+    }
+  ],
+  "visibleCountBeforeSubmit": "1.5",
+  "fractionRejectedBeforeUpload": true,
+  "sentCount": 2,
+  "addResponse": "标志性成果「审计小数奖项数量」添加成功，成果ID：12",
+  "savedCount": 2,
+  "savedAchievementId": 12,
+  "visibleSavedRow": "审计小数奖项数量\n\t\n省级\n\t\n一等奖×2\n\t\n2026-09-16\n\t\n查看材料\n\t\n审计测试单位\n\t\n待归档审核\n\t\n查看\n删除"
+}

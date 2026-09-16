@@ -77,7 +77,9 @@ node scripts/ui-audit/review-audit.cjs achievement-count
 node scripts/ui-audit/review-audit.cjs achievement-validation
 ```
 
-`pagination`、`history-tab` 已改为修复回归：15 条按 10＋5 分页不重复，历史标签自动加载、归档不计入待办。`achievement-count` 仍验证小数奖项数量提交成功但保存时截断的缺陷。`achievement-validation` 检查空表单、非法文件扩展名及整数数量保存，属于正常行为对照。成果场景通过页面实际新增合成记录，按新增接口返回的 ID 核对保存结果；多次运行会新增更多测试记录，随隔离库一起清理。结果写入 `target/ui-audit/evidence-review`。
+`pagination`、`history-tab` 已改为修复回归：15 条按 10＋5 分页不重复，历史标签自动加载、归档不计入待办。`achievement-count` 已改为修复回归：小数 1.5 被拒绝且不上传文件、不提交新增；改为 2 后真实保存，查询及页面显示为 2。`achievement-validation` 检查空表单、非法文件扩展名及整数数量保存，属于正常行为对照。成果场景通过页面实际新增合成记录，按新增接口返回的 ID 核对保存结果；多次运行会新增更多测试记录，随隔离库一起清理。结果写入 `target/ui-audit/evidence-review`。
+
+成果数量后端专项使用 `scripts/run-review-regression.py achievementQuantitiesRejectInvalidWithoutWrites` 和 `scripts/run-review-regression.py achievementQuantitiesPreserveCompatibleInputs`。先设置 `SHUANGGAO_TEST_DB_PASSWORD` 环境变量；脚本独立创建并清理临时数据库。第一个方法覆盖九字段、新增/修改的 198 次非法请求与无写入断言；第二个覆盖全部兼容输入。全量执行该脚本时也会包含这两个新增方法。
 
 审核中心补充回归使用同一全新 `review` 环境，先执行上述分页/历史测试，再执行：
 

@@ -1,0 +1,54 @@
+{
+  "case": "achievement-validation",
+  "errors": [],
+  "requests": [
+    {
+      "method": "POST",
+      "path": "/api/system/login"
+    },
+    {
+      "method": "GET",
+      "path": "/api/achievement/"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/allUsers"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/allUsers"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/dept/920001"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/dept/920002"
+    },
+    {
+      "method": "POST",
+      "path": "/api/achievement/add"
+    },
+    {
+      "method": "GET",
+      "path": "/api/achievement/"
+    }
+  ],
+  "emptyFormErrors": [
+    "请选择成果类别",
+    "请选择级别",
+    "请输入建设成果名称",
+    "请输入组织部门",
+    "请选择颁发时间",
+    "请输入具体内容"
+  ],
+  "addRequestsBeforeValidForm": 0,
+  "invalidFileRejected": true,
+  "visibleCountBeforeSubmit": "2",
+  "sentCount": 2,
+  "addResponse": "标志性成果「审计整数数量对照」添加成功，成果ID：13",
+  "savedCount": 2,
+  "savedAchievementId": 13,
+  "visibleSavedRow": "审计整数数量对照\n\t\n省级\n\t\n一等奖×2\n\t\n2026-09-16\n\t\n\t\n审计测试单位\n\t\n待归档审核\n\t\n查看\n删除"
+}
