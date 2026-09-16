@@ -1,0 +1,49 @@
+{
+  "case": "year-race",
+  "errors": [],
+  "initialApi": [],
+  "initialChartData": [
+    10,
+    15,
+    12,
+    25,
+    20,
+    45
+  ],
+  "currentApi": [
+    {
+      "dataId": 34,
+      "year": 2027,
+      "month": 1,
+      "day": 1,
+      "createTime": "2026-09-16 12:14:33",
+      "totalTasks": 100,
+      "completionCount": 33,
+      "completionRate": 33,
+      "isDelete": 0
+    }
+  ],
+  "before": [
+    33
+  ],
+  "lateApi": [
+    {
+      "dataId": 33,
+      "year": 2025,
+      "month": 1,
+      "day": 1,
+      "createTime": "2026-09-16 12:14:33",
+      "totalTasks": 100,
+      "completionCount": 77,
+      "completionRate": 77,
+      "isDelete": 0
+    }
+  ],
+  "after": [
+    77
+  ],
+  "selectedYear": "2027年",
+  "stableChartData": [
+    77
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "case": "empty-trend",
+  "errors": [],
+  "initialApi": [],
+  "initialChartData": [
+    10,
+    15,
+    12,
+    25,
+    20,
+    45
+  ],
+  "stableChartData": [
+    10,
+    15,
+    12,
+    25,
+    20,
+    45
+  ]
+}
