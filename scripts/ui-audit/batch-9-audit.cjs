@@ -6,12 +6,15 @@ const OUTPUT = path.resolve(__dirname, '../../target/ui-audit/evidence-batch-9')
 
 async function main() {
   const name = process.argv[2];
+  const fixed = process.argv.includes('--fixed');
+  const senderFixed = process.argv.includes('--sender-fixed');
+  const senderFallback = process.argv.includes('--sender-fallback');
   assert(['archived-link', 'task-link-and-sender'].includes(name));
   const browser = await chromium.launch({ channel: 'msedge', headless: true });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1100 }, reducedMotion: 'reduce' });
   await context.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort());
   const page = await context.newPage();
-  const result = { case: name, errors: [], routes: [] };
+  const result = { case: name, fixed, senderFixed, senderFallback, errors: [], routes: [] };
   page.on('pageerror', error => result.errors.push(error.message));
   page.on('framenavigated', frame => { if (frame === page.mainFrame()) result.routes.push(new URL(frame.url()).pathname + new URL(frame.url()).search); });
   const screenshot = suffix => page.screenshot({ path: path.join(OUTPUT, name + '-' + suffix + '.png'), fullPage: true });
@@ -23,6 +26,9 @@ async function main() {
     await page.getByRole('button', { name: /登\s*录/ }).click();
     await page.waitForURL('**/home/works');
     await page.getByText('审计专用A一级任务', { exact: true }).waitFor();
+    if (senderFallback) {
+      await page.route('**/api/system/allUsers', route => route.fulfill({ status: 503, json: { message: '合成用户目录不可用', code: 503 } }));
+    }
     const notices = page.waitForResponse(res => new URL(res.url()).pathname === '/api/system/notice');
     await page.getByRole('menuitem', { name: /消息中心/ }).click();
     const rows = await (await notices).json();
@@ -37,12 +43,26 @@ async function main() {
     if (name === 'task-link-and-sender') {
       result.senderLabel = await dialog.locator('.sender').innerText();
       assert.equal(Number(result.notice.fromUserId), 910003);
-      assert.ok(result.senderLabel.includes('系统管理员'));
+      assert.ok(result.senderLabel.includes(senderFallback ? '用户910003' : senderFixed ? '审计审核人' : '系统管理员'));
       assert.equal(String(result.notice.sourceType), '1');
       assert.equal(Number(result.notice.sourceId), 930002);
       await screenshot('sender');
     }
     await dialog.getByRole('button', { name: /前往处理业务/ }).click();
+    if (fixed) {
+      if (name === 'archived-link') {
+        const detail = page.getByRole('dialog', { name: '详情查看', exact: true });
+        await detail.waitFor();
+        result.detailText = await detail.innerText();
+        assert.ok(result.detailText.includes('972099'));
+        assert.equal(await detail.getByRole('button', { name: '确认提交', exact: true }).count(), 0);
+      } else {
+        await page.waitForURL('**/home/works?taskId=930002');
+        result.targetUrl = page.url();
+        assert.ok(result.targetUrl.includes('taskId=930002'));
+      }
+      await screenshot('fixed-jump');
+    } else {
     const message = name === 'archived-link'
       ? '该绩效暂无与您相关的审批单（可能已流转给下一位或不在您的待办中）'
       : '该成果暂无与您相关的审批单（可能已处理或不在您的待办中）';
@@ -61,9 +81,10 @@ async function main() {
     } else {
       assert.ok(result.routes.some(route => route.includes('type=achievement') && route.includes('930002')));
     }
+    }
     assert.deepEqual(result.errors, []);
-    await fs.writeFile(path.join(OUTPUT, name + '.json'), JSON.stringify(result, null, 2));
-    console.log(JSON.stringify({ case: name, reproduced: true, errors: result.errors }));
+    await fs.writeFile(path.join(OUTPUT, name + (senderFallback ? '-fallback' : fixed ? '-fixed' : '') + '.json'), JSON.stringify(result, null, 2));
+    console.log(JSON.stringify({ case: name, fixed, passed: true, errors: result.errors }));
   } catch (error) {
     console.error(JSON.stringify({ result, text: await page.locator('body').innerText() }));
     await screenshot('failure'); throw error;

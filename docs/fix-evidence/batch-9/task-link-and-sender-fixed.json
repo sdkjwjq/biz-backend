@@ -1,0 +1,32 @@
+{
+  "case": "task-link-and-sender",
+  "fixed": true,
+  "senderFixed": true,
+  "errors": [],
+  "routes": [
+    "/login",
+    "/login",
+    "/login",
+    "/home/works",
+    "/home/works",
+    "/home/notice",
+    "/home/notice",
+    "/home/works?taskId=930002"
+  ],
+  "notice": {
+    "noticeId": 989102,
+    "fromUserId": 910003,
+    "toUserId": 910001,
+    "type": "3",
+    "triggerEvent": "TASK",
+    "title": "任务督办：请补充成果材料",
+    "content": "这是任务 930002 的督办通知，非成果审核单",
+    "sourceType": "1",
+    "sourceId": 930002,
+    "isRead": "1",
+    "isDelete": 0,
+    "createTime": "2026-09-16 16:49:59"
+  },
+  "senderLabel": "发送人: 审计审核人",
+  "targetUrl": "http://127.0.0.1:15173/home/works?taskId=930002"
+}
