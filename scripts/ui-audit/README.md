@@ -53,7 +53,18 @@ node scripts/ui-audit/business-audit.cjs performance-race
 
 `zero-audit` 对比真实接口的零值与审核列表显示；`performance-year` 是正常年份显示的对照检查；`dashboard-unmount` 使用普通时钟验证离开页面后的延迟响应。`performance-race` 已改为修复回归：延迟 A 的真实请求后打开 B，确认 A 不能覆盖 B；实际审批 B，在审批响应返回前切回 A，确认 A 的意见不被重置，A 仍为状态 10，B 为状态 20。它会改变合成记录的状态，每个新环境只运行一次；再次运行或随后重跑 `zero-audit` 前，请停止并重启隔离环境。
 
-结果保存在 `target/ui-audit/evidence-business`。目前 `dashboard-unmount` 通过表示缺陷仍存在；`zero-audit`、`performance-race` 通过表示修复后的行为正确，年份检查通过表示该疑点已排除。历史复现证据仍保留在 `docs/audit-evidence/2026-09-16/batch-6`。
+结果保存在 `target/ui-audit/evidence-business`。`dashboard-unmount`、`zero-audit`、`performance-race` 已改为修复回归，通过表示修复后的行为正确，年份检查通过表示该疑点已排除。历史复现证据仍保留在 `docs/audit-evidence/2026-09-16/batch-6`。
+
+大屏补充生命周期回归（`business` 或 `review` 环境）：
+
+```powershell
+node scripts/ui-audit/dashboard-lifecycle.cjs delayed-init
+node scripts/ui-audit/dashboard-lifecycle.cjs chart-request
+node scripts/ui-audit/dashboard-lifecycle.cjs repeat
+node scripts/ui-audit/dashboard-lifecycle.cjs scroll
+```
+
+分别覆盖初始化延迟、图表数据请求中途退出、三轮进入退出、滚动停止，并验证重进后的五个图表。`delayed-init` 仅延长 800ms 初始化定时器，用于确定性退出；`scroll` 明确注入六条合成成果激活滚动，其余场景使用真实接口。结果位于 `target/ui-audit/evidence-dashboard`。
 
 同一 `business` 隔离环境中可运行额外的只读绩效回归：
 

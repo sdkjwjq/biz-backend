@@ -1,0 +1,7 @@
+{
+  "case": "chart-request",
+  "errors": [],
+  "cancellationErrors": [],
+  "canceledRequest": "net::ERR_ABORTED",
+  "chartsAfterReentry": 5
+}

@@ -1,0 +1,2 @@
+60af5decfd9b49eeeb227f3a1001da3105368721d96663e04622a7be46d6cb23  frontend.zip
+a6d49f488742d31cb6f163cf82ef03f0ef13c091ca553e53472a712c0f24b1dd  biz_backend-1.0-SNAPSHOT.jar

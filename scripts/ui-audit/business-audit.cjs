@@ -160,15 +160,21 @@ async function main() {
         await page.getByRole('menuitem', { name: '数据大屏', exact: true }).click();
         await entered;
         await page.waitForURL('**/dashboard');
-        const failure = page.waitForEvent('pageerror', { predicate: error => error.message.includes('Initialize failed: invalid dom'), timeout: 15000 });
+        const canceled = page.waitForEvent('requestfailed', { predicate: request => new URL(request.url()).pathname === '/api/dashboard/tasks/all_level' });
         await page.goBack();
         await page.waitForURL('**/home/works');
         await page.locator('.dashboard-fixed-container').waitFor({ state: 'detached' });
         result.dashboardRemovedBeforeResponse = true;
         release();
-        result.errorAfterLeaving = (await failure).message;
+        result.canceledRequest = (await canceled).failure()?.errorText;
+        await page.waitForTimeout(1200); // 超过原 800ms 初始化延迟，观察离开后的异常。
         result.returnedUrl = page.url();
-        assert.ok(result.errorAfterLeaving.includes('Initialize failed: invalid dom'));
+        assert.deepEqual(result.errors, []);
+        assert.equal(await page.locator('.el-message--error').count(), 0);
+        await page.unroute(slowPath);
+        await page.getByRole('menuitem', { name: '数据大屏', exact: true }).click();
+        await page.waitForFunction(() => document.querySelectorAll('.dashboard-fixed-container [_echarts_instance_]').length === 5);
+        result.chartsAfterReentry = await page.locator('.dashboard-fixed-container [_echarts_instance_]').count();
         await screenshot('dashboard-after-leaving.png');
       } finally { release(); await page.unroute(slowPath); }
     }
