@@ -53,7 +53,7 @@ node scripts/ui-audit/business-audit.cjs performance-race
 
 `zero-audit` 对比真实接口的零值与审核列表显示；`performance-year` 是正常年份显示的对照检查；`dashboard-unmount` 使用普通时钟验证离开页面后的延迟响应。`performance-race` 已改为修复回归：延迟 A 的真实请求后打开 B，确认 A 不能覆盖 B；实际审批 B，在审批响应返回前切回 A，确认 A 的意见不被重置，A 仍为状态 10，B 为状态 20。它会改变合成记录的状态，每个新环境只运行一次；再次运行或随后重跑 `zero-audit` 前，请停止并重启隔离环境。
 
-结果保存在 `target/ui-audit/evidence-business`。目前 `zero-audit`、`dashboard-unmount` 通过表示缺陷仍存在；`performance-race` 通过表示修复后的行为正确，年份检查通过表示该疑点已排除。历史复现证据仍保留在 `docs/audit-evidence/2026-09-16/batch-6`。
+结果保存在 `target/ui-audit/evidence-business`。目前 `dashboard-unmount` 通过表示缺陷仍存在；`zero-audit`、`performance-race` 通过表示修复后的行为正确，年份检查通过表示该疑点已排除。历史复现证据仍保留在 `docs/audit-evidence/2026-09-16/batch-6`。
 
 同一 `business` 隔离环境中可运行额外的只读绩效回归：
 
@@ -77,7 +77,20 @@ node scripts/ui-audit/review-audit.cjs achievement-count
 node scripts/ui-audit/review-audit.cjs achievement-validation
 ```
 
-前 3 个场景验证现有缺陷：审核分页重复数据、切换历史记录后需手动刷新、小数奖项数量提交成功但保存时截断。`achievement-validation` 检查空表单、非法文件扩展名及整数数量保存，属于正常行为对照。成果场景通过页面实际新增合成记录，按新增接口返回的 ID 核对保存结果；多次运行会新增更多测试记录，随隔离库一起清理。结果写入 `target/ui-audit/evidence-review`。
+`pagination`、`history-tab` 已改为修复回归：15 条按 10＋5 分页不重复，历史标签自动加载、归档不计入待办。`achievement-count` 仍验证小数奖项数量提交成功但保存时截断的缺陷。`achievement-validation` 检查空表单、非法文件扩展名及整数数量保存，属于正常行为对照。成果场景通过页面实际新增合成记录，按新增接口返回的 ID 核对保存结果；多次运行会新增更多测试记录，随隔离库一起清理。结果写入 `target/ui-audit/evidence-review`。
+
+审核中心补充回归使用同一全新 `review` 环境，先执行上述分页/历史测试，再执行：
+
+```powershell
+node scripts/ui-audit/business-audit.cjs zero-audit
+node scripts/ui-audit/audit-center-regression.cjs value-contract
+node scripts/ui-audit/audit-center-regression.cjs tab-race
+node scripts/ui-audit/audit-center-regression.cjs filters
+node scripts/ui-audit/audit-center-regression.cjs deep-link
+node scripts/ui-audit/audit-center-regression.cjs last-page
+```
+
+`value-contract` 明确使用响应注入，覆盖任务数值零、字符串零、空值、缺省和非零值；其他场景使用真实接口。`tab-race` 延迟真实历史请求，验证快速切换后的待办不被覆盖。`last-page` 实际审批末页 5 条，只能最后执行；重跑需重建隔离库。补充结果位于 `target/ui-audit/evidence-audit-center`，原始缺陷证据保留不变。
 
 ### 清理
 

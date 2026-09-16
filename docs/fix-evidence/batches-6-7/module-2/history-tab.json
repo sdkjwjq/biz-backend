@@ -1,0 +1,118 @@
+{
+  "case": "history-tab",
+  "errors": [],
+  "requests": [
+    {
+      "method": "POST",
+      "path": "/api/system/login"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/tasks"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/allUsers"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/notice"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/audit/todo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/allUsers"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/audit/todo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/allUsers"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/audit/todo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/performance/audit/todo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/achievement/audit/todo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/allUsers"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/audit/todo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/performance/audit/todo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/achievement/audit/todo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/tasks"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/audit/task/930002"
+    },
+    {
+      "method": "GET",
+      "path": "/api/performance/audit/records"
+    },
+    {
+      "method": "GET",
+      "path": "/api/achievement/audit/records"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/allUsers"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/audit/todo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/performance/audit/todo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/achievement/audit/todo"
+    }
+  ],
+  "initialTodoCount": 0,
+  "apiHistory": [
+    {
+      "subId": 972099,
+      "perfName": "已归档历史绩效",
+      "flowStatus": 30
+    }
+  ],
+  "rowsOnSwitch": 1,
+  "recordRequestsOnSwitch": [
+    {
+      "method": "GET",
+      "path": "/api/performance/audit/records"
+    },
+    {
+      "method": "GET",
+      "path": "/api/achievement/audit/records"
+    }
+  ],
+  "archivedRowsInTodo": 0
+}

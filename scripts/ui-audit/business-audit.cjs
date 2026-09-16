@@ -42,7 +42,7 @@ async function main() {
       result.displayedValue = (await zeroRow.locator('td').nth(4).innerText()).trim();
       result.nonzeroDisplayedValue = (await page.locator('.el-table__body tr').filter({ hasText: '审计手动绩效' }).locator('td').nth(4).innerText()).trim();
       assert.equal(Number(result.apiValue), 0);
-      assert.equal(result.displayedValue, '-');
+      assert.equal(result.displayedValue, '0');
       assert.equal(result.nonzeroDisplayedValue, '3');
       await screenshot('zero-audit.png');
     } else if (name !== 'dashboard-unmount') {

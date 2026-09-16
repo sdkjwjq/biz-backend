@@ -1,0 +1,55 @@
+{
+  "case": "zero-audit",
+  "errors": [],
+  "requests": [
+    {
+      "method": "POST",
+      "path": "/api/system/login"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/tasks"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/allUsers"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/notice"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/audit/todo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/allUsers"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/audit/todo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/allUsers"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/audit/todo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/performance/audit/todo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/achievement/audit/todo"
+    }
+  ],
+  "apiValue": 0,
+  "text": "审核中心\n15 待处理\n待我审批\n审批记录\n业务类型\n单号\n\t\n关联任务/项目\n\t\n类型\n\t\n提交信息\n\t\n本次填报值\n\t\n完成情况\n\t\n当前状态\n\t\n操作\n1\n\t\n审计手动绩效\n\t\n绩效填报\n\t\n审计用户A\n2026-09-16 10:08:07\n\t\n3\n\t\n审计待办样本\n\t\n待专业群审核\n\t\n审批\n\n\n2\n\t\n审计零值绩效B\n\t\n绩效填报\n\t\n审计用户A\n2026-09-16 10:08:07\n\t\n0\n\t\n绩效B已明确填报零\n\t\n待专业群审核\n\t\n审批\n\n\n3\n\t\n分页待审绩效01\n\t\n绩效填报\n\t\n审计用户A\n2026-09-16 10:08:07\n\t\n1\n\t\n分页验证样本\n\t\n待专业群审核\n\t\n审批\n\n\n4\n\t\n分页待审绩效02\n\t\n绩效填报\n\t\n审计用户A\n2026-09-16 10:08:07\n\t\n1\n\t\n分页验证样本\n\t\n待专业群审核\n\t\n审批\n\n\n5\n\t\n分页待审绩效03\n\t\n绩效填报\n\t\n审计用户A\n2026-09-16 10:08:07\n\t\n1\n\t\n分页验证样本\n\t\n待专业群审核\n\t\n审批\n\n\n6\n\t\n分页待审绩效04\n\t\n绩效填报\n\t\n审计用户A\n2026-09-16 10:08:07\n\t\n1\n\t\n分页验证样本\n\t\n待专业群审核\n\t\n审批\n\n\n7\n\t\n分页待审绩效05\n\t\n绩效填报\n\t\n审计用户A\n2026-09-16 10:08:07\n\t\n1\n\t\n分页验证样本\n\t\n待专业群审核\n\t\n审批\n\n\n8\n\t\n分页待审绩效06\n\t\n绩效填报\n\t\n审计用户A\n2026-09-16 10:08:07\n\t\n1\n\t\n分页验证样本\n\t\n待专业群审核\n\t\n审批\n\n\n9\n\t\n分页待审绩效07\n\t\n绩效填报\n\t\n审计用户A\n2026-09-16 10:08:07\n\t\n1\n\t\n分页验证样本\n\t\n待专业群审核\n\t\n审批\n\n\n10\n\t\n分页待审绩效08\n\t\n绩效填报\n\t\n审计用户A\n2026-09-16 10:08:07\n\t\n1\n\t\n分页验证样本\n\t\n待专业群审核\n\t\n审批\n\n\n11\n\t\n分页待审绩效09\n\t\n绩效填报\n\t\n审计用户A\n2026-09-16 10:08:07\n\t\n1\n\t\n分页验证样本\n\t\n待专业群审核\n\t\n审批\n\n\n12\n\t\n分页待审绩效10\n\t\n绩效填报\n\t\n审计用户A\n2026-09-16 10:08:07\n\t\n1\n\t\n分页验证样本\n\t\n待专业群审核\n\t\n审批\n\n\n13\n\t\n分页待审绩效11\n\t\n绩效填报\n\t\n审计用户A\n2026-09-16 10:08:07\n\t\n1\n\t\n分页验证样本\n\t\n待专业群审核\n\t\n审批\n\n\n14\n\t\n分页待审绩效12\n\t\n绩效填报\n\t\n审计用户A\n2026-09-16 10:08:07\n\t\n1\n\t\n分页验证样本\n\t\n待专业群审核\n\t\n审批\n\n\n15\n\t\n分页待审绩效13\n\t\n绩效填报\n\t\n审计用户A\n2026-09-16 10:08:07\n\t\n1\n\t\n分页验证样本\n\t\n待专业群审核\n\t\n审批\nTotal 15\n1\n2",
+  "zeroRow": "2\n\t\n审计零值绩效B\n\t\n绩效填报\n\t\n审计用户A\n2026-09-16 10:08:07\n\t\n0\n\t\n绩效B已明确填报零\n\t\n待专业群审核\n\t\n审批",
+  "displayedValue": "0",
+  "nonzeroDisplayedValue": "3"
+}

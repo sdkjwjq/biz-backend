@@ -1,0 +1,8 @@
+{
+  "case": "value-contract",
+  "errors": [],
+  "checks": [
+    "任务列表与弹窗：数值零、字符串零、null、空字符串、缺省和非零值均正确"
+  ],
+  "responseInjected": true
+}

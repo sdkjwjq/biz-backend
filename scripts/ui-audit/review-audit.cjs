@@ -103,29 +103,33 @@ async function main() {
         result.activePage = await page.locator('.el-pager li.is-active').innerText();
         result.page2Rows = await rows.allTextContents();
         assert.equal(result.apiTodoCount, 15);
-        assert.equal(result.page1Rows.length, 15);
+        assert.equal(result.page1Rows.length, 10);
         assert.equal(result.activePage, '2');
-        assert.deepEqual(result.page2Rows, result.page1Rows);
+        assert.equal(result.page2Rows.length, 5);
+        const names = text => text.replace(/^\d+/, '').trim();
+        assert.equal(new Set([...result.page1Rows, ...result.page2Rows].map(names)).size, 15);
         await screenshot('audit-page2.png');
       } else {
         result.initialTodoCount = todo.length;
         const start = result.requests.length;
-        await page.getByText('审批记录', { exact: true }).click();
-        await page.getByText('No Data', { exact: true }).waitFor();
-        result.rowsBeforeRefresh = await page.locator('.audit-container .el-table__body tr').count();
-        result.recordRequestsOnSwitch = result.requests.slice(start).filter(item => item.path.endsWith('/audit/records'));
-        await screenshot('history-before-refresh.png');
         const recordsResponse = responseFor('/api/performance/audit/records');
-        await page.locator('.filter-right button').click();
+        await page.getByText('审批记录', { exact: true }).click();
         result.apiHistory = (await (await recordsResponse).json()).map(row => ({ subId: row.subId, perfName: row.perfName, flowStatus: row.flowStatus }));
         await page.getByText('已归档历史绩效', { exact: true }).waitFor();
         await page.locator('.audit-container .el-loading-mask').waitFor({ state: 'hidden' });
-        result.rowsAfterRefresh = await page.locator('.audit-container .el-table__body tr').count();
-        assert.equal(result.rowsBeforeRefresh, 0);
-        assert.equal(result.recordRequestsOnSwitch.length, 0);
+        result.rowsOnSwitch = await page.locator('.audit-container .el-table__body tr').count();
+        result.recordRequestsOnSwitch = result.requests.slice(start).filter(item => item.path.endsWith('/audit/records'));
+        assert.equal(result.recordRequestsOnSwitch.length, 2);
         assert.ok(result.apiHistory.some(row => Number(row.subId) === 972099));
-        assert.equal(result.rowsAfterRefresh, 1);
-        await screenshot('history-after-refresh.png');
+        assert.equal(result.rowsOnSwitch, 1);
+        assert.equal(await page.locator('.header-left .el-tag').count(), 0);
+        await screenshot('history-auto-loaded.png');
+        const todoAgain = responseFor('/api/performance/audit/todo');
+        await page.getByText('待我审批', { exact: true }).click();
+        await (await todoAgain).finished();
+        await page.locator('.audit-container .el-loading-mask').waitFor({ state: 'hidden' });
+        assert.equal(await page.locator('.audit-container .el-table__body tr').count(), 0);
+        result.archivedRowsInTodo = 0;
       }
     }
     await fs.writeFile(path.join(OUTPUT, name + '.json'), JSON.stringify(result, null, 2));
