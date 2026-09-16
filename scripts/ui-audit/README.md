@@ -55,6 +55,21 @@ node scripts/ui-audit/business-audit.cjs performance-race
 
 结果保存在 `target/ui-audit/evidence-business`。其中 3 个缺陷复现场景断言通过表示问题仍存在，年份检查通过表示该疑点已排除。
 
+### 审核列表及成果表单（第七批）
+
+停止上一轮环境后，以 `python scripts/ui-audit/serve.py --fixture review` 启动。此数据集包含 15 条待审绩效、1 条已归档绩效以及成果填报账号。出现 `UI_AUDIT_READY` 后执行：
+
+```powershell
+node scripts/ui-audit/review-audit.cjs pagination
+node scripts/ui-audit/review-audit.cjs history-tab
+node scripts/ui-audit/review-audit.cjs achievement-count
+node scripts/ui-audit/review-audit.cjs achievement-validation
+```
+
+前 3 个场景验证现有缺陷：审核分页重复数据、切换历史记录后需手动刷新、小数奖项数量提交成功但保存时截断。`achievement-validation` 检查空表单、非法文件扩展名及整数数量保存，属于正常行为对照。成果场景通过页面实际新增合成记录，按新增接口返回的 ID 核对保存结果；多次运行会新增更多测试记录，随隔离库一起清理。结果写入 `target/ui-audit/evidence-review`。
+
+### 清理
+
 结束时执行：
 
 ```powershell
