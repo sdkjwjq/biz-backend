@@ -405,6 +405,57 @@ class ReviewBatchRegressionApiTest {
         jdbc.update("INSERT INTO rel_task_performance (task_id, perf_id, year_id) VALUES (930002, 950001, 950002)");
     }
 
+    private Map<String, Object> taskUpdatePayload(long taskId, String token) throws Exception {
+        Map<String, Object> task = new LinkedHashMap<>(json.convertValue(
+                body(request(HttpMethod.GET, "/biz/tasks/" + taskId, token, null)), Map.class));
+        task.keySet().removeAll(List.of("isDelete", "createTime", "updateTime"));
+        return task;
+    }
+
+    @Test
+    void taskHierarchyRejectsCyclesAndKeepsValidEdits() throws Exception {
+        seedTasks();
+        seedTask(930000L, 0L, 1);
+        seedTask(930010L, 0L, 2);
+        seedTask(930011L, 930002L, 4);
+        seedTask(930012L, 0L, 2);
+        seedTask(930013L, 930014L, 2);
+        seedTask(930014L, 930013L, 1);
+        jdbc.update("UPDATE biz_task SET is_delete=1 WHERE task_id=930012");
+        String admin = login(ADMIN);
+        Map<String, Object> original = taskUpdatePayload(930002L, admin);
+        for (Long parentId : new Long[]{930002L, 930011L, 939999L, 930012L, 930013L, 930000L, 0L, null}) {
+            Map<String, Object> changed = new LinkedHashMap<>(original);
+            changed.put("parentId", parentId);
+            changed.put("taskName", "Must not save");
+            Map<String, List<Map<String, Object>>> before = taskFlowState();
+            JsonNode error = body(request(HttpMethod.POST, "/biz/tasks/manage/update", admin, changed));
+            assertEquals(500, error.path("code").asInt(), "parent=" + parentId);
+            assertEquals(before, taskFlowState());
+        }
+        Map<String, Object> changed = new LinkedHashMap<>(original);
+        changed.put("parentId", 930000L);
+        changed.put("level", 2);
+        assertEquals(500, body(request(HttpMethod.POST, "/biz/tasks/manage/update", admin, changed)).path("code").asInt());
+        assertEquals(3, jdbc.queryForObject("SELECT level FROM biz_task WHERE task_id=930002", Integer.class));
+
+        changed = new LinkedHashMap<>(original);
+        changed.put("parentId", 930010L);
+        changed.put("taskName", "Valid moved task");
+        assertSuccess(request(HttpMethod.POST, "/biz/tasks/manage/update", admin, changed), "更新成功");
+        assertEquals(930010L, jdbc.queryForObject("SELECT parent_id FROM biz_task WHERE task_id=930002", Long.class));
+        assertEquals("Valid moved task", body(request(HttpMethod.GET, "/biz/tasks/930002", admin, null)).path("taskName").asText());
+        changed.put("taskName", "Valid renamed task");
+        assertSuccess(request(HttpMethod.POST, "/biz/tasks/manage/update", admin, changed), "更新成功");
+
+        Map<String, Object> root = taskUpdatePayload(930000L, admin);
+        root.put("parentId", null);
+        assertSuccess(request(HttpMethod.POST, "/biz/tasks/manage/update", admin, root), "更新成功");
+        Map<String, Object> legacyRoot = taskUpdatePayload(930001L, admin);
+        legacyRoot.put("taskName", "Legacy root renamed");
+        assertSuccess(request(HttpMethod.POST, "/biz/tasks/manage/update", admin, legacyRoot), "更新成功");
+    }
+
     private Map<String, Object> submission(String value) {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("task_id", 930002L);

@@ -183,6 +183,7 @@ public class BizService {
             if (existingTask == null) {
                 throw new RuntimeException("该任务不存在");
             }
+            validateTaskHierarchy(taskDTO, existingTask);
             BizTask task = taskDTO2Task(taskDTO);
             task.setIsDelete(existingTask.getIsDelete());
             task.setCreateTime(existingTask.getCreateTime());
@@ -190,6 +191,57 @@ public class BizService {
             bizMapper.updateTask(task);
         } catch (Exception e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    /** 修改父节点时验证层级，并避免自身、后代或已有循环进入任务树。 */
+    private void validateTaskHierarchy(BizTaskDTO task, BizTask existingTask) {
+        Set<Long> visited = new HashSet<>();
+        visited.add(task.getTaskId());
+        Long parentId = task.getParentId();
+        BizTask parent = null;
+        while (parentId != null && parentId != 0L) {
+            if (!visited.add(parentId)) {
+                throw new RuntimeException("父任务不能是自身或后代，任务层级不能形成循环");
+            }
+            BizTask ancestor = bizMapper.getTaskById(parentId);
+            if (ancestor == null || Integer.valueOf(1).equals(ancestor.getIsDelete())) {
+                throw new RuntimeException("父任务或上级任务不存在或已删除");
+            }
+            if (parent == null) parent = ancestor;
+            parentId = ancestor.getParentId();
+        }
+
+        boolean hierarchyChanged = !Objects.equals(task.getParentId(), existingTask.getParentId())
+                || !Objects.equals(task.getLevel(), existingTask.getLevel());
+        if (!hierarchyChanged) return;
+        Integer level = task.getLevel();
+        if (level == null || level < 1 || level > 4) {
+            throw new RuntimeException("任务层级必须为1至4级");
+        }
+        // 根节点保留 null/0 两种表示；未改变的历史层级由上面的返回分支兼容。
+        if (level == 1) {
+            if (parent != null) throw new RuntimeException("一级任务不能设置父任务");
+        } else {
+            if (parent == null || !Objects.equals(parent.getLevel(), level - 1)) {
+                throw new RuntimeException("父任务层级必须比当前任务高一级");
+            }
+            if (!Objects.equals(parent.getProjectId(), task.getProjectId())) {
+                throw new RuntimeException("父任务与当前任务必须属于同一项目");
+            }
+            if (level == 3 && !Objects.equals(parent.getDeptId(), task.getDeptId())) {
+                throw new RuntimeException("该任务所属部门与二级任务部门不一致");
+            }
+        }
+        if (!Objects.equals(level, existingTask.getLevel())) {
+            for (BizTask child : bizMapper.getActiveChildTasksByParentId(task.getTaskId())) {
+                if (!Objects.equals(child.getLevel(), level + 1)) {
+                    throw new RuntimeException("修改层级会破坏现有子任务层级");
+                }
+            }
+            if (level != 3 && !bizMapper.getForthLevelTasksByParentId(task.getTaskId()).isEmpty()) {
+                throw new RuntimeException("存在四级子任务，不能修改当前任务层级");
+            }
         }
     }
 
