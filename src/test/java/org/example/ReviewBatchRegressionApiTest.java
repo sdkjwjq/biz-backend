@@ -372,6 +372,45 @@ class ReviewBatchRegressionApiTest {
         assertTrue(messages.stream().noneMatch(text -> text.contains("Deleted C") || text.contains("Empty D")));
     }
 
+    @Test
+    void trendNullValuesRecordAndDuplicateIsReportedAsSkipped() throws Exception {
+        seedTasks();
+        seedTask(937021L, 0L, 3);
+        seedTask(937022L, 0L, 3);
+        jdbc.update("UPDATE biz_task SET phase=?", LocalDate.now().getYear());
+        jdbc.update("UPDATE biz_task SET current_value=NULL,is_delete=NULL WHERE task_id=930002");
+        jdbc.update("UPDATE biz_task SET current_value=10,status='3' WHERE task_id=937021");
+        jdbc.update("UPDATE biz_task SET target_value=0 WHERE task_id=937022");
+        String admin = login(ADMIN);
+        assertSuccess(request(HttpMethod.POST, "/dashboard/trend/record", admin, Map.of()), "手动记录成功");
+        assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM biz_trend_data", Integer.class));
+        assertEquals(3, jdbc.queryForObject("SELECT total_tasks FROM biz_trend_data", Integer.class));
+        assertEquals(1, jdbc.queryForObject("SELECT completion_count FROM biz_trend_data", Integer.class));
+        assertEquals(50.0, jdbc.queryForObject("SELECT completion_rate FROM biz_trend_data", Double.class));
+        assertSuccess(request(HttpMethod.POST, "/dashboard/trend/record", admin, Map.of()), "已记录趋势数据，跳过");
+        assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM biz_trend_data", Integer.class));
+    }
+
+    @Test
+    void trendEmptyAndDatabaseFailureDoNotClaimSuccess() throws Exception {
+        String admin = login(ADMIN);
+        assertSuccess(request(HttpMethod.POST, "/dashboard/trend/record", admin, Map.of()), "无三级任务，跳过");
+        assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM biz_trend_data", Integer.class));
+        seedTasks();
+        jdbc.update("UPDATE biz_task SET phase=?", LocalDate.now().getYear());
+        jdbc.execute("CREATE TRIGGER review_fail_trend BEFORE INSERT ON biz_trend_data FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='synthetic trend failure'");
+        try {
+            JsonNode error = body(request(HttpMethod.POST, "/dashboard/trend/record", admin, Map.of()));
+            assertEquals(500, error.path("code").asInt());
+            assertTrue(error.path("message").asText().contains("记录趋势数据失败"));
+            assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM biz_trend_data", Integer.class));
+        } finally {
+            jdbc.execute("DROP TRIGGER review_fail_trend");
+        }
+        assertSuccess(request(HttpMethod.POST, "/dashboard/trend/record", admin, Map.of()), "手动记录成功");
+        assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM biz_trend_data", Integer.class));
+    }
+
     private void seedTask(long taskId, long parentId, int level) {
         jdbc.update("INSERT INTO biz_task (task_id, project_id, parent_id, phase, task_name, level, leader_id, "
                         + "auditor_id, principal_id, dept_id, data_type, target_value, current_value, progress, status, is_delete) "

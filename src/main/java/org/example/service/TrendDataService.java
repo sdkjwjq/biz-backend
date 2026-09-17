@@ -28,12 +28,16 @@ public class TrendDataService {
      */
     @Transactional
     public void recordDailyTrendData() {
+        recordTrendData();
+    }
+
+    private String recordTrendData() {
         try {
             // 检查今天是否已记录
             Integer count = trendDataMapper.checkTodayRecorded();
             if (count > 0) {
                 System.out.println("今天已记录趋势数据，跳过");
-                return;
+                return "今天已记录趋势数据，跳过";
             }
 
             LocalDate today = LocalDate.now();
@@ -46,11 +50,11 @@ public class TrendDataService {
 
             // 筛选三级任务
             List<BizTask> thirdLevelTasks = tasks.stream()
-                    .filter(task -> task.getLevel() == 3 && task.getIsDelete() == 0)
+                    .filter(task -> Integer.valueOf(3).equals(task.getLevel()) && !Integer.valueOf(1).equals(task.getIsDelete()))
                     .toList();
 
             if (thirdLevelTasks.isEmpty()) {
-                return; // 没有三级任务，不记录
+                return "本年度无三级任务，跳过";
             }
 
             // 计算统计数据
@@ -76,9 +80,11 @@ public class TrendDataService {
                     "，总任务数：" + totalTasks +
                     "，完成数量：" + completionCount +
                     "，完成率：" + completionRate + "%");
+            return "手动记录成功";
 
         } catch (Exception e) {
             System.err.println("记录趋势数据失败: " + e.getMessage());
+            throw new RuntimeException("记录趋势数据失败", e);
         }
     }
 
@@ -95,7 +101,7 @@ public class TrendDataService {
 
         for (BizTask task : tasks) {
             BigDecimal target = task.getTargetValue();
-            BigDecimal current = task.getCurrentValue();
+            BigDecimal current = task.getCurrentValue() == null ? BigDecimal.ZERO : task.getCurrentValue();
 
             if (target != null && target.compareTo(BigDecimal.ZERO) > 0) {
                 // 计算单个任务的完成率
@@ -139,12 +145,8 @@ public class TrendDataService {
     /**
      * 手动触发记录（测试用）
      */
+    @Transactional
     public String triggerRecord() {
-        try {
-            recordDailyTrendData();
-            return "手动记录成功";
-        } catch (Exception e) {
-            return "手动记录失败: " + e.getMessage();
-        }
+        return recordTrendData();
     }
 }
