@@ -755,8 +755,8 @@ public class BizService {
     public Object audit(BizAuditDTO bizAuditDTO, Long userId) {
         Long subId = bizAuditDTO.getSub_id();
         try {
-            BizMaterialSubmission bizMaterialSubmission = bizMapper.getAuditBySubId(subId);
-            if (bizMaterialSubmission == null) {
+            BizMaterialSubmission bizMaterialSubmission = bizMapper.getAuditBySubIdIncludingDeletedForUpdate(subId);
+            if (bizMaterialSubmission == null || Integer.valueOf(1).equals(bizMaterialSubmission.getIsDelete())) {
                 throw new RuntimeException("该任务不存在");
             }
 
@@ -1187,7 +1187,7 @@ public class BizService {
     @Transactional
     public Object drawbackSubmit(Long taskId, Long userId){
         try{
-            BizMaterialSubmission bizMaterialSubmission = bizMapper.getNewestAudit(taskId);
+            BizMaterialSubmission bizMaterialSubmission = bizMapper.getNewestAuditForUpdate(taskId);
             if (bizMaterialSubmission == null) {
                 throw new RuntimeException("该任务未处于审核状态");
             }

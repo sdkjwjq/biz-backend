@@ -322,6 +322,9 @@ void updateLevel4Task(BizLevel4Task task);
     @Select("SELECT * FROM biz_material_submission WHERE task_id = #{taskId} AND is_delete = 0 ORDER BY sub_id DESC LIMIT 1")
     BizMaterialSubmission getNewestAudit(@Param("taskId") Long taskId);
 
+    @Select("SELECT * FROM biz_material_submission WHERE task_id = #{taskId} AND is_delete = 0 ORDER BY sub_id DESC LIMIT 1 FOR UPDATE")
+    BizMaterialSubmission getNewestAuditForUpdate(@Param("taskId") Long taskId);
+
     /**
      * 获取"待我审批"的审批单（按当前处理人查询）
      * @param userId 用户ID
