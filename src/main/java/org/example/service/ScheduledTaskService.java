@@ -52,53 +52,55 @@ public class ScheduledTaskService {
 
             int successCount = 0;
             for (Long deptLeaderId: deptLeaderIds){
-                SysDept dept = sysMapper.getDeptByUserId(deptLeaderId);
-                if (dept == null || Integer.valueOf(1).equals(dept.getIsDelete())) {
-                    System.err.println("跳过部门提醒：负责人未关联有效部门，userId=" + deptLeaderId);
-                    continue;
-                }
-//                获取当前时间，将年份转为Integer
-                int currentYear = java.time.LocalDate.now().getYear();
-//                获取本年度本部门的所有任务
-                List<BizTask> currentYearTasks = bizMapper.getTasksByDeptIdAndPhase(dept.getDeptId(),currentYear);
-                if (currentYearTasks.isEmpty()) {
-                    continue;
-                }
-                // 统计截止本月有进展的任务数量
-                Integer monthCount = 0;
-                for (BizTask task: currentYearTasks){
-                    if (task.getCurrentValue().signum() != 0) {
-                        monthCount++;
+                for (Long deptId : sysMapper.getDeptIdsByLeaderId(deptLeaderId)) {
+                    SysDept dept = sysMapper.getDeptById(deptId);
+                    if (dept == null || Integer.valueOf(1).equals(dept.getIsDelete())) {
+                        System.err.println("跳过部门提醒：负责人未关联有效部门，userId=" + deptLeaderId);
+                        continue;
                     }
-                }
-
-//                统计已完成任务数量
-                Integer completeCount = 0;
-                for (BizTask task: currentYearTasks){
-                    if (task.getStatus().equals("3")) {
-                        completeCount++;
+                    // 获取当前时间，将年份转为Integer
+                    int currentYear = java.time.LocalDate.now().getYear();
+                    // 获取本年度本部门的所有任务
+                    List<BizTask> currentYearTasks = bizMapper.getTasksByDeptIdAndPhase(dept.getDeptId(),currentYear);
+                    if (currentYearTasks.isEmpty()) {
+                        continue;
                     }
-                }
-
-//                统计待审核任务数量
-                Integer auditCount = 0;
-                for (BizTask task: currentYearTasks){
-                    if (task.getStatus().equals("2")) {
-                        auditCount++;
+                    // 统计截止本月有进展的任务数量
+                    Integer monthCount = 0;
+                    for (BizTask task: currentYearTasks){
+                        if (task.getCurrentValue().signum() != 0) {
+                            monthCount++;
+                        }
                     }
-                }
 
-                String title = "部门双高建设任务完成情况月度提醒";
-                String content = "尊敬的 "+ sysMapper.getUserById(deptLeaderId).getNickName() +
-                        " 您好,本年度贵部门有 " + currentYearTasks.size() + " 个双高建设任务，\n" +
-                        "截至本月，共" +  monthCount + "个任务已有进展。\n"+
-                        "已完成任务" + completeCount + " 个，" + auditCount + " 个任务尚未审核\n"+
-                        "请及时关注本部门双高建设任务进展情况。";
-                sendSystemNotice(deptLeaderId, title, content, "月度提醒");
-                System.out.println("向用户ID " + deptLeaderId + " 发送月度提醒成功");
-                successCount++;
+                    // 统计已完成任务数量
+                    Integer completeCount = 0;
+                    for (BizTask task: currentYearTasks){
+                        if (task.getStatus().equals("3")) {
+                            completeCount++;
+                        }
+                    }
+
+                    // 统计待审核任务数量
+                    Integer auditCount = 0;
+                    for (BizTask task: currentYearTasks){
+                        if (task.getStatus().equals("2")) {
+                            auditCount++;
+                        }
+                    }
+
+                    String title = "部门双高建设任务完成情况月度提醒";
+                    String content = "尊敬的 "+ sysMapper.getUserById(deptLeaderId).getNickName() +
+                            " 您好,您负责的部门「" + dept.getDeptName() + "」本年度有 " + currentYearTasks.size() + " 个双高建设任务，\n" +
+                            "截至本月，共" +  monthCount + "个任务已有进展。\n"+
+                            "已完成任务" + completeCount + " 个，" + auditCount + " 个任务尚未审核\n"+
+                            "请及时关注本部门双高建设任务进展情况。";
+                    sendSystemNotice(deptLeaderId, title, content, "月度提醒");
+                    System.out.println("向用户ID " + deptLeaderId + " 发送月度提醒成功");
+                    successCount++;
+                }
             }
-            return "向"+successCount+"名用户发送月度提醒成功";
+            return "月度提醒完成，成功发送 " + successCount + " 条提醒";
 
         } catch (Exception e) {
             System.err.println("执行月度审核提醒任务时发生错误: " + e.getMessage());
@@ -179,25 +181,27 @@ public class ScheduledTaskService {
             int currentYear = java.time.LocalDate.now().getYear();
             int successCount = 0;
             for(Long leaderId: leadersId){
-                SysDept dept = sysMapper.getDeptByUserId(leaderId);
-                if (dept == null || Integer.valueOf(1).equals(dept.getIsDelete())) {
-                    System.err.println("跳过部门提醒：负责人未关联有效部门，userId=" + leaderId);
-                    continue;
-                }
-//                获取本年度本部门的所有任务
-                List<BizTask> currentYearTasks = bizMapper.getTasksByDeptIdAndPhase(dept.getDeptId(),currentYear);
-                if (currentYearTasks.isEmpty()) {
-                    continue;
-                }
+                for (Long deptId : sysMapper.getDeptIdsByLeaderId(leaderId)) {
+                    SysDept dept = sysMapper.getDeptById(deptId);
+                    if (dept == null || Integer.valueOf(1).equals(dept.getIsDelete())) {
+                        System.err.println("跳过部门提醒：负责人未关联有效部门，userId=" + leaderId);
+                        continue;
+                    }
+                    // 获取本年度本部门的所有任务
+                    List<BizTask> currentYearTasks = bizMapper.getTasksByDeptIdAndPhase(dept.getDeptId(),currentYear);
+                    if (currentYearTasks.isEmpty()) {
+                        continue;
+                    }
 
-                String title = "部门双高建设任务年度提醒";
-                String content = "尊敬的 "+ sysMapper.getUserById(leaderId).getNickName() +
-                        " 您好,本年度贵部门有 " + currentYearTasks.size() + " 个双高建设任务，\n" +
-                        "请及时关注本部门双高建设任务进展情况。";
-                sendSystemNotice(leaderId, title, content, "月度提醒");
-                successCount++;
-                System.out.println("向用户ID " + leaderId + " 发送月度提醒成功");
+                    String title = "部门双高建设任务年度提醒";
+                    String content = "尊敬的 "+ sysMapper.getUserById(leaderId).getNickName() +
+                            " 您好,您负责的部门「" + dept.getDeptName() + "」本年度有 " + currentYearTasks.size() + " 个双高建设任务，\n" +
+                            "请及时关注本部门双高建设任务进展情况。";
+                    sendSystemNotice(leaderId, title, content, "月度提醒");
+                    successCount++;
+                    System.out.println("向用户ID " + leaderId + " 发送月度提醒成功");
 
+                }
             }
 
             System.out.println("年度提醒完成，成功发送 " + successCount + " 条提醒");

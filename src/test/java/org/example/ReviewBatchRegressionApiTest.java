@@ -354,6 +354,24 @@ class ReviewBatchRegressionApiTest {
         assertEquals(2, jdbc.queryForObject("SELECT COUNT(*) FROM sys_notice WHERE to_user_id=?", Integer.class, LEADER));
     }
 
+    @Test
+    void remindersIncludeEachManagedDepartment() throws Exception {
+        seedTasks();
+        jdbc.update("UPDATE biz_task SET phase=?", LocalDate.now().getYear());
+        jdbc.update("INSERT INTO sys_dept (dept_id,dept_name,leader_id,is_delete) VALUES (927010,'Managed B',?,0),(927011,'Deleted C',?,1),(927012,'Empty D',?,0)", LEADER, LEADER, LEADER);
+        seedTask(937001L, 0L, 3);
+        jdbc.update("UPDATE biz_task SET dept_id=927010,phase=? WHERE task_id=937001", LocalDate.now().getYear());
+        String admin = login(ADMIN);
+        for (String endpoint : List.of("month_leader_trigger", "year_trigger")) {
+            assertSuccess(request(HttpMethod.POST, "/scheduled/" + endpoint, admin, Map.of()), "2 条提醒");
+        }
+        List<String> messages = jdbc.queryForList("SELECT content FROM sys_notice WHERE to_user_id=?", String.class, LEADER);
+        assertEquals(4, messages.size());
+        assertEquals(2, messages.stream().filter(text -> text.contains("Review department") && text.contains("2 个双高建设任务")).count());
+        assertEquals(2, messages.stream().filter(text -> text.contains("Managed B") && text.contains("1 个双高建设任务")).count());
+        assertTrue(messages.stream().noneMatch(text -> text.contains("Deleted C") || text.contains("Empty D")));
+    }
+
     private void seedTask(long taskId, long parentId, int level) {
         jdbc.update("INSERT INTO biz_task (task_id, project_id, parent_id, phase, task_name, level, leader_id, "
                         + "auditor_id, principal_id, dept_id, data_type, target_value, current_value, progress, status, is_delete) "
