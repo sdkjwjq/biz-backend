@@ -148,6 +148,9 @@ public class BizService {
         try {
             ensureTaskManager(userId);
             // 只能添加三级任务,根据parent字段判断二级任务是否正确
+            if (!Integer.valueOf(3).equals(taskDTO.getLevel())) {
+                throw new RuntimeException("只能新增三级任务");
+            }
             if (bizMapper.getTaskById(taskDTO.getParentId()) == null) {
                 throw new RuntimeException("该二级任务不存在");
             }
@@ -176,6 +179,7 @@ public class BizService {
      * @param taskDTO 任务数据
      * @param userId 当前用户ID
      */
+    @Transactional
     public void updateTask(BizTaskDTO taskDTO, Long userId) {
         try {
             ensureTaskManager(userId);
@@ -189,6 +193,7 @@ public class BizService {
             task.setCreateTime(existingTask.getCreateTime());
             task.setUpdateTime(new Date());
             bizMapper.updateTask(task);
+            performanceService.updatePerformanceByTaskId(task.getTaskId());
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
