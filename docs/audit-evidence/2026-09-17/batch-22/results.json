@@ -1,0 +1,26 @@
+[
+  {
+    "id": "22-1",
+    "response": "任务合成已删除父节点下新增添加成功",
+    "childLevel": 3,
+    "childDeleted": false,
+    "parentDeleted": true
+  },
+  {
+    "id": "22-2",
+    "response": "发送成功",
+    "recipientDeleted": true,
+    "savedRecipientId": 922201,
+    "recipientLoginRejected": true
+  },
+  {
+    "id": "22-3",
+    "normalResponse": "向1名用户发送月度提醒成功",
+    "missingHandlerResponse": {
+      "message": "java.lang.NullPointerException: Cannot invoke \"java.lang.Long.equals(Object)\" because the return value of \"org.example.entity.BizMaterialSubmission.getCurrentHandlerId()\" is null",
+      "code": 500
+    },
+    "validPendingSubmissionRetained": 162,
+    "newNotices": 0
+  }
+]
