@@ -2,6 +2,8 @@
 
 基线后端 `b65f1da`。按用户要求，在第二十二批修复和闭环后继续检查；本批不修改业务代码，预算及已忽略事项不涉及。
 
+后续状态：用户确认三项修复，空年份不计入中期；见 [修复记录](fix-batch-23.md)。
+
 ## 23-1【中 / BUG】部门已配置负责人，但详情没有返回
 
 - 位置：`service/BizService.java` 的 `getDeptStatsDetail`，调用 `sysMapper.getDeptLeaderId(deptId)`；`mapper/SysMapper.java` 对应查询实际接收 userId。

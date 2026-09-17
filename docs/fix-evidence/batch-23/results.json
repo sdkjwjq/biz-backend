@@ -1,0 +1,20 @@
+[
+  {
+    "id": "23-1",
+    "leaderId": 910002,
+    "sameNumberUserDoesNotInterfere": true,
+    "deletedLeaderOmitted": true
+  },
+  {
+    "id": "23-2",
+    "allThreeStatsExcludeDeleted": true,
+    "activeTotal": 2,
+    "completedTotal": 0
+  },
+  {
+    "id": "23-3",
+    "nullYearOverallTotal": 3,
+    "nullYearMidtermTotal": 2,
+    "emptyDeptZeroRates": true
+  }
+]
