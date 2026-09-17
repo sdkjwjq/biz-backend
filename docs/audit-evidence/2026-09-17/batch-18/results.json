@@ -1,0 +1,50 @@
+[
+  {
+    "id": "18-1",
+    "samples": [
+      {
+        "displayFormat": "0.00",
+        "cellValue": 1.2345,
+        "savedSource": 1.23,
+        "savedTask": 1.23
+      },
+      {
+        "displayFormat": "0.0000",
+        "cellValue": 1.2345,
+        "savedSource": 1.2345,
+        "savedTask": 1.2345
+      }
+    ]
+  },
+  {
+    "id": "18-2",
+    "responses": [
+      "成果已归档",
+      "成果已退回"
+    ],
+    "logs": [
+      {
+        "after": -10,
+        "action": "reject",
+        "before": 10
+      },
+      {
+        "after": 30,
+        "action": "pass",
+        "before": 10
+      }
+    ],
+    "noticeTitles": [
+      "成果已退回",
+      "成果已归档"
+    ],
+    "finalStatus": 30
+  },
+  {
+    "id": "18-3",
+    "deleteResponse": "用户 918003 删除成功",
+    "pendingHandler": 918003,
+    "reviewerTokenStatus": 401,
+    "flowStatus": 10
+  }
+]
