@@ -116,18 +116,22 @@ public class SysService {
      * @param newPassword 新密码
      */
     public void changePassword(Long userId, String newPassword) {
-        if (newPassword == null || newPassword.isBlank()) {
-            throw new IllegalArgumentException("请输入新密码");
-        }
-        if (newPassword.length() < 6) {
-            throw new IllegalArgumentException("密码长度至少6位");
-        }
+        validatePassword(newPassword);
         SysUser user = sysMapper.getUserById(userId);
         if (user == null) {
             throw new RuntimeException("用户不存在");
         }
         user.setPassword(newPassword);
         sysMapper.updateUser(user);
+    }
+
+    private void validatePassword(String newPassword) {
+        if (newPassword == null || newPassword.isBlank()) {
+            throw new IllegalArgumentException("请输入新密码");
+        }
+        if (newPassword.length() < 6) {
+            throw new IllegalArgumentException("密码长度至少6位");
+        }
     }
 
     @Autowired
@@ -381,6 +385,7 @@ public class SysService {
      * @return 用户实体
      */
     public SysUser userDTO2User(SysUserDTO user) {
+        validatePassword(user.getPassword());
         if (user.getStatus() != null && !"0".equals(user.getStatus()) && !"1".equals(user.getStatus())) {
             throw new IllegalArgumentException("账号状态必须为0或1");
         }
