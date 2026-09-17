@@ -13,3 +13,5 @@
 复跑：设置 `SHUANGGAO_TEST_DB_PASSWORD`，运行 `python scripts/run-review-regression.py`；启动 `python scripts/ui-audit/serve.py --fixture review` 后执行定向脚本。结束创建 `target/ui-audit/STOP`，等待临时服务和随机库清理。本批只用合成数据，旧审计证据保留。
 
 未部署；产物 `target/biz_backend-1.0-SNAPSHOT.jar`。无数据库迁移、无需前端更新，按现有后端流程发布。回滚执行 `git revert fcace47` 后重新打包或恢复上一版产物，不硬重置，不影响既有未提交工作。
+
+本批定向测试库与后续收尾巡检使用的随机库均已清理，临时服务已停止。收尾结果见 [覆盖与剩余清单](audit-closure-2026-09-17.md)。

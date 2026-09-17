@@ -1,0 +1,136 @@
+{
+  "case": "polling",
+  "errors": [],
+  "firstMountRequestsPerInterval": 1,
+  "secondMountRequestsPerInterval": 2,
+  "apiCalls": [
+    {
+      "method": "POST",
+      "path": "/api/system/login"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/tasks"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/allUsers"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/notice"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/audit/todo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/allUsers"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/audit/todo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/tasks"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/tasks"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/notice"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/audit/todo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/audit/todo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/audit/todo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/dashboard/tasks/all_level"
+    },
+    {
+      "method": "GET",
+      "path": "/api/dashboard/trend/2026"
+    },
+    {
+      "method": "GET",
+      "path": "/api/achievement/"
+    },
+    {
+      "method": "GET",
+      "path": "/api/dashboard/dept/year"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/allUsers"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/notice"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/audit/todo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/tasks"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/audit/todo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/tasks"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/notice"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/audit/todo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/tasks"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/notice"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/audit/todo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/allUsers"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/allUsers"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/audit/todo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/audit/todo"
+    }
+  ]
+}

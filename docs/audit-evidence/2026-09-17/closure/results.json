@@ -1,0 +1,516 @@
+{
+  "pages": [
+    {
+      "id": 110228,
+      "route": "/home/works",
+      "actualPath": "/home/works",
+      "textLength": 415,
+      "errors": []
+    },
+    {
+      "id": 110228,
+      "route": "/home/works/performance",
+      "actualPath": "/home/works/performance",
+      "textLength": 350,
+      "errors": []
+    },
+    {
+      "id": 110228,
+      "route": "/home/notice",
+      "actualPath": "/home/notice",
+      "textLength": 95,
+      "errors": []
+    },
+    {
+      "id": 110228,
+      "route": "/home/audit",
+      "actualPath": "/home/audit",
+      "textLength": 154,
+      "errors": []
+    },
+    {
+      "id": 110228,
+      "route": "/home/report",
+      "actualPath": "/home/report",
+      "textLength": 159,
+      "errors": []
+    },
+    {
+      "id": 110228,
+      "route": "/dashboard",
+      "actualPath": "/dashboard",
+      "textLength": 143,
+      "errors": []
+    },
+    {
+      "id": 110228,
+      "route": "/home/works/achievement",
+      "actualPath": "/home/works/achievement",
+      "textLength": 268,
+      "errors": []
+    },
+    {
+      "id": 110228,
+      "route": "/home/works",
+      "mobile": true,
+      "widths": {
+        "viewport": 390,
+        "document": 390
+      }
+    },
+    {
+      "id": 110228,
+      "route": "/home/works/performance",
+      "mobile": true,
+      "widths": {
+        "viewport": 390,
+        "document": 390
+      }
+    },
+    {
+      "id": 110228,
+      "route": "/home/report",
+      "mobile": true,
+      "widths": {
+        "viewport": 390,
+        "document": 390
+      }
+    },
+    {
+      "id": 110228,
+      "route": "/home/board",
+      "hiddenPrototype": true,
+      "actualPath": "/home/board",
+      "textSample": "“双高建设计划”项目平台\n数据大屏\n工作中心 (我的任务)\n消息中心\n审核中心\n督办中心\n管理后台\n/\n管理首页 (驾驶舱)\n审\n审计管理员\n任务总数\n正常推进\n4,321\n12.5%\n年度目标完成率\n98%\n资金执行\n进度滞后\n1,234\n万元\n5.2%\n年度目标完成率\n27.6%\n绩效指标\n运行良好\n120\n项\n8.4%\n年度目标完成率\n65.2%\n预警事项\n重点关注\n15\n20.1%\n年度目标完成率\n12%\n建设监测指标年度趋势\n月度\n季度\n我的待办\n5\n进入工作中心\n类型\n\t\n任务/事项名称\n\t\n所属项目\n\t\n截止时间\n\t\n操作\n任务\n\t\n1.2.3 实施师德师风行为准则考核\n\t\n国双高项目\n\t\n2025-12-31\n\t\n去处理\n\n\n任务\n\t\n2.1.2 建立校企定期需求对接机制\n\t\n国双高项目\n\t\n2025-12-31\n\t\n去处理\n\n\n绩效\n\t\n3.1 核心课程建设数量达标审核\n\t\n省高水平学校建设\n\t\n2025-06-20\n\t\n去处理\n\n\n资金\n\t\n4.1 实训基地设备采购资金审批\n\t\n数字化教学资源库\n\t\n2025-05-15\n\t\n去处理\n\n\n任务\n\t\n5.2.1 国际交流合作项目备案\n\t\n国际化办学\n\t\n2025-08-10\n\t\n去处理\n工作滞后预警 TOP5\n1\n安全保卫处\n滞后率 85%\n催办\n2\n党政办公室\n滞后率 72%\n催办\n3\n教务处\n滞后率 45%\n催办\n4\n信息技术中心\n滞后率 25%\n催办\n5\n财务处\n滞后率 15%\n催办\n系统提示： 请重点关注 安全保卫处 和 党政办公室 的材料上报进度，距中期检查仅剩 5 天。"
+    },
+    {
+      "id": 110228,
+      "route": "/home/data",
+      "hiddenPrototype": true,
+      "actualPath": "/home/data",
+      "textSample": "“双高建设计划”项目平台\n数据大屏\n工作中心 (我的任务)\n消息中心\n审核中心\n督办中心\n管理后台\n/\n数据中心\n审\n审计管理员\n数据中心\n数据已更新至 2026-09-17 00:00:00\n批量导出\n年度总任务数\n4,321\n同比增长 12%\n年度资金预算\n1,200 万元\n执行率 45%\n核心绩效指标\n128 项\n达标率 88%\n生成报表数\n56 份\n最近生成：2小时前\n年度报表\n季度报表\n\t\n报表名称\n\t\n类型\n\t\n大小\n\t\n生成时间\n\t\n操作\n\t\n2025年度双高建设任务完成情况总表\n\t\n综合报表\n\t\n2.5MB\n\t\n2025-12-31 10:00\n\t\n预览\n下载\n\n\n\t\n2025年度资金预算执行决算表\n\t\n财务报表\n\t\n1.8MB\n\t\n2025-12-30 15:30\n\t\n预览\n下载\n\n\n\t\n2025年度核心绩效指标监测报告\n\t\n绩效报表\n\t\n3.2MB\n\t\n2025-12-28 09:15\n\t\n预览\n下载\n\n\n\t\n2025年度标志性成果汇编\n\t\n成果汇编\n\t\n15.6MB\n\t\n2025-12-25 14:00\n\t\n预览\n下载"
+    },
+    {
+      "id": 110228,
+      "route": "/home/query",
+      "hiddenPrototype": true,
+      "actualPath": "/home/query",
+      "textSample": "“双高建设计划”项目平台\n数据大屏\n工作中心 (我的任务)\n消息中心\n审核中心\n督办中心\n管理后台\n/\n查询中心\n审\n审计管理员\n查询中心\n全量任务检索与详情查看\n关键词\n所属项目\n全部项目\n负责部门\n全部部门\n状态\n全部状态\n查询\n重置\n任务编号\n\t\n任务名称\n\t\n所属项目\n\t\n负责部门\n\t\n负责人\n\t\n进度\n\t\n状态\n\t\n操作\nT-2025-001\n\t\n1.2.3 实施师德师风行为准则考核\n\t\n双高-人才\n\t\n人事处\n\t\n王科长\n\t\n45%\n\t\n进行中\n\t\n查看\n\n\nT-2025-002\n\t\n2.1.2 建立校企定期需求对接机制\n\t\n双高-校企\n\t\n科研处\n\t\n李主任\n\t\n30%\n\t\n进行中\n\t\n查看\n\n\nT-2025-003\n\t\n3.1 核心课程建设数量达标审核\n\t\n双高-人才\n\t\n教务处\n\t\n张老师\n\t\n0%\n\t\n未开始\n\t\n查看\n\n\nT-2025-004\n\t\n实训基地设备采购第一期\n\t\n双高-平台\n\t\n教务处\n\t\n赵助理\n\t\n\t\n已完成\n\t\n查看\n\n\nT-2025-005\n\t\n省级教学成果奖申报材料汇总\n\t\n重大成果\n\t\n“双高”建设办公室\n\t\n孙主任\n\t\n60%\n\t\n进行中\n\t\n查看\n\n\nT-2025-006\n\t\n国际交流合作项目备案\n\t\n双高-治理\n\t\n机电学院\n\t\n陈院长\n\t\n\t\n逾期\n\t\n查看\nTotal 6\n10/page\n1\nGo to"
+    },
+    {
+      "id": 110228,
+      "route": "/home/system/user",
+      "hiddenPrototype": true,
+      "actualPath": "/home/system/user",
+      "textSample": "“双高建设计划”项目平台\n数据大屏\n工作中心 (我的任务)\n消息中心\n审核中心\n督办中心\n管理后台\n/\n用户管理\n审\n审计管理员\n个人信息\n系统管理员\n超级管理员\n工号：\nadmin\n部门：\n“双高”建设办公室\n手机：\n13800138000\n邮箱：\nadmin@xzcit.edu.cn\n修改资料\n基本资料\n账号安全\n详细信息\n姓名\t系统管理员\t性别\t男\n入职日期\t2018-09-01\t职称\t副教授\n双高建设任务\t\n核心成员\n\t状态\t\n在职\n\n办公地点\t行政楼 305 室\n备注\t负责双高计划“打造技术技能人才培养高地”项目统筹工作。"
+    },
+    {
+      "id": 110228,
+      "route": "/home/system/permission",
+      "hiddenPrototype": true,
+      "actualPath": "/home/system/permission",
+      "textSample": "“双高建设计划”项目平台\n数据大屏\n工作中心 (我的任务)\n消息中心\n审核中心\n督办中心\n管理后台\n/\n任务权限\n审\n审计管理员\n任务权限管理\n共 5 项负责任务\n任务名称\n\t\n所属项目\n\t\n截止时间\n\t\n状态\n\t\n操作\n1.2.3 实施师德师风行为准则考核\n\t\n国双高项目\n\t\n2025-12-31\n\t\n进行中\n\t\n转交\n\n\n2.1.2 建立校企定期需求对接机制\n\t\n国双高项目\n\t\n2025-12-31\n\t\n进行中\n\t\n转交\n\n\n年度绩效数据填报\n\t\n日常工作\n\t\n2025-06-30\n\t\n未开始\n\t\n转交\n\n\n实训室安全检查报告\n\t\n安全专项\n\t\n2025-05-20\n\t\n已完成\n\t\n转交\n\n\n省级教学成果奖申报材料汇总\n\t\n重大成果培育\n\t\n2025-09-10\n\t\n进行中\n\t\n转交"
+    },
+    {
+      "id": 110228,
+      "route": "/home/system/log",
+      "hiddenPrototype": true,
+      "actualPath": "/home/system/log",
+      "textSample": "5 14:32:00\n\t\n323 ms\n\n\n10005\n\t\n张\n张老师\n\t\n10.0.0.5\n\t\n系统登录\n\t\n上传了佐证材料\n\t\n 成功\n\t\n2025-02-15 15:51:00\n\t\n267 ms\n\n\n10006\n\t\n李\n李主任\n\t\n172.16.0.1\n\t\n系统登录\n\t\n登录系统\n\t\n 成功\n\t\n2025-02-15 16:55:00\n\t\n286 ms\n\n\n10007\n\t\n张\n张老师\n\t\n172.16.0.1\n\t\n数据中心\n\t\n上传了佐证材料\n\t\n 成功\n\t\n2025-02-15 17:07:00\n\t\n778 ms\n\n\n10008\n\t\na\nadmin\n\t\n192.168.1.10\n\t\n审核中心\n\t\n登录系统\n\t\n 成功\n\t\n2025-02-15 18:00:00\n\t\n268 ms\n\n\n10009\n\t\n李\n李主任\n\t\n192.168.1.10\n\t\n审核中心\n\t\n删除了临时文件\n\t\n 成功\n\t\n2025-02-15 19:55:00\n\t\n81 ms\n\n\n10010\n\t\n王\n王科长\n\t\n172.16.0.1\n\t\n审核中心\n\t\n导出了月度报表\n\t\n 失败\n\t\n2025-02-15 20:17:00\n\t\n527 ms\n\n\n10011\n\t\na\nadmin\n\t\n192.168.1.15\n\t\n数据中心\n\t\n上传了佐证材料\n\t\n 成功\n\t\n2025-02-15 21:40:00\n\t\n582 ms\n\n\n10012\n\t\n张\n张老师\n\t\n10.0.0.5\n\t\n系统登录\n\t\n查看了驾驶舱数据\n\t\n 成功\n\t\n2025-02-15 22:57:00\n\t\n496 ms\n\n\n10013\n\t\na\nadmin\n\t\n192.168.1.10\n\t\n数据中心\n\t\n审核通过了资金申请\n\t\n 成功\n\t\n2025-02-15 23:32:00\n\t\n397 ms\n\n\n10014\n\t\na\nadmin\n\t\n192.168.1.15\n\t\n数据中心\n\t\n导出了月度报表\n\t\n 成功\n\t\n2025-02-15 24:34:00\n\t\n166 ms\nTotal 1254\n10/page\n1\n2\n3\n4\n5\n6\n126\nGo to"
+    },
+    {
+      "id": 910001,
+      "route": "/home/works",
+      "actualPath": "/home/works",
+      "textLength": 415,
+      "errors": []
+    },
+    {
+      "id": 910001,
+      "route": "/home/works/performance",
+      "actualPath": "/home/works/performance",
+      "textLength": 350,
+      "errors": []
+    },
+    {
+      "id": 910001,
+      "route": "/home/notice",
+      "actualPath": "/home/notice",
+      "textLength": 717,
+      "errors": []
+    },
+    {
+      "id": 910001,
+      "route": "/home/audit",
+      "actualPath": "/home/audit",
+      "textLength": 160,
+      "errors": []
+    },
+    {
+      "id": 910001,
+      "route": "/home/report",
+      "actualPath": "/home/report",
+      "textLength": 165,
+      "errors": []
+    },
+    {
+      "id": 910001,
+      "route": "/dashboard",
+      "actualPath": "/dashboard",
+      "textLength": 172,
+      "errors": []
+    },
+    {
+      "id": 910003,
+      "route": "/home/works",
+      "actualPath": "/home/works",
+      "textLength": 409,
+      "errors": []
+    },
+    {
+      "id": 910003,
+      "route": "/home/works/performance",
+      "actualPath": "/home/works/performance",
+      "textLength": 344,
+      "errors": []
+    },
+    {
+      "id": 910003,
+      "route": "/home/notice",
+      "actualPath": "/home/notice",
+      "textLength": 95,
+      "errors": []
+    },
+    {
+      "id": 910003,
+      "route": "/home/audit",
+      "actualPath": "/home/audit",
+      "textLength": 925,
+      "errors": []
+    },
+    {
+      "id": 910003,
+      "route": "/home/report",
+      "actualPath": "/home/report",
+      "textLength": 159,
+      "errors": []
+    },
+    {
+      "id": 910003,
+      "route": "/dashboard",
+      "actualPath": "/dashboard",
+      "textLength": 172,
+      "errors": []
+    },
+    {
+      "id": 1910001,
+      "route": "/home/works/achievement",
+      "actualPath": "/home/works/achievement",
+      "textLength": 243,
+      "errors": []
+    },
+    {
+      "id": 1910001,
+      "route": "/home/works",
+      "actualPath": "/home/works/achievement",
+      "textLength": 243,
+      "errors": []
+    },
+    {
+      "id": 1910001,
+      "route": "/home/audit",
+      "actualPath": "/home/works/achievement",
+      "textLength": 243,
+      "errors": []
+    }
+  ],
+  "api": [
+    {
+      "route": "/system/allUsers",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/system/dept/920001",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/system/notice",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/biz/tasks",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/biz/tasks/930002",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/biz/tasks/children?task_id=930000",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/biz/tasks/forth?parent_id=930002",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/biz/tasks/parent?task_id=930002",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/biz/tasks/dept?dept_id=920001",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/biz/audit/todo",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/biz/audit/task/930002",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/achievement/",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/achievement/audit/todo",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/achievement/audit/records",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/performance",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/performance/950011",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/performance/year/2026",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/performance/task/950011?year=2026",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/performance/audit/todo",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/performance/audit/records",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/performance/audit/perf/950011?year=2026",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/performance/audit/logs/971001",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/dashboard/summary",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/dashboard/completion/overall",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/dashboard/completion/year?year=2026",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/dashboard/completion/midterm?endYear=2028",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/dashboard/completion/first-level",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/dashboard/dept/overall",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/dashboard/dept/year?year=2026",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/dashboard/dept/midterm?endYear=2028",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/dashboard/tasks/first-level",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/dashboard/tasks/all_level",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/dashboard/dept/920001",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/dashboard/dept/batch?deptIds=920001,920002",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/dashboard/comparison/dept",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/dashboard/comparison/year",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/dashboard/comparison/level",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/dashboard/trend/2026",
+      "status": 200,
+      "businessError": null
+    }
+  ],
+  "findings": [
+    {
+      "id": "prototype-password",
+      "passwordRequests": 0,
+      "oldPasswordStillValid": true,
+      "newPasswordInvalid": true
+    },
+    {
+      "id": "department-counts",
+      "stats": {
+        "deptId": 920001,
+        "deptName": "审计测试部门A",
+        "totalTasks": 1,
+        "completedTasks": 0,
+        "completionRate": 0,
+        "notStartedCount": 0,
+        "inProgressCount": 3,
+        "inReviewCount": 0,
+        "finishedCount": 0,
+        "notStartedRate": 0,
+        "inProgressRate": 300,
+        "inReviewRate": 0,
+        "finishedRate": 0
+      }
+    },
+    {
+      "id": "comparison-placeholder",
+      "year": {
+        "data": [
+          {
+            "completedTasks": 30,
+            "year": 2023,
+            "totalTasks": 50,
+            "completionRate": 60
+          },
+          {
+            "completedTasks": 45,
+            "year": 2024,
+            "totalTasks": 60,
+            "completionRate": 70
+          },
+          {
+            "completedTasks": 60,
+            "year": 2025,
+            "totalTasks": 70,
+            "completionRate": 80
+          }
+        ],
+        "dimension": "年度"
+      },
+      "level": {
+        "data": [
+          {
+            "completedTasks": 0,
+            "level": "一级任务",
+            "totalTasks": 1,
+            "completionRate": 0
+          },
+          {
+            "completedTasks": 60,
+            "level": "二级任务",
+            "totalTasks": 100,
+            "completionRate": 60
+          },
+          {
+            "completedTasks": 120,
+            "level": "三级任务",
+            "totalTasks": 200,
+            "completionRate": 60
+          }
+        ],
+        "dimension": "任务级别"
+      }
+    },
+    {
+      "id": "uppercase-upload",
+      "uploaded": [
+        {
+          "name": "closure.pdf",
+          "status": 200,
+          "body": {
+            "fileId": 165,
+            "filename": "closure(1).pdf",
+            "filepath": "/uploads/closure(1).pdf"
+          }
+        },
+        {
+          "name": "closure.PDF",
+          "status": 200,
+          "body": {
+            "message": "java.lang.RuntimeException: 文件格式错误",
+            "code": 500
+          }
+        }
+      ]
+    }
+  ]
+}

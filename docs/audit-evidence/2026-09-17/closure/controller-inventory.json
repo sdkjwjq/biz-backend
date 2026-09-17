@@ -1,0 +1,372 @@
+[
+  {
+    "controller": "AchievementController.java",
+    "verb": "GET",
+    "mapping": "/{achId}"
+  },
+  {
+    "controller": "AchievementController.java",
+    "verb": "GET",
+    "mapping": "/"
+  },
+  {
+    "controller": "AchievementController.java",
+    "verb": "POST",
+    "mapping": "/add"
+  },
+  {
+    "controller": "AchievementController.java",
+    "verb": "POST",
+    "mapping": "/update/{id}"
+  },
+  {
+    "controller": "AchievementController.java",
+    "verb": "POST",
+    "mapping": "/delete/{achId}"
+  },
+  {
+    "controller": "AchievementController.java",
+    "verb": "GET",
+    "mapping": "/audit/todo"
+  },
+  {
+    "controller": "AchievementController.java",
+    "verb": "GET",
+    "mapping": "/audit/records"
+  },
+  {
+    "controller": "AchievementController.java",
+    "verb": "GET",
+    "mapping": "/audit/achievement/{achId}"
+  },
+  {
+    "controller": "AchievementController.java",
+    "verb": "GET",
+    "mapping": "/audit/logs/{subId}"
+  },
+  {
+    "controller": "AchievementController.java",
+    "verb": "POST",
+    "mapping": "/audit"
+  },
+  {
+    "controller": "BizController.java",
+    "verb": "GET",
+    "mapping": "/tasks"
+  },
+  {
+    "controller": "BizController.java",
+    "verb": "GET",
+    "mapping": "/tasks/{taskId}"
+  },
+  {
+    "controller": "BizController.java",
+    "verb": "GET",
+    "mapping": "/tasks/children"
+  },
+  {
+    "controller": "BizController.java",
+    "verb": "GET",
+    "mapping": "/tasks/forth"
+  },
+  {
+    "controller": "BizController.java",
+    "verb": "GET",
+    "mapping": "/tasks/parent"
+  },
+  {
+    "controller": "BizController.java",
+    "verb": "GET",
+    "mapping": "/tasks/dept"
+  },
+  {
+    "controller": "BizController.java",
+    "verb": "POST",
+    "mapping": "/tasks/manage/add"
+  },
+  {
+    "controller": "BizController.java",
+    "verb": "POST",
+    "mapping": "/tasks/manage/update"
+  },
+  {
+    "controller": "BizController.java",
+    "verb": "POST",
+    "mapping": "/tasks/manage/finish/{taskId}"
+  },
+  {
+    "controller": "BizController.java",
+    "verb": "POST",
+    "mapping": "/sub"
+  },
+  {
+    "controller": "BizController.java",
+    "verb": "GET",
+    "mapping": "/audit/{taskId}"
+  },
+  {
+    "controller": "BizController.java",
+    "verb": "GET",
+    "mapping": "/audit/todo"
+  },
+  {
+    "controller": "BizController.java",
+    "verb": "GET",
+    "mapping": "/audit/task/{taskId}"
+  },
+  {
+    "controller": "BizController.java",
+    "verb": "GET",
+    "mapping": "/audit/file/{taskId}"
+  },
+  {
+    "controller": "BizController.java",
+    "verb": "GET",
+    "mapping": "/audit/logs/{subId}"
+  },
+  {
+    "controller": "BizController.java",
+    "verb": "POST",
+    "mapping": "/audit"
+  },
+  {
+    "controller": "BizController.java",
+    "verb": "POST",
+    "mapping": "/drawback/{taskId}"
+  },
+  {
+    "controller": "BizController.java",
+    "verb": "POST",
+    "mapping": "/resub"
+  },
+  {
+    "controller": "DashboardController.java",
+    "verb": "GET",
+    "mapping": "/summary"
+  },
+  {
+    "controller": "DashboardController.java",
+    "verb": "GET",
+    "mapping": "/completion/overall"
+  },
+  {
+    "controller": "DashboardController.java",
+    "verb": "GET",
+    "mapping": "/completion/year"
+  },
+  {
+    "controller": "DashboardController.java",
+    "verb": "GET",
+    "mapping": "/completion/midterm"
+  },
+  {
+    "controller": "DashboardController.java",
+    "verb": "GET",
+    "mapping": "/completion/first-level"
+  },
+  {
+    "controller": "DashboardController.java",
+    "verb": "GET",
+    "mapping": "/dept/overall"
+  },
+  {
+    "controller": "DashboardController.java",
+    "verb": "GET",
+    "mapping": "/dept/year"
+  },
+  {
+    "controller": "DashboardController.java",
+    "verb": "GET",
+    "mapping": "/dept/midterm"
+  },
+  {
+    "controller": "DashboardController.java",
+    "verb": "GET",
+    "mapping": "/tasks/first-level"
+  },
+  {
+    "controller": "DashboardController.java",
+    "verb": "GET",
+    "mapping": "/tasks/all_level"
+  },
+  {
+    "controller": "DashboardController.java",
+    "verb": "GET",
+    "mapping": "/dept/{deptId}"
+  },
+  {
+    "controller": "DashboardController.java",
+    "verb": "GET",
+    "mapping": "/dept/batch"
+  },
+  {
+    "controller": "DashboardController.java",
+    "verb": "GET",
+    "mapping": "/comparison/{dimension}"
+  },
+  {
+    "controller": "PerformanceController.java",
+    "verb": "GET",
+    "mapping": "(root)"
+  },
+  {
+    "controller": "PerformanceController.java",
+    "verb": "POST",
+    "mapping": "/refresh"
+  },
+  {
+    "controller": "PerformanceController.java",
+    "verb": "GET",
+    "mapping": "/{perfId}"
+  },
+  {
+    "controller": "PerformanceController.java",
+    "verb": "GET",
+    "mapping": "/task/{prefId}"
+  },
+  {
+    "controller": "PerformanceController.java",
+    "verb": "GET",
+    "mapping": "/year/{year}"
+  },
+  {
+    "controller": "PerformanceController.java",
+    "verb": "POST",
+    "mapping": "/submit"
+  },
+  {
+    "controller": "PerformanceController.java",
+    "verb": "GET",
+    "mapping": "/audit/todo"
+  },
+  {
+    "controller": "PerformanceController.java",
+    "verb": "GET",
+    "mapping": "/audit/records"
+  },
+  {
+    "controller": "PerformanceController.java",
+    "verb": "GET",
+    "mapping": "/audit/perf/{perfId}"
+  },
+  {
+    "controller": "PerformanceController.java",
+    "verb": "GET",
+    "mapping": "/audit/logs/{subId}"
+  },
+  {
+    "controller": "PerformanceController.java",
+    "verb": "POST",
+    "mapping": "/audit"
+  },
+  {
+    "controller": "PerformanceController.java",
+    "verb": "POST",
+    "mapping": "/audit/withdraw/{subId}"
+  },
+  {
+    "controller": "ScheduledTaskController.java",
+    "verb": "POST",
+    "mapping": "/month_leader_trigger"
+  },
+  {
+    "controller": "ScheduledTaskController.java",
+    "verb": "POST",
+    "mapping": "/month_auditor_trigger"
+  },
+  {
+    "controller": "ScheduledTaskController.java",
+    "verb": "POST",
+    "mapping": "/year_trigger"
+  },
+  {
+    "controller": "ScheduledTaskController.java",
+    "verb": "POST",
+    "mapping": "/update_task_status"
+  },
+  {
+    "controller": "SysController.java",
+    "verb": "GET",
+    "mapping": "/allUsers"
+  },
+  {
+    "controller": "SysController.java",
+    "verb": "POST",
+    "mapping": "/users/add"
+  },
+  {
+    "controller": "SysController.java",
+    "verb": "POST",
+    "mapping": "/users/update"
+  },
+  {
+    "controller": "SysController.java",
+    "verb": "POST",
+    "mapping": "/users/delete/{userId}"
+  },
+  {
+    "controller": "SysController.java",
+    "verb": "GET",
+    "mapping": "/dept/{deptId}"
+  },
+  {
+    "controller": "SysController.java",
+    "verb": "POST",
+    "mapping": "/login"
+  },
+  {
+    "controller": "SysController.java",
+    "verb": "POST",
+    "mapping": "/password"
+  },
+  {
+    "controller": "SysController.java",
+    "verb": "POST",
+    "mapping": "/logout"
+  },
+  {
+    "controller": "SysController.java",
+    "verb": "POST",
+    "mapping": "/upload/{task_id}"
+  },
+  {
+    "controller": "SysController.java",
+    "verb": "GET",
+    "mapping": "/download/{file_id}"
+  },
+  {
+    "controller": "SysController.java",
+    "verb": "POST",
+    "mapping": "/notice"
+  },
+  {
+    "controller": "SysController.java",
+    "verb": "GET",
+    "mapping": "/notice"
+  },
+  {
+    "controller": "SysController.java",
+    "verb": "POST",
+    "mapping": "/notice/{notice_id}"
+  },
+  {
+    "controller": "SysController.java",
+    "verb": "POST",
+    "mapping": "/alert"
+  },
+  {
+    "controller": "TrendDataController.java",
+    "verb": "GET",
+    "mapping": "/{year}"
+  },
+  {
+    "controller": "TrendDataController.java",
+    "verb": "GET",
+    "mapping": "/"
+  },
+  {
+    "controller": "TrendDataController.java",
+    "verb": "POST",
+    "mapping": "/record"
+  }
+]
