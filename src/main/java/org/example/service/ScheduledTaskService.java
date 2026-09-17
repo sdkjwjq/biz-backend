@@ -53,6 +53,10 @@ public class ScheduledTaskService {
             int successCount = 0;
             for (Long deptLeaderId: deptLeaderIds){
                 SysDept dept = sysMapper.getDeptByUserId(deptLeaderId);
+                if (dept == null || Integer.valueOf(1).equals(dept.getIsDelete())) {
+                    System.err.println("跳过部门提醒：负责人未关联有效部门，userId=" + deptLeaderId);
+                    continue;
+                }
 //                获取当前时间，将年份转为Integer
                 int currentYear = java.time.LocalDate.now().getYear();
 //                获取本年度本部门的所有任务
@@ -176,6 +180,10 @@ public class ScheduledTaskService {
             int successCount = 0;
             for(Long leaderId: leadersId){
                 SysDept dept = sysMapper.getDeptByUserId(leaderId);
+                if (dept == null || Integer.valueOf(1).equals(dept.getIsDelete())) {
+                    System.err.println("跳过部门提醒：负责人未关联有效部门，userId=" + leaderId);
+                    continue;
+                }
 //                获取本年度本部门的所有任务
                 List<BizTask> currentYearTasks = bizMapper.getTasksByDeptIdAndPhase(dept.getDeptId(),currentYear);
                 if (currentYearTasks.isEmpty()) {
@@ -242,7 +250,14 @@ public class ScheduledTaskService {
             // 获取所有部门负责人
             List<Long> deptLeaders = sysMapper.getAllDeptLeaders();
             if (deptLeaders != null) {
-                userIds.addAll(deptLeaders);
+                for (Long leaderId : deptLeaders) {
+                    SysUser leader = leaderId == null ? null : sysMapper.getUserById(leaderId);
+                    if (leader == null || Integer.valueOf(1).equals(leader.getIsDelete())) {
+                        System.err.println("跳过部门提醒：负责人为空、不存在或已删除，userId=" + leaderId);
+                        continue;
+                    }
+                    userIds.add(leaderId);
+                }
             }
 
             // 可以根据需要添加其他用户组

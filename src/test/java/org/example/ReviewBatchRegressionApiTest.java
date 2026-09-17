@@ -336,6 +336,24 @@ class ReviewBatchRegressionApiTest {
         seedTask(930002L, 930001L, 3);
     }
 
+    @Test
+    void remindersSkipInvalidLeadersAndContinueValidDepartments() throws Exception {
+        seedTasks();
+        jdbc.update("UPDATE biz_task SET phase=?", LocalDate.now().getYear());
+        seedUser(919997L, "1");
+        jdbc.update("UPDATE sys_user SET is_delete=1 WHERE user_id=919997");
+        for (int i = 0; i < 2; i++) {
+            jdbc.update("INSERT INTO sys_dept (dept_id,dept_name,leader_id,is_delete) VALUES (?, 'Invalid leader fixture', ?,0)",
+                    927001 + i, new Long[]{null, 919997L}[i]);
+        }
+        String admin = login(ADMIN);
+        assertSuccess(request(HttpMethod.POST, "/scheduled/month_leader_trigger", admin, Map.of()), "成功");
+        assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM sys_notice WHERE to_user_id=?", Integer.class, LEADER));
+        assertSuccess(request(HttpMethod.POST, "/scheduled/year_trigger", admin, Map.of()), "成功");
+        assertEquals(2, jdbc.queryForObject("SELECT COUNT(*) FROM sys_notice", Integer.class));
+        assertEquals(2, jdbc.queryForObject("SELECT COUNT(*) FROM sys_notice WHERE to_user_id=?", Integer.class, LEADER));
+    }
+
     private void seedTask(long taskId, long parentId, int level) {
         jdbc.update("INSERT INTO biz_task (task_id, project_id, parent_id, phase, task_name, level, leader_id, "
                         + "auditor_id, principal_id, dept_id, data_type, target_value, current_value, progress, status, is_delete) "
