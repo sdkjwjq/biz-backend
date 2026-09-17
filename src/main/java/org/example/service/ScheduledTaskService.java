@@ -13,6 +13,9 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.Map;
+import java.util.HashMap;
+import org.example.utils.BusinessLogUtil;
 
 /**
  * 定时任务服务类
@@ -124,24 +127,27 @@ public class ScheduledTaskService {
             List<BizMaterialSubmission> allPendingAudits = bizMapper.getAllPendingAudits();
 
 
-            Set<Long> auditorIds = new HashSet<>();
+            Map<Long, Integer> auditorCounts = new HashMap<>();
+            int skippedCount = 0;
             for (BizMaterialSubmission pendingAudit: allPendingAudits){
-                auditorIds.add(pendingAudit.getCurrentHandlerId());
+                Long handlerId = pendingAudit.getCurrentHandlerId();
+                SysUser handler = handlerId == null ? null : sysMapper.getUserById(handlerId);
+                if (handler == null || Integer.valueOf(1).equals(handler.getIsDelete())) {
+                    skippedCount++;
+                    BusinessLogUtil.info("月度审核提醒", "result", "跳过无有效处理人的审核单",
+                            "subId", pendingAudit.getSubId(), "handlerId", handlerId);
+                    continue;
+                }
+                auditorCounts.merge(handlerId, 1, Integer::sum);
             }
 
-            if (auditorIds.isEmpty()) {
-                System.out.println("没有需要发送年度提醒的用户");
-                return "没有需要发送年度提醒的用户";
+            if (auditorCounts.isEmpty()) {
+                return "没有需要发送月度审核提醒的用户，跳过 " + skippedCount + " 条异常审核单";
             }
             int successCount = 0;
-            for (Long auditorId: auditorIds){
+            for (Long auditorId: auditorCounts.keySet()){
 //              获取待审核任务数量
-                Integer auditCount = 0;
-                for (BizMaterialSubmission pendingAudit: allPendingAudits){
-                    if (pendingAudit.getCurrentHandlerId().equals(auditorId)) {
-                        auditCount++;
-                    }
-                }
+                Integer auditCount = auditorCounts.get(auditorId);
 
                 String title = "月度审核任务提醒";
                 String content = "尊敬的 " + sysMapper.getUserById(auditorId).getNickName() +
@@ -152,7 +158,7 @@ public class ScheduledTaskService {
                 System.out.println("向用户ID " + auditorId + " 发送月度提醒成功");
                 successCount++;
             }
-            return "向"+successCount+"名用户发送月度提醒成功";
+            return "向"+successCount+"名用户发送月度提醒成功，跳过 " + skippedCount + " 条异常审核单";
         } catch (Exception e) {
             System.err.println("执行月度审核提醒任务时发生错误: " + e.getMessage());
             e.printStackTrace();
