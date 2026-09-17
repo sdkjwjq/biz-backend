@@ -1,0 +1,23 @@
+[
+  {
+    "id": "23-1",
+    "configuredLeaderId": 910002,
+    "returnedLeaderId": null,
+    "returnedLeaderName": null
+  },
+  {
+    "id": "23-2",
+    "beforeTotal": 3,
+    "afterDeleteTotal": 3,
+    "completedTasksFromDeletedRecord": 1,
+    "activeTaskCount": 2
+  },
+  {
+    "id": "23-3",
+    "response": {
+      "message": "获取部门统计详情失败: Cannot invoke \"java.lang.Integer.intValue()\" because the return value of \"org.example.entity.BizTask.getPhase()\" is null",
+      "code": 500
+    },
+    "taskWithNullYear": 930002
+  }
+]
