@@ -286,9 +286,26 @@ public class SysService {
      */
     public void sendAlert(SysAlertDTO sysAlertDTO, Long userId) {
         try{
+            SysUser recipient;
+            if (sysAlertDTO.getTo_user_id() != null) {
+                recipient = sysMapper.getUserById(sysAlertDTO.getTo_user_id());
+            } else {
+                String nickName = sysAlertDTO.getTo_user_nick_name();
+                if (nickName == null || nickName.isBlank()) {
+                    throw new RuntimeException("请提供接收人员ID或姓名");
+                }
+                List<SysUser> recipients = sysMapper.getActiveUsersByNickName(nickName);
+                if (recipients.size() > 1) {
+                    throw new RuntimeException("存在同名人员，请使用接收人员ID发送");
+                }
+                recipient = recipients.isEmpty() ? null : recipients.get(0);
+            }
+            if (recipient == null || Integer.valueOf(1).equals(recipient.getIsDelete())) {
+                throw new RuntimeException("接收人员不存在或已删除");
+            }
             SysNotice sysNotice = new SysNotice();
             sysNotice.setFromUserId(userId);
-            sysNotice.setToUserId(sysMapper.getUserByNickName(sysAlertDTO.getTo_user_nick_name()).getUserId());
+            sysNotice.setToUserId(recipient.getUserId());
             sysNotice.setType("1");
             sysNotice.setTriggerEvent("1");
             sysNotice.setTitle(sysAlertDTO.getTitle());

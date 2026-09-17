@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 //站内信息 预警
 //input token to_user_nick_name title/content source_id
 public class SysAlertDTO {
+    private Long to_user_id;
     private String to_user_nick_name;
     private String title;
     private String content;

@@ -99,6 +99,9 @@ public interface SysMapper {
     @Select("SELECT * FROM sys_user WHERE nick_name = #{nickName}")
     public SysUser getUserByNickName(String nickName);
 
+    @Select("SELECT * FROM sys_user WHERE nick_name = #{nickName} AND (is_delete = 0 OR is_delete IS NULL)")
+    List<SysUser> getActiveUsersByNickName(String nickName);
+
     /**
      * 添加用户
      * userId手动添加而非自增
