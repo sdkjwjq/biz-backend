@@ -1,0 +1,46 @@
+{
+  "schema": "biz_review_test_ecc6899352b646f0af1836a15fc28a24",
+  "cases": [
+    {
+      "id": "15-1",
+      "roleAfterChange": "1",
+      "newSession": {
+        "status": 403,
+        "body": {
+          "code": 403,
+          "msg": "无权限访问该接口，仅管理员可访问"
+        }
+      },
+      "oldSession": {
+        "status": 200,
+        "body": "用户 915002 删除成功"
+      },
+      "victimDeleted": 1
+    },
+    {
+      "id": "15-2",
+      "requestedStatus": "0",
+      "createdStatus": "1",
+      "updateResponse": {
+        "status": 200,
+        "body": "用户 batch15_915003 更新成功"
+      },
+      "updatedStatus": "1",
+      "statusOneCanLogin": true
+    },
+    {
+      "id": "15-3",
+      "changed": {
+        "status": 200,
+        "body": {
+          "new_password": "密码修改成功"
+        }
+      },
+      "emptyPasswordApiLogin": true,
+      "originalPasswordRejected": true,
+      "browserLoginRequests": 0,
+      "browserMessage": "请输入密码"
+    }
+  ],
+  "errors": []
+}
