@@ -1,0 +1,95 @@
+[
+  {
+    "id": "19-1",
+    "responses": [
+      "已审批，下一位审批人为audit_leader",
+      "已退回，退回到audit_user_a"
+    ],
+    "logs": [
+      {
+        "after": 10,
+        "action": "提交",
+        "before": 0
+      },
+      {
+        "after": 20,
+        "action": "通过",
+        "before": 10
+      },
+      {
+        "after": -10,
+        "action": "退回",
+        "before": 10
+      }
+    ],
+    "submission": "-10\t1\t910001",
+    "task": "0.0000\t1"
+  },
+  {
+    "id": "19-2",
+    "responses": [
+      "绩效已通过专业群审核，待完结归档",
+      "绩效已通过专业群审核，待完结归档"
+    ],
+    "logs": [
+      {
+        "after": 10,
+        "action": "submit",
+        "before": 0
+      },
+      {
+        "after": 20,
+        "action": "pass",
+        "before": 10
+      },
+      {
+        "after": 20,
+        "action": "pass",
+        "before": 10
+      }
+    ],
+    "yearActualValue": "3.0000",
+    "submission": "20\t0\t110228",
+    "notices": [
+      "绩效待审核",
+      "绩效待完结归档",
+      "绩效待完结归档"
+    ]
+  },
+  {
+    "id": "19-3",
+    "responses": [
+      "绩效填报已撤回",
+      "绩效已完结归档"
+    ],
+    "logs": [
+      {
+        "after": 10,
+        "action": "submit",
+        "before": 0
+      },
+      {
+        "after": 20,
+        "action": "pass",
+        "before": 10
+      },
+      {
+        "after": 30,
+        "action": "pass",
+        "before": 20
+      },
+      {
+        "after": 0,
+        "action": "withdraw",
+        "before": 20
+      }
+    ],
+    "yearActualValue": "0.0000",
+    "submission": "0\t1\t910001",
+    "notices": [
+      "绩效待审核",
+      "绩效待完结归档",
+      "绩效已完结归档"
+    ]
+  }
+]
