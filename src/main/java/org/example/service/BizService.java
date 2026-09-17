@@ -275,15 +275,15 @@ public class BizService {
             if (!sysUser.getRole().equals("0")) {
                 throw new RuntimeException("仅限管理员访问");
             }
-            if (bizMapper.getTaskById(taskId) == null) {
+            BizMaterialSubmission audit = bizMapper.getNewestAuditForUpdate(taskId);
+            BizTask taskById = bizMapper.getTaskByIdForUpdate(taskId);
+            if (taskById == null) {
                 throw new RuntimeException("该任务不存在");
             }
 
-            if (bizMapper.getTaskById(taskId).getStatus().equals("3")) {
+            if (taskById.getStatus().equals("3")) {
                 throw new RuntimeException("该任务已完成，请勿重复提交");
             }
-            BizTask taskById = bizMapper.getTaskById(taskId);
-            BizMaterialSubmission audit = bizMapper.getNewestAudit(taskId);
             if (audit == null || (audit.getIsDelete() != null && audit.getIsDelete() == 1)) {
                 throw new RuntimeException("该任务没有可完结的审批单，请先提交材料");
             }
