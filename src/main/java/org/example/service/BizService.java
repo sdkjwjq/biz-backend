@@ -151,6 +151,7 @@ public class BizService {
             if (!Integer.valueOf(3).equals(taskDTO.getLevel())) {
                 throw new RuntimeException("只能新增三级任务");
             }
+            validateTaskHierarchy(taskDTO, new BizTask());
             if (bizMapper.getTaskById(taskDTO.getParentId()) == null) {
                 throw new RuntimeException("该二级任务不存在");
             }
