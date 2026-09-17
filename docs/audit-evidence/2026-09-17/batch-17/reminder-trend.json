@@ -1,0 +1,38 @@
+[
+  {
+    "id": "17-1",
+    "monthly": {
+      "message": "java.lang.NullPointerException: Cannot invoke \"org.example.entity.SysDept.getDeptId()\" because \"dept\" is null",
+      "code": 500
+    },
+    "annual": {
+      "message": "java.lang.NullPointerException: Cannot invoke \"org.example.entity.SysDept.getDeptId()\" because \"dept\" is null",
+      "code": 500
+    },
+    "validLeaderNoticeCount": 0
+  },
+  {
+    "id": "17-2",
+    "monthly": "向1名用户发送月度提醒成功",
+    "annual": "年度提醒完成，成功发送 1 条提醒",
+    "managedTaskCount": 5,
+    "ownDepartmentTaskCount": 3,
+    "notices": [
+      {
+        "title": "部门双高建设任务完成情况月度提醒",
+        "content": "尊敬的 审计部门负责人 您好,本年度贵部门有 3 个双高建设任务，\\n截至本月，共0个任务已有进展。\\n已完成任务0 个，0 个任务尚未审核\\n请及时关注本部门双高建设任务进展情况。"
+      },
+      {
+        "title": "部门双高建设任务年度提醒",
+        "content": "尊敬的 审计部门负责人 您好,本年度贵部门有 3 个双高建设任务，\\n请及时关注本部门双高建设任务进展情况。"
+      }
+    ]
+  },
+  {
+    "id": "17-3",
+    "withNullValue": "手动记录成功",
+    "failedRecordCount": 0,
+    "afterZeroValue": "手动记录成功",
+    "controlRecordCount": 1
+  }
+]
