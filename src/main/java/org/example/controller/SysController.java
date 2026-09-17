@@ -10,6 +10,7 @@ import org.example.entity.vo.SysLogoutVO;
 import org.example.service.SysService;
 import org.example.utils.JWTUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -124,6 +125,8 @@ public class SysController {
             Long userId=JWTUtil.getUserIdFromToken(request.getHeader("Authorization"));
             sysService.changePassword(userId,sysPasswordDTO.getNew_password());
             return new SysPwdDTO("密码修改成功");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(new ErrorVO(e.getMessage(), 400));
         } catch (Exception e) {
             return new ErrorVO(e.getMessage(), 500);
         }

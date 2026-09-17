@@ -144,6 +144,36 @@ class ReviewBatchRegressionApiTest {
     }
 
     @Test
+    void passwordValidationPreservesExistingCredentials() throws Exception {
+        String token = login(USER);
+        List<Map<String, Object>> invalidBodies = new ArrayList<>();
+        invalidBodies.add(new LinkedHashMap<>());
+        Map<String, Object> nullBody = new LinkedHashMap<>();
+        nullBody.put("new_password", null);
+        invalidBodies.add(nullBody);
+        for (String invalid : List.of("", "      ", "\t\n    ", "12345")) {
+            invalidBodies.add(Map.of("new_password", invalid));
+        }
+        for (Map<String, Object> invalid : invalidBodies) {
+            ResponseEntity<String> response = request(HttpMethod.POST, "/system/password", token, invalid);
+            assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+            assertEquals(400, json.readTree(response.getBody()).get("code").asInt());
+            assertEquals(PASSWORD, jdbc.queryForObject("SELECT password FROM sys_user WHERE user_id=?", String.class, USER));
+            login(USER);
+        }
+        for (String valid : List.of("abc123", " a123 ")) {
+            ResponseEntity<String> response = request(HttpMethod.POST, "/system/password", token,
+                    Map.of("new_password", valid));
+            assertEquals(HttpStatus.OK, response.getStatusCode());
+            assertEquals(valid, jdbc.queryForObject("SELECT password FROM sys_user WHERE user_id=?", String.class, USER));
+            assertTrue(body(request(HttpMethod.POST, "/system/login", null,
+                    Map.of("user_id", USER, "password", valid))).hasNonNull("token"));
+        }
+        assertFalse(body(request(HttpMethod.POST, "/system/login", null,
+                Map.of("user_id", USER, "password", PASSWORD))).hasNonNull("token"));
+    }
+
+    @Test
     void achievementQuantitiesRejectInvalidWithoutWrites() throws Exception {
         seedUser(990000L + DEPT, "1");
         String token = login(990000L + DEPT);

@@ -116,6 +116,12 @@ public class SysService {
      * @param newPassword 新密码
      */
     public void changePassword(Long userId, String newPassword) {
+        if (newPassword == null || newPassword.isBlank()) {
+            throw new IllegalArgumentException("请输入新密码");
+        }
+        if (newPassword.length() < 6) {
+            throw new IllegalArgumentException("密码长度至少6位");
+        }
         SysUser user = sysMapper.getUserById(userId);
         if (user == null) {
             throw new RuntimeException("用户不存在");
