@@ -1,0 +1,101 @@
+[
+  {
+    "decisions": [
+      true,
+      false
+    ],
+    "overlappingRequests": 2,
+    "responses": [
+      "成果已归档",
+      {
+        "message": "当前状态不可审核",
+        "code": 500
+      }
+    ],
+    "state": {
+      "submission": "30\t110228\t合成并发审核",
+      "achievement": "30\tNULL",
+      "logs": [
+        {
+          "after": 30,
+          "action": "pass",
+          "before": 10
+        }
+      ],
+      "notices": [
+        "成果已归档"
+      ]
+    },
+    "retryResponse": {
+      "message": "当前状态不可审核",
+      "code": 500
+    },
+    "retryUnchanged": true
+  },
+  {
+    "decisions": [
+      true,
+      true
+    ],
+    "overlappingRequests": 2,
+    "responses": [
+      {
+        "message": "当前状态不可审核",
+        "code": 500
+      },
+      "成果已归档"
+    ],
+    "state": {
+      "submission": "30\t110228\t合成并发审核",
+      "achievement": "30\tNULL",
+      "logs": [
+        {
+          "after": 30,
+          "action": "pass",
+          "before": 10
+        }
+      ],
+      "notices": [
+        "成果已归档"
+      ]
+    },
+    "retryResponse": {
+      "message": "当前状态不可审核",
+      "code": 500
+    },
+    "retryUnchanged": true
+  },
+  {
+    "decisions": [
+      false,
+      false
+    ],
+    "overlappingRequests": 2,
+    "responses": [
+      "成果已退回",
+      {
+        "message": "当前状态不可审核",
+        "code": 500
+      }
+    ],
+    "state": {
+      "submission": "-10\t1910001\t合成并发审核",
+      "achievement": "-10\t1910001",
+      "logs": [
+        {
+          "after": -10,
+          "action": "reject",
+          "before": 10
+        }
+      ],
+      "notices": [
+        "成果已退回"
+      ]
+    },
+    "retryResponse": {
+      "message": "当前状态不可审核",
+      "code": 500
+    },
+    "retryUnchanged": true
+  }
+]
