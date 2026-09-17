@@ -1,0 +1,307 @@
+[
+  {
+    "id": "19-1",
+    "decisions": [
+      true,
+      false
+    ],
+    "responses": [
+      {
+        "message": "java.lang.RuntimeException: 该任务不存在",
+        "code": 500
+      },
+      "已退回，退回到audit_user_a"
+    ],
+    "logs": [
+      {
+        "after": 10,
+        "action": "提交",
+        "before": 0
+      },
+      {
+        "after": -10,
+        "action": "退回",
+        "before": 10
+      }
+    ],
+    "submission": "-10\t1\t910001",
+    "taskValue": 0.0,
+    "noticeCount": 2,
+    "retryRejected": true
+  },
+  {
+    "id": "19-1",
+    "decisions": [
+      true,
+      true
+    ],
+    "responses": [
+      "已审批，下一位审批人为audit_leader",
+      {
+        "message": "java.lang.RuntimeException: 您不是该任务的当前审批人，无法操作",
+        "code": 500
+      }
+    ],
+    "logs": [
+      {
+        "after": 10,
+        "action": "提交",
+        "before": 0
+      },
+      {
+        "after": 20,
+        "action": "通过",
+        "before": 10
+      }
+    ],
+    "submission": "20\t0\t910002",
+    "taskValue": 3.0,
+    "noticeCount": 2,
+    "retryRejected": true
+  },
+  {
+    "id": "19-1",
+    "mode": "duplicate-withdraw",
+    "responses": [
+      {
+        "message": "java.lang.RuntimeException: 该任务未处于审核状态",
+        "code": 500
+      },
+      "已撤回提交"
+    ],
+    "restoredValue": 0,
+    "singleWithdrawalLog": true
+  },
+  {
+    "id": "19-1",
+    "decisions": [
+      false,
+      false
+    ],
+    "responses": [
+      {
+        "message": "java.lang.RuntimeException: 该任务不存在",
+        "code": 500
+      },
+      "已退回，退回到audit_user_a"
+    ],
+    "logs": [
+      {
+        "after": 10,
+        "action": "提交",
+        "before": 0
+      },
+      {
+        "after": -10,
+        "action": "退回",
+        "before": 10
+      }
+    ],
+    "submission": "-10\t1\t910001",
+    "taskValue": 0.0,
+    "noticeCount": 2,
+    "retryRejected": true
+  },
+  {
+    "id": "19-2",
+    "mode": "duplicate-pass",
+    "responses": [
+      {
+        "message": "当前用户不是该绩效审核单的处理人",
+        "code": 500
+      },
+      "绩效已通过专业群审核，待完结归档"
+    ],
+    "logs": [
+      {
+        "after": 10,
+        "action": "submit",
+        "before": 0
+      },
+      {
+        "after": 20,
+        "action": "pass",
+        "before": 10
+      }
+    ],
+    "submission": "20\t0",
+    "actualValue": 3.0,
+    "totalValue": 3.0,
+    "notices": [
+      "绩效待审核",
+      "绩效待完结归档"
+    ],
+    "retryRejected": true
+  },
+  {
+    "id": "19-2",
+    "mode": "conflicting-decisions",
+    "responses": [
+      {
+        "message": "当前用户不是该绩效审核单的处理人",
+        "code": 500
+      },
+      "绩效已退回"
+    ],
+    "logs": [
+      {
+        "after": 10,
+        "action": "submit",
+        "before": 0
+      },
+      {
+        "after": -10,
+        "action": "reject",
+        "before": 10
+      }
+    ],
+    "submission": "-10\t0",
+    "actualValue": 0.0,
+    "totalValue": 0.0,
+    "notices": [
+      "绩效待审核",
+      "绩效已退回"
+    ],
+    "retryRejected": true
+  },
+  {
+    "id": "19-2",
+    "mode": "duplicate-reject",
+    "responses": [
+      "绩效已退回",
+      {
+        "message": "当前用户不是该绩效审核单的处理人",
+        "code": 500
+      }
+    ],
+    "logs": [
+      {
+        "after": 10,
+        "action": "submit",
+        "before": 0
+      },
+      {
+        "after": -10,
+        "action": "reject",
+        "before": 10
+      }
+    ],
+    "submission": "-10\t0",
+    "actualValue": 0.0,
+    "totalValue": 0.0,
+    "notices": [
+      "绩效待审核",
+      "绩效已退回"
+    ],
+    "retryRejected": true
+  },
+  {
+    "id": "19-3",
+    "mode": "archive-withdraw",
+    "responses": [
+      "绩效填报已撤回",
+      {
+        "message": "绩效审核单不存在",
+        "code": 500
+      }
+    ],
+    "logs": [
+      {
+        "after": 10,
+        "action": "submit",
+        "before": 0
+      },
+      {
+        "after": 20,
+        "action": "pass",
+        "before": 10
+      },
+      {
+        "after": 0,
+        "action": "withdraw",
+        "before": 20
+      }
+    ],
+    "submission": "0\t1",
+    "actualValue": 0.0,
+    "totalValue": 0.0,
+    "notices": [
+      "绩效待审核",
+      "绩效待完结归档"
+    ],
+    "retryRejected": true
+  },
+  {
+    "id": "19-3",
+    "mode": "withdraw-first",
+    "responses": [
+      "绩效填报已撤回",
+      {
+        "message": "绩效审核单不存在",
+        "code": 500
+      }
+    ],
+    "logs": [
+      {
+        "after": 10,
+        "action": "submit",
+        "before": 0
+      },
+      {
+        "after": 20,
+        "action": "pass",
+        "before": 10
+      },
+      {
+        "after": 0,
+        "action": "withdraw",
+        "before": 20
+      }
+    ],
+    "submission": "0\t1",
+    "actualValue": 0.0,
+    "totalValue": 0.0,
+    "notices": [
+      "绩效待审核",
+      "绩效待完结归档"
+    ],
+    "retryRejected": true
+  },
+  {
+    "id": "19-3",
+    "mode": "archive-first",
+    "responses": [
+      "绩效已完结归档",
+      {
+        "message": "当前状态不可撤回",
+        "code": 500
+      }
+    ],
+    "logs": [
+      {
+        "after": 10,
+        "action": "submit",
+        "before": 0
+      },
+      {
+        "after": 20,
+        "action": "pass",
+        "before": 10
+      },
+      {
+        "after": 30,
+        "action": "pass",
+        "before": 20
+      }
+    ],
+    "submission": "30\t0",
+    "actualValue": 3.0,
+    "totalValue": 3.0,
+    "notices": [
+      "绩效待审核",
+      "绩效待完结归档",
+      "绩效已完结归档"
+    ],
+    "retryRejected": true
+  }
+]
