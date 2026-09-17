@@ -1,0 +1,22 @@
+[
+  {
+    "id": "22-1",
+    "deletedParentRejected": true,
+    "deletedAncestorRejected": true,
+    "validParentCreated": true
+  },
+  {
+    "id": "22-2",
+    "invalidRecipientsRejected": 3,
+    "noFailedWrites": true,
+    "validRecipientDelivered": 910001
+  },
+  {
+    "id": "22-3",
+    "mixedBatch": "向1名用户发送月度提醒成功，跳过 2 条异常审核单",
+    "validHandler": 910003,
+    "validPendingCount": 2,
+    "allInvalidBatch": "没有需要发送月度审核提醒的用户，跳过 2 条异常审核单",
+    "noticeCount": 1
+  }
+]
