@@ -322,6 +322,7 @@ public class BizService {
 
             ensureTaskSubmitter(task, userId);
             ensureNoActiveAudit(task.getTaskId());
+            ensureTaskReviewer(task);
             BizMaterialSubmission bizMaterialSubmission = new BizMaterialSubmission();
             bizMaterialSubmission.setTaskId(bizSubDTO.getTask_id());
             bizMaterialSubmission.setFileId(sysMapper.getFileByName(sysFile.getFileName()).getFileId());
@@ -415,6 +416,7 @@ public class BizService {
         }
         ensureTaskSubmitter(ThirdLevelTask, userId);
         ensureNoActiveAudit(ThirdLevelTask.getTaskId());
+        ensureTaskReviewer(ThirdLevelTask);
         if (ThirdLevelTask.getStatus().equals("2")) {
             throw new RuntimeException("该任务状态未开始或正在审核中,无法提交");
         }
@@ -898,6 +900,7 @@ public class BizService {
             }
             ensureTaskSubmitter(task, userId);
             ensureNoActiveAudit(task.getTaskId());
+            ensureTaskReviewer(task);
             Long nextHandlerId = task.getAuditorId();
             if (oldSubmission.getFlowStatus() >= 0) {
                 throw new RuntimeException("该任务状态不是退回状态,无法重新提交");
@@ -1262,6 +1265,17 @@ public class BizService {
         }
         if (task.getLeaderId() == null || !task.getLeaderId().equals(userId)) {
             throw new RuntimeException("您不是该任务的提交人，无法提交");
+        }
+    }
+
+    /** 提交前确保首位审核人可以接收并处理单据。 */
+    private void ensureTaskReviewer(BizTask task) {
+        if (task.getAuditorId() == null) {
+            throw new RuntimeException("该任务未设置专业群审核人，无法提交");
+        }
+        SysUser reviewer = sysMapper.getUserById(task.getAuditorId());
+        if (reviewer == null || Integer.valueOf(1).equals(reviewer.getIsDelete())) {
+            throw new RuntimeException("该任务的专业群审核人不存在或已删除，请先重新配置");
         }
     }
 

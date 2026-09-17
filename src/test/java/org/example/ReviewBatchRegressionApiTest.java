@@ -622,6 +622,46 @@ class ReviewBatchRegressionApiTest {
     }
 
     @Test
+    void taskSubmissionRequiresExistingReviewerBeforeAnyWrite() throws Exception {
+        seedSubmissionFlow();
+        for (long id : new long[]{960001L, 960002L}) {
+            jdbc.update("INSERT INTO biz_level4_task (task_id,parent_id,phase,task_name,leader_id,dept_id,data_type,target_value,current_value,progress,status) "
+                    + "VALUES (?,930002,2026,'Reviewer fixture',?,?,'1',5,0,0,'1')", id, USER, DEPT);
+        }
+        seedUser(919999L, "1");
+        jdbc.update("UPDATE sys_user SET is_delete=1 WHERE user_id=919999");
+        String user = login(USER);
+        for (Long reviewer : new Long[]{null, 919998L, 919999L}) {
+            jdbc.update("UPDATE biz_task SET auditor_id=? WHERE task_id=930002", reviewer);
+            Map<String, List<Map<String, Object>>> before = taskFlowState();
+            for (Map<String, Object> payload : List.of(submission("3"), level4Submission(2, 3))) {
+                JsonNode error = body(request(HttpMethod.POST, "/biz/sub", user, payload));
+                assertEquals(500, error.path("code").asInt());
+                assertTrue(error.path("message").asText().contains("审核人"));
+                assertEquals(before, taskFlowState());
+            }
+        }
+        jdbc.update("UPDATE biz_task SET auditor_id=? WHERE task_id=930002", AUDITOR);
+        assertSuccess(request(HttpMethod.POST, "/biz/sub", user, level4Submission(2, 3)), "提交成功");
+        long subId = newestSubmission();
+        assertEquals(AUDITOR, jdbc.queryForObject("SELECT current_handler_id FROM biz_material_submission WHERE sub_id=?", Long.class, subId));
+        review(subId, false, login(AUDITOR));
+        jdbc.update("UPDATE biz_task SET auditor_id=NULL WHERE task_id=930002");
+        Map<String, List<Map<String, Object>>> beforeResub = taskFlowState();
+        for (Map<String, Object> payload : List.of(submission("3"), level4Submission(2, 3))) {
+            payload = new LinkedHashMap<>(payload);
+            payload.remove("task_id");
+            payload.remove("third_task_id");
+            payload.put("sub_id", subId);
+            assertEquals(500, body(request(HttpMethod.POST, "/biz/resub", user, payload)).path("code").asInt());
+            assertEquals(beforeResub, taskFlowState());
+        }
+        jdbc.update("UPDATE biz_task SET auditor_id=? WHERE task_id=930002", AUDITOR);
+        assertSuccess(request(HttpMethod.POST, "/biz/sub", user, submission("3")), "提交成功");
+        assertTaskAndPerformance("3", 30, "2");
+    }
+
+    @Test
     void archivedTasksCannotBeWithdrawn() throws Exception {
         seedSubmissionFlow();
         String user = login(USER);
