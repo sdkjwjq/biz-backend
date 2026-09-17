@@ -2264,13 +2264,13 @@ public class BizService {
             int currentYear = cal.get(Calendar.YEAR);
 
             // 获取部门信息
-            String deptName = sysMapper.getDeptNameByDeptId(deptId);
-            if (deptName == null) {
+            SysDept dept = sysMapper.getDeptById(deptId);
+            if (dept == null) {
                 throw new RuntimeException("部门不存在");
             }
 
             result.put("deptId", deptId);
-            result.put("deptName", deptName);
+            result.put("deptName", dept.getDeptName());
 
             // 计算各种完成率（包含状态统计）
             result.put("overall", calculateDeptCompletionRate(deptId, null, null));
@@ -2278,11 +2278,11 @@ public class BizService {
             result.put("midterm", calculateDeptCompletionRate(deptId, null, MID_TERM_END_YEAR));
 
             // 获取部门负责人
-            Long leaderId = sysMapper.getDeptLeaderId(deptId);
-            if (leaderId != null) {
-                String leaderName = sysMapper.getUserById(leaderId).getNickName();
+            Long leaderId = dept.getLeaderId();
+            SysUser leader = leaderId == null ? null : sysMapper.getUserById(leaderId);
+            if (leader != null && !Integer.valueOf(1).equals(leader.getIsDelete())) {
                 result.put("leaderId", leaderId);
-                result.put("leaderName", leaderName);
+                result.put("leaderName", leader.getNickName());
             }
 
             return result;
@@ -2307,13 +2307,16 @@ public class BizService {
             List<BizTask> allDeptTasks = bizMapper.getTasksByDeptId(deptId);
             deptTasks = new ArrayList<>();
             for (BizTask task : allDeptTasks) {
-                if (task.getPhase() < endYear) {
+                if (task.getPhase() != null && task.getPhase() < endYear) {
                     deptTasks.add(task);
                 }
             }
         } else {
             deptTasks = bizMapper.getTasksByDeptId(deptId);
         }
+
+        deptTasks = new ArrayList<>(deptTasks);
+        deptTasks.removeIf(task -> Integer.valueOf(1).equals(task.getIsDelete()));
 
         // 统计任务数量
         int totalTasks = deptTasks.size();
