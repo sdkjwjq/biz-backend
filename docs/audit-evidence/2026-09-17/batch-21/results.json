@@ -1,0 +1,26 @@
+[
+  {
+    "id": "21-1",
+    "updateResponse": "任务仅用户A可见的三级任务更新成功",
+    "taskActualValue": 7,
+    "performanceAfterUpdate": 0.0,
+    "performanceAfterRefresh": 7.0
+  },
+  {
+    "id": "21-2",
+    "addResponse": "任务合成错误层级新增添加成功",
+    "savedLevel": 1,
+    "parentLevel": 2,
+    "parentId": 930001
+  },
+  {
+    "id": "21-3",
+    "uniqueNameAlert": "发送成功",
+    "sameNameUserCreated": "用户 batch21_921202 添加成功",
+    "duplicateNameAlert": {
+      "message": "org.mybatis.spring.MyBatisSystemException",
+      "code": 500
+    },
+    "noNoticeWritten": true
+  }
+]
