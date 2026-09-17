@@ -341,6 +341,10 @@ public class SysService {
      * @param user 用户数据传输对象
      */
     public void updateUser(SysUserDTO  user) {
+        SysUser existingUser = sysMapper.getUserById(user.getUserId());
+        if (existingUser == null) {
+            throw new IllegalArgumentException("用户不存在");
+        }
         SysUser sameNameUser = sysMapper.getUserByName(user.getUserName());
         if(sameNameUser != null && !sameNameUser.getUserId().equals(user.getUserId())){
             throw new RuntimeException("用户名已存在，请添加文字进行区分");
@@ -349,7 +353,11 @@ public class SysService {
             throw new RuntimeException("部门不存在");
         }
 
-        sysMapper.updateUser(userDTO2User(user));
+        SysUser updatedUser = userDTO2User(user);
+        if (user.getStatus() == null) {
+            updatedUser.setStatus(existingUser.getStatus());
+        }
+        sysMapper.updateUser(updatedUser);
     }
 
     /**
@@ -373,6 +381,9 @@ public class SysService {
      * @return 用户实体
      */
     public SysUser userDTO2User(SysUserDTO user) {
+        if (user.getStatus() != null && !"0".equals(user.getStatus()) && !"1".equals(user.getStatus())) {
+            throw new IllegalArgumentException("账号状态必须为0或1");
+        }
         SysUser newUser = new SysUser();
         newUser.setUserId(user.getUserId());
         newUser.setDeptId(user.getDeptId());
@@ -383,7 +394,7 @@ public class SysService {
         newUser.setRole(user.getRole());
         newUser.setCreateTime(new Date());
         newUser.setUpdateTime(new Date());
-        newUser.setStatus("1");
+        newUser.setStatus(user.getStatus() == null ? "1" : user.getStatus());
         newUser.setIsDelete(0);
         return newUser;
     }

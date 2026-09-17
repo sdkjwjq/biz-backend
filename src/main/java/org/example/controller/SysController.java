@@ -49,6 +49,8 @@ public class SysController {
         try{
             sysService.addUser(user);
             return "用户 "+user.getUserName()+" 添加成功";
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(new ErrorVO(e.getMessage(), 400));
         } catch (Exception e) {
             return new ErrorVO(e.getMessage(), 500);
         }
@@ -64,6 +66,8 @@ public class SysController {
         try{
             sysService.updateUser(user);
             return "用户 "+user.getUserName()+" 更新成功";
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(new ErrorVO(e.getMessage(), 400));
         } catch (Exception e) {
             return new ErrorVO(e.getMessage(), 500);
         }

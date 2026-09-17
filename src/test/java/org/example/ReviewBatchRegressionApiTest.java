@@ -174,6 +174,51 @@ class ReviewBatchRegressionApiTest {
     }
 
     @Test
+    void accountStatusPreservesExplicitAndOmittedValues() throws Exception {
+        String admin = login(ADMIN);
+        long id = 915100L;
+        Map<String, Object> user = new LinkedHashMap<>(Map.of(
+                "userId", id, "deptId", DEPT, "userName", "status_fixture",
+                "nickName", "Status fixture", "password", PASSWORD, "role", "1"));
+        assertEquals(HttpStatus.OK, request(HttpMethod.POST, "/system/users/add", admin, user).getStatusCode());
+        assertEquals("1", jdbc.queryForObject("SELECT status FROM sys_user WHERE user_id=?", String.class, id));
+        for (String status : List.of("0", "1", "0")) {
+            user.put("status", status);
+            assertEquals(HttpStatus.OK, request(HttpMethod.POST, "/system/users/update", admin, user).getStatusCode());
+            assertEquals(status, jdbc.queryForObject("SELECT status FROM sys_user WHERE user_id=?", String.class, id));
+            user.remove("status");
+            request(HttpMethod.POST, "/system/users/update", admin, user);
+            assertEquals(status, jdbc.queryForObject("SELECT status FROM sys_user WHERE user_id=?", String.class, id));
+            user.put("status", null);
+            request(HttpMethod.POST, "/system/users/update", admin, user);
+            assertEquals(status, jdbc.queryForObject("SELECT status FROM sys_user WHERE user_id=?", String.class, id));
+        }
+        for (String invalid : List.of("", " ", "2", "normal")) {
+            user.put("status", invalid);
+            user.put("nickName", "Must not be saved");
+            ResponseEntity<String> response = request(HttpMethod.POST, "/system/users/update", admin, user);
+            assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+            assertEquals("0", jdbc.queryForObject("SELECT status FROM sys_user WHERE user_id=?", String.class, id));
+            assertEquals("Status fixture", jdbc.queryForObject("SELECT nick_name FROM sys_user WHERE user_id=?", String.class, id));
+            user.put("userId", id + 1);
+            user.put("userName", "invalid_status_fixture");
+            assertEquals(HttpStatus.BAD_REQUEST, request(HttpMethod.POST, "/system/users/add", admin, user).getStatusCode());
+            assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM sys_user WHERE user_id=?", Integer.class, id + 1));
+            user.put("userId", id);
+            user.put("userName", "status_fixture");
+        }
+        for (String status : List.of("0", "1")) {
+            long addedId = id + 2 + Integer.parseInt(status);
+            user.put("userId", addedId);
+            user.put("userName", "explicit_status_" + status);
+            user.put("status", status);
+            assertEquals(HttpStatus.OK, request(HttpMethod.POST, "/system/users/add", admin, user).getStatusCode());
+            assertEquals(status, jdbc.queryForObject("SELECT status FROM sys_user WHERE user_id=?", String.class, addedId));
+            login(addedId); // 已确认兼容范围：本次不改变状态与登录的关系。
+        }
+    }
+
+    @Test
     void achievementQuantitiesRejectInvalidWithoutWrites() throws Exception {
         seedUser(990000L + DEPT, "1");
         String token = login(990000L + DEPT);
