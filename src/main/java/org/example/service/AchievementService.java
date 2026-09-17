@@ -134,19 +134,7 @@ public class AchievementService {
         if (achievement == null) {
             throw new RuntimeException("新增成果信息不能为空");
         }
-        if (achievement.getCategory() == null) {
-            throw new RuntimeException("成果类别不能为空");
-        }
-        if (achievement.getLevel() == null || achievement.getLevel().trim().isEmpty()) {
-            throw new RuntimeException("成果级别不能为空");
-        }
-        if (achievement.getAchName() == null || achievement.getAchName().trim().isEmpty()) {
-            throw new RuntimeException("成果名称不能为空");
-        }
-        if (achievement.getGotTime() == null) {
-            throw new RuntimeException("成果颁发时间不能为空");
-        }
-        // 自动填充公共字段
+        validateAchievement(achievement);
         Date now = new Date();
         achievement.setCreateBy(createBy);
         achievement.setDeptId(user.getDeptId());
@@ -203,6 +191,7 @@ public class AchievementService {
         if (achievement == null) {
             throw new RuntimeException("修改成果信息不能为空");
         }
+        validateAchievement(achievement);
         BizAchievement existing = achievementMapper.getAchievementById(id);
         if (existing == null) {
             throw new RuntimeException("成果ID不存在，无法修改");
@@ -225,6 +214,21 @@ public class AchievementService {
                     "achName", achievement.getAchName());
         } catch (Exception e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    private void validateAchievement(BizAchievement achievement) {
+        if (achievement.getCategory() == null) {
+            throw new RuntimeException("成果类别不能为空");
+        }
+        if (achievement.getLevel() == null || achievement.getLevel().trim().isEmpty()) {
+            throw new RuntimeException("成果级别不能为空");
+        }
+        if (achievement.getAchName() == null || achievement.getAchName().trim().isEmpty()) {
+            throw new RuntimeException("成果名称不能为空");
+        }
+        if (achievement.getGotTime() == null) {
+            throw new RuntimeException("成果颁发时间不能为空");
         }
     }
 
