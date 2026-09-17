@@ -102,6 +102,9 @@ public interface AchievementMapper {
     @Select("SELECT * FROM biz_achievement_submission WHERE sub_id = #{subId}")
     BizAchievementSubmission getAchievementSubmissionById(Long subId);
 
+    @Select("SELECT * FROM biz_achievement_submission WHERE sub_id = #{subId} FOR UPDATE")
+    BizAchievementSubmission getAchievementSubmissionByIdForUpdate(Long subId);
+
     @Select("SELECT * FROM biz_achievement_submission WHERE ach_id = #{achId} AND is_delete = 0 ORDER BY submit_time DESC, sub_id DESC")
     List<BizAchievementSubmission> getAchievementSubmissionsByAchId(Long achId);
 

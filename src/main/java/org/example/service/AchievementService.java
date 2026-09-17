@@ -281,7 +281,7 @@ public class AchievementService {
         if (!canAuditAchievement(userId)) {
             throw new RuntimeException("仅管理员可以审核成果归档");
         }
-        BizAchievementSubmission submission = achievementMapper.getAchievementSubmissionById(auditDTO.getSub_id());
+        BizAchievementSubmission submission = achievementMapper.getAchievementSubmissionByIdForUpdate(auditDTO.getSub_id());
         if (submission == null || (submission.getIsDelete() != null && submission.getIsDelete() == 1)) {
             throw new RuntimeException("成果审核单不存在");
         }
