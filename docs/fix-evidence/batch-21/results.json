@@ -1,0 +1,24 @@
+[
+  {
+    "id": "21-1",
+    "taskValue": 7,
+    "performanceValue": 7,
+    "yearValue": 7,
+    "failedRefreshRolledBackAllTables": true
+  },
+  {
+    "id": "21-2",
+    "invalidLevelsRejected": 6,
+    "validLevelSaved": 3
+  },
+  {
+    "id": "21-3",
+    "duplicateNameResponse": {
+      "message": "java.lang.RuntimeException: 存在同名人员，请使用接收人员ID发送",
+      "code": 500
+    },
+    "explicitIdDeliveredTo": 921202,
+    "uniqueActiveNameDeliveredTo": 921201,
+    "invalidRecipientsRejected": 4
+  }
+]
