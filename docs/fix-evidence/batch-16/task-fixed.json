@@ -1,0 +1,34 @@
+[
+  {
+    "id": "16-1",
+    "submitted": {
+      "message": "java.lang.RuntimeException: 该任务未设置专业群审核人，无法提交",
+      "code": 500
+    },
+    "submissionCount": 0,
+    "taskStatus": "1"
+  },
+  {
+    "id": "16-2",
+    "partialResponse": "提交成功，下一位审批人是audit_reviewer",
+    "partialValues": {
+      "parent": 4.0,
+      "childSum": 7.0
+    },
+    "withdraw": "已撤回提交",
+    "directResponse": "提交成功，下一位审批人是audit_reviewer",
+    "directValues": {
+      "parent": 9.0,
+      "childSum": 5.0
+    }
+  },
+  {
+    "id": "16-3",
+    "updated": {
+      "message": "java.lang.RuntimeException: 父任务不能是自身或后代，任务层级不能形成循环",
+      "code": 500
+    },
+    "savedTaskId": 936003,
+    "savedParentId": 930001
+  }
+]

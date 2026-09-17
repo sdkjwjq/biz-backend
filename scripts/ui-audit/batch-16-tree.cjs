@@ -2,6 +2,7 @@ const { chromium } = require('../../target/ui-audit-tools/node_modules/playwrigh
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const assert = require('node:assert/strict');
+const fixed = process.argv.includes('--fixed');
 async function main() {
   const root = path.resolve(__dirname, '../../target/ui-audit');
   assert.match(JSON.parse(await fs.readFile(path.join(root, 'state.json'))).schema, /^biz_review_test_[0-9a-f]{32}$/);
@@ -27,9 +28,9 @@ async function main() {
     await expand();
     await page.getByText('合成四级汇总任务', { exact: true }).waitFor();
     result.selfParentVisible = await page.getByText('合成层级校验任务', { exact: true }).count();
-    assert.equal(result.selfParentVisible, 0);
+    assert.equal(result.selfParentVisible, fixed ? 1 : 0);
     const output = path.join(root, 'evidence-batch-16');
-    await page.screenshot({ path: path.join(output, 'tree-invalid.png'), fullPage: true });
+    await page.screenshot({ path: path.join(output, fixed ? 'tree-protected.png' : 'tree-invalid.png'), fullPage: true });
     result.restored = await page.evaluate(async () => {
       const headers = { Authorization: localStorage.getItem('token'), 'Content-Type': 'application/json' };
       const task = await (await fetch('/api/biz/tasks/936003', { headers })).json();
@@ -45,7 +46,7 @@ async function main() {
     result.validParentVisible = true;
     await page.screenshot({ path: path.join(output, 'tree-restored.png'), fullPage: true });
     assert.deepEqual(result.errors, []);
-    await fs.writeFile(path.join(output, 'tree-ui.json'), JSON.stringify(result, null, 2));
+    await fs.writeFile(path.join(output, fixed ? 'tree-fixed.json' : 'tree-ui.json'), JSON.stringify(result, null, 2));
     console.log(JSON.stringify(result));
   } finally { await browser.close(); }
 }
