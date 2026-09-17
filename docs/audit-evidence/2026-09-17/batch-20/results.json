@@ -1,0 +1,66 @@
+[
+  {
+    "id": "20-1",
+    "responses": [
+      "任务仅用户A可见的三级任务已完成",
+      "任务仅用户A可见的三级任务已完成"
+    ],
+    "logs": [
+      {
+        "after": 10,
+        "action": "提交",
+        "before": 0
+      },
+      {
+        "after": 20,
+        "action": "通过",
+        "before": 10
+      },
+      {
+        "after": 30,
+        "action": "通过",
+        "before": 20
+      },
+      {
+        "after": 40,
+        "action": "通过",
+        "before": 30
+      },
+      {
+        "after": 20,
+        "action": "通过",
+        "before": 10
+      },
+      {
+        "after": 30,
+        "action": "通过",
+        "before": 20
+      },
+      {
+        "after": 40,
+        "action": "通过",
+        "before": 30
+      }
+    ],
+    "completionNotices": 2
+  },
+  {
+    "id": "20-2",
+    "addRejected": {
+      "message": "成果级别不能为空",
+      "code": 500
+    },
+    "updateResponse": "标志性成果「」修改成功",
+    "savedNameLength": 0,
+    "savedLevelLength": 0,
+    "auditStatus": 10
+  },
+  {
+    "id": "20-3",
+    "emptyPasswordAddResponse": "用户 batch20_920201 添加成功",
+    "blankPasswordUpdateResponse": "用户 batch20_920202 更新成功",
+    "emptyPasswordApiLogin": true,
+    "blankPasswordApiLogin": true,
+    "oldPasswordRejected": true
+  }
+]

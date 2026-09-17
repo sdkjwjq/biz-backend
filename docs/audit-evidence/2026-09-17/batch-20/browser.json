@@ -1,0 +1,15 @@
+{
+  "results": [
+    {
+      "userId": 920201,
+      "browserMessage": "请输入密码",
+      "loginRequests": 0
+    },
+    {
+      "userId": 920202,
+      "browserMessage": "登录成功",
+      "loginRequests": 1
+    }
+  ],
+  "errors": []
+}
