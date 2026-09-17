@@ -1,0 +1,48 @@
+[
+  {
+    "id": "20-1",
+    "responses": [
+      {
+        "message": "java.lang.RuntimeException: 该任务已完成，请勿重复提交",
+        "code": 500
+      },
+      "任务仅用户A可见的三级任务已完成"
+    ],
+    "logs": [
+      {
+        "after": 10,
+        "action": "提交",
+        "before": 0
+      },
+      {
+        "after": 20,
+        "action": "通过",
+        "before": 10
+      },
+      {
+        "after": 30,
+        "action": "通过",
+        "before": 20
+      },
+      {
+        "after": 40,
+        "action": "通过",
+        "before": 30
+      }
+    ],
+    "completionNotices": 1,
+    "withdrawRejected": true
+  },
+  {
+    "id": "20-2",
+    "invalidCases": 12,
+    "failedWritesUnchanged": true,
+    "validUpdate": "标志性成果「合成修改后成果」修改成功"
+  },
+  {
+    "id": "20-3",
+    "invalidCases": 10,
+    "failedWritesUnchanged": true,
+    "validPasswordsPreserveSpaces": true
+  }
+]
