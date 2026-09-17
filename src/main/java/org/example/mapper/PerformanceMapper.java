@@ -115,6 +115,9 @@ public interface PerformanceMapper {
     @Select("SELECT * FROM biz_performance_submission WHERE sub_id = #{subId}")
     BizPerformanceSubmission getPerformanceSubmissionById(@Param("subId") Long subId);
 
+    @Select("SELECT * FROM biz_performance_submission WHERE sub_id = #{subId} FOR UPDATE")
+    BizPerformanceSubmission getPerformanceSubmissionByIdForUpdate(@Param("subId") Long subId);
+
     @Select("SELECT * FROM biz_performance_submission " +
             "WHERE perf_id = #{perfId} AND year = #{year} AND is_delete = 0 AND flow_status IN (10, 20) " +
             "ORDER BY sub_id DESC LIMIT 1")

@@ -577,7 +577,7 @@ public class PerformanceService {
         if (auditDTO.getIs_pass() == null) {
             throw new RuntimeException("审核结果不能为空");
         }
-        BizPerformanceSubmission submission = performanceMapper.getPerformanceSubmissionById(auditDTO.getSub_id());
+        BizPerformanceSubmission submission = performanceMapper.getPerformanceSubmissionByIdForUpdate(auditDTO.getSub_id());
         if (submission == null || (submission.getIsDelete() != null && submission.getIsDelete() == 1)) {
             throw new RuntimeException("绩效审核单不存在");
         }
@@ -664,7 +664,7 @@ public class PerformanceService {
 
     @Transactional
     public Object withdrawPerformanceSubmission(Long subId, Long userId) {
-        BizPerformanceSubmission submission = performanceMapper.getPerformanceSubmissionById(subId);
+        BizPerformanceSubmission submission = performanceMapper.getPerformanceSubmissionByIdForUpdate(subId);
         if (submission == null || (submission.getIsDelete() != null && submission.getIsDelete() == 1)) {
             throw new RuntimeException("绩效审核单不存在");
         }
