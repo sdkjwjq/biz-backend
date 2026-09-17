@@ -235,6 +235,11 @@ public class SysService {
      */
     public void sendNotice(SysNoticeDTO sysNoticeDTO, Long userId) {
         try{
+            SysUser recipient = sysNoticeDTO.getTo_user_id() == null ? null
+                    : sysMapper.getUserById(sysNoticeDTO.getTo_user_id());
+            if (recipient == null || Integer.valueOf(1).equals(recipient.getIsDelete())) {
+                throw new RuntimeException("接收人员不存在或已删除");
+            }
             SysNotice sysNotice = new SysNotice();
             sysNotice.setFromUserId(userId);
             sysNotice.setToUserId(sysNoticeDTO.getTo_user_id());
