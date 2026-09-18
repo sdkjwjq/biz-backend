@@ -1,0 +1,12 @@
+{
+  "checks": [
+    "initial-first-boundary-and-year-filter",
+    "next-loads-correct-task-and-fourth-level",
+    "dirty-fourth-level-cancel-discard-and-last-boundary",
+    "feedback-unsaved-protection-and-back-navigation",
+    "selected-file-protection",
+    "loading-lock-close-reopen-stale-response",
+    "search-single-result"
+  ],
+  "errors": []
+}
