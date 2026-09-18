@@ -41,6 +41,35 @@ public class BizService {
         return bizMapper.getAllTasks();
     }
 
+    /** 对比图使用实际任务汇总，空级别保留零值，空年份不参与年度对比。 */
+    public List<Map<String, Object>> getTaskComparisonData(boolean byYear) {
+        Map<Integer, Map<String, Object>> counts = new TreeMap<>();
+        if (!byYear) {
+            for (int level = 1; level <= 3; level++) counts.put(level, Collections.emptyMap());
+        }
+        List<Map<String, Object>> rows = byYear
+                ? bizMapper.getYearComparisonCounts() : bizMapper.getLevelComparisonCounts();
+        for (Map<String, Object> row : rows) {
+            counts.put(((Number) row.get("category")).intValue(), row);
+        }
+        List<Map<String, Object>> result = new ArrayList<>();
+        String[] levels = {"一级任务", "二级任务", "三级任务"};
+        for (Map.Entry<Integer, Map<String, Object>> entry : counts.entrySet()) {
+            Map<String, Object> row = entry.getValue();
+            long total = ((Number) row.getOrDefault("totalTasks", 0)).longValue();
+            Object completedValue = row.get("completedTasks");
+            long completed = completedValue == null ? 0 : ((Number) completedValue).longValue();
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put(byYear ? "year" : "level", byYear ? entry.getKey() : levels[entry.getKey() - 1]);
+            data.put("totalTasks", total);
+            data.put("completedTasks", completed);
+            data.put("completionRate", total == 0 ? BigDecimal.ZERO : BigDecimal.valueOf(completed)
+                    .multiply(BigDecimal.valueOf(100)).divide(BigDecimal.valueOf(total), 2, RoundingMode.HALF_UP));
+            result.add(data);
+        }
+        return result;
+    }
+
     /**
      * 根据id获取任务
      * @param taskId 任务ID

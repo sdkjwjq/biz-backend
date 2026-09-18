@@ -218,13 +218,13 @@ public class DashboardController {
 
                 case "year":
                     // 历年完成率对比（需要扩展Mapper）
-                    result.put("data", getYearComparisonData());
+                    result.put("data", bizService.getTaskComparisonData(true));
                     result.put("dimension", "年度");
                     break;
 
                 case "level":
                     // 各级别任务完成率对比
-                    result.put("data", getLevelComparisonData());
+                    result.put("data", bizService.getTaskComparisonData(false));
                     result.put("dimension", "任务级别");
                     break;
 
@@ -238,65 +238,4 @@ public class DashboardController {
         }
     }
 
-    // 辅助方法：获取年度对比数据（需要扩展实现）
-    private List<Map<String, Object>> getYearComparisonData() {
-        // 这里简化实现，实际需要从数据库查询历年数据
-        List<Map<String, Object>> result = new java.util.ArrayList<>();
-
-        // 示例数据
-        for (int year = 2023; year <= 2025; year++) {
-            Map<String, Object> yearData = new java.util.HashMap<>();
-            yearData.put("year", year);
-            yearData.put("totalTasks", 50 + (year - 2023) * 10);
-            yearData.put("completedTasks", 30 + (year - 2023) * 15);
-            yearData.put("completionRate", 60 + (year - 2023) * 10);
-            result.add(yearData);
-        }
-
-        return result;
-    }
-
-    // 辅助方法：获取级别对比数据
-    private List<Map<String, Object>> getLevelComparisonData() {
-        List<Map<String, Object>> result = new java.util.ArrayList<>();
-
-        // 一级任务
-        TaskCompletionVO firstLevel = bizService.getFirstLevelTaskCompletionRate();
-        result.add(createLevelData("一级任务", firstLevel));
-
-        // 二级任务（需要扩展Mapper）
-        result.add(createLevelData("二级任务", 100, 60));
-
-        // 三级任务（需要扩展Mapper）
-        result.add(createLevelData("三级任务", 200, 120));
-
-        return result;
-    }
-
-    private Map<String, Object> createLevelData(String levelName, TaskCompletionVO vo) {
-        Map<String, Object> data = new java.util.HashMap<>();
-        data.put("level", levelName);
-        data.put("totalTasks", vo.getTotalTasks());
-        data.put("completedTasks", vo.getCompletedTasks());
-        data.put("completionRate", vo.getCompletionRate());
-        return data;
-    }
-
-    private Map<String, Object> createLevelData(String levelName, int totalTasks, int completedTasks) {
-        Map<String, Object> data = new java.util.HashMap<>();
-        data.put("level", levelName);
-        data.put("totalTasks", totalTasks);
-        data.put("completedTasks", completedTasks);
-
-        if (totalTasks > 0) {
-            data.put("completionRate",
-                    java.math.BigDecimal.valueOf(completedTasks * 100.0 / totalTasks)
-                            .setScale(2, java.math.BigDecimal.ROUND_HALF_UP)
-            );
-        } else {
-            data.put("completionRate", java.math.BigDecimal.ZERO);
-        }
-
-        return data;
-    }
 }

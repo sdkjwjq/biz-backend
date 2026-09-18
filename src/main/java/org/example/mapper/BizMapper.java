@@ -19,6 +19,14 @@ import java.util.List;
 @Mapper
 public interface BizMapper {
 
+    @Select("SELECT phase AS category, COUNT(*) AS totalTasks, SUM(status = '3') AS completedTasks " +
+            "FROM biz_task WHERE is_delete = 0 AND phase IS NOT NULL GROUP BY phase ORDER BY phase")
+    List<java.util.Map<String, Object>> getYearComparisonCounts();
+
+    @Select("SELECT level AS category, COUNT(*) AS totalTasks, SUM(status = '3') AS completedTasks " +
+            "FROM biz_task WHERE is_delete = 0 AND level BETWEEN 1 AND 3 GROUP BY level ORDER BY level")
+    List<java.util.Map<String, Object>> getLevelComparisonCounts();
+
     /**
      * 任务相关操作
      */
