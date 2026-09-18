@@ -1,0 +1,47 @@
+{
+  "case": "notices",
+  "errors": [],
+  "firstPageCount": 10,
+  "secondPageCount": 5,
+  "pagesIdentical": false,
+  "readCount": 5,
+  "readPaginationPages": 1,
+  "apiCalls": [
+    {
+      "method": "POST",
+      "path": "/api/system/login"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/tasks"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/allUsers"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/notice"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/audit/todo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/allUsers"
+    },
+    {
+      "method": "GET",
+      "path": "/api/biz/audit/todo"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/notice"
+    },
+    {
+      "method": "GET",
+      "path": "/api/system/allUsers"
+    }
+  ]
+}

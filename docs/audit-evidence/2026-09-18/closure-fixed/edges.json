@@ -1,0 +1,20 @@
+[
+  {
+    "httpStatus": 200,
+    "stale401DoesNotLogoutNewSession": true,
+    "staleCacheWriteIsolated": true
+  },
+  {
+    "httpStatus": 401,
+    "stale401DoesNotLogoutNewSession": true,
+    "staleCacheWriteIsolated": true
+  },
+  {
+    "noticeLastPageClamped": true,
+    "unreadEmptyState": true
+  },
+  {
+    "mixedAuditTypes": 6,
+    "historyExcluded": true
+  }
+]

@@ -1,0 +1,499 @@
+{
+  "pages": [
+    {
+      "id": 110228,
+      "route": "/home/works",
+      "actualPath": "/home/works",
+      "textLength": 415,
+      "errors": []
+    },
+    {
+      "id": 110228,
+      "route": "/home/works/performance",
+      "actualPath": "/home/works/performance",
+      "textLength": 350,
+      "errors": []
+    },
+    {
+      "id": 110228,
+      "route": "/home/notice",
+      "actualPath": "/home/notice",
+      "textLength": 95,
+      "errors": []
+    },
+    {
+      "id": 110228,
+      "route": "/home/audit",
+      "actualPath": "/home/audit",
+      "textLength": 154,
+      "errors": []
+    },
+    {
+      "id": 110228,
+      "route": "/home/report",
+      "actualPath": "/home/report",
+      "textLength": 159,
+      "errors": []
+    },
+    {
+      "id": 110228,
+      "route": "/dashboard",
+      "actualPath": "/dashboard",
+      "textLength": 143,
+      "errors": []
+    },
+    {
+      "id": 110228,
+      "route": "/home/works/achievement",
+      "actualPath": "/home/works/achievement",
+      "textLength": 268,
+      "errors": []
+    },
+    {
+      "id": 110228,
+      "route": "/home/works",
+      "mobile": true,
+      "widths": {
+        "viewport": 390,
+        "document": 390
+      }
+    },
+    {
+      "id": 110228,
+      "route": "/home/works/performance",
+      "mobile": true,
+      "widths": {
+        "viewport": 390,
+        "document": 390
+      }
+    },
+    {
+      "id": 110228,
+      "route": "/home/report",
+      "mobile": true,
+      "widths": {
+        "viewport": 390,
+        "document": 390
+      }
+    },
+    {
+      "id": 110228,
+      "route": "/home/board",
+      "hiddenPrototype": true,
+      "actualPath": "/home/works",
+      "textSample": "“双高建设计划”项目平台\n数据大屏\n工作中心 (我的任务)\n任务\n绩效\n成果\n预算\n消息中心\n审核中心\n督办中心\n管理后台\n/\n工作中心 (我的任务)\n审\n审计管理员\n提示\n今天是2026年9月18日\n徐州工业职业技术学院“双高建设计划”任务与绩效目标管理\n周期: 2025-01-01 至 2029-12-31\n责任部门：“双高”建设办公室\n共 1 条\n任务\n绩效\n成果\n预算\n年度:\n2026年\n状态:\n选择状态\n搜索\n任务名称\n\t\n进度\n\t\n状态\n\t\n归口部门\n\t\n负责人\n\t\n起止时间\n\t\n操作\n[1]审计专用A一级任务（1）\n\t\n0%\n\t\n进行中\n\t\n审计测试部门A\n\t\na\naudit_user_a\n\t\n2025-01-01\n2029-12-31\n\t\n\n\n[1.1]审计专用A二级任务（1）\n\t\n0%\n\t\n进行中\n\t\n审计测试部门A\n\t\na\naudit_user_a\n\t\n2025-01-01\n2029-12-31\n\t"
+    },
+    {
+      "id": 110228,
+      "route": "/home/data",
+      "hiddenPrototype": true,
+      "actualPath": "/home/works",
+      "textSample": "“双高建设计划”项目平台\n数据大屏\n工作中心 (我的任务)\n任务\n绩效\n成果\n预算\n消息中心\n审核中心\n督办中心\n管理后台\n/\n工作中心 (我的任务)\n审\n审计管理员\n提示\n今天是2026年9月18日\n徐州工业职业技术学院“双高建设计划”任务与绩效目标管理\n周期: 2025-01-01 至 2029-12-31\n责任部门：“双高”建设办公室\n共 1 条\n任务\n绩效\n成果\n预算\n年度:\n2026年\n状态:\n选择状态\n搜索\n任务名称\n\t\n进度\n\t\n状态\n\t\n归口部门\n\t\n负责人\n\t\n起止时间\n\t\n操作\n[1]审计专用A一级任务（1）\n\t\n0%\n\t\n进行中\n\t\n审计测试部门A\n\t\na\naudit_user_a\n\t\n2025-01-01\n2029-12-31\n\t\n\n\n[1.1]审计专用A二级任务（1）\n\t\n0%\n\t\n进行中\n\t\n审计测试部门A\n\t\na\naudit_user_a\n\t\n2025-01-01\n2029-12-31\n\t"
+    },
+    {
+      "id": 110228,
+      "route": "/home/query",
+      "hiddenPrototype": true,
+      "actualPath": "/home/works",
+      "textSample": "“双高建设计划”项目平台\n数据大屏\n工作中心 (我的任务)\n任务\n绩效\n成果\n预算\n消息中心\n审核中心\n督办中心\n管理后台\n/\n工作中心 (我的任务)\n审\n审计管理员\n提示\n今天是2026年9月18日\n徐州工业职业技术学院“双高建设计划”任务与绩效目标管理\n周期: 2025-01-01 至 2029-12-31\n责任部门：“双高”建设办公室\n共 1 条\n任务\n绩效\n成果\n预算\n年度:\n2026年\n状态:\n选择状态\n搜索\n任务名称\n\t\n进度\n\t\n状态\n\t\n归口部门\n\t\n负责人\n\t\n起止时间\n\t\n操作\n[1]审计专用A一级任务（1）\n\t\n0%\n\t\n进行中\n\t\n审计测试部门A\n\t\na\naudit_user_a\n\t\n2025-01-01\n2029-12-31\n\t\n\n\n[1.1]审计专用A二级任务（1）\n\t\n0%\n\t\n进行中\n\t\n审计测试部门A\n\t\na\naudit_user_a\n\t\n2025-01-01\n2029-12-31\n\t"
+    },
+    {
+      "id": 110228,
+      "route": "/home/system/user",
+      "hiddenPrototype": true,
+      "actualPath": "/home/works",
+      "textSample": "“双高建设计划”项目平台\n数据大屏\n工作中心 (我的任务)\n任务\n绩效\n成果\n预算\n消息中心\n审核中心\n督办中心\n管理后台\n/\n工作中心 (我的任务)\n审\n审计管理员\n提示\n今天是2026年9月18日\n徐州工业职业技术学院“双高建设计划”任务与绩效目标管理\n周期: 2025-01-01 至 2029-12-31\n责任部门：“双高”建设办公室\n共 1 条\n任务\n绩效\n成果\n预算\n年度:\n2026年\n状态:\n选择状态\n搜索\n任务名称\n\t\n进度\n\t\n状态\n\t\n归口部门\n\t\n负责人\n\t\n起止时间\n\t\n操作\n[1]审计专用A一级任务（1）\n\t\n0%\n\t\n进行中\n\t\n审计测试部门A\n\t\na\naudit_user_a\n\t\n2025-01-01\n2029-12-31\n\t\n\n\n[1.1]审计专用A二级任务（1）\n\t\n0%\n\t\n进行中\n\t\n审计测试部门A\n\t\na\naudit_user_a\n\t\n2025-01-01\n2029-12-31\n\t"
+    },
+    {
+      "id": 110228,
+      "route": "/home/system/permission",
+      "hiddenPrototype": true,
+      "actualPath": "/home/works",
+      "textSample": "“双高建设计划”项目平台\n数据大屏\n工作中心 (我的任务)\n任务\n绩效\n成果\n预算\n消息中心\n审核中心\n督办中心\n管理后台\n/\n工作中心 (我的任务)\n审\n审计管理员\n提示\n今天是2026年9月18日\n徐州工业职业技术学院“双高建设计划”任务与绩效目标管理\n周期: 2025-01-01 至 2029-12-31\n责任部门：“双高”建设办公室\n共 1 条\n任务\n绩效\n成果\n预算\n年度:\n2026年\n状态:\n选择状态\n搜索\n任务名称\n\t\n进度\n\t\n状态\n\t\n归口部门\n\t\n负责人\n\t\n起止时间\n\t\n操作\n[1]审计专用A一级任务（1）\n\t\n0%\n\t\n进行中\n\t\n审计测试部门A\n\t\na\naudit_user_a\n\t\n2025-01-01\n2029-12-31\n\t\n\n\n[1.1]审计专用A二级任务（1）\n\t\n0%\n\t\n进行中\n\t\n审计测试部门A\n\t\na\naudit_user_a\n\t\n2025-01-01\n2029-12-31\n\t"
+    },
+    {
+      "id": 110228,
+      "route": "/home/system/log",
+      "hiddenPrototype": true,
+      "actualPath": "/home/works",
+      "textSample": "“双高建设计划”项目平台\n数据大屏\n工作中心 (我的任务)\n任务\n绩效\n成果\n预算\n消息中心\n审核中心\n督办中心\n管理后台\n/\n工作中心 (我的任务)\n审\n审计管理员\n提示\n今天是2026年9月18日\n徐州工业职业技术学院“双高建设计划”任务与绩效目标管理\n周期: 2025-01-01 至 2029-12-31\n责任部门：“双高”建设办公室\n共 1 条\n任务\n绩效\n成果\n预算\n年度:\n2026年\n状态:\n选择状态\n搜索\n任务名称\n\t\n进度\n\t\n状态\n\t\n归口部门\n\t\n负责人\n\t\n起止时间\n\t\n操作\n[1]审计专用A一级任务（1）\n\t\n0%\n\t\n进行中\n\t\n审计测试部门A\n\t\na\naudit_user_a\n\t\n2025-01-01\n2029-12-31\n\t\n\n\n[1.1]审计专用A二级任务（1）\n\t\n0%\n\t\n进行中\n\t\n审计测试部门A\n\t\na\naudit_user_a\n\t\n2025-01-01\n2029-12-31\n\t"
+    },
+    {
+      "id": 910001,
+      "route": "/home/works",
+      "actualPath": "/home/works",
+      "textLength": 409,
+      "errors": []
+    },
+    {
+      "id": 910001,
+      "route": "/home/works/performance",
+      "actualPath": "/home/works/performance",
+      "textLength": 344,
+      "errors": []
+    },
+    {
+      "id": 910001,
+      "route": "/home/notice",
+      "actualPath": "/home/notice",
+      "textLength": 503,
+      "errors": []
+    },
+    {
+      "id": 910001,
+      "route": "/home/audit",
+      "actualPath": "/home/audit",
+      "textLength": 154,
+      "errors": []
+    },
+    {
+      "id": 910001,
+      "route": "/home/report",
+      "actualPath": "/home/report",
+      "textLength": 159,
+      "errors": []
+    },
+    {
+      "id": 910001,
+      "route": "/dashboard",
+      "actualPath": "/dashboard",
+      "textLength": 172,
+      "errors": []
+    },
+    {
+      "id": 910003,
+      "route": "/home/works",
+      "actualPath": "/home/works",
+      "textLength": 416,
+      "errors": []
+    },
+    {
+      "id": 910003,
+      "route": "/home/works/performance",
+      "actualPath": "/home/works/performance",
+      "textLength": 351,
+      "errors": []
+    },
+    {
+      "id": 910003,
+      "route": "/home/notice",
+      "actualPath": "/home/notice",
+      "textLength": 192,
+      "errors": []
+    },
+    {
+      "id": 910003,
+      "route": "/home/audit",
+      "actualPath": "/home/audit",
+      "textLength": 932,
+      "errors": []
+    },
+    {
+      "id": 910003,
+      "route": "/home/report",
+      "actualPath": "/home/report",
+      "textLength": 166,
+      "errors": []
+    },
+    {
+      "id": 910003,
+      "route": "/dashboard",
+      "actualPath": "/dashboard",
+      "textLength": 172,
+      "errors": []
+    },
+    {
+      "id": 1910001,
+      "route": "/home/works/achievement",
+      "actualPath": "/home/works/achievement",
+      "textLength": 243,
+      "errors": []
+    },
+    {
+      "id": 1910001,
+      "route": "/home/works",
+      "actualPath": "/home/works/achievement",
+      "textLength": 243,
+      "errors": []
+    },
+    {
+      "id": 1910001,
+      "route": "/home/audit",
+      "actualPath": "/home/works/achievement",
+      "textLength": 243,
+      "errors": []
+    }
+  ],
+  "api": [
+    {
+      "route": "/system/allUsers",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/system/dept/920001",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/system/notice",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/biz/tasks",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/biz/tasks/930002",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/biz/tasks/children?task_id=930000",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/biz/tasks/forth?parent_id=930002",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/biz/tasks/parent?task_id=930002",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/biz/tasks/dept?dept_id=920001",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/biz/audit/todo",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/biz/audit/task/930002",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/achievement/",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/achievement/audit/todo",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/achievement/audit/records",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/performance",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/performance/950011",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/performance/year/2026",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/performance/task/950011?year=2026",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/performance/audit/todo",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/performance/audit/records",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/performance/audit/perf/950011?year=2026",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/performance/audit/logs/971001",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/dashboard/summary",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/dashboard/completion/overall",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/dashboard/completion/year?year=2026",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/dashboard/completion/midterm?year=2028",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/dashboard/completion/first-level",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/dashboard/dept/overall",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/dashboard/dept/year?year=2026",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/dashboard/dept/midterm?endYear=2028",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/dashboard/tasks/first-level",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/dashboard/tasks/all_level",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/dashboard/dept/920001",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/dashboard/dept/batch?deptIds=920001,920002",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/dashboard/comparison/dept",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/dashboard/comparison/year",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/dashboard/comparison/level",
+      "status": 200,
+      "businessError": null
+    },
+    {
+      "route": "/dashboard/trend/2026",
+      "status": 200,
+      "businessError": null
+    }
+  ],
+  "findings": [
+    {
+      "id": "department-counts",
+      "stats": {
+        "deptId": 920001,
+        "deptName": "审计测试部门A",
+        "totalTasks": 1,
+        "completedTasks": 0,
+        "completionRate": 0,
+        "notStartedCount": 0,
+        "inProgressCount": 1,
+        "inReviewCount": 0,
+        "finishedCount": 0,
+        "notStartedRate": 0,
+        "inProgressRate": 100,
+        "inReviewRate": 0,
+        "finishedRate": 0
+      }
+    },
+    {
+      "id": "comparison-placeholder",
+      "year": {
+        "data": [
+          {
+            "year": 2026,
+            "totalTasks": 3,
+            "completedTasks": 0,
+            "completionRate": 0
+          }
+        ],
+        "dimension": "年度"
+      },
+      "level": {
+        "data": [
+          {
+            "level": "一级任务",
+            "totalTasks": 1,
+            "completedTasks": 0,
+            "completionRate": 0
+          },
+          {
+            "level": "二级任务",
+            "totalTasks": 1,
+            "completedTasks": 0,
+            "completionRate": 0
+          },
+          {
+            "level": "三级任务",
+            "totalTasks": 1,
+            "completedTasks": 0,
+            "completionRate": 0
+          }
+        ],
+        "dimension": "任务级别"
+      }
+    },
+    {
+      "id": "uppercase-upload",
+      "uploaded": [
+        {
+          "name": "closure.pdf",
+          "status": 200,
+          "body": {
+            "fileId": 168,
+            "filename": "closure(2).pdf",
+            "filepath": "/uploads/closure(2).pdf"
+          }
+        },
+        {
+          "name": "closure.PDF",
+          "status": 200,
+          "body": {
+            "fileId": 169,
+            "filename": "closure(3).PDF",
+            "filepath": "/uploads/closure(3).PDF"
+          }
+        }
+      ]
+    }
+  ]
+}

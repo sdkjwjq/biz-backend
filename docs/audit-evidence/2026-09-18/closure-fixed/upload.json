@@ -1,0 +1,38 @@
+[
+  {
+    "extension": "PDF",
+    "uploaded": true,
+    "submitted": true,
+    "normalizedSuffix": "pdf"
+  },
+  {
+    "extension": "DoC",
+    "uploaded": true,
+    "submitted": true,
+    "normalizedSuffix": "doc"
+  },
+  {
+    "extension": "DOCX",
+    "uploaded": true,
+    "submitted": true,
+    "normalizedSuffix": "docx"
+  },
+  {
+    "extension": "pdf",
+    "uploaded": true,
+    "submitted": true,
+    "normalizedSuffix": "pdf"
+  },
+  {
+    "name": "closure.exe",
+    "rejected": true
+  },
+  {
+    "name": "closure",
+    "rejected": true
+  },
+  {
+    "name": "closure.pdf.exe",
+    "rejected": true
+  }
+]
