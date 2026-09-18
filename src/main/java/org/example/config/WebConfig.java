@@ -56,7 +56,7 @@ public class WebConfig implements WebMvcConfigurer {
                 .addPathPatterns("/performance/**")
                 .addPathPatterns("/budget/**")
                 .addPathPatterns("/scheduled/**")
-                .excludePathPatterns("/system/login");
+                .excludePathPatterns("/system/login", "/system/password/reset", "/system/password/reset/");
 
         registry.addInterceptor(userRoleInterceptor)
                 .addPathPatterns("/system/users/**");

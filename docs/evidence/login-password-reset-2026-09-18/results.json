@@ -1,0 +1,16 @@
+{
+  "passed": true,
+  "checks": [
+    "prefill",
+    "required",
+    "weak-password",
+    "confirmation",
+    "wrong-original-stays-on-page",
+    "close-clears-secrets",
+    "duplicate-submit",
+    "real-reset-and-login",
+    "no-forced-change",
+    "mobile-width"
+  ],
+  "errors": []
+}

@@ -144,6 +144,73 @@ class ReviewBatchRegressionApiTest {
     }
 
     @Test
+    void passwordResetValidatesCredentialsAndPreservesProfile() throws Exception {
+        String endpoint = "/system/password/reset";
+        for (long id : List.of(USER, ADMIN)) {
+            Map<String, Object> profile = new LinkedHashMap<>(jdbc.queryForMap("SELECT * FROM sys_user WHERE user_id=?", id));
+            assertEquals(HttpStatus.OK, request(HttpMethod.POST, endpoint, null,
+                    Map.of("user_id", String.valueOf(id), "old_password", PASSWORD, "new_password", "ResetTest123")).getStatusCode());
+            Map<String, Object> after = new LinkedHashMap<>(jdbc.queryForMap("SELECT * FROM sys_user WHERE user_id=?", id));
+            assertEquals("ResetTest123", after.remove("password")); profile.remove("password");
+            assertNotNull(after.remove("update_time")); profile.remove("update_time");
+            assertEquals(profile, after);
+            assertFalse(body(request(HttpMethod.POST, "/system/login", null,
+                    Map.of("user_id", id, "password", PASSWORD))).has("token"));
+            JsonNode loginResult = body(request(HttpMethod.POST, "/system/login", null,
+                    Map.of("user_id", id, "password", "ResetTest123")));
+            assertTrue(loginResult.hasNonNull("token"));
+            assertFalse(loginResult.path("requiresPasswordChange").asBoolean());
+        }
+        assertEquals(HttpStatus.UNAUTHORIZED, request(HttpMethod.POST, "/system/password", null,
+                Map.of("new_password", "ResetTest456")).getStatusCode());
+    }
+
+    @Test
+    void passwordResetRejectsInvalidInputAndConcurrentOldCredentials() throws Exception {
+        String endpoint = "/system/password/reset";
+        for (Object id : List.of("abc", "1.5", -1, 0, "9223372036854775808", true)) {
+            assertEquals(HttpStatus.BAD_REQUEST, request(HttpMethod.POST, endpoint, null,
+                    Map.of("user_id", id, "old_password", PASSWORD, "new_password", "ResetTest123")).getStatusCode());
+        }
+        for (String weak : List.of("Short1A", "lowercase123", "UPPERCASE123", "NoDigitsHere")) {
+            assertEquals(HttpStatus.BAD_REQUEST, request(HttpMethod.POST, endpoint, null,
+                    Map.of("user_id", USER, "old_password", PASSWORD, "new_password", weak)).getStatusCode());
+        }
+        assertEquals(HttpStatus.BAD_REQUEST, request(HttpMethod.POST, endpoint, null, Map.of()).getStatusCode());
+        for (String wrong : List.of(PASSWORD.toLowerCase(), PASSWORD + " ", "incorrect")) {
+            ResponseEntity<String> response = request(HttpMethod.POST, endpoint, null,
+                    Map.of("user_id", USER, "old_password", wrong, "new_password", "ResetTest123"));
+            assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+            assertEquals("账号或原密码错误", json.readTree(response.getBody()).path("message").asText());
+        }
+        jdbc.update("UPDATE sys_user SET is_delete=1 WHERE user_id=?", LEADER);
+        for (long id : List.of(999999999L, LEADER)) {
+            assertEquals(HttpStatus.UNAUTHORIZED, request(HttpMethod.POST, endpoint, null,
+                    Map.of("user_id", id, "old_password", PASSWORD, "new_password", "ResetTest123")).getStatusCode());
+        }
+        assertEquals(PASSWORD, jdbc.queryForObject("SELECT password FROM sys_user WHERE user_id=?", String.class, USER));
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            var start = new java.util.concurrent.CountDownLatch(1);
+            List<Future<ResponseEntity<String>>> attempts = new ArrayList<>();
+            for (String next : List.of("ResetRace123", "ResetRace456")) {
+                attempts.add(executor.submit(() -> {
+                    start.await();
+                    return request(HttpMethod.POST, endpoint, null,
+                            Map.of("user_id", USER, "old_password", PASSWORD, "new_password", next));
+                }));
+            }
+            start.countDown();
+            List<Integer> codes = new ArrayList<>();
+            for (var attempt : attempts) codes.add(attempt.get(10, TimeUnit.SECONDS).getStatusCode().value());
+            codes.sort(Integer::compareTo);
+            assertEquals(List.of(200, 401), codes);
+            String stored = jdbc.queryForObject("SELECT password FROM sys_user WHERE user_id=?", String.class, USER);
+            assertTrue(List.of("ResetRace123", "ResetRace456").contains(stored));
+        } finally { executor.shutdownNow(); }
+    }
+
+    @Test
     void passwordValidationPreservesExistingCredentials() throws Exception {
         String token = login(USER);
         List<Map<String, Object>> invalidBodies = new ArrayList<>();

@@ -15,6 +15,13 @@ import java.util.List;
  */
 @Mapper
 public interface SysMapper {
+    /** 二进制比较保留密码大小写及尾部空格；仅修改密码和更新时间。 */
+    @Update("UPDATE sys_user SET password = #{newPassword}, update_time = NOW() "
+            + "WHERE user_id = #{userId} AND BINARY password = BINARY #{oldPassword} "
+            + "AND (is_delete = 0 OR is_delete IS NULL)")
+    int resetPassword(@Param("userId") Long userId, @Param("oldPassword") String oldPassword,
+                      @Param("newPassword") String newPassword);
+
     /**
      * 获取所有用户
      * @return 用户列表

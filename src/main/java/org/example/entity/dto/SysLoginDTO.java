@@ -9,5 +9,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class SysLoginDTO {
     private Long user_id;
+    @lombok.ToString.Exclude
     private String password;
 }

@@ -126,6 +126,15 @@ public class SysService {
         sysMapper.updateUser(user);
     }
 
+    /** 原密码作为更新条件，避免并发重置覆盖已经修改的密码。 */
+    public void resetPassword(Long userId, String oldPassword, String newPassword) {
+        org.example.utils.PasswordPolicy.validate(newPassword);
+        if (sysMapper.resetPassword(userId, oldPassword, newPassword) != 1) {
+            throw new SecurityException("账号或原密码错误");
+        }
+        BusinessLogUtil.info("密码重置", "result", "成功", "userId", userId);
+    }
+
     private void validatePassword(String newPassword) {
         if (newPassword == null || newPassword.isBlank()) {
             throw new IllegalArgumentException("请输入新密码");

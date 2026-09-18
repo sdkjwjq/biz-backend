@@ -8,5 +8,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class SysPwdDTO {
+    @lombok.ToString.Exclude
     private String new_password;
 }
