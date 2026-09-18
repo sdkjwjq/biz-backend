@@ -1,0 +1,29 @@
+{
+  "results": [
+    {
+      "realPerformanceApproval": true,
+      "multiCount": "15 -> 14",
+      "finalCount": "1 -> 0",
+      "stalePollIgnored": true
+    },
+    {
+      "type": "task",
+      "injectedResponses": true,
+      "failedKeepsBadge": true,
+      "successfulRejectClearsBadge": true
+    },
+    {
+      "type": "performance",
+      "injectedResponses": true,
+      "failedKeepsBadge": true,
+      "successfulRejectClearsBadge": true
+    },
+    {
+      "type": "achievement",
+      "injectedResponses": true,
+      "failedKeepsBadge": true,
+      "successfulRejectClearsBadge": true
+    }
+  ],
+  "errors": []
+}
