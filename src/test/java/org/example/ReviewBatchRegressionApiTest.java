@@ -337,6 +337,66 @@ class ReviewBatchRegressionApiTest {
     }
 
     @Test
+    void departmentDistributionUsesActiveThirdLevelTasks() throws Exception {
+        seedTasks();
+        seedTask(930000L, 0L, 1);
+        seedTask(930003L, 930001L, 3);
+        jdbc.update("UPDATE biz_task SET is_delete=1,status='3' WHERE task_id=930003");
+        jdbc.update("UPDATE biz_task SET phase=?", LocalDate.now().getYear());
+        String admin = login(ADMIN);
+        for (String state : List.of("0", "1", "2", "3")) {
+            jdbc.update("UPDATE biz_task SET status=? WHERE task_id=930002", state);
+            List<JsonNode> stats = new ArrayList<>();
+            for (String route : List.of("overall", "year", "midterm")) {
+                stats.add(body(request(HttpMethod.GET, "/dashboard/dept/" + route, admin, null)).get(0));
+            }
+            JsonNode summary = body(request(HttpMethod.GET, "/dashboard/summary", admin, null));
+            for (String field : List.of("deptOverallStats", "deptYearStats", "deptMidTermStats")) stats.add(summary.path(field).get(0));
+            for (JsonNode stat : stats) {
+                assertNotNull(stat);
+                assertEquals(1, stat.path("totalTasks").asInt(), stat.toString());
+                String[] fields = {"notStartedCount", "inProgressCount", "inReviewCount", "finishedCount"};
+                for (int i = 0; i < fields.length; i++) assertEquals(i == Integer.parseInt(state) ? 1 : 0, stat.path(fields[i]).asInt(), stat.toString());
+                assertEquals("3".equals(state) ? 1 : 0, stat.path("completedTasks").asInt());
+            }
+        }
+        jdbc.update("UPDATE biz_task SET is_delete=1 WHERE task_id=930002");
+        JsonNode empty = body(request(HttpMethod.GET, "/dashboard/dept/overall", admin, null));
+        assertTrue(empty.isArray());
+        assertEquals(0, empty.size()); // 沿用原接口：没有三级任务的部门不返回。
+    }
+
+    @Test
+    void dashboardComparisonsReflectStoredYearsAndLevels() throws Exception {
+        String admin = login(ADMIN);
+        assertEquals(0, body(request(HttpMethod.GET, "/dashboard/comparison/year", admin, null)).path("data").size());
+        JsonNode empty = body(request(HttpMethod.GET, "/dashboard/comparison/level", admin, null)).path("data");
+        assertEquals(3, empty.size());
+        for (JsonNode row : empty) assertEquals(0, row.path("totalTasks").asInt());
+        seedTasks();
+        seedTask(930000L, 0L, 1);
+        seedTask(930003L, 930001L, 3);
+        seedTask(930004L, 930001L, 3);
+        jdbc.update("UPDATE biz_task SET status='3' WHERE task_id IN (930002,930003,930004)");
+        jdbc.update("UPDATE biz_task SET phase=2027 WHERE task_id=930003");
+        jdbc.update("UPDATE biz_task SET is_delete=1,phase=2025 WHERE task_id=930004");
+        JsonNode years = body(request(HttpMethod.GET, "/dashboard/comparison/year", admin, null)).path("data");
+        assertEquals(2, years.size());
+        assertEquals(2026, years.get(0).path("year").asInt());
+        assertEquals(3, years.get(0).path("totalTasks").asInt());
+        assertEquals(1, years.get(0).path("completedTasks").asInt());
+        assertEquals(33.33, years.get(0).path("completionRate").asDouble());
+        assertEquals(2027, years.get(1).path("year").asInt());
+        assertEquals(100, years.get(1).path("completionRate").asInt());
+        JsonNode levels = body(request(HttpMethod.GET, "/dashboard/comparison/level", admin, null)).path("data");
+        assertEquals(3, levels.size());
+        for (int i = 0; i < 3; i++) {
+            assertEquals(i == 2 ? 2 : 1, levels.get(i).path("totalTasks").asInt());
+            assertEquals(i == 2 ? 100 : 0, levels.get(i).path("completionRate").asInt());
+        }
+    }
+
+    @Test
     void remindersSkipInvalidLeadersAndContinueValidDepartments() throws Exception {
         seedTasks();
         jdbc.update("UPDATE biz_task SET phase=?", LocalDate.now().getYear());
