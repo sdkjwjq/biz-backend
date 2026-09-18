@@ -1,0 +1,36 @@
+{
+  "results": [
+    {
+      "id": 110228,
+      "forced": true,
+      "reloadAndDashboardGuarded": true,
+      "validation": true,
+      "singleSubmission": true,
+      "oldPasswordRejected": true,
+      "strongPasswordUngated": true
+    },
+    {
+      "id": 910001,
+      "forced": true,
+      "reloadAndDashboardGuarded": true,
+      "validation": true,
+      "singleSubmission": true,
+      "oldPasswordRejected": true,
+      "strongPasswordUngated": true
+    },
+    {
+      "id": 1910001,
+      "forced": true,
+      "reloadAndDashboardGuarded": true,
+      "validation": true,
+      "singleSubmission": true,
+      "oldPasswordRejected": true,
+      "strongPasswordUngated": true
+    },
+    {
+      "id": 910004,
+      "alreadyCompliantSkipsDialog": true
+    }
+  ],
+  "errors": []
+}
