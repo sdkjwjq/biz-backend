@@ -11,4 +11,5 @@ public class SysLoginVO {
 
     private String nick_name;
     private String token;
+    private boolean requiresPasswordChange;
 }

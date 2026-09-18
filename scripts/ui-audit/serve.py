@@ -26,7 +26,11 @@ SPEC.loader.exec_module(RUNNER)
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--fixture", choices=["base", "business", "review"], default="base")
+    parser.add_argument("--frontend-port", type=int, default=15173)
     args = parser.parse_args()
+    if not 1024 <= args.frontend_port <= 65535:
+        raise RuntimeError("Invalid frontend port")
+    frontend_url = "http://127.0.0.1:" + str(args.frontend_port)
     password = os.environ.get("SHUANGGAO_TEST_DB_PASSWORD")
     if password is None:
         raise RuntimeError("Set SHUANGGAO_TEST_DB_PASSWORD")
@@ -76,24 +80,24 @@ def main():
         vite = WORK / "vite-audit.mjs"
         vite.write_text("import { createServer } from " + json.dumps((frontend / "node_modules/vite/dist/node/index.js").as_uri())
                         + "; const server = await createServer({root:" + json.dumps(str(frontend))
-                        + ",server:{host:'127.0.0.1',port:15173,strictPort:true,proxy:{'/api':{target:'http://127.0.0.1:18080',changeOrigin:true}}}}); await server.listen();", encoding="utf-8")
+                        + ",server:{host:'127.0.0.1',port:" + str(args.frontend_port) + ",strictPort:true,proxy:{'/api':{target:'http://127.0.0.1:18080',changeOrigin:true}}}}); await server.listen();", encoding="utf-8")
         frontend_log = open(WORK / "frontend.log", "w", encoding="utf-8")
         logs.append(frontend_log)
         children.append(subprocess.Popen([RUNNER.executable("node"), str(vite)], cwd=WORK,
                                           stdout=frontend_log, stderr=subprocess.STDOUT,
                                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)))
         (WORK / "state.json").write_text(json.dumps({"schema": schema, "pids": [p.pid for p in children],
-                                                   "frontend": "http://127.0.0.1:15173"}), encoding="utf-8")
+                                                   "frontend": frontend_url}), encoding="utf-8")
         deadline = time.monotonic() + 90
         while time.monotonic() < deadline:
             if any(p.poll() is not None for p in children):
                 raise RuntimeError("Audit service exited; inspect isolated logs")
             try:
-                with urllib.request.urlopen("http://127.0.0.1:15173/api/system/login", timeout=2):
+                with urllib.request.urlopen(frontend_url + "/api/system/login", timeout=2):
                     pass
             except urllib.error.HTTPError as e:
                 if e.code == 405:
-                    print("UI_AUDIT_READY http://127.0.0.1:15173 schema=" + schema, flush=True)
+                    print("UI_AUDIT_READY " + frontend_url + " schema=" + schema, flush=True)
                     break
             except (OSError, urllib.error.URLError):
                 pass

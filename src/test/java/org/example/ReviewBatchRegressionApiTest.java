@@ -51,7 +51,7 @@ class ReviewBatchRegressionApiTest {
     private static final long LEADER = 910002L;
     private static final long AUDITOR = 910003L;
     private static final long DEPT = 920001L;
-    private static final String PASSWORD = "review-fixture-password";
+    private static final String PASSWORD = "Review-fixture-password1";
 
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
@@ -151,7 +151,7 @@ class ReviewBatchRegressionApiTest {
         Map<String, Object> nullBody = new LinkedHashMap<>();
         nullBody.put("new_password", null);
         invalidBodies.add(nullBody);
-        for (String invalid : List.of("", "      ", "\t\n    ", "12345")) {
+        for (String invalid : List.of("", "      ", "\t\n    ", "12345", "abcdef1", "ABCDEF1", "Abcdef", "Ab1")) {
             invalidBodies.add(Map.of("new_password", invalid));
         }
         for (Map<String, Object> invalid : invalidBodies) {
@@ -161,7 +161,7 @@ class ReviewBatchRegressionApiTest {
             assertEquals(PASSWORD, jdbc.queryForObject("SELECT password FROM sys_user WHERE user_id=?", String.class, USER));
             login(USER);
         }
-        for (String valid : List.of("abc123", " a123 ")) {
+        for (String valid : List.of("Abc123", " Aa1  ")) {
             ResponseEntity<String> response = request(HttpMethod.POST, "/system/password", token,
                     Map.of("new_password", valid));
             assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -334,6 +334,56 @@ class ReviewBatchRegressionApiTest {
         jdbc.update("INSERT INTO biz_project (project_id, project_name, leader_id) VALUES (1, 'Review project', ?)", ADMIN);
         seedTask(930001L, 0L, 2);
         seedTask(930002L, 930001L, 3);
+    }
+
+    @Test
+    void weakPasswordsGateAllRolesAndExistingTokensUntilChanged() throws Exception {
+        for (long userId : List.of(ADMIN, USER, LEADER, AUDITOR)) {
+            String existingToken = login(userId);
+            assertFalse(body(request(HttpMethod.GET, "/system/password/status", existingToken, null))
+                    .path("requiresPasswordChange").asBoolean());
+            jdbc.update("UPDATE sys_user SET password='110228' WHERE user_id=?", userId);
+            JsonNode loggedIn = body(request(HttpMethod.POST, "/system/login", null,
+                    Map.of("user_id", userId, "password", "110228")));
+            assertTrue(loggedIn.path("requiresPasswordChange").asBoolean());
+            assertTrue(loggedIn.hasNonNull("token"));
+            String token = loggedIn.path("token").asText();
+            assertTrue(body(request(HttpMethod.GET, "/system/password/status", token, null))
+                    .path("requiresPasswordChange").asBoolean());
+            for (String route : List.of("/biz/tasks", "/dashboard/summary", "/performance", "/achievement/",
+                    "/system/allUsers", "/system/notice")) {
+                ResponseEntity<String> blocked = request(HttpMethod.GET, route, existingToken, null);
+                assertEquals(428, blocked.getStatusCode().value(), route);
+                assertEquals(428, json.readTree(blocked.getBody()).path("code").asInt());
+            }
+            int taskCount = jdbc.queryForObject("SELECT COUNT(*) FROM biz_task", Integer.class);
+            assertEquals(428, request(HttpMethod.POST, "/biz/tasks/manage/add", token, Map.of()).getStatusCode().value());
+            assertEquals(taskCount, jdbc.queryForObject("SELECT COUNT(*) FROM biz_task", Integer.class));
+            assertEquals(HttpStatus.BAD_REQUEST, request(HttpMethod.POST, "/system/password", token,
+                    Map.of("new_password", "abcdef1")).getStatusCode());
+            assertEquals("110228", jdbc.queryForObject("SELECT password FROM sys_user WHERE user_id=?", String.class, userId));
+            assertEquals(HttpStatus.OK, request(HttpMethod.POST, "/system/password", token,
+                    Map.of("new_password", PASSWORD)).getStatusCode());
+            assertFalse(body(request(HttpMethod.GET, "/system/password/status", token, null))
+                    .path("requiresPasswordChange").asBoolean());
+            assertEquals(HttpStatus.OK, request(HttpMethod.GET, "/biz/tasks", token, null).getStatusCode());
+            assertFalse(body(request(HttpMethod.POST, "/system/login", null,
+                    Map.of("user_id", userId, "password", PASSWORD))).path("requiresPasswordChange").asBoolean());
+            assertFalse(body(request(HttpMethod.POST, "/system/login", null,
+                    Map.of("user_id", userId, "password", "110228"))).hasNonNull("token"));
+        }
+    }
+
+    @Test
+    void weakPasswordGateAllowsLogoutHandlerButStatusRequiresAuthentication() throws Exception {
+        assertEquals(HttpStatus.UNAUTHORIZED, request(HttpMethod.GET, "/system/password/status", null, null).getStatusCode());
+        String token = login(USER);
+        jdbc.update("UPDATE sys_user SET password='110228' WHERE user_id=?", USER);
+        // 这里只验证改密门禁不拦截注销；原库 token_blacklist.token 长度限制不属于本次改动。
+        ResponseEntity<String> logout = request(HttpMethod.POST, "/system/logout", token, Map.of());
+        assertEquals(HttpStatus.OK, logout.getStatusCode());
+        assertNotEquals(428, json.readTree(logout.getBody()).path("code").asInt());
+        assertEquals(HttpStatus.UNAUTHORIZED, request(HttpMethod.GET, "/system/password/status", "invalid-token", null).getStatusCode());
     }
 
     @Test

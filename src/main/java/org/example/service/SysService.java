@@ -84,7 +84,8 @@ public class SysService {
             boolean canUploadAchievement = AchievementPermissionUtil.canUploadAchievement(user, dept);
             SysLoginVO sysLoginVo = new SysLoginVO(
                     user.getNickName(),
-                    JWTUtil.generateJwtToken(user, isDepartmentAccount, canViewAchievement, canUploadAchievement)
+                    JWTUtil.generateJwtToken(user, isDepartmentAccount, canViewAchievement, canUploadAchievement),
+                    org.example.utils.PasswordPolicy.requiresChange(user.getPassword())
             );
             BusinessLogUtil.info("用户登录",
                     "result", "成功",
@@ -116,7 +117,7 @@ public class SysService {
      * @param newPassword 新密码
      */
     public void changePassword(Long userId, String newPassword) {
-        validatePassword(newPassword);
+        org.example.utils.PasswordPolicy.validate(newPassword);
         SysUser user = sysMapper.getUserById(userId);
         if (user == null) {
             throw new RuntimeException("用户不存在");

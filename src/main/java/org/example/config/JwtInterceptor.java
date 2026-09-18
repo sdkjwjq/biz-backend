@@ -9,6 +9,7 @@ import org.example.entity.vo.ErrorVO;
 import org.example.mapper.SysMapper;
 import org.example.mapper.TokenBlacklistMapper;
 import org.example.utils.JWTUtil;
+import org.example.utils.PasswordPolicy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -63,6 +64,15 @@ public class JwtInterceptor implements HandlerInterceptor {
                 sendError(response, 401, "Invalid Token");
                 return false;
             }
+            String path = request.getRequestURI().substring(request.getContextPath().length());
+            while (path.endsWith("/") && path.length() > 1) path = path.substring(0, path.length() - 1);
+            boolean passwordEndpoint = ("GET".equals(request.getMethod()) && "/system/password/status".equals(path))
+                    || ("POST".equals(request.getMethod())
+                    && ("/system/password".equals(path) || "/system/logout".equals(path)));
+            if (PasswordPolicy.requiresChange(user.getPassword()) && !passwordEndpoint) {
+                sendError(response, 428, "请先修改密码，新密码至少6位，并同时包含大写字母、小写字母和数字");
+                return false;
+            }
             request.setAttribute("userRole", decodedJWT.getClaim("role").asString());
             return true;
         } catch (Exception e) {
@@ -80,6 +90,7 @@ public class JwtInterceptor implements HandlerInterceptor {
      */
     private void sendError(HttpServletResponse response, int code, String message) throws IOException {
         response.setStatus(code);
+        response.setCharacterEncoding("UTF-8");
         response.setContentType("application/json");
         response.getWriter().write(new ObjectMapper().writeValueAsString(new ErrorVO(message, code)));
     }
