@@ -1897,9 +1897,13 @@ public class BizService {
         ));
     }
 
-    /**
-     * 计算部门数据（在Service中补充状态统计）
-     */
+    /** 与部门统计 SQL 使用相同的有效三级任务范围。 */
+    private boolean isDeptStatsTask(BizTask task) {
+        return task != null && Integer.valueOf(3).equals(task.getLevel())
+                && Integer.valueOf(0).equals(task.getIsDelete());
+    }
+
+    /** 计算部门数据（在 Service 中补充状态统计）。 */
     private void calculateDeptData(DashboardSummaryVO summary, int currentYear) {
         // 2.1 各部门整体完成率（在Service中补充状态统计）
         List<DeptTaskStatsVO> deptOverallStats = bizMapper.getDeptTaskStats();
@@ -1911,6 +1915,7 @@ public class BizService {
                 // 统计各状态数量
                 int notStarted = 0, inProgress = 0, inReview = 0, finished = 0;
                 for (BizTask task : deptTasks) {
+                    if (!isDeptStatsTask(task) || task.getStatus() == null) continue;
                     String status = task.getStatus();
                     if (status == null) continue;
 
@@ -1940,6 +1945,7 @@ public class BizService {
                 // 统计各状态数量
                 int notStarted = 0, inProgress = 0, inReview = 0, finished = 0;
                 for (BizTask task : deptYearTasks) {
+                    if (!isDeptStatsTask(task) || task.getStatus() == null) continue;
                     String status = task.getStatus();
                     if (status == null) continue;
 
@@ -1968,6 +1974,7 @@ public class BizService {
                 List<BizTask> deptTasks = bizMapper.getTasksByDeptId(stats.getDeptId());
                 int notStarted = 0, inProgress = 0, inReview = 0, finished = 0;
                 for (BizTask task : deptTasks) {
+                    if (!isDeptStatsTask(task) || task.getStatus() == null) continue;
                     // 添加空值检查
                     if (task.getPhase() != null && task.getPhase() < MID_TERM_END_YEAR) {
                         String status = task.getStatus();
@@ -2125,6 +2132,7 @@ public class BizService {
                     // 统计各状态数量
                     int notStarted = 0, inProgress = 0, inReview = 0, finished = 0;
                     for (BizTask task : deptTasks) {
+                        if (!isDeptStatsTask(task) || task.getStatus() == null) continue;
                         switch (task.getStatus()) {
                             case "0": notStarted++; break;
                             case "1": inProgress++; break;
@@ -2166,6 +2174,7 @@ public class BizService {
                     // 统计各状态数量
                     int notStarted = 0, inProgress = 0, inReview = 0, finished = 0;
                     for (BizTask task : deptYearTasks) {
+                        if (!isDeptStatsTask(task) || task.getStatus() == null) continue;
                         switch (task.getStatus()) {
                             case "0": notStarted++; break;
                             case "1": inProgress++; break;
@@ -2205,6 +2214,7 @@ public class BizService {
                     List<BizTask> deptTasks = bizMapper.getTasksByDeptId(stat.getDeptId());
                     int notStarted = 0, inProgress = 0, inReview = 0, finished = 0;
                     for (BizTask task : deptTasks) {
+                        if (!isDeptStatsTask(task) || task.getStatus() == null) continue;
                         // 添加空值检查
                         if (task.getPhase() != null && task.getPhase() < endYear) {
                             String status = task.getStatus();
