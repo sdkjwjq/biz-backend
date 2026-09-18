@@ -373,8 +373,9 @@ public class BizService {
                 throw new RuntimeException("该文件不存在");
             }
             // 验证文件后缀，只能为pdf,doc,docx
-            if (!sysFile.getFileName().endsWith(".pdf") && !sysFile.getFileName().endsWith(".doc")
-                    && !sysFile.getFileName().endsWith(".docx")) {
+            String fileName = sysFile.getFileName().toLowerCase(Locale.ROOT);
+            if (!fileName.endsWith(".pdf") && !fileName.endsWith(".doc")
+                    && !fileName.endsWith(".docx")) {
                 throw new RuntimeException("文件格式错误,请上传pdf,doc,docx格式的文件");
             }
 

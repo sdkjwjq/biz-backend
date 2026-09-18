@@ -162,7 +162,10 @@ public class SysService {
                 throw new RuntimeException("文件不能为空");
             }
             // 如果文件后缀不是doc,docx,pdf中的一个，报错
-            if (!file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf(".")+1).matches("doc|docx|pdf")) {
+            String originalName = file.getOriginalFilename();
+            String suffix = originalName == null || !originalName.contains(".") ? ""
+                    : originalName.substring(originalName.lastIndexOf('.') + 1).toLowerCase(java.util.Locale.ROOT);
+            if (!suffix.matches("doc|docx|pdf")) {
                 throw new RuntimeException("文件格式错误");
             }
             FileUploadDTO fileUploadDTO = FileUploadUtil.upload(file);
@@ -170,7 +173,7 @@ public class SysService {
             sysFile.setFilePath(fileUploadDTO.getFilepath());
             sysFile.setFileName(fileUploadDTO.getFilename());
             sysFile.setFileUrl(fileUploadDTO.getFilepath());
-            sysFile.setFileSuffix(file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf(".")+1));
+            sysFile.setFileSuffix(suffix);
             sysFile.setFileSize(file.getSize());
             Long userId = JWTUtil.getUserIdFromToken(request.getHeader("Authorization"));
             sysFile.setUploadBy(userId);
