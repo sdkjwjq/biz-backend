@@ -1,0 +1,35 @@
+{
+  "results": [
+    {
+      "username": "徐忠杰",
+      "required": true,
+      "displayed": "å¾å¿ æ°"
+    },
+    {
+      "username": "张老师",
+      "required": true,
+      "displayed": "å¼ èå¸"
+    },
+    {
+      "username": "AuditAdmin",
+      "required": true,
+      "displayed": "AuditAdmin"
+    },
+    {
+      "username": "徐忠杰",
+      "required": false,
+      "displayed": "å¾å¿ æ°"
+    },
+    {
+      "username": "张老师",
+      "required": false,
+      "displayed": "å¼ èå¸"
+    },
+    {
+      "username": "AuditAdmin",
+      "required": false,
+      "displayed": "AuditAdmin"
+    }
+  ],
+  "errors": []
+}

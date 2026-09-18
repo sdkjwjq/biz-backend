@@ -1,0 +1,35 @@
+{
+  "results": [
+    {
+      "username": "徐忠杰",
+      "required": true,
+      "displayed": "徐忠杰"
+    },
+    {
+      "username": "张老师",
+      "required": true,
+      "displayed": "张老师"
+    },
+    {
+      "username": "AuditAdmin",
+      "required": true,
+      "displayed": "AuditAdmin"
+    },
+    {
+      "username": "徐忠杰",
+      "required": false,
+      "displayed": "徐忠杰"
+    },
+    {
+      "username": "张老师",
+      "required": false,
+      "displayed": "张老师"
+    },
+    {
+      "username": "AuditAdmin",
+      "required": false,
+      "displayed": "AuditAdmin"
+    }
+  ],
+  "errors": []
+}
