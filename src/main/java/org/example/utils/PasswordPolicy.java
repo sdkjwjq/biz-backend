@@ -5,7 +5,7 @@ public final class PasswordPolicy {
     private PasswordPolicy() { }
 
     public static boolean requiresChange(String password) {
-        return password == null || password.length() < 6
+        return password == null || password.length() < 8
                 || !password.matches("(?s).*[A-Z].*")
                 || !password.matches("(?s).*[a-z].*")
                 || !password.matches("(?s).*[0-9].*");
@@ -13,7 +13,7 @@ public final class PasswordPolicy {
 
     public static void validate(String password) {
         if (requiresChange(password)) {
-            throw new IllegalArgumentException("新密码至少6位，并同时包含大写字母、小写字母和数字");
+            throw new IllegalArgumentException("新密码至少8位，并同时包含大写字母、小写字母和数字");
         }
     }
 }

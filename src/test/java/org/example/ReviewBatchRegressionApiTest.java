@@ -151,7 +151,7 @@ class ReviewBatchRegressionApiTest {
         Map<String, Object> nullBody = new LinkedHashMap<>();
         nullBody.put("new_password", null);
         invalidBodies.add(nullBody);
-        for (String invalid : List.of("", "      ", "\t\n    ", "12345", "abcdef1", "ABCDEF1", "Abcdef", "Ab1")) {
+        for (String invalid : List.of("", "      ", "\t\n    ", "12345", "abcdefgh1", "ABCDEFGH1", "Abcdefgh", "Ab1", "Aa1234", "Aa12345")) {
             invalidBodies.add(Map.of("new_password", invalid));
         }
         for (Map<String, Object> invalid : invalidBodies) {
@@ -161,7 +161,7 @@ class ReviewBatchRegressionApiTest {
             assertEquals(PASSWORD, jdbc.queryForObject("SELECT password FROM sys_user WHERE user_id=?", String.class, USER));
             login(USER);
         }
-        for (String valid : List.of("Abc123", " Aa1  ")) {
+        for (String valid : List.of("Aa123456", " Aa123  ")) {
             ResponseEntity<String> response = request(HttpMethod.POST, "/system/password", token,
                     Map.of("new_password", valid));
             assertEquals(HttpStatus.OK, response.getStatusCode());
@@ -384,6 +384,21 @@ class ReviewBatchRegressionApiTest {
         assertEquals(HttpStatus.OK, logout.getStatusCode());
         assertNotEquals(428, json.readTree(logout.getBody()).path("code").asInt());
         assertEquals(HttpStatus.UNAUTHORIZED, request(HttpMethod.GET, "/system/password/status", "invalid-token", null).getStatusCode());
+    }
+
+    @Test
+    void sixAndSevenCharacterPasswordsRequireUpgradeButEightCharactersPass() throws Exception {
+        for (String password : List.of("Aa1234", "Aa12345", "Aa123456")) {
+            jdbc.update("UPDATE sys_user SET password=? WHERE user_id=?", password, USER);
+            JsonNode result = body(request(HttpMethod.POST, "/system/login", null,
+                    Map.of("user_id", USER, "password", password)));
+            boolean required = password.length() < 8;
+            assertEquals(required, result.path("requiresPasswordChange").asBoolean());
+            String token = result.path("token").asText();
+            assertEquals(required, body(request(HttpMethod.GET, "/system/password/status", token, null))
+                    .path("requiresPasswordChange").asBoolean());
+            assertEquals(required ? 428 : 200, request(HttpMethod.GET, "/biz/tasks", token, null).getStatusCode().value());
+        }
     }
 
     @Test

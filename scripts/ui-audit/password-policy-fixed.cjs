@@ -5,7 +5,7 @@ const path = require('node:path');
 const assert = require('node:assert/strict');
 const BASE = 'http://127.0.0.1:15273';
 const OLD = 'review-fixture-password';
-const STRONG = 'Review-fixture-password1';
+const STRONG = 'Aa123456';
 async function main() {
   const root = path.resolve(__dirname, '../../target/ui-audit');
   const state = JSON.parse(await fs.readFile(path.join(root, 'state.json')));
@@ -58,7 +58,8 @@ async function main() {
       const password = dialog.getByPlaceholder('请输入新密码', { exact: true });
       const confirm = dialog.getByPlaceholder('请再次输入新密码', { exact: true });
       const save = dialog.getByRole('button', { name: '保存', exact: true });
-      for (const invalid of ['123456', 'abcdef1', 'ABCDEF1', 'Abcdef', 'Ab1']) {
+      await dialog.getByText('新密码至少8位，并同时包含大写字母、小写字母和数字。', { exact: true }).waitFor();
+      for (const invalid of ['12345678', 'abcdefgh1', 'ABCDEFGH1', 'Abcdefgh', 'Ab1', 'Aa1234', 'Aa12345']) {
         await password.fill(invalid); await confirm.fill(invalid); await save.click();
         assert.equal(writes, 0);
         await dialog.locator('.el-form-item__error').first().waitFor();

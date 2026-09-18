@@ -70,7 +70,7 @@ public class JwtInterceptor implements HandlerInterceptor {
                     || ("POST".equals(request.getMethod())
                     && ("/system/password".equals(path) || "/system/logout".equals(path)));
             if (PasswordPolicy.requiresChange(user.getPassword()) && !passwordEndpoint) {
-                sendError(response, 428, "请先修改密码，新密码至少6位，并同时包含大写字母、小写字母和数字");
+                sendError(response, 428, "请先修改密码，新密码至少8位，并同时包含大写字母、小写字母和数字");
                 return false;
             }
             request.setAttribute("userRole", decodedJWT.getClaim("role").asString());
