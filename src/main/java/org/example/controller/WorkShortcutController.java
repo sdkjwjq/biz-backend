@@ -50,14 +50,15 @@ public class WorkShortcutController {
             List<Long> ids = visible.stream().filter(p -> !Integer.valueOf(1).equals(p.getIsDelete()))
                     .filter(p -> p.getPerfCode() == null || !(p.getPerfCode().startsWith("1.1.") || p.getPerfCode().startsWith("1.2.")))
                     .map(BizPerformance::getPerfId).toList();
-            List<Map<String, Object>> returned = new ArrayList<>(), todo = new ArrayList<>();
+            List<Map<String, Object>> returned = new ArrayList<>(), todo = new ArrayList<>(), pending = new ArrayList<>();
             for (Map<String, Object> row : ids.isEmpty() ? List.<Map<String, Object>>of() : shortcuts.performanceStates(ids)) {
                 int status = ((Number) row.get("flowStatus")).intValue();
                 Map<String, Object> key = Map.of("perfId", row.get("perfId"), "year", row.get("year"));
                 if (status < 0) returned.add(key);
+                if (List.of(10, 20).contains(status)) pending.add(row);
                 if (List.of(10, 20).contains(status) && sameUser(row.get("handlerId"), userId)) todo.add(key);
             }
-            return Map.of("returned", returned, "todo", todo);
+            return Map.of("returned", returned, "todo", todo, "pending", pending);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(new ErrorVO("绩效快捷筛选加载失败", 500));
         }

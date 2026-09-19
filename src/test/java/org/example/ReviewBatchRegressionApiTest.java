@@ -1397,15 +1397,20 @@ class ReviewBatchRegressionApiTest {
         JsonNode result = body(request(HttpMethod.GET, path, auditor, null));
         assertEquals(2026, result.path("returned").get(0).path("year").asInt());
         assertEquals(2027, result.path("todo").get(0).path("year").asInt());
+        assertEquals(1, result.path("pending").size());
+        assertEquals(2027, result.path("pending").get(0).path("year").asInt());
+        assertEquals(AUDITOR, result.path("pending").get(0).path("handlerId").asLong());
         seedUser(910004L, "1");
         jdbc.update("UPDATE sys_user SET dept_id=NULL WHERE user_id=910004");
         JsonNode hidden = body(request(HttpMethod.GET, path, login(910004L), null));
         assertEquals(0, hidden.path("returned").size());
         assertEquals(0, hidden.path("todo").size());
+        assertEquals(0, hidden.path("pending").size());
         submitPerformance(2026, "5", user);
         assertEquals(0, body(request(HttpMethod.GET, path, user, null)).path("returned").size());
         jdbc.update("UPDATE biz_performance SET perf_code='1.1.auto' WHERE perf_id=950001");
         assertEquals(0, body(request(HttpMethod.GET, path, auditor, null)).path("todo").size());
+        assertEquals(0, body(request(HttpMethod.GET, path, auditor, null)).path("pending").size());
     }
 
     @Test
