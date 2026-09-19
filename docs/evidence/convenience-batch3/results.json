@@ -1,0 +1,15 @@
+{
+  "checks": [
+    "real-task-and-achievement-pass-reject-with-overlapping-submission-ids",
+    "real-performance-cross-original-page-boundary-and-no-wrap",
+    "real-fifteen-performance-approvals-and-immediate-badge-zero",
+    "injected-submit-failure-preserves-draft-and-concurrent-completion-is-skipped",
+    "injected-post-success-refresh-failure-retry-without-resubmission",
+    "injected-double-click-and-close-during-refresh-cancels-next",
+    "search-and-type-intersection-does-not-open-unfiltered-records",
+    "injected-filter-change-during-refresh-cancels-next",
+    "route-change-during-refresh-does-not-reopen-audit",
+    "original-confirm-submit-closes-without-opening-next"
+  ],
+  "errors": []
+}
