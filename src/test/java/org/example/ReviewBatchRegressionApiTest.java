@@ -1403,6 +1403,66 @@ class ReviewBatchRegressionApiTest {
         assertEquals(0, body(request(HttpMethod.GET, path, auditor, null)).path("todo").size());
     }
 
+    @Test
+    void deletedAchievementsNeverRemainPendingAndCompletedHistorySurvives() throws Exception {
+        seedUser(990000L + DEPT, "1");
+        String uploader = login(990000L + DEPT), admin = login(ADMIN);
+        for (boolean archived : List.of(false, true)) {
+            assertSuccess(request(HttpMethod.POST, "/achievement/add", uploader,
+                    Map.of("category", 1, "level", "省级", "achName", "Deleted pending regression", "gotTime", 1767225600000L,
+                            "department", "Synthetic organization", "comment", "Synthetic deletion test")), "添加成功");
+            long id = jdbc.queryForObject("SELECT MAX(ach_id) FROM biz_achievement", Long.class);
+            long subId = jdbc.queryForObject("SELECT MAX(sub_id) FROM biz_achievement_submission", Long.class);
+            if (archived) assertSuccess(request(HttpMethod.POST, "/achievement/audit", admin,
+                    Map.of("sub_id", subId, "is_pass", true, "title", "Archive before deletion")), "已归档");
+            assertSuccess(request(HttpMethod.POST, "/achievement/delete/" + id, uploader, null), "删除成功");
+            JsonNode todos = body(request(HttpMethod.GET, "/achievement/audit/todo", admin, null));
+            assertTrue(todos.isArray(), todos.toString());
+            assertEquals(0, todos.size(), "Deleted achievement must not remain in pending list");
+            if (archived) {
+                assertEquals(1, body(request(HttpMethod.GET, "/achievement/audit/records", admin, null)).size());
+                assertEquals(2, jdbc.queryForObject("SELECT COUNT(*) FROM biz_achievement_audit_log WHERE sub_id=?", Integer.class, subId));
+            } else {
+                Map<String, List<Map<String, Object>>> before = achievementFlowState();
+                assertEquals(500, body(request(HttpMethod.POST, "/achievement/audit", admin,
+                        Map.of("sub_id", subId, "is_pass", true, "title", "Must not archive deleted item"))).path("code").asInt());
+                assertEquals(before, achievementFlowState());
+            }
+        }
+    }
+
+    @Test
+    void achievementReportDatesComeFromAuditEvidenceWithinExistingPermissions() throws Exception {
+        seedUser(990000L + DEPT, "1");
+        String uploader = login(990000L + DEPT), admin = login(ADMIN);
+        assertSuccess(request(HttpMethod.POST, "/achievement/add", uploader,
+                Map.of("category", 1, "level", "省级", "achName", "Report dates", "gotTime", 1767225600000L,
+                        "department", "Synthetic organization", "comment", "Synthetic report")), "添加成功");
+        long id = jdbc.queryForObject("SELECT MAX(ach_id) FROM biz_achievement", Long.class);
+        long subId = jdbc.queryForObject("SELECT MAX(sub_id) FROM biz_achievement_submission", Long.class);
+        jdbc.update("UPDATE biz_achievement SET create_time='2000-01-01',update_time='2001-01-01' WHERE ach_id=?", id);
+        jdbc.update("UPDATE biz_achievement_submission SET submit_time='2026-02-03 12:00:00' WHERE sub_id=?", subId);
+        JsonNode row = body(request(HttpMethod.GET, "/achievement/", uploader, null)).get(0);
+        assertTrue(row.path("submittedTime").asText().contains("2026-02-03"));
+        assertTrue(row.path("archivedTime").isNull());
+        assertSuccess(request(HttpMethod.POST, "/achievement/audit", admin,
+                Map.of("sub_id", subId, "is_pass", true, "title", "Archive")), "已归档");
+        jdbc.update("UPDATE biz_achievement_audit_log SET create_time='2026-03-04 12:00:00' WHERE sub_id=? AND action_type='pass'", subId);
+        row = body(request(HttpMethod.GET, "/achievement/", admin, null)).get(0);
+        assertTrue(row.path("archivedTime").asText().contains("2026-03-04"));
+        jdbc.update("INSERT INTO sys_dept (dept_id,dept_name,is_delete) VALUES (920002,'Other report department',0)");
+        seedUser(1910002L, "1");
+        jdbc.update("UPDATE sys_user SET dept_id=920002 WHERE user_id=1910002");
+        // 现有规则允许成果上传账号浏览全校成果，新增报表不擅自收窄范围。
+        assertEquals(1, body(request(HttpMethod.GET, "/achievement/", login(1910002L), null)).size());
+        assertEquals(500, body(request(HttpMethod.GET, "/achievement/", login(USER), null)).path("code").asInt());
+        jdbc.update("DELETE FROM biz_achievement_audit_log WHERE sub_id=?", subId);
+        jdbc.update("DELETE FROM biz_achievement_submission WHERE sub_id=?", subId);
+        row = body(request(HttpMethod.GET, "/achievement/", admin, null)).get(0);
+        assertTrue(row.path("submittedTime").isNull());
+        assertTrue(row.path("archivedTime").isNull(), "No historical evidence must not use update_time as archive time");
+    }
+
     private void seedAnnualTasks() {
         seedTasks();
         for (long id = 970001L; id <= 970008L; id++) {

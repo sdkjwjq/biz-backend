@@ -67,4 +67,6 @@ public class BizAchievement {
     private Integer isDelete; // 0:存在 1:删除
     private Date createTime; // 创建时间(默认当前时间)
     private Date updateTime; // 更新时间
+    private Date submittedTime; // 查询字段：最近一次有效提交时间，不回写业务表
+    private Date archivedTime; // 查询字段：当前已归档成果的最近归档日志时间
 }

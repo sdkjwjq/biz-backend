@@ -18,6 +18,11 @@ import java.util.List;
  */
 @Mapper
 public interface AchievementMapper {
+    String REPORT_COLUMNS = "SELECT a.*, "
+            + "(SELECT MAX(s.submit_time) FROM biz_achievement_submission s WHERE s.ach_id=a.ach_id AND s.is_delete=0) AS submittedTime, "
+            + "CASE WHEN a.audit_status=30 THEN (SELECT MAX(l.create_time) FROM biz_achievement_audit_log l "
+            + "JOIN biz_achievement_submission s ON s.sub_id=l.sub_id WHERE s.ach_id=a.ach_id AND s.is_delete=0 "
+            + "AND l.action_type='pass' AND l.post_status=30) ELSE NULL END AS archivedTime FROM biz_achievement a ";
 
     /**
      * 根据成果ID查询单条成果信息
@@ -31,10 +36,10 @@ public interface AchievementMapper {
      * 查询所有未删除的标志性成果列表
      * @return 标志性成果列表
      */
-    @Select("SELECT * FROM biz_achievement WHERE is_delete = 0")
+    @Select(REPORT_COLUMNS + "WHERE a.is_delete = 0")
     List<BizAchievement> listAllAchievements();
 
-    @Select("SELECT * FROM biz_achievement WHERE is_delete = 0 AND dept_id = #{deptId}")
+    @Select(REPORT_COLUMNS + "WHERE a.is_delete = 0 AND a.dept_id = #{deptId}")
     List<BizAchievement> listAchievementsByDeptId(Long deptId);
 
     @Select("SELECT * FROM biz_achievement WHERE is_delete = 0 AND COALESCE(audit_status, 30) = 30")
@@ -108,10 +113,12 @@ public interface AchievementMapper {
     @Select("SELECT * FROM biz_achievement_submission WHERE ach_id = #{achId} AND is_delete = 0 ORDER BY submit_time DESC, sub_id DESC")
     List<BizAchievementSubmission> getAchievementSubmissionsByAchId(Long achId);
 
-    @Select("SELECT * FROM biz_achievement_submission WHERE current_handler_id = #{userId} AND is_delete = 0 AND flow_status = 10 ORDER BY submit_time DESC")
+    @Select("SELECT s.* FROM biz_achievement_submission s JOIN biz_achievement a ON a.ach_id=s.ach_id AND a.is_delete=0 "
+            + "WHERE s.current_handler_id = #{userId} AND s.is_delete = 0 AND s.flow_status = 10 ORDER BY s.submit_time DESC")
     List<BizAchievementSubmission> getTodoAchievementSubmissions(Long userId);
 
-    @Select("SELECT * FROM biz_achievement_submission WHERE is_delete = 0 AND flow_status = 10 ORDER BY submit_time DESC")
+    @Select("SELECT s.* FROM biz_achievement_submission s JOIN biz_achievement a ON a.ach_id=s.ach_id AND a.is_delete=0 "
+            + "WHERE s.is_delete = 0 AND s.flow_status = 10 ORDER BY s.submit_time DESC")
     List<BizAchievementSubmission> getAllTodoAchievementSubmissions();
 
     @Select("SELECT * FROM biz_achievement_submission WHERE (submit_by = #{userId} OR current_handler_id = #{userId}) " +
