@@ -1358,6 +1358,10 @@ class ReviewBatchRegressionApiTest {
         assertEquals(HttpStatus.UNAUTHORIZED, request(HttpMethod.GET, path, null, null).getStatusCode());
         assertSuccess(request(HttpMethod.POST, "/biz/sub", user, submission("3")), "提交成功");
         assertEquals(930002L, body(request(HttpMethod.GET, path, auditor, null)).path("todoIds").get(0).asLong());
+        JsonNode pending = body(request(HttpMethod.GET, path, user, null)).path("pending").get(0);
+        assertEquals(10, pending.path("flowStatus").asInt());
+        assertEquals(DEPT, pending.path("handlerDeptId").asLong());
+        assertEquals(AUDITOR, pending.path("handlerId").asLong());
         long first = newestSubmission();
         review(first, false, auditor);
         assertEquals(930002L, body(request(HttpMethod.GET, path, user, null)).path("returnedIds").get(0).asLong());
@@ -1370,6 +1374,7 @@ class ReviewBatchRegressionApiTest {
         JsonNode hidden = body(request(HttpMethod.GET, path, login(910004L), null));
         assertEquals(0, hidden.path("returnedIds").size());
         assertEquals(0, hidden.path("todoIds").size());
+        assertEquals(0, hidden.path("pending").size());
         review(newestSubmission(), false, auditor);
         for (long id : List.of(960001L, 960002L)) {
             jdbc.update("INSERT INTO biz_level4_task (task_id,parent_id,phase,task_name,leader_id,dept_id,data_type,target_value,current_value,progress,status) "

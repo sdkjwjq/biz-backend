@@ -27,13 +27,15 @@ public class WorkShortcutController {
             List<Long> ids = visible.stream().filter(t -> !Integer.valueOf(1).equals(t.getIsDelete()) && Integer.valueOf(3).equals(t.getLevel()))
                     .map(BizTask::getTaskId).toList();
             Set<Long> returned = new LinkedHashSet<>(), todo = new LinkedHashSet<>();
+            List<Map<String, Object>> pending = new ArrayList<>();
             for (Map<String, Object> row : ids.isEmpty() ? List.<Map<String, Object>>of() : shortcuts.taskStates(ids)) {
                 int status = ((Number) row.get("flowStatus")).intValue();
                 Long id = ((Number) row.get("taskId")).longValue();
                 if (status < 0) returned.add(id);
+                if (List.of(10, 20, 30).contains(status)) pending.add(row);
                 if (List.of(10, 20, 30).contains(status) && sameUser(row.get("handlerId"), userId)) todo.add(id);
             }
-            return Map.of("returnedIds", returned, "todoIds", todo);
+            return Map.of("returnedIds", returned, "todoIds", todo, "pending", pending);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(new ErrorVO("任务快捷筛选加载失败", 500));
         }
