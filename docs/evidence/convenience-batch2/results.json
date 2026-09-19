@@ -1,0 +1,21 @@
+{
+  "checks": [
+    "performance-real-todo-filter-and-refresh-expansion-memory",
+    "performance-filtered-navigation-count-and-bounds",
+    "performance-mine-empty-and-reset",
+    "performance-returned-year-intersection-and-year-memory",
+    "task-mine-memory-returned-empty-and-reset",
+    "achievement-real-owner-memory-category-order-and-bounds",
+    "achievement-real-todo-excludes-archived",
+    "achievement-returned-single-result-bounds",
+    "logout-clears-memory-and-switch-account-defaults",
+    "memory-saves-executed-search-only",
+    "explicit-link-overrides-remembered-filter",
+    "injected-shortcut-failure-and-real-retry",
+    "injected-session-storage-denied-keeps-browsing-working",
+    "real-scroll-anchor-restored-after-refresh",
+    "injected-deleted-anchor-and-directory-repaired",
+    "injected-slow-response-busy-guard-and-close-reopen-isolation"
+  ],
+  "errors": []
+}
