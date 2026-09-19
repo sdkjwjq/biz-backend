@@ -1,0 +1,10 @@
+{
+  "checks": [
+    "绩效: department intersection, pending-only handlers, range, memory and reset",
+    "绩效: existing actions, keyword search, 5 viewport widths",
+    "成果: department intersection, pending-only handlers, range, memory and reset",
+    "成果: existing actions, keyword search, 5 viewport widths",
+    "achievement uploader retains add permission and entry; administrator remains review-only"
+  ],
+  "errors": []
+}

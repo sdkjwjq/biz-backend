@@ -23,7 +23,7 @@ async function main() {
     page = await context.newPage(); page.setDefaultTimeout(15000); page.on('pageerror', e => errors.push(e.message));
     await page.clock.install();
     await page.goto(state.frontend + '/home/works/achievement');
-    await expect(page.locator('.quick-filters').getByRole('radio', { name: '全部', exact: true })).toBeEnabled();
+    await expect(before ? page.locator('.quick-filters').getByRole('radio', { name: '全部', exact: true }) : page.getByRole('combobox', { name: '成果范围', exact: true })).toBeEnabled();
     const badge = page.getByRole('menuitem', { name: /审核中心/ }).locator('.el-badge');
     await expect(badge).toContainText(/\d/); const originalCount = Number(await badge.innerText());
     await expect(page.locator('.table-wrapper .el-loading-mask')).toBeHidden();

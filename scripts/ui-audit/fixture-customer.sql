@@ -10,3 +10,4 @@ INSERT INTO biz_material_submission (sub_id,task_id,file_id,submit_by,submit_dep
 INSERT INTO biz_achievement (ach_id,category,level,ach_name,department,got_time,dept_id,create_by,audit_status,comment,is_competition,yi_deng_jiang)
 VALUES (979003,2,'省级','无审核证据的历史成果','合成部门','2026-06-03',920001,1910001,30,'合成历史数据',1,2);
 UPDATE biz_achievement_submission SET submit_time='2026-07-01 12:00:00' WHERE ach_id IN (979001,979002);
+UPDATE biz_achievement SET current_handler_id=110228 WHERE ach_id IN (979001,979002);
