@@ -1,0 +1,8 @@
+{
+  "checks": [
+    "wheel-selection-and-last-textarea-1440x600",
+    "wheel-selection-and-last-textarea-1440x900",
+    "wheel-selection-and-last-textarea-768x700"
+  ],
+  "errors": []
+}
