@@ -1,0 +1,10 @@
+{
+  "checks": [
+    "绩效: owning department, range, memory and reset; removed handler and ignored legacy handler cache",
+    "绩效: existing actions, keyword search, 5 viewport widths",
+    "成果: owning department, range, memory and reset; removed handler and ignored legacy handler cache",
+    "成果: existing actions, keyword search, 5 viewport widths",
+    "achievement uploader retains add permission and entry; administrator remains review-only"
+  ],
+  "errors": []
+}
