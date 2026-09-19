@@ -25,7 +25,7 @@ SPEC.loader.exec_module(RUNNER)
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--fixture", choices=["base", "business", "review", "navigation"], default="base")
+    parser.add_argument("--fixture", choices=["base", "business", "review", "navigation", "convenience"], default="base")
     parser.add_argument("--frontend-port", type=int, default=15173)
     args = parser.parse_args()
     if not 1024 <= args.frontend_port <= 65535:
@@ -61,12 +61,14 @@ def main():
     try:
         subprocess.run(mysql + [schema], input=dump, env=env, check=True, capture_output=True)
         sql((ROOT / "scripts/ui-audit/fixture.sql").read_text(encoding="utf-8"), schema)
-        if args.fixture in ("business", "review"):
+        if args.fixture in ("business", "review", "convenience"):
             sql((ROOT / "scripts/ui-audit/fixture-business.sql").read_text(encoding="utf-8"), schema)
         if args.fixture == "review":
             sql((ROOT / "scripts/ui-audit/fixture-review.sql").read_text(encoding="utf-8"), schema)
-        if args.fixture == "navigation":
+        if args.fixture in ("navigation", "convenience"):
             sql((ROOT / "scripts/ui-audit/fixture-navigation.sql").read_text(encoding="utf-8"), schema)
+        if args.fixture == "convenience":
+            sql((ROOT / "scripts/ui-audit/fixture-convenience.sql").read_text(encoding="utf-8"), schema)
         cp = os.pathsep.join([str(WORK), str(ROOT / "target/classes"), str(ROOT / "target/test-classes"),
                               (ROOT / "target/ui-audit-classpath.txt").read_text().strip()])
         subprocess.run([RUNNER.executable("javac"), "-encoding", "UTF-8", "-cp", cp, "-d", str(WORK),

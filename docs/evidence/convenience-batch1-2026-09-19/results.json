@@ -1,0 +1,16 @@
+{
+  "checks": [
+    "unauthenticated-link-login-and-forced-password-return",
+    "performance-link-fallback-year-and-deep-tree-location",
+    "achievement-link-category-location",
+    "task-section-scroll-dirty-cancel-discard-location",
+    "filtered-out-item-keeps-filter-until-confirmation",
+    "performance-unsaved-value-protection",
+    "unauthorized-task-link-does-not-open-details",
+    "deleted-record-stops-list-location",
+    "role-specific-sections-copy-success-and-missing-record",
+    "external-login-redirect-rejected",
+    "same-page-detail-link-change-ignores-old-related-tasks"
+  ],
+  "errors": []
+}
