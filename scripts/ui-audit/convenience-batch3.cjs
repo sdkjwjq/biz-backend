@@ -81,7 +81,7 @@ async function main() {
       const logs = await get(`/performance/audit/logs/${initial[i]}`);
       assert.ok(logs.some(log => Number(log.postStatus ?? log.post_status) === (i >= 9 && i % 2 ? -10 : 20)));
     }
-    await page.screenshot({ path: path.join(output, 'all-performance-completed.png') });
+    await page.screenshot({ path: path.join(output, 'all-performance-completed.png'), animations: 'disabled' });
     passed('real-fifteen-performance-approvals-and-immediate-badge-zero');
     await page.context().close();
 
@@ -154,7 +154,8 @@ async function main() {
     passed('route-change-during-refresh-does-not-reopen-audit'); await page.context().close();
 
     model = await setup();
-    await page.screenshot({ path: path.join(output, 'continuous-approval-buttons.png') });
+    await next().hover();
+    await page.screenshot({ path: path.join(output, 'continuous-approval-buttons.png'), animations: 'disabled' });
     await dialog().getByRole('button', { name: '确认提交', exact: true }).click();
     await expect(dialog()).toBeHidden(); await badge(3);
     await expect(page.locator('.audit-container .el-loading-mask')).toBeHidden();
