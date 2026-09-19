@@ -1,0 +1,30 @@
+{
+  "name": "org.example.WorkRecordApiTest",
+  "tests": "20",
+  "errors": "0",
+  "failures": "0",
+  "skipped": "0",
+  "time": "38.968",
+  "cases": [
+    "exportRequiresExplicitPermissionAndRejectsEntireInvalidSelection",
+    "newDraftAndSnapshotAreAtomicOnPersistenceFailure",
+    "monthAndPayloadValidationRejectsInvalidWithoutWriting",
+    "textAndEntryValidationDoesNotPartiallyWrite",
+    "fourLevelArchivesNeverDoubleCountAndMissingParentEvidenceIsExplicit",
+    "draftRoundTripAndSubmitRecomputeThenFreezeAllContent",
+    "previousCompletedSnapshotPreventsInventingFirstCompletionMonth",
+    "concurrentSubmitCommitsExactlyOnceAndOldWindowCannotOverwrite",
+    "mergedWordSortsDeduplicatesAndSupportsLongTablesAndNarratives",
+    "missingEarlierArchiveTimeAndInvalidTargetRemainUnverified",
+    "wordUsesFrozenSnapshotRemovesExamplesAndPreservesFiveSections",
+    "permissionsFollowAuditorNotLeaderAndProtectNewEndpoints",
+    "refreshRechecksQualificationAndRaceAndRollsBackFailedSnapshot",
+    "failedSubmissionRollsBackTextEntriesVersionAndSnapshot",
+    "concurrentCreateProducesOneDraftAndDoesNotAcceptSpoofedOwner",
+    "draftAndSubmittedVisibilityAndRevokedQualifications",
+    "statisticsUseOwnedAnnualTasksAndFirstQualifyingArchive",
+    "saveAndSubmitRequireOwnerAndCurrentAnnualQualification",
+    "listFiltersPaginationAndNoBusinessWritesFromStatistics",
+    "storedSnapshotOnlyChangesOnExplicitVersionedRefresh"
+  ]
+}

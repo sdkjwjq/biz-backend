@@ -298,6 +298,85 @@ class WorkRecordApiTest {
         assertFalse(ok(request(HttpMethod.GET,"/work-records/"+id,token,null)).path("editable").asBoolean());
     }
 
+    private ResponseEntity<byte[]> export(String token, Object body) {
+        HttpHeaders headers=new HttpHeaders(); headers.setContentType(MediaType.APPLICATION_JSON);
+        if(token!=null) headers.set("Authorization",token);
+        return http.exchange("http://127.0.0.1:"+port+"/api/work-records/export",HttpMethod.POST,new HttpEntity<>(body,headers),byte[].class);
+    }
+
+    private String wordText(byte[] bytes) throws Exception {
+        try(var document=new org.apache.poi.xwpf.usermodel.XWPFDocument(new java.io.ByteArrayInputStream(bytes));
+            var extractor=new org.apache.poi.xwpf.extractor.XWPFWordExtractor(document)) { return extractor.getText(); }
+    }
+
+    @Test void exportRequiresExplicitPermissionAndRejectsEntireInvalidSelection() throws Exception {
+        String owner=login(OWNER), admin=login(ADMIN), viewer=login(VIEWER);
+        long id=create(owner,1).path("record").path("recordId").asLong();
+        assertEquals(401,export(null,Map.of("ids",List.of(id))).getStatusCode().value());
+        assertEquals(403,export(owner,Map.of("ids",List.of(id))).getStatusCode().value());
+        assertEquals(404,export(admin,Map.of("ids",List.of(id))).getStatusCode().value());
+        ok(request(HttpMethod.POST,"/work-records/"+id+"/submit",owner,narrative(0,"Submitted text")));
+        for(Object body:List.of(Map.of("ids",List.of()),Map.of("ids",List.of(1.5)),Map.of("ids",List.of("1")),Map.of("ids",List.of(-1)),Map.of("ids","invalid")))
+            assertEquals(400,export(admin,body).getStatusCode().value());
+        assertEquals(404,export(admin,Map.of("ids",List.of(id,99999999))).getStatusCode().value());
+        long draft=create(owner,2).path("record").path("recordId").asLong();
+        assertEquals(404,export(admin,Map.of("ids",List.of(id,draft))).getStatusCode().value());
+        for(String token:List.of(admin,viewer)) {
+            var response=export(token,Map.of("ids",List.of(id)));
+            assertEquals(200,response.getStatusCode().value());
+            assertTrue(response.getHeaders().getContentType().toString().contains("wordprocessingml"));
+            assertTrue(response.getHeaders().getFirst("Content-Disposition").contains("attachment"));
+            assertEquals("no-store",response.getHeaders().getCacheControl());
+            assertTrue(wordText(response.getBody()).contains("Submitted text"));
+        }
+    }
+
+    @Test void wordUsesFrozenSnapshotRemovesExamplesAndPreservesFiveSections() throws Exception {
+        jdbc.update("INSERT INTO biz_task(task_id,project_id,parent_id,phase,task_code,task_name,level,auditor_id,principal_id,dept_id,is_delete) VALUES(900100,1,0,2026,'SG02','Empty reform omitted',1,?,910003,920001,0)",OWNER);
+        task(900101,OWNER,2026,10,"1"); jdbc.update("UPDATE biz_task SET parent_id=900100 WHERE task_id=900101");
+        String token=login(OWNER),admin=login(ADMIN); long id=create(token,1).path("record").path("recordId").asLong();
+        ok(request(HttpMethod.POST,"/work-records/"+id+"/submit",token,Map.of("version",0,"entries",List.of(
+                Map.of("reformTaskId",900000,"keyProgress","Saved <XML> & text\n第二行"),Map.of("reformTaskId",900100,"keyProgress","\u00a0")))));
+        String before=wordText(export(admin,Map.of("ids",List.of(id))).getBody());
+        assertFalse(before.contains("Empty reform omitted"));
+        assertTrue(before.contains("2026年1月份工作纪实")); assertTrue(before.contains("填报人：Reporter "+OWNER));
+        for(String heading:List.of("一、基本情况","二、主要工作亮点和成果","三、存在问题","四、下阶段工作重点","五、其它事项")) assertTrue(before.contains(heading),heading);
+        assertTrue(before.contains("2026年09月19日")); assertTrue(before.contains("2026-01-31 23:59:59"));
+        assertTrue(before.contains("Saved <XML> & text\n第二行")); assertTrue(before.contains("关键进展：")); assertTrue(before.contains("典型做法："));
+        assertFalse(before.contains("****")); assertFalse(before.contains("{{")); assertFalse(before.contains("（说明"));
+        assertFalse(before.contains("直接提取指定时间段")); assertFalse(before.contains("三维联动"));
+        jdbc.update("UPDATE biz_task SET task_name='MUTATED',auditor_id=?,target_value=999 WHERE auditor_id=?",OTHER,OWNER);
+        jdbc.update("UPDATE sys_user SET nick_name='CHANGED USER' WHERE user_id=?",OWNER);
+        assertEquals(before,wordText(export(admin,Map.of("ids",List.of(id))).getBody()));
+    }
+
+    @Test void mergedWordSortsDeduplicatesAndSupportsLongTablesAndNarratives() throws Exception {
+        for(long taskId=900100;taskId<900150;taskId++) task(taskId,OWNER,2026,10,"1");
+        task(900011,OTHER,2026,10,"1");
+        String owner=login(OWNER),other=login(OTHER),admin=login(ADMIN);
+        long feb=create(owner,2).path("record").path("recordId").asLong();
+        long janOther=create(other,1).path("record").path("recordId").asLong();
+        long jan=create(owner,1).path("record").path("recordId").asLong();
+        String longText="长文本内容".repeat(60);
+        Map<String,Object> body=Map.of("version",0,"entries",List.of(Map.of("reformTaskId",900000,"keyProgress",longText,"stageResults",longText,"typicalPractices",longText)),
+                "problems",longText,"nextFocus",longText,"otherMatters",longText);
+        ok(request(HttpMethod.POST,"/work-records/"+jan+"/submit",owner,body));
+        ok(request(HttpMethod.POST,"/work-records/"+feb+"/submit",owner,narrative(0,"FEB_OWNER")));
+        ok(request(HttpMethod.POST,"/work-records/"+janOther+"/submit",other,narrative(0,"JAN_OTHER")));
+        var response=export(admin,Map.of("ids",List.of(feb,janOther,jan,jan)));
+        assertEquals(200,response.getStatusCode().value()); String text=wordText(response.getBody());
+        assertTrue(text.indexOf(longText)<text.indexOf("JAN_OTHER")); assertTrue(text.indexOf("JAN_OTHER")<text.indexOf("FEB_OWNER"));
+        try(var doc=new org.apache.poi.xwpf.usermodel.XWPFDocument(new java.io.ByteArrayInputStream(response.getBody()))) {
+            assertEquals(6,doc.getTables().size()); assertEquals(52,doc.getTables().get(0).getNumberOfRows());
+            for(var table:doc.getTables()) assertTrue(table.getRow(0).isRepeatHeader());
+            assertEquals(2,doc.getParagraphs().stream().filter(org.apache.poi.xwpf.usermodel.XWPFParagraph::isPageBreak).count());
+            assertTrue(doc.getTables().get(1).getText().contains(longText));
+        }
+        java.nio.file.Path output=java.nio.file.Path.of("target/work-record-export-samples"); java.nio.file.Files.createDirectories(output);
+        java.nio.file.Files.write(output.resolve("merged-long.docx"),response.getBody());
+        java.nio.file.Files.write(output.resolve("single.docx"),export(admin,Map.of("ids",List.of(jan))).getBody());
+    }
+
     private Map<String,Object> narrative(long version, String text) {
         return Map.of("version",version,"entries",List.of(Map.of("reformTaskId",900000,"keyProgress",text,
                 "reformTaskName","Spoofed name")),"problems","Synthetic problem","nextFocus","Next","otherMatters","");

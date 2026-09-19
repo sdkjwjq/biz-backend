@@ -137,6 +137,23 @@ public class WorkRecordService {
         return records.authors(userId, capabilities(userId).canViewAll());
     }
 
+    /** 一次核验全部所选记录；任何记录无效都拒绝整批，禁止静默跳过。 */
+    @Transactional(readOnly=true, isolation=Isolation.REPEATABLE_READ)
+    public List<Detail> exportDetails(Long userId, List<Long> ids) {
+        if (!capabilities(userId).canExport()) throw new WorkRecordException(403, "您没有纪实导出权限");
+        if (ids == null || ids.isEmpty() || ids.stream().anyMatch(id -> id == null || id <= 0)) throw new WorkRecordException(400, "请选择有效的纪实记录");
+        List<Detail> result = new ArrayList<>();
+        for (Long id : new LinkedHashSet<>(ids)) {
+            Detail detail = detail(userId,id);
+            if (!Integer.valueOf(1).equals(detail.record().getStatus())) throw new WorkRecordException(409, "所选纪实包含草稿，不能导出");
+            result.add(detail);
+        }
+        result.sort(Comparator.comparing((Detail value) -> value.record().getRecordYear())
+                .thenComparing(value -> value.record().getRecordMonth())
+                .thenComparing(value -> value.record().getOwnerId()));
+        return result;
+    }
+
     /** 正文、条目、提交时统计快照在一个事务中保存，旧版本和已提交记录均不可写。 */
     @Transactional(isolation=Isolation.REPEATABLE_READ)
     public Detail save(Long userId, Long id, JsonNode body, boolean submit) {

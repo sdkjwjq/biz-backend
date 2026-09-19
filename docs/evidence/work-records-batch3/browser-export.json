@@ -1,0 +1,11 @@
+{
+  "checks": [
+    "real-single-row-download-is-word-file",
+    "real-cross-page-selection-batch-download-and-duplicate-click",
+    "changing-filter-clears-export-selection",
+    "real-readonly-detail-export",
+    "simulated-export-error-is-message-not-corrupt-download",
+    "real-filler-cannot-export-through-ui-or-api"
+  ],
+  "errors": []
+}

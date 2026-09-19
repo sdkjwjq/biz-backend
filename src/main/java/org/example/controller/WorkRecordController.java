@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.example.entity.vo.ErrorVO;
 import org.example.service.WorkRecordException;
 import org.example.service.WorkRecordService;
+import org.example.service.WorkRecordExportService;
 import org.example.utils.JWTUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,7 +20,27 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 public class WorkRecordController {
     private static final Logger LOG = LoggerFactory.getLogger(WorkRecordController.class);
     private final WorkRecordService records;
-    public WorkRecordController(WorkRecordService records) { this.records = records; }
+    private final WorkRecordExportService exporter;
+    public WorkRecordController(WorkRecordService records, WorkRecordExportService exporter) { this.records = records; this.exporter = exporter; }
+
+    @PostMapping("/export")
+    public ResponseEntity<byte[]> export(HttpServletRequest request, @RequestBody JsonNode body) throws java.io.IOException {
+        JsonNode selected = body == null ? null : body.get("ids");
+        if (selected == null || !selected.isArray() || selected.isEmpty()) throw new WorkRecordException(400,"请选择需要导出的纪实");
+        java.util.List<Long> ids = new java.util.ArrayList<>();
+        for (JsonNode id : selected) {
+            if (!id.isIntegralNumber() || !id.canConvertToLong() || id.asLong()<=0) throw new WorkRecordException(400,"纪实编号必须为正整数");
+            ids.add(id.asLong());
+        }
+        var details = records.exportDetails(user(request), ids);
+        byte[] bytes = exporter.render(details);
+        String filename = details.size()==1 ? "工作纪实-"+details.get(0).record().getRecordYear()+"-"+details.get(0).record().getRecordMonth()+".docx" : "工作纪实-合并导出.docx";
+        return ResponseEntity.ok().header("Content-Disposition", org.springframework.http.ContentDisposition.attachment()
+                .filename(filename,java.nio.charset.StandardCharsets.UTF_8).build().toString())
+                .header("Cache-Control","no-store")
+                .contentType(org.springframework.http.MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+                .body(bytes);
+    }
 
     private Long user(HttpServletRequest request) {
         return JWTUtil.getUserIdFromToken(request.getHeader("Authorization"));

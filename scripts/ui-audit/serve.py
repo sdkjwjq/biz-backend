@@ -65,6 +65,8 @@ def main():
             sql("DROP TABLE IF EXISTS biz_work_record_snapshot; DROP TABLE IF EXISTS biz_work_record_entry; DROP TABLE IF EXISTS biz_work_record;", schema)
             sql((ROOT / "scripts/work-records/001_work_records.sql").read_text(encoding="utf-8"), schema)
             sql("UPDATE sys_user SET password='WorkRecords123';", schema)
+            sql("INSERT INTO biz_task(task_id,project_id,parent_id,phase,task_code,task_name,level,leader_id,auditor_id,principal_id,dept_id,data_type,target_value,current_value,status,is_delete) "
+                "VALUES(930003,1,930001,2026,'1.1.2','Export synthetic task',3,910001,910002,910002,920001,'1',10,0,'1',0);", schema)
             env["WORK_RECORDS_VIEWER_USER_IDS"] = "910004"
         if args.fixture in ("business", "review", "convenience", "convenience2", "continuous", "customer"):
             sql((ROOT / "scripts/ui-audit/fixture-business.sql").read_text(encoding="utf-8"), schema)

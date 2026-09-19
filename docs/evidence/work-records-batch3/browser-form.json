@@ -1,0 +1,19 @@
+{
+  "checks": [
+    "real-api-create-empty-draft-and-future-month-disabled",
+    "required-content-and-unicode-300-boundary-save-reopen",
+    "unsaved-list-and-route-leave-cancel-statistics-preserves-text",
+    "delayed-real-save-repeated-click-sends-once",
+    "real-two-window-conflict-retains-input-and-explicit-reload",
+    "simulated-server-failure-retains-form",
+    "responsive-layout-1920-1440-1024-768",
+    "real-submit-readonly-and-direct-api-write-rejected",
+    "real-admin-configured-viewer-and-unauthorized-role-boundaries",
+    "simulated-old-list-response-cannot-overwrite-new-filter",
+    "existing-month-opens-frozen-record-without-duplicate",
+    "remove-entry-cancel-and-confirmed-leave-discards-unsaved-text",
+    "simulated-delayed-detail-after-route-leave-is-discarded",
+    "no-browser-runtime-errors"
+  ],
+  "errors": []
+}
