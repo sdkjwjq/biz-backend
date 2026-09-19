@@ -1,0 +1,10 @@
+{
+  "checks": [
+    "1920px: controls use at most two rows and consistent 32px height",
+    "range, status, stage and actual handling department filters remain usable",
+    "1440px: owning department before current handler department; independent intersection, memory and reset",
+    "keyword Enter search and reset preserve existing behavior",
+    "1280/1024/768px: filter controls do not overflow"
+  ],
+  "errors": []
+}
