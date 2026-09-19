@@ -18,7 +18,7 @@ async function main() {
     await api.post('/api/system/password/reset', { data: { user_id: 110228, old_password: 'review-fixture-password', new_password: 'Convenience123' } });
     const auth = await (await api.post('/api/system/login', { data: { user_id: 110228, password: 'Convenience123' } })).json();
     assert.ok(auth.token);
-    const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+    const context = await browser.newContext({ viewport: { width: before ? 1440 : 1920, height: 1000 } });
     await context.addInitScript(token => localStorage.setItem('token', token), auth.token);
     page = await context.newPage(); page.setDefaultTimeout(15000); page.on('pageerror', e => errors.push(e.message));
     await page.clock.install();
@@ -45,7 +45,7 @@ async function main() {
     await page.screenshot({ path: path.join(output, 'achievement-badge.png'), animations: 'disabled' });
     await page.clock.resume();
     await page.goto(state.frontend + '/home/works');
-    await page.locator('.filter-item').filter({ hasText: '状态:' }).locator('.el-select').click();
+    await page.locator('.filter-item').filter({ hasText: before ? '状态:' : '任务状态' }).locator('.el-select').click();
     await expect(page.getByRole('option', { name: '审核中', exact: true })).toHaveCount(before ? 0 : 1);
     checks.push(before ? 'REPRODUCED: no independent in-review status filter' : 'FIXED: independent in-review status filter exists');
     await page.keyboard.press('Escape');
@@ -56,8 +56,8 @@ async function main() {
           if (!await closed.count()) break; await closed.first().click();
         }
       };
-      await expect(page.locator('.quick-filters').getByRole('radio', { name: '全部', exact: true })).toBeEnabled();
-      await page.locator('.filter-item').filter({ hasText: '状态:' }).locator('.el-select').click();
+      await expect(page.getByRole('combobox', { name: '任务范围', exact: true })).toBeEnabled();
+      await page.locator('.filter-item').filter({ hasText: '任务状态' }).locator('.el-select').click();
       await page.getByRole('option', { name: '审核中', exact: true }).click(); await expand();
       await expect(page.getByRole('row').filter({ hasText: '客户待专业群审核任务' })).toBeVisible();
       await page.getByRole('combobox', { name: '任务待审阶段', exact: true }).locator('xpath=ancestor::*[contains(@class, "el-select__wrapper")]').click();
@@ -72,7 +72,7 @@ async function main() {
       await page.getByRole('combobox', { name: '任务当前处理部门', exact: true }).locator('xpath=ancestor::*[contains(@class, "el-select__wrapper")]').click();
       await page.getByRole('option', { name: '审计测试部门A', exact: true }).click();
       await expect(page.getByRole('row').filter({ hasText: '客户待归口审核任务' })).toHaveCount(0);
-      await page.getByRole('button', { name: '重置筛选', exact: true }).click(); await expand();
+      await page.getByRole('button', { name: '重置', exact: true }).click(); await expand();
       await expect(page.getByRole('row').filter({ hasText: '客户待归口审核任务' })).toBeVisible();
       checks.push('task status, audit stage and actual handler department intersect correctly; memory and reset work');
       await page.screenshot({ path: path.join(output, 'task-stage-filters.png'), animations: 'disabled' });
