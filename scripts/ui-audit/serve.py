@@ -25,7 +25,7 @@ SPEC.loader.exec_module(RUNNER)
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--fixture", choices=["base", "business", "review", "navigation", "convenience", "convenience2", "continuous"], default="base")
+    parser.add_argument("--fixture", choices=["base", "business", "review", "navigation", "convenience", "convenience2", "continuous", "customer"], default="base")
     parser.add_argument("--frontend-port", type=int, default=15173)
     args = parser.parse_args()
     if not 1024 <= args.frontend_port <= 65535:
@@ -61,12 +61,14 @@ def main():
     try:
         subprocess.run(mysql + [schema], input=dump, env=env, check=True, capture_output=True)
         sql((ROOT / "scripts/ui-audit/fixture.sql").read_text(encoding="utf-8"), schema)
-        if args.fixture in ("business", "review", "convenience", "convenience2", "continuous"):
+        if args.fixture in ("business", "review", "convenience", "convenience2", "continuous", "customer"):
             sql((ROOT / "scripts/ui-audit/fixture-business.sql").read_text(encoding="utf-8"), schema)
-        if args.fixture in ("review", "continuous"):
+        if args.fixture in ("review", "continuous", "customer"):
             sql((ROOT / "scripts/ui-audit/fixture-review.sql").read_text(encoding="utf-8"), schema)
-        if args.fixture == "continuous":
+        if args.fixture in ("continuous", "customer"):
             sql((ROOT / "scripts/ui-audit/fixture-continuous.sql").read_text(encoding="utf-8"), schema)
+        if args.fixture == "customer":
+            sql((ROOT / "scripts/ui-audit/fixture-customer.sql").read_text(encoding="utf-8"), schema)
         if args.fixture in ("navigation", "convenience", "convenience2"):
             sql((ROOT / "scripts/ui-audit/fixture-navigation.sql").read_text(encoding="utf-8"), schema)
         if args.fixture in ("convenience", "convenience2"):

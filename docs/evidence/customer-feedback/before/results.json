@@ -1,0 +1,7 @@
+{
+  "checks": [
+    "REPRODUCED: achievement approval leaves sidebar count unchanged despite backend pending decrease",
+    "REPRODUCED: no independent in-review status filter"
+  ],
+  "errors": []
+}

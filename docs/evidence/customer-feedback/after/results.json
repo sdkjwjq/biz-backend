@@ -1,0 +1,10 @@
+{
+  "checks": [
+    "FIXED: achievement approval immediately updates sidebar count",
+    "FIXED: independent in-review status filter exists",
+    "task status, audit stage and actual handler department intersect correctly; memory and reset work",
+    "real report totals, three time bases, inclusive date boundaries, status intersection and CSV downloads",
+    "legacy records without audit evidence excluded from date-based report; professional review remains unknown"
+  ],
+  "errors": []
+}
