@@ -87,4 +87,28 @@ public interface WorkRecordMapper {
 
     @Select("SELECT COUNT(*) FROM biz_work_record WHERE owner_id=#{userId} AND status=1")
     long ownSubmitted(Long userId);
+
+    @Select("SELECT COUNT(*) FROM biz_work_record WHERE owner_id=#{userId}")
+    long ownRecords(Long userId);
+
+    @Select("SELECT owner_id,MAX(owner_name) owner_name FROM biz_work_record "
+            + "WHERE owner_id=#{userId} OR (status=1 AND #{viewAll}=true) GROUP BY owner_id ORDER BY owner_id")
+    List<WorkRecordVO.Author> authors(@Param("userId") Long userId, @Param("viewAll") boolean viewAll);
+
+    @Select("SELECT record_id,reform_task_id,reform_task_name,sort_order,key_progress,stage_results,typical_practices "
+            + "FROM biz_work_record_entry WHERE record_id=#{id} ORDER BY sort_order,entry_id")
+    List<WorkRecordVO.Entry> entries(Long id);
+
+    @Delete("DELETE FROM biz_work_record_entry WHERE record_id=#{id}")
+    void deleteEntries(Long id);
+
+    @Insert("INSERT INTO biz_work_record_entry(record_id,reform_task_id,reform_task_name,sort_order,key_progress,stage_results,typical_practices) "
+            + "VALUES(#{recordId},#{reformTaskId},#{reformTaskName},#{sortOrder},#{keyProgress},#{stageResults},#{typicalPractices})")
+    void insertEntry(WorkRecordVO.Entry entry);
+
+    @Update("UPDATE biz_work_record SET problems=#{record.problems},next_focus=#{record.nextFocus},other_matters=#{record.otherMatters},"
+            + "owner_name=#{record.ownerName},version=version+1,update_time=#{record.updateTime},"
+            + "status=#{record.status},submit_time=#{record.submitTime} "
+            + "WHERE record_id=#{record.recordId} AND owner_id=#{record.ownerId} AND status=0 AND version=#{record.version}")
+    int saveBody(@Param("record") BizWorkRecord record);
 }

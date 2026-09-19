@@ -25,7 +25,7 @@ SPEC.loader.exec_module(RUNNER)
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--fixture", choices=["base", "business", "review", "navigation", "convenience", "convenience2", "continuous", "customer"], default="base")
+    parser.add_argument("--fixture", choices=["base", "business", "review", "navigation", "convenience", "convenience2", "continuous", "customer", "work-records"], default="base")
     parser.add_argument("--frontend-port", type=int, default=15173)
     args = parser.parse_args()
     if not 1024 <= args.frontend_port <= 65535:
@@ -61,6 +61,11 @@ def main():
     try:
         subprocess.run(mysql + [schema], input=dump, env=env, check=True, capture_output=True)
         sql((ROOT / "scripts/ui-audit/fixture.sql").read_text(encoding="utf-8"), schema)
+        if args.fixture == "work-records":
+            sql("DROP TABLE IF EXISTS biz_work_record_snapshot; DROP TABLE IF EXISTS biz_work_record_entry; DROP TABLE IF EXISTS biz_work_record;", schema)
+            sql((ROOT / "scripts/work-records/001_work_records.sql").read_text(encoding="utf-8"), schema)
+            sql("UPDATE sys_user SET password='WorkRecords123';", schema)
+            env["WORK_RECORDS_VIEWER_USER_IDS"] = "910004"
         if args.fixture in ("business", "review", "convenience", "convenience2", "continuous", "customer"):
             sql((ROOT / "scripts/ui-audit/fixture-business.sql").read_text(encoding="utf-8"), schema)
         if args.fixture in ("review", "continuous", "customer"):

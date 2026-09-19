@@ -28,6 +28,19 @@ public class WorkRecordController {
     @GetMapping("/capabilities")
     public Object capabilities(HttpServletRequest request) { return records.capabilities(user(request)); }
 
+    @GetMapping("/authors")
+    public Object authors(HttpServletRequest request) { return records.authors(user(request)); }
+
+    @PostMapping("/{id}/save")
+    public Object save(HttpServletRequest request, @PathVariable Long id, @RequestBody JsonNode body) {
+        return records.save(user(request), id, body, false);
+    }
+
+    @PostMapping("/{id}/submit")
+    public Object submit(HttpServletRequest request, @PathVariable Long id, @RequestBody JsonNode body) {
+        return records.save(user(request), id, body, true);
+    }
+
     @GetMapping("/statistics")
     public Object statistics(HttpServletRequest request, @RequestParam int year, @RequestParam int month) {
         return records.preview(user(request), year, month);

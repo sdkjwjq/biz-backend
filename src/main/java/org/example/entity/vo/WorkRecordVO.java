@@ -12,7 +12,7 @@ public final class WorkRecordVO {
     private WorkRecordVO() { }
 
     public record Capabilities(boolean canCreate, boolean canViewAll, boolean canExport,
-                               boolean canViewOwnHistory, List<Integer> fillableYears) { }
+                               boolean canViewOwnHistory, List<Integer> fillableYears, boolean canViewOwnRecords) { }
     public record ReformTask(Long taskId, String taskCode, String taskName) { }
     public record TaskSummary(Long taskId, String taskCode, String taskName, String leaderName,
                               Long reformTaskId, String auditState, String firstCompletedAt,
@@ -22,8 +22,25 @@ public final class WorkRecordVO {
                              int totalTasks, int newCompleted, int cumulativeCompleted,
                              BigDecimal completionRate, int unverifiedTasks, String notice,
                              List<TaskSummary> tasks, List<ReformTask> reformTasks) { }
-    public record Detail(BizWorkRecord record, Statistics statistics, boolean editable) { }
+    public record Detail(BizWorkRecord record, Statistics statistics, boolean editable, List<Entry> entries) { }
     public record Page(long total, int page, int pageSize, List<BizWorkRecord> records) { }
+
+    @Data
+    public static class Entry {
+        private Long recordId;
+        private Long reformTaskId;
+        private String reformTaskName;
+        private Integer sortOrder;
+        private String keyProgress;
+        private String stageResults;
+        private String typicalPractices;
+    }
+
+    @Data
+    public static class Author {
+        private Long ownerId;
+        private String ownerName;
+    }
 
     @Data
     public static class Task extends BizTask {

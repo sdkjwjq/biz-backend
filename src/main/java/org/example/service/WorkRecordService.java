@@ -2,6 +2,7 @@ package org.example.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.example.entity.BizWorkRecord;
 import org.example.entity.SysUser;
 import org.example.entity.vo.WorkRecordVO.*;
@@ -49,7 +50,7 @@ public class WorkRecordService {
         List<Integer> years = records.fillableYears(userId);
         boolean export = "0".equals(user.getRole()) || viewers.contains(userId);
         return new Capabilities(!years.isEmpty(), export || !years.isEmpty(), export,
-                records.ownSubmitted(userId) > 0, years);
+                records.ownSubmitted(userId) > 0, years, records.ownRecords(userId) > 0);
     }
 
     private void requireFiller(Long userId, int year) {
@@ -109,7 +110,7 @@ public class WorkRecordService {
         } catch (JsonProcessingException e) { throw new IllegalStateException("Invalid work record snapshot", e); }
         boolean editable = userId.equals(record.getOwnerId()) && Integer.valueOf(0).equals(record.getStatus())
                 && records.fillableYears(userId).contains(record.getRecordYear());
-        return new Detail(record, snapshot, editable);
+        return new Detail(record, snapshot, editable, records.entries(record.getRecordId()));
     }
 
     @Transactional(isolation=Isolation.REPEATABLE_READ)
@@ -130,6 +131,78 @@ public class WorkRecordService {
     private void saveSnapshot(BizWorkRecord record, Statistics result) {
         try { records.saveSnapshot(record.getRecordId(), json.writeValueAsString(result), Date.from(clock.instant())); }
         catch (JsonProcessingException e) { throw new IllegalStateException("Cannot serialize work record snapshot", e); }
+    }
+
+    public List<Author> authors(Long userId) {
+        return records.authors(userId, capabilities(userId).canViewAll());
+    }
+
+    /** 正文、条目、提交时统计快照在一个事务中保存，旧版本和已提交记录均不可写。 */
+    @Transactional(isolation=Isolation.REPEATABLE_READ)
+    public Detail save(Long userId, Long id, JsonNode body, boolean submit) {
+        SysUser owner = user(userId);
+        BizWorkRecord record = records.lock(id);
+        if (record == null || !userId.equals(record.getOwnerId())) throw new WorkRecordException(404, "纪实不存在或无权访问");
+        if (!Integer.valueOf(0).equals(record.getStatus())) throw new WorkRecordException(409, "已提交纪实不可修改");
+        requireFiller(userId, record.getRecordYear());
+        long version = version(body);
+        if (version != record.getVersion()) throw new WorkRecordException(409, "纪实已在其它窗口更新，请重新加载后再操作；当前未保存内容仍保留");
+        Statistics current = statistics.calculate(userId, record.getRecordYear(), record.getRecordMonth());
+        Map<Long, ReformTask> allowed = current.reformTasks().stream().collect(Collectors.toMap(ReformTask::taskId, value -> value));
+        JsonNode items = body.get("entries");
+        if (items == null || !items.isArray()) throw new WorkRecordException(400, "请提供改革任务填报项目");
+        if (items.size() > allowed.size()) throw new WorkRecordException(400, "改革任务项目重复或超出可填报范围");
+        Set<Long> used = new HashSet<>();
+        List<Entry> entries = new ArrayList<>();
+        for (JsonNode item : items) {
+            JsonNode task = item.get("reformTaskId");
+            if (task == null || !task.isIntegralNumber() || !task.canConvertToLong() || !allowed.containsKey(task.asLong())) {
+                throw new WorkRecordException(400, "所选改革任务已不在您的填报范围内，请刷新统计后核对");
+            }
+            long taskId = task.asLong();
+            if (!used.add(taskId)) throw new WorkRecordException(400, "同一改革任务不能重复填写");
+            Entry entry = new Entry();
+            entry.setRecordId(id); entry.setReformTaskId(taskId); entry.setReformTaskName(allowed.get(taskId).taskName());
+            entry.setSortOrder(entries.size());
+            entry.setKeyProgress(text(item,"keyProgress")); entry.setStageResults(text(item,"stageResults"));
+            entry.setTypicalPractices(text(item,"typicalPractices")); entries.add(entry);
+        }
+        if (submit && entries.stream().noneMatch(entry -> hasContent(entry.getKeyProgress())
+                || hasContent(entry.getStageResults()) || hasContent(entry.getTypicalPractices()))) {
+            throw new WorkRecordException(400, "提交前请至少选择一项改革任务并填写有效内容");
+        }
+        record.setProblems(text(body,"problems")); record.setNextFocus(text(body,"nextFocus"));
+        record.setOtherMatters(text(body,"otherMatters"));
+        record.setOwnerName(owner.getNickName() == null || owner.getNickName().isBlank() ? owner.getUserName() : owner.getNickName());
+        record.setUpdateTime(Date.from(clock.instant())); record.setStatus(submit ? 1 : 0);
+        record.setSubmitTime(submit ? record.getUpdateTime() : null);
+        if (records.saveBody(record) != 1) throw new WorkRecordException(409, "纪实版本已变更，请重新加载后重试");
+        records.deleteEntries(id);
+        for (Entry entry : entries) records.insertEntry(entry);
+        if (submit) saveSnapshot(record, current);
+        BusinessLogUtil.info(submit ? "工作纪实提交" : "工作纪实保存草稿", "userId", userId, "recordId", id, "version", version+1);
+        return buildDetail(userId, records.lock(id));
+    }
+
+    private boolean hasContent(String text) {
+        return text.codePoints().anyMatch(value -> !Character.isWhitespace(value) && !Character.isSpaceChar(value));
+    }
+
+    private long version(JsonNode body) {
+        JsonNode value = body == null ? null : body.get("version");
+        if (value == null || !value.isIntegralNumber() || !value.canConvertToLong() || value.asLong() < 0) {
+            throw new WorkRecordException(400, "请提供有效的纪实版本号");
+        }
+        return value.asLong();
+    }
+
+    private String text(JsonNode body, String field) {
+        JsonNode value = body.get(field);
+        if (value == null || value.isNull()) return "";
+        if (!value.isTextual()) throw new WorkRecordException(400, "填报内容必须为文本");
+        String content = value.asText();
+        if (content.codePointCount(0,content.length()) > 300) throw new WorkRecordException(400, "每项填报内容不得超过300字");
+        return content;
     }
 
     @Transactional(readOnly=true, isolation=Isolation.REPEATABLE_READ)

@@ -264,7 +264,7 @@ class WorkRecordApiTest {
             assertEquals(0,ok(request(HttpMethod.GET,"/work-records",token,null)).path("total").asInt());
             assertEquals(404,request(HttpMethod.POST,"/work-records/"+id+"/statistics/refresh",token,Map.of("version",0)).getStatusCode().value());
         }
-        // 第二批尚未开放提交接口，此处用隔离数据模拟既有已提交记录，验证基础读取及冻结约束。
+        // 模拟已有提交记录，单独验证读取及资格撤销约束；真实提交另有闭环用例。
         jdbc.update("UPDATE biz_work_record SET status=1,submit_time=NOW() WHERE record_id=?",id);
         assertEquals(404,request(HttpMethod.GET,"/work-records/"+id,other,null).getStatusCode().value());
         task(900011,OTHER,2026,10,"1");
@@ -296,6 +296,97 @@ class WorkRecordApiTest {
         jdbc.update("UPDATE biz_task SET auditor_id=? WHERE auditor_id=?",OTHER,OWNER);
         assertEquals(403,request(HttpMethod.POST,"/work-records/"+id+"/statistics/refresh",token,Map.of("version",1)).getStatusCode().value());
         assertFalse(ok(request(HttpMethod.GET,"/work-records/"+id,token,null)).path("editable").asBoolean());
+    }
+
+    private Map<String,Object> narrative(long version, String text) {
+        return Map.of("version",version,"entries",List.of(Map.of("reformTaskId",900000,"keyProgress",text,
+                "reformTaskName","Spoofed name")),"problems","Synthetic problem","nextFocus","Next","otherMatters","");
+    }
+
+    @Test void draftRoundTripAndSubmitRecomputeThenFreezeAllContent() throws Exception {
+        String token=login(OWNER); JsonNode draft=create(token,1); long id=draft.path("record").path("recordId").asLong();
+        JsonNode empty=ok(request(HttpMethod.POST,"/work-records/"+id+"/save",token,Map.of("version",0,"entries",List.of())));
+        assertEquals(1,empty.path("record").path("version").asInt());
+        task(900011,OWNER,2026,10,"1");
+        JsonNode saved=ok(request(HttpMethod.POST,"/work-records/"+id+"/save",token,narrative(1,"😀".repeat(300))));
+        assertEquals(draft.path("statistics"),saved.path("statistics"));
+        assertEquals("Synthetic reform",saved.path("entries").get(0).path("reformTaskName").asText());
+        assertEquals("😀".repeat(300),saved.path("entries").get(0).path("keyProgress").asText());
+        assertEquals(saved,ok(request(HttpMethod.GET,"/work-records/"+id,token,null)));
+        submission(910010,900010,10,"2026-01-01 01:00:00","2026-01-05 01:00:00");
+        JsonNode submitted=ok(request(HttpMethod.POST,"/work-records/"+id+"/submit",token,narrative(2,"Final content")));
+        assertEquals(1,submitted.path("record").path("status").asInt());
+        assertEquals(3,submitted.path("record").path("version").asInt());
+        assertFalse(submitted.path("editable").asBoolean());
+        assertEquals(2,submitted.path("statistics").path("totalTasks").asInt());
+        assertEquals(1,submitted.path("statistics").path("newCompleted").asInt());
+        jdbc.update("UPDATE biz_task SET task_name='Changed',target_value=999,auditor_id=? WHERE auditor_id=?",OTHER,OWNER);
+        assertEquals(submitted,ok(request(HttpMethod.GET,"/work-records/"+id,token,null)));
+        for(String action:List.of("save","submit","statistics/refresh"))
+            assertEquals(409,request(HttpMethod.POST,"/work-records/"+id+"/"+action,token,narrative(3,"Overwrite")).getStatusCode().value());
+        assertEquals(submitted.path("entries"),ok(request(HttpMethod.GET,"/work-records/"+id,login(ADMIN),null)).path("entries"));
+    }
+
+    @Test void textAndEntryValidationDoesNotPartiallyWrite() throws Exception {
+        String token=login(OWNER); long id=create(token,1).path("record").path("recordId").asLong();
+        List<Object> invalid=new ArrayList<>();
+        invalid.add(narrative(0,"x".repeat(301)));
+        for(String field:List.of("problems","nextFocus","otherMatters")) {
+            Map<String,Object> body=new HashMap<>(narrative(0,"Valid")); body.put(field,"😀".repeat(301)); invalid.add(body);
+            body=new HashMap<>(narrative(0,"Valid")); body.put(field,123); invalid.add(body);
+        }
+        for(String field:List.of("keyProgress","stageResults","typicalPractices"))
+            invalid.add(Map.of("version",0,"entries",List.of(Map.of("reformTaskId",900000,field,"x".repeat(301)))));
+        invalid.add(Map.of("version",0,"entries",List.of(Map.of("reformTaskId",900010))));
+        invalid.add(Map.of("version",0,"entries",List.of(Map.of("reformTaskId",900000),Map.of("reformTaskId",900000))));
+        invalid.add(Map.of("version",0,"entries","wrong type"));
+        invalid.add(Map.of("version",0.5,"entries",List.of()));
+        invalid.add(Map.of("entries",List.of()));
+        invalid.add(Map.of("version",0,"entries",List.of("invalid")));
+        for(Object body:invalid) assertEquals(400,request(HttpMethod.POST,"/work-records/"+id+"/save",token,body).getStatusCode().value(),body.toString());
+        for(String blank:List.of("","  ","\n\t","\u00a0")) assertEquals(400,request(HttpMethod.POST,"/work-records/"+id+"/submit",token,narrative(0,blank)).getStatusCode().value());
+        assertEquals(0,jdbc.queryForObject("SELECT version FROM biz_work_record WHERE record_id=?",Long.class,id));
+        assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM biz_work_record_entry",Integer.class));
+        assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM sys_notice",Integer.class));
+    }
+
+    @Test void saveAndSubmitRequireOwnerAndCurrentAnnualQualification() throws Exception {
+        String token=login(OWNER); long id=create(token,1).path("record").path("recordId").asLong();
+        for(String action:List.of("save","submit")) {
+            assertEquals(401,request(HttpMethod.POST,"/work-records/"+id+"/"+action,null,narrative(0,"Valid")).getStatusCode().value());
+            for(long user:List.of(ADMIN,OTHER,VIEWER)) assertEquals(404,request(HttpMethod.POST,"/work-records/"+id+"/"+action,login(user),narrative(0,"Valid")).getStatusCode().value());
+        }
+        assertEquals(0,ok(request(HttpMethod.GET,"/work-records/authors",login(ADMIN),null)).size());
+        jdbc.update("UPDATE biz_task SET auditor_id=? WHERE auditor_id=?",OTHER,OWNER);
+        for(String action:List.of("save","submit")) assertEquals(403,request(HttpMethod.POST,"/work-records/"+id+"/"+action,token,narrative(0,"Valid")).getStatusCode().value());
+        assertTrue(ok(request(HttpMethod.GET,"/work-records/capabilities",token,null)).path("canViewOwnRecords").asBoolean());
+        assertFalse(ok(request(HttpMethod.GET,"/work-records/"+id,token,null)).path("editable").asBoolean());
+    }
+
+    @Test void concurrentSubmitCommitsExactlyOnceAndOldWindowCannotOverwrite() throws Exception {
+        String token=login(OWNER); long id=create(token,1).path("record").path("recordId").asLong();
+        ok(request(HttpMethod.POST,"/work-records/"+id+"/save",token,narrative(0,"First window")));
+        assertEquals(409,request(HttpMethod.POST,"/work-records/"+id+"/save",token,narrative(0,"Old window")).getStatusCode().value());
+        ExecutorService pool=Executors.newFixedThreadPool(2);
+        try {
+            Callable<Integer> call=() -> request(HttpMethod.POST,"/work-records/"+id+"/submit",token,narrative(1,"Final")).getStatusCode().value();
+            List<Integer> codes=new ArrayList<>();
+            for(Future<Integer> result:pool.invokeAll(List.of(call,call))) codes.add(result.get(30,TimeUnit.SECONDS));
+            Collections.sort(codes); assertEquals(List.of(200,409),codes);
+        } finally { pool.shutdownNow(); }
+        assertEquals(2,jdbc.queryForObject("SELECT version FROM biz_work_record WHERE record_id=?",Long.class,id));
+        assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM biz_work_record_entry WHERE record_id=?",Integer.class,id));
+        assertEquals(1,ok(request(HttpMethod.GET,"/work-records/authors",login(VIEWER),null)).size());
+    }
+
+    @Test void failedSubmissionRollsBackTextEntriesVersionAndSnapshot() throws Exception {
+        String token=login(OWNER); long id=create(token,1).path("record").path("recordId").asLong();
+        JsonNode before=ok(request(HttpMethod.POST,"/work-records/"+id+"/save",token,narrative(0,"Original")));
+        jdbc.execute("CREATE TRIGGER fail_work_submit BEFORE UPDATE ON biz_work_record_snapshot FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Synthetic submission failure'");
+        try {
+            assertEquals(500,request(HttpMethod.POST,"/work-records/"+id+"/submit",token,narrative(1,"Must rollback")).getStatusCode().value());
+            assertEquals(before,ok(request(HttpMethod.GET,"/work-records/"+id,token,null)));
+        } finally { jdbc.execute("DROP TRIGGER fail_work_submit"); }
     }
 
     @Test void listFiltersPaginationAndNoBusinessWritesFromStatistics() throws Exception {
