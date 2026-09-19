@@ -1350,6 +1350,59 @@ class ReviewBatchRegressionApiTest {
         }
     }
 
+    @Test
+    void quickFiltersTrackRealTaskReturnResubmitAndVisibility() throws Exception {
+        seedSubmissionFlow();
+        String user = login(USER), auditor = login(AUDITOR);
+        String path = "/biz/tasks/quick-filters";
+        assertEquals(HttpStatus.UNAUTHORIZED, request(HttpMethod.GET, path, null, null).getStatusCode());
+        assertSuccess(request(HttpMethod.POST, "/biz/sub", user, submission("3")), "提交成功");
+        assertEquals(930002L, body(request(HttpMethod.GET, path, auditor, null)).path("todoIds").get(0).asLong());
+        long first = newestSubmission();
+        review(first, false, auditor);
+        assertEquals(930002L, body(request(HttpMethod.GET, path, user, null)).path("returnedIds").get(0).asLong());
+        Map<String, Object> resub = submission("4");
+        resub.remove("task_id"); resub.put("sub_id", first);
+        assertSuccess(request(HttpMethod.POST, "/biz/resub", user, resub), "已重新提交");
+        assertEquals(0, body(request(HttpMethod.GET, path, user, null)).path("returnedIds").size());
+        seedUser(910004L, "1");
+        jdbc.update("UPDATE sys_user SET dept_id=NULL WHERE user_id=910004");
+        JsonNode hidden = body(request(HttpMethod.GET, path, login(910004L), null));
+        assertEquals(0, hidden.path("returnedIds").size());
+        assertEquals(0, hidden.path("todoIds").size());
+        review(newestSubmission(), false, auditor);
+        for (long id : List.of(960001L, 960002L)) {
+            jdbc.update("INSERT INTO biz_level4_task (task_id,parent_id,phase,task_name,leader_id,dept_id,data_type,target_value,current_value,progress,status) "
+                    + "VALUES (?,930002,2026,'Shortcut child',?,?, '1',5,0,0,'1')", id, USER, DEPT);
+        }
+        assertEquals(930002L, body(request(HttpMethod.GET, path, user, null)).path("returnedIds").get(0).asLong());
+        assertEquals(0, body(request(HttpMethod.GET, path, login(910004L), null)).path("returnedIds").size());
+        jdbc.update("UPDATE biz_task SET is_delete=1 WHERE task_id=930002");
+        assertEquals(0, body(request(HttpMethod.GET, path, login(ADMIN), null)).path("returnedIds").size());
+    }
+
+    @Test
+    void quickFiltersTrackPerformanceYearAndExcludeAutomaticIndicators() throws Exception {
+        seedManualPerformance("1");
+        String user = login(USER), auditor = login(AUDITOR), path = "/performance/quick-filters";
+        assertEquals(HttpStatus.UNAUTHORIZED, request(HttpMethod.GET, path, null, null).getStatusCode());
+        long first = submitPerformance(2026, "3", user);
+        submitPerformance(2027, "4", user);
+        assertSuccess(reviewPerformance(first, false, auditor), "已退回");
+        JsonNode result = body(request(HttpMethod.GET, path, auditor, null));
+        assertEquals(2026, result.path("returned").get(0).path("year").asInt());
+        assertEquals(2027, result.path("todo").get(0).path("year").asInt());
+        seedUser(910004L, "1");
+        jdbc.update("UPDATE sys_user SET dept_id=NULL WHERE user_id=910004");
+        JsonNode hidden = body(request(HttpMethod.GET, path, login(910004L), null));
+        assertEquals(0, hidden.path("returned").size());
+        assertEquals(0, hidden.path("todo").size());
+        submitPerformance(2026, "5", user);
+        assertEquals(0, body(request(HttpMethod.GET, path, user, null)).path("returned").size());
+        jdbc.update("UPDATE biz_performance SET perf_code='1.1.auto' WHERE perf_id=950001");
+        assertEquals(0, body(request(HttpMethod.GET, path, auditor, null)).path("todo").size());
+    }
+
     private void seedAnnualTasks() {
         seedTasks();
         for (long id = 970001L; id <= 970008L; id++) {
