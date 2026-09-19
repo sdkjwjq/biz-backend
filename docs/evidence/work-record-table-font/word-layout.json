@@ -1,0 +1,70 @@
+﻿[
+    {
+        "file":  "single",
+        "pages":  11,
+        "tables":  [
+                       {
+                           "rows":  52,
+                           "startPage":  2,
+                           "endPage":  6,
+                           "repeatHeader":  -1
+                       },
+                       {
+                           "rows":  2,
+                           "startPage":  6,
+                           "endPage":  9,
+                           "repeatHeader":  -1
+                       }
+                   ],
+        "coverPages":  [
+                           1
+                       ]
+    },
+    {
+        "file":  "merged-long",
+        "pages":  21,
+        "tables":  [
+                       {
+                           "rows":  52,
+                           "startPage":  2,
+                           "endPage":  6,
+                           "repeatHeader":  -1
+                       },
+                       {
+                           "rows":  2,
+                           "startPage":  6,
+                           "endPage":  9,
+                           "repeatHeader":  -1
+                       },
+                       {
+                           "rows":  2,
+                           "startPage":  13,
+                           "endPage":  13,
+                           "repeatHeader":  -1
+                       },
+                       {
+                           "rows":  2,
+                           "startPage":  13,
+                           "endPage":  13,
+                           "repeatHeader":  -1
+                       },
+                       {
+                           "rows":  52,
+                           "startPage":  16,
+                           "endPage":  20,
+                           "repeatHeader":  -1
+                       },
+                       {
+                           "rows":  2,
+                           "startPage":  20,
+                           "endPage":  21,
+                           "repeatHeader":  -1
+                       }
+                   ],
+        "coverPages":  [
+                           1,
+                           12,
+                           15
+                       ]
+    }
+]

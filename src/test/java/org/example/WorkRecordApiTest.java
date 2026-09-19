@@ -368,7 +368,14 @@ class WorkRecordApiTest {
         assertTrue(text.indexOf(longText)<text.indexOf("JAN_OTHER")); assertTrue(text.indexOf("JAN_OTHER")<text.indexOf("FEB_OWNER"));
         try(var doc=new org.apache.poi.xwpf.usermodel.XWPFDocument(new java.io.ByteArrayInputStream(response.getBody()))) {
             assertEquals(6,doc.getTables().size()); assertEquals(52,doc.getTables().get(0).getNumberOfRows());
-            for(var table:doc.getTables()) assertTrue(table.getRow(0).isRepeatHeader());
+            for(var table:doc.getTables()) {
+                assertTrue(table.getRow(0).isRepeatHeader());
+                for(var row:table.getRows()) for(var cell:row.getTableCells()) for(var paragraph:cell.getParagraphs()) for(var run:paragraph.getRuns()) {
+                    for(var range:org.apache.poi.xwpf.usermodel.XWPFRun.FontCharRange.values()) assertEquals("仿宋_GB2312",run.getFontFamily(range));
+                    assertEquals(12.0,run.getFontSizeAsDouble());
+                    assertEquals(java.math.BigInteger.valueOf(24),run.getCTR().getRPr().getSzCsArray(0).getVal());
+                }
+            }
             assertEquals(2,doc.getParagraphs().stream().filter(org.apache.poi.xwpf.usermodel.XWPFParagraph::isPageBreak).count());
             assertTrue(doc.getTables().get(1).getText().contains(longText));
         }

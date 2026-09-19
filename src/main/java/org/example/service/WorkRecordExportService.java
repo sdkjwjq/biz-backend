@@ -89,6 +89,7 @@ public class WorkRecordExportService {
         var prototype = table.getRow(1).getCtRow().copy();
         while(table.getNumberOfRows()>1) table.removeRow(1);
         table.getRow(0).setRepeatHeader(true);
+        formatTableRow(table.getRow(0));
         for(List<String> values : rows) {
             XWPFTableRow row = new XWPFTableRow((org.openxmlformats.schemas.wordprocessingml.x2006.main.CTRow) prototype.copy(),table);
             if(row.getCtRow().isSetTrPr()) row.getCtRow().unsetTrPr();
@@ -100,9 +101,25 @@ public class WorkRecordExportService {
                 if (!p.getCTP().isSetPPr()) p.getCTP().addNewPPr();
                 p.setKeepNext(false);
                 replace(p, Objects.toString(values.get(i),""));
-                p.getRuns().forEach(run -> {run.setFontFamily("宋体"); run.setFontSize(10);});
             }
+            // POI插入行时会复制XML，必须在插入前设置字体。
+            formatTableRow(row);
             table.addRow(row);
+        }
+    }
+
+    private void formatTableRow(XWPFTableRow row) {
+        // 表头和正文一并设置，显式覆盖中文、拉丁文字及复杂文字字体。
+        for (XWPFTableCell cell : row.getTableCells()) {
+            for (XWPFParagraph paragraph : cell.getParagraphs()) {
+                for (XWPFRun run : paragraph.getRuns()) {
+                    for (XWPFRun.FontCharRange range : XWPFRun.FontCharRange.values()) run.setFontFamily("仿宋_GB2312", range);
+                    run.setFontSize(12);
+                    var properties = run.getCTR().getRPr();
+                    if (properties.sizeOfSzCsArray() == 0) properties.addNewSzCs();
+                    properties.getSzCsArray(0).setVal(java.math.BigInteger.valueOf(24));
+                }
+            }
         }
     }
 }
