@@ -1,0 +1,22 @@
+{
+  "name": "org.example.WorkRecordApiTest",
+  "tests": "12",
+  "failures": "0",
+  "errors": "0",
+  "skipped": "0",
+  "time": "36.97",
+  "cases": [
+    "newDraftAndSnapshotAreAtomicOnPersistenceFailure",
+    "monthAndPayloadValidationRejectsInvalidWithoutWriting",
+    "fourLevelArchivesNeverDoubleCountAndMissingParentEvidenceIsExplicit",
+    "previousCompletedSnapshotPreventsInventingFirstCompletionMonth",
+    "missingEarlierArchiveTimeAndInvalidTargetRemainUnverified",
+    "permissionsFollowAuditorNotLeaderAndProtectNewEndpoints",
+    "refreshRechecksQualificationAndRaceAndRollsBackFailedSnapshot",
+    "concurrentCreateProducesOneDraftAndDoesNotAcceptSpoofedOwner",
+    "draftAndSubmittedVisibilityAndRevokedQualifications",
+    "statisticsUseOwnedAnnualTasksAndFirstQualifyingArchive",
+    "listFiltersPaginationAndNoBusinessWritesFromStatistics",
+    "storedSnapshotOnlyChangesOnExplicitVersionedRefresh"
+  ]
+}
