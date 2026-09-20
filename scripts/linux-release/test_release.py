@@ -15,7 +15,7 @@ import shutil
 import gzip
 
 ROOT=Path(__file__).resolve().parents[2]
-PACKAGE=ROOT.parent/'releases/shuanggao-update-20260920-r2'
+PACKAGE=ROOT.parent/'releases/shuanggao-update-20260920-r3'
 MYSQL=Path(r'C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe')
 BASH=r'C:\Program Files\Git\bin\bash.exe'
 env=os.environ.copy()

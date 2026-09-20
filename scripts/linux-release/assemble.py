@@ -10,7 +10,7 @@ import tarfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = ROOT.parent / 'releases/shuanggao-update-20260920-r2'
+OUT = ROOT.parent / 'releases/shuanggao-update-20260920-r3'
 MYSQL = shutil.which('mysql') or r'C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe'
 NEW_SOURCES = [
     'data/migrations/2026-05-30-audit-snapshot.sql',
