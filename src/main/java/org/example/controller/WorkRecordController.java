@@ -52,6 +52,11 @@ public class WorkRecordController {
     @GetMapping("/authors")
     public Object authors(HttpServletRequest request) { return records.authors(user(request)); }
 
+    @PostMapping("/{id}/delete")
+    public Object delete(HttpServletRequest request, @PathVariable Long id, @RequestBody JsonNode body) {
+        return records.delete(user(request), id, body);
+    }
+
     @PostMapping("/{id}/save")
     public Object save(HttpServletRequest request, @PathVariable Long id, @RequestBody JsonNode body) {
         return records.save(user(request), id, body, false);

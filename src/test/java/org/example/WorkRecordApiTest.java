@@ -475,6 +475,106 @@ class WorkRecordApiTest {
         } finally { jdbc.execute("DROP TRIGGER fail_work_submit"); }
     }
 
+    private long submittedForDelete(String ownerToken, int month) throws Exception {
+        long id=create(ownerToken,month).path("record").path("recordId").asLong();
+        ok(request(HttpMethod.POST,"/work-records/"+id+"/submit",ownerToken,narrative(0,"Retained narrative")));
+        return id;
+    }
+
+    @Test void adminDeleteRetainsContentAndSnapshotButBlocksEveryReadAndExport() throws Exception {
+        String owner=login(OWNER),admin=login(ADMIN);long id=submittedForDelete(owner,1);
+        JsonNode before=ok(request(HttpMethod.GET,"/work-records/"+id,owner,null));
+        String snapshot=jdbc.queryForObject("SELECT statistics_json FROM biz_work_record_snapshot WHERE record_id=?",String.class,id);
+        List<Map<String,Object>> entries=jdbc.queryForList("SELECT * FROM biz_work_record_entry WHERE record_id=?",id);
+        List<Map<String,Object>> tasks=jdbc.queryForList("SELECT * FROM biz_task ORDER BY task_id");
+        ok(request(HttpMethod.POST,"/work-records/"+id+"/delete",admin,Map.of("version",1,"reason","  Duplicate report  ")));
+        Map<String,Object> row=jdbc.queryForMap("SELECT * FROM biz_work_record WHERE record_id=?",id);
+        assertEquals(id,((Number)row.get("delete_marker")).longValue());assertEquals(ADMIN,((Number)row.get("deleted_by")).longValue());
+        assertEquals("Duplicate report",row.get("delete_reason"));assertNotNull(row.get("deleted_time"));assertEquals(2,((Number)row.get("version")).longValue());
+        assertEquals(before.path("record").path("problems").asText(),row.get("problems"));
+        assertEquals(snapshot,jdbc.queryForObject("SELECT statistics_json FROM biz_work_record_snapshot WHERE record_id=?",String.class,id));
+        assertEquals(entries,jdbc.queryForList("SELECT * FROM biz_work_record_entry WHERE record_id=?",id));
+        assertEquals(tasks,jdbc.queryForList("SELECT * FROM biz_task ORDER BY task_id"));
+        for(String token:List.of(owner,admin,login(VIEWER))) {
+            assertEquals(404,request(HttpMethod.GET,"/work-records/"+id,token,null).getStatusCode().value());
+            assertEquals(0,ok(request(HttpMethod.GET,"/work-records",token,null)).path("total").asInt());
+            assertEquals(0,ok(request(HttpMethod.GET,"/work-records/authors",token,null)).size());
+        }
+        assertFalse(ok(request(HttpMethod.GET,"/work-records/capabilities",owner,null)).path("canViewOwnRecords").asBoolean());
+        for(String action:List.of("save","submit","statistics/refresh")) assertEquals(404,request(HttpMethod.POST,"/work-records/"+id+"/"+action,owner,narrative(2,"Old window")).getStatusCode().value());
+        long other=submittedForDelete(owner,2);
+        assertEquals(404,request(HttpMethod.POST,"/work-records/export",admin,Map.of("ids",List.of(other,id))).getStatusCode().value());
+    }
+
+    @Test void deleteRequiresCurrentAdminAndDoesNotExposeOthersDrafts() throws Exception {
+        String owner=login(OWNER),admin=login(ADMIN);long id=submittedForDelete(owner,1);
+        assertTrue(ok(request(HttpMethod.GET,"/work-records/capabilities",admin,null)).path("canDelete").asBoolean());
+        assertEquals(401,request(HttpMethod.POST,"/work-records/"+id+"/delete",null,Map.of("version",1,"reason","Delete")).getStatusCode().value());
+        for(long account:List.of(OWNER,OTHER,LEADER,VIEWER)) {
+            String token=login(account);assertFalse(ok(request(HttpMethod.GET,"/work-records/capabilities",token,null)).path("canDelete").asBoolean());
+            assertEquals(403,request(HttpMethod.POST,"/work-records/"+id+"/delete",token,Map.of("version",1,"reason","Delete")).getStatusCode().value());
+        }
+        long draft=create(owner,2).path("record").path("recordId").asLong();
+        assertEquals(404,request(HttpMethod.POST,"/work-records/"+draft+"/delete",admin,Map.of("version",0,"reason","Delete")).getStatusCode().value());
+        jdbc.update("UPDATE sys_user SET role='1' WHERE user_id=?",ADMIN);
+        assertEquals(403,request(HttpMethod.POST,"/work-records/"+id+"/delete",admin,Map.of("version",1,"reason","Delete")).getStatusCode().value());
+        assertEquals(0,jdbc.queryForObject("SELECT SUM(delete_marker) FROM biz_work_record",Long.class));
+    }
+
+    @Test void deleteValidationAndStaleVersionLeaveRecordUntouched() throws Exception {
+        String owner=login(OWNER),admin=login(ADMIN);long id=submittedForDelete(owner,1);
+        Map<String,Object> before=jdbc.queryForMap("SELECT * FROM biz_work_record WHERE record_id=?",id);
+        for(Object reason:List.of(""," \n\t","\u00a0","😀".repeat(301),42))
+            assertEquals(400,request(HttpMethod.POST,"/work-records/"+id+"/delete",admin,Map.of("version",1,"reason",reason)).getStatusCode().value());
+        for(Object version:List.of(-1,1.5,"1"))
+            assertEquals(400,request(HttpMethod.POST,"/work-records/"+id+"/delete",admin,Map.of("version",version,"reason","Delete")).getStatusCode().value());
+        assertEquals(409,request(HttpMethod.POST,"/work-records/"+id+"/delete",admin,Map.of("version",0,"reason","Delete")).getStatusCode().value());
+        assertEquals(before,jdbc.queryForMap("SELECT * FROM biz_work_record WHERE record_id=?",id));
+        ok(request(HttpMethod.POST,"/work-records/"+id+"/delete",admin,Map.of("version",1,"reason","😀".repeat(300))));
+    }
+
+    @Test void deletedMonthCanBeRecreatedConcurrentlyAndRepeatedHistoryIsRetained() throws Exception {
+        String owner=login(OWNER),admin=login(ADMIN);long first=submittedForDelete(owner,1);
+        ok(request(HttpMethod.POST,"/work-records/"+first+"/delete",admin,Map.of("version",1,"reason","Replace")));
+        ExecutorService pool=Executors.newFixedThreadPool(2);long second;
+        try {
+            Callable<Long> call=()->create(owner,1).path("record").path("recordId").asLong();
+            List<Future<Long>> results=pool.invokeAll(List.of(call,call));second=results.get(0).get(30,TimeUnit.SECONDS);
+            assertEquals(second,results.get(1).get(30,TimeUnit.SECONDS));assertNotEquals(first,second);
+        } finally {pool.shutdownNow();}
+        ok(request(HttpMethod.POST,"/work-records/"+second+"/submit",owner,narrative(0,"Replacement")));
+        ok(request(HttpMethod.POST,"/work-records/"+second+"/delete",admin,Map.of("version",1,"reason","Replace again")));
+        long third=create(owner,1).path("record").path("recordId").asLong();assertNotEquals(second,third);
+        assertEquals(3,jdbc.queryForObject("SELECT COUNT(*) FROM biz_work_record",Integer.class));
+        assertEquals(2,jdbc.queryForObject("SELECT COUNT(*) FROM biz_work_record WHERE delete_marker<>0",Integer.class));
+        assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM biz_work_record WHERE delete_marker=0",Integer.class));
+        assertEquals(3,jdbc.queryForObject("SELECT COUNT(*) FROM biz_work_record_snapshot",Integer.class));
+    }
+
+    @Test void concurrentDeleteCommitsOnceAndCannotAffectReplacement() throws Exception {
+        String owner=login(OWNER),admin=login(ADMIN);long id=submittedForDelete(owner,1);
+        ExecutorService pool=Executors.newFixedThreadPool(2);
+        try {
+            Callable<Integer> call=()->request(HttpMethod.POST,"/work-records/"+id+"/delete",admin,Map.of("version",1,"reason","Concurrent delete")).getStatusCode().value();
+            List<Integer> codes=new ArrayList<>();for(Future<Integer> result:pool.invokeAll(List.of(call,call))) codes.add(result.get(30,TimeUnit.SECONDS));
+            Collections.sort(codes);assertEquals(List.of(200,404),codes);
+        } finally {pool.shutdownNow();}
+        long replacement=create(owner,1).path("record").path("recordId").asLong();
+        assertEquals(404,request(HttpMethod.POST,"/work-records/"+id+"/delete",admin,Map.of("version",1,"reason","Old click")).getStatusCode().value());
+        assertEquals(0,jdbc.queryForObject("SELECT delete_marker FROM biz_work_record WHERE record_id=?",Long.class,replacement));
+    }
+
+    @Test void failedDeleteRollsBackAndPreservesSubmittedRecord() throws Exception {
+        String owner=login(OWNER),admin=login(ADMIN);long id=submittedForDelete(owner,1);
+        Map<String,Object> before=jdbc.queryForMap("SELECT * FROM biz_work_record WHERE record_id=?",id);
+        jdbc.execute("CREATE TRIGGER fail_work_delete BEFORE UPDATE ON biz_work_record FOR EACH ROW BEGIN IF NEW.delete_marker<>0 THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Synthetic delete failure'; END IF; END");
+        try {
+            assertEquals(500,request(HttpMethod.POST,"/work-records/"+id+"/delete",admin,Map.of("version",1,"reason","Fail")).getStatusCode().value());
+            assertEquals(before,jdbc.queryForMap("SELECT * FROM biz_work_record WHERE record_id=?",id));
+            assertEquals(200,request(HttpMethod.GET,"/work-records/"+id,admin,null).getStatusCode().value());
+        } finally {jdbc.execute("DROP TRIGGER fail_work_delete");}
+    }
+
     @Test void listFiltersPaginationAndNoBusinessWritesFromStatistics() throws Exception {
         String token=login(OWNER); create(token,1); create(token,2);
         assertEquals(2,ok(request(HttpMethod.GET,"/work-records?pageSize=1",token,null)).path("total").asInt());

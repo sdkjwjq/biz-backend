@@ -37,13 +37,13 @@ public interface WorkRecordMapper {
             + "ORDER BY s.submit_time,s.sub_id</script>")
     List<WorkRecordVO.Evidence> evidence(@Param("ids") List<Long> ids, @Param("cutoff") Date cutoff);
 
-    @Select("SELECT * FROM biz_work_record WHERE owner_id=#{ownerId} AND record_year=#{year} AND record_month=#{month}")
+    @Select("SELECT * FROM biz_work_record WHERE owner_id=#{ownerId} AND record_year=#{year} AND record_month=#{month} AND delete_marker=0")
     BizWorkRecord byMonth(@Param("ownerId") Long ownerId, @Param("year") int year, @Param("month") int month);
 
-    @Select("SELECT * FROM biz_work_record WHERE record_id=#{id}")
+    @Select("SELECT * FROM biz_work_record WHERE record_id=#{id} AND delete_marker=0")
     BizWorkRecord byId(Long id);
 
-    @Select("SELECT * FROM biz_work_record WHERE record_id=#{id} FOR UPDATE")
+    @Select("SELECT * FROM biz_work_record WHERE record_id=#{id} AND delete_marker=0 FOR UPDATE")
     BizWorkRecord lock(Long id);
 
     @Insert("INSERT INTO biz_work_record(owner_id,owner_name,record_year,record_month,create_time,update_time) "
@@ -63,11 +63,11 @@ public interface WorkRecordMapper {
     void saveSnapshot(@Param("id") Long id, @Param("json") String json, @Param("time") Date time);
 
     @Update("UPDATE biz_work_record SET version=version+1,update_time=#{time} "
-            + "WHERE record_id=#{id} AND owner_id=#{ownerId} AND status=0 AND version=#{version}")
+            + "WHERE record_id=#{id} AND owner_id=#{ownerId} AND status=0 AND version=#{version} AND delete_marker=0")
     int advanceVersion(@Param("id") Long id, @Param("ownerId") Long ownerId,
                        @Param("version") long version, @Param("time") Date time);
 
-    String VISIBLE = " WHERE (owner_id=#{userId} OR (status=1 AND #{viewAll}=true)) "
+    String VISIBLE = " WHERE delete_marker=0 AND (owner_id=#{userId} OR (status=1 AND #{viewAll}=true)) "
             + "<if test='year != null'>AND record_year=#{year} </if>"
             + "<if test='month != null'>AND record_month=#{month} </if>"
             + "<if test='ownerId != null'>AND owner_id=#{ownerId} </if>"
@@ -85,14 +85,14 @@ public interface WorkRecordMapper {
                @Param("year") Integer year, @Param("month") Integer month,
                @Param("ownerId") Long ownerId, @Param("status") Integer status);
 
-    @Select("SELECT COUNT(*) FROM biz_work_record WHERE owner_id=#{userId} AND status=1")
+    @Select("SELECT COUNT(*) FROM biz_work_record WHERE owner_id=#{userId} AND status=1 AND delete_marker=0")
     long ownSubmitted(Long userId);
 
-    @Select("SELECT COUNT(*) FROM biz_work_record WHERE owner_id=#{userId}")
+    @Select("SELECT COUNT(*) FROM biz_work_record WHERE owner_id=#{userId} AND delete_marker=0")
     long ownRecords(Long userId);
 
     @Select("SELECT owner_id,MAX(owner_name) owner_name FROM biz_work_record "
-            + "WHERE owner_id=#{userId} OR (status=1 AND #{viewAll}=true) GROUP BY owner_id ORDER BY owner_id")
+            + "WHERE delete_marker=0 AND (owner_id=#{userId} OR (status=1 AND #{viewAll}=true)) GROUP BY owner_id ORDER BY owner_id")
     List<WorkRecordVO.Author> authors(@Param("userId") Long userId, @Param("viewAll") boolean viewAll);
 
     @Select("SELECT record_id,reform_task_id,reform_task_name,sort_order,key_progress,stage_results,typical_practices "
@@ -109,6 +109,11 @@ public interface WorkRecordMapper {
     @Update("UPDATE biz_work_record SET problems=#{record.problems},next_focus=#{record.nextFocus},other_matters=#{record.otherMatters},"
             + "owner_name=#{record.ownerName},version=version+1,update_time=#{record.updateTime},"
             + "status=#{record.status},submit_time=#{record.submitTime} "
-            + "WHERE record_id=#{record.recordId} AND owner_id=#{record.ownerId} AND status=0 AND version=#{record.version}")
+            + "WHERE record_id=#{record.recordId} AND owner_id=#{record.ownerId} AND status=0 AND version=#{record.version} AND delete_marker=0")
     int saveBody(@Param("record") BizWorkRecord record);
+
+    @Update("UPDATE biz_work_record SET delete_marker=record_id,deleted_by=#{userId},deleted_time=#{time},delete_reason=#{reason},version=version+1 "
+            + "WHERE record_id=#{id} AND delete_marker=0 AND status=1 AND version=#{version}")
+    int markDeleted(@Param("id") Long id, @Param("version") long version, @Param("userId") Long userId,
+                    @Param("reason") String reason, @Param("time") Date time);
 }

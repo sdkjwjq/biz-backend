@@ -12,7 +12,7 @@ public final class WorkRecordVO {
     private WorkRecordVO() { }
 
     public record Capabilities(boolean canCreate, boolean canViewAll, boolean canExport,
-                               boolean canViewOwnHistory, List<Integer> fillableYears, boolean canViewOwnRecords) { }
+                               boolean canViewOwnHistory, List<Integer> fillableYears, boolean canViewOwnRecords, boolean canDelete) { }
     public record ReformTask(Long taskId, String taskCode, String taskName) { }
     public record TaskSummary(Long taskId, String taskCode, String taskName, String leaderName,
                               Long reformTaskId, String auditState, String firstCompletedAt,

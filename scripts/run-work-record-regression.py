@@ -43,6 +43,25 @@ def main():
         sql(migration, schema)
         sql((ROOT / "scripts/work-records/001_work_records_rollback.sql").read_bytes(), schema)
         sql(migration, schema)
+        deletion = (ROOT / "scripts/work-records/002_work_record_delete.sql").read_bytes()
+        # Synthetic legacy row verifies that both migration and rollback preserve content.
+        sql("INSERT INTO biz_work_record(record_id,owner_id,owner_name,record_year,record_month,problems,create_time,update_time) "
+            "VALUES(999999,999999,'migration fixture',2026,1,'preserve me',NOW(),NOW())", schema)
+        sql(deletion, schema)
+        sql((ROOT / "scripts/work-records/002_work_record_delete_rollback.sql").read_bytes(), schema)
+        sql(deletion, schema)
+        sql(deletion, schema)
+        def scalar(statement):
+            return subprocess.check_output(mysql + ["-N", "-B", schema, "-e", statement], env=env).decode().strip()
+        assert scalar("SELECT CONCAT(problems,':',delete_marker) FROM biz_work_record WHERE record_id=999999") == "preserve me:0"
+        sql("UPDATE biz_work_record SET delete_marker=record_id WHERE record_id=999999", schema)
+        rollback = (ROOT / "scripts/work-records/002_work_record_delete_rollback.sql").read_bytes()
+        for _ in range(2):
+            blocked = subprocess.run(mysql + [schema], input=rollback, env=env, capture_output=True)
+            assert blocked.returncode != 0 and b"Deleted work records exist" in blocked.stderr
+        assert scalar("SELECT problems FROM biz_work_record WHERE record_id=999999") == "preserve me"
+        sql("DROP PROCEDURE IF EXISTS rollback_work_record_delete_20260920; DELETE FROM biz_work_record WHERE record_id=999999", schema)
+        print("Delete migration: repeatable, preserves legacy rows, blocks rollback with archived rows", flush=True)
         env["SHUANGGAO_REVIEW_TEST"] = "true"
         env["SHUANGGAO_TEST_JDBC_URL"] = "jdbc:mysql://127.0.0.1:3306/" + schema + "?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai"
         # Connector/J 的 Java 字符集名称使用 UTF-8。
