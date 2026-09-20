@@ -15,7 +15,7 @@ import shutil
 import gzip
 
 ROOT=Path(__file__).resolve().parents[2]
-PACKAGE=ROOT.parent/'releases/shuanggao-update-20260920-r3'
+PACKAGE=ROOT.parent/'releases/shuanggao-update-20260920-r4'
 MYSQL=Path(r'C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe')
 BASH=r'C:\Program Files\Git\bin\bash.exe'
 env=os.environ.copy()
@@ -41,6 +41,29 @@ def snapshot():
         assert re.fullmatch('[A-Za-z0-9_]+',line)
         values[line]=sql('SELECT * FROM `'+line+'`')
     return values
+
+def notice_cleanup():
+    sql("""INSERT INTO sys_notice(content,notice_id,to_user_id,source_type,source_id,trigger_event,title,is_delete,is_read) VALUES
+      ('synthetic',999001,910003,'2',971001,'绩效审核','绩效待审核',0,0),
+      ('synthetic',999002,110228,'2',971001,'绩效审核','绩效待审核',0,1),
+      ('synthetic',999003,110228,'0',999999,'任务审核','任务审核',0,0),
+      ('synthetic',999004,110228,'3',999999,'成果归档审核','成果待归档审核',0,1),
+      ('synthetic',999005,110228,'0',999999,'任务完成','任务已完成',0,0),
+      ('synthetic',999006,110228,'0',999999,'月度提醒','月度审核任务提醒',0,0),
+      ('synthetic',999007,110228,'3',999999,'成果归档审核','成果待归档审核',1,0);""")
+    before = snapshot()
+    restore = sql((PACKAGE/'sql/backup-stale-notices.sql').read_bytes())
+    assert restore.count(b'UPDATE sys_notice') == 3
+    result = sql((PACKAGE/'sql/retire-stale-notices.sql').read_bytes()).strip()
+    assert result == b'3', result
+    assert sql('SELECT notice_id FROM sys_notice WHERE notice_id>=999001 AND is_delete=0 ORDER BY notice_id').split() == [b'999001',b'999005',b'999006']
+    after = snapshot()
+    assert all(after[t] == rows for t,rows in before.items() if t != 'sys_notice')
+    assert sql((PACKAGE/'sql/retire-stale-notices.sql').read_bytes()).strip() == b'0'
+    sql(restore)
+    assert snapshot() == before
+    sql('DELETE FROM sys_notice WHERE notice_id>=999001')
+    checks.append('notice-cleanup-preserves-live-todos-results-business-data-and-supports-idempotence-and-flag-rollback')
 
 def mixed_line_endings():
     with tempfile.TemporaryDirectory(prefix='schema-lines-',dir=ROOT/'target') as temp:
@@ -181,7 +204,7 @@ printf 'new-config' > "$BACKEND/.release.properties"
 stop_app() { printf 'stopped' > "$BACKUP/stopped"; }
 start_old() { printf 'started' > "$BACKUP/started"; }
 health() { return 0; }
-CHANGED=1
+NOTICE_CLEANUP=0; CHANGED=1
 trap cleanup EXIT
 exit 17
 '''
@@ -199,7 +222,7 @@ exit 17
             (base/'backup/database-restored').unlink(missing_ok=True)
             recovery = ('restore_saved_database() { printf restored > "$BACKUP/database-restored"; }' if db_ok
                         else 'restore_saved_database() { return 1; }')
-            test=harness.replace('CHANGED=1', recovery+'\nDB_REPLACED=1\nCHANGED=1')
+            test=harness.replace('NOTICE_CLEANUP=0; CHANGED=1', recovery+'\nDB_REPLACED=1\nNOTICE_CLEANUP=0; CHANGED=1')
             test=test.replace('start_old() { printf', 'start_old() { [[ -f "$BACKUP/database-restored" ]] || return 1; printf')
             script.write_text(test,encoding='utf-8',newline='\n')
             result=subprocess.run([BASH,str(script),bash_base],capture_output=True)
@@ -215,6 +238,9 @@ exit 17
         assert 'spring.datasource.password=${SPRING_DATASOURCE_PASSWORD:}' in p
         assert not re.search(r'^\s*#?\s*spring.datasource.password=(?!\$\{)',p,re.M)
         assert 'BOOT-INF/classes/templates/work-record.docx' in jar.namelist()
+        predicate = jar.read('BOOT-INF/classes/sql/stale-review-notices.sql').decode('utf-8').strip()
+        assert predicate == (ROOT/'src/main/resources/sql/stale-review-notices.sql').read_text(encoding='utf-8').strip()
+        assert predicate in (PACKAGE/'sql/retire-stale-notices.sql').read_text(encoding='utf-8')
     assert (PACKAGE/'frontend/templates/budget-template.xlsx').read_bytes()==(PACKAGE/'templates/budget-template.xlsx').read_bytes()
     checks.append('checksums-password-exclusion-and-templates')
     ddl=(PACKAGE/'sql/additive.sql').read_text(encoding='utf-8')
@@ -245,6 +271,7 @@ exit 17
         sql('ALTER TABLE biz_audit_snapshot DROP COLUMN previous_comment; ALTER TABLE biz_performance_audit_snapshot DROP COLUMN previous_year_target_value;')
         check_schema('before'); sql(ddl); check_schema('after')
         checks.append('approved-legacy-missing-columns-added')
+        notice_cleanup()
         smoke_jar()
         restore_roundtrip()
         sql('ALTER TABLE biz_task DROP COLUMN exp_effect;')

@@ -124,6 +124,73 @@ class ReviewBatchRegressionApiTest {
                 id, DEPT, "review" + id, "Review " + id, PASSWORD, role);
     }
 
+    private int liveReviewNotices(String type) {
+        return jdbc.queryForObject("SELECT COUNT(*) FROM sys_notice WHERE source_type=? AND is_delete=0 "
+                + "AND trigger_event IN ('任务审核','绩效审核','绩效归档','成果归档审核')", Integer.class, type);
+    }
+
+    @Test
+    void taskReviewNoticesRetireWithHandlerAndWithdraw() throws Exception {
+        seedSubmissionFlow();
+        String user = login(USER);
+        assertSuccess(request(HttpMethod.POST, "/biz/sub", user, submission("3")), "提交成功");
+        assertEquals(1, liveReviewNotices("0"));
+        long sub = newestSubmission();
+        long first = jdbc.queryForObject("SELECT MAX(notice_id) FROM sys_notice", Long.class);
+        review(sub, true, login(AUDITOR));
+        assertEquals(1, jdbc.queryForObject("SELECT is_delete FROM sys_notice WHERE notice_id=?", Integer.class, first));
+        assertEquals(1, liveReviewNotices("0"));
+        review(sub, true, login(LEADER));
+        assertEquals(1, liveReviewNotices("0"));
+        assertSuccess(request(HttpMethod.POST, "/biz/drawback/930002", user, null), "已撤回提交");
+        assertEquals(0, liveReviewNotices("0"));
+        assertSuccess(request(HttpMethod.POST, "/biz/sub", user, submission("4")), "提交成功");
+        assertEquals(1, liveReviewNotices("0"));
+        assertTrue(jdbc.queryForObject("SELECT COUNT(*) FROM biz_audit_log", Integer.class) >= 5);
+    }
+
+    @Test
+    void performanceReviewNoticesRetireButResultSurvives() throws Exception {
+        seedManualPerformance("1");
+        long sub = submitPerformance(2026, "3", login(USER));
+        assertEquals(1, liveReviewNotices("2"));
+        assertSuccess(reviewPerformance(sub, true, login(AUDITOR)), "已通过专业群审核");
+        assertEquals(1, liveReviewNotices("2"));
+        assertSuccess(reviewPerformance(sub, false, login(ADMIN)), "已退回");
+        assertEquals(0, liveReviewNotices("2"));
+        assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM sys_notice WHERE trigger_event='绩效退回' AND is_delete=0", Integer.class));
+    }
+
+    @Test
+    void achievementReviewNoticesRetireButResultSurvives() throws Exception {
+        seedUser(990000L + DEPT, "1");
+        String uploader = login(990000L + DEPT);
+        assertSuccess(request(HttpMethod.POST, "/achievement/add", uploader,
+                Map.of("category", 1, "level", "省级", "achName", "Review achievement", "gotTime", 1767225600000L,
+                        "department", "Review organization", "comment", "Review")), "成功");
+        long sub = jdbc.queryForObject("SELECT MAX(sub_id) FROM biz_achievement_submission", Long.class);
+        assertEquals(1, liveReviewNotices("3"));
+        assertSuccess(request(HttpMethod.POST, "/achievement/audit", login(ADMIN),
+                Map.of("sub_id", sub, "is_pass", true, "title", "Review")), "已归档");
+        assertEquals(0, liveReviewNotices("3"));
+        assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM sys_notice WHERE trigger_event='成果归档完成' AND is_delete=0", Integer.class));
+    }
+
+    @Test
+    void noticeListHidesStaleRequestsPreservesOrdinaryMessagesAndIsolation() throws Exception {
+        jdbc.update("INSERT INTO sys_notice(content,notice_id,to_user_id,source_type,source_id,trigger_event,title,is_delete,is_read) VALUES "
+                + "('synthetic',990001,?,'0',999999,'任务审核','任务审核',0,0),"
+                + "('synthetic',990002,?,'0',999999,'任务完成','任务已完成',0,0),"
+                + "('synthetic',990003,?,'0',999999,'月度提醒','月度审核任务提醒',0,1),"
+                + "('synthetic',990004,?,'0',999999,NULL,'普通消息',0,0),"
+                + "('synthetic',990005,?,'0',999999,'任务完成','任务已完成',1,0),"
+                + "('synthetic',990006,?,'0',999999,'任务完成','任务已完成',0,0)",
+                ADMIN, ADMIN, ADMIN, ADMIN, ADMIN, USER);
+        JsonNode notices = body(request(HttpMethod.GET, "/system/notice", login(ADMIN), null));
+        assertEquals(3, notices.size());
+        assertEquals(6, jdbc.queryForObject("SELECT COUNT(*) FROM sys_notice", Integer.class));
+    }
+
     private ResponseEntity<String> request(HttpMethod method, String path, String token, Object body) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

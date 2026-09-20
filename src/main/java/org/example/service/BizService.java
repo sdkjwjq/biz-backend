@@ -1590,6 +1590,8 @@ public class BizService {
         sysNotice.setSourceType(sourceType);
         sysNotice.setSourceId(sourceId);
         sysNotice.setIsRead("0");
+        sysNotice.setIsDelete(0);
+        sysNotice.setCreateTime(new Date());
 
         sysMapper.sendNotice(sysNotice);
         System.out.println("id=" + toUserId + "的用户收到一条通知：" + title);
@@ -1617,6 +1619,7 @@ public class BizService {
         bizAuditLog.setCreateTime(new Date());
 
         bizMapper.createAuditLog(bizAuditLog);
+        sysMapper.retireTaskNotices(subId);
     }
 
     private void completeAuditStepIfNeeded(BizMaterialSubmission submission, Integer preStatus, Integer postStatus,

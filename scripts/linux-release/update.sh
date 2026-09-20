@@ -20,6 +20,7 @@ JAVA_BIN=''
 OLD_ARGS=()
 NEW_ARGS=()
 RESTORE_BACKUP=0
+NOTICE_CLEANUP=0
 die() { printf '错误：%s\n' "$*" >&2; exit 1; }
 say() { printf '[更新] %s\n' "$*"; }
 need() { command -v "$1" >/dev/null || die "缺少命令 $1；尚未更新程序"; }
@@ -109,6 +110,9 @@ cleanup() {
   if [[ $CHANGED == 1 && $FINISHED == 0 ]]; then
     say "更新未完成，恢复旧程序和前端。备份：$BACKUP"
     set +e
+    if [[ $NOTICE_CLEANUP == 1 && $DB_REPLACED == 0 ]]; then
+      "${MYSQL[@]}" < "$BACKUP/restore-notice-flags.sql" || say '通知删除标记恢复失败，可使用备份目录中的 restore-notice-flags.sql 单独恢复'
+    fi
     if [[ $DB_REPLACED == 1 ]]; then
       say '数据库恢复步骤已开始，先恢复本次更新前的完整数据库备份'
       (set -Eeuo pipefail; stop_app; restore_saved_database)
@@ -248,6 +252,13 @@ else
 fi
 "${MYSQL[@]}" < "$PACKAGE/sql/additive.sql" > "$BACKUP/migration.log"
 bash "$PACKAGE/schema-check.sh" after
+
+# The backend is stopped and the complete database has already been backed up.
+# Retire review requests only; preserve completed-result messages and audit history.
+"${MYSQL[@]}" < "$PACKAGE/sql/backup-stale-notices.sql" > "$BACKUP/restore-notice-flags.sql"
+NOTICE_CLEANUP=1
+"${MYSQL[@]}" < "$PACKAGE/sql/retire-stale-notices.sql" > "$BACKUP/notice-cleanup.log"
+say "失效待审核通知已逻辑删除 $(tr -d '\r\n' < "$BACKUP/notice-cleanup.log") 条；审核结果通知及业务记录保留"
 
 # A root-readable properties file, not a password in command-line arguments or in the distributable JAR.
 escaped_password=$(printf '%s' "$DB_PASSWORD" | sed -e 's/\\/\\\\/g' -e 's/ /\\ /g')

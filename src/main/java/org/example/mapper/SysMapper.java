@@ -6,6 +6,7 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 import org.apache.ibatis.annotations.Options;
+import org.apache.ibatis.annotations.SelectProvider;
 import org.example.entity.*;
 
 import java.util.List;
@@ -172,8 +173,28 @@ public interface SysMapper {
      * @param userId 用户ID
      * @return 通知列表
      */
-    @Select("SELECT * FROM sys_notice WHERE to_user_id = #{userId}")
-    public List<SysNotice> getNotices(Long userId);
+    @SelectProvider(type = ReviewNoticeSql.class, method = "visible")
+    public List<SysNotice> getNotices(@Param("userId") Long userId);
+
+    @SelectProvider(type = ReviewNoticeSql.class, method = "retireTask")
+    List<Long> staleTaskNotices(@Param("subId") Long subId);
+
+    @SelectProvider(type = ReviewNoticeSql.class, method = "retirePerformance")
+    List<Long> stalePerformanceNotices(@Param("subId") Long subId);
+
+    @SelectProvider(type = ReviewNoticeSql.class, method = "retireAchievement")
+    List<Long> staleAchievementNotices(@Param("subId") Long subId);
+
+    @Update("<script>UPDATE sys_notice SET is_delete=1 WHERE COALESCE(is_delete,0)=0 AND notice_id IN "
+            + "<foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach></script>")
+    int retireNoticeIds(@Param("ids") List<Long> ids);
+
+    default void retireTaskNotices(Long subId) { retireIfPresent(staleTaskNotices(subId)); }
+    default void retirePerformanceNotices(Long subId) { retireIfPresent(stalePerformanceNotices(subId)); }
+    default void retireAchievementNotices(Long subId) { retireIfPresent(staleAchievementNotices(subId)); }
+    default void retireIfPresent(List<Long> ids) {
+        if (!ids.isEmpty()) retireNoticeIds(ids);
+    }
 
     /**
      * 根据ID获取通知

@@ -776,6 +776,7 @@ public class PerformanceService {
         log.setComment(comment);
         log.setCreateTime(new Date());
         performanceMapper.createPerformanceAuditLog(log);
+        sysMapper.retirePerformanceNotices(subId);
     }
 
     private void sendNotice(Long fromUserId, Long toUserId, String triggerEvent,

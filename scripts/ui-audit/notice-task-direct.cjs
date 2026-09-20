@@ -6,7 +6,7 @@ async function main() {
   const root = path.resolve(__dirname, '../../target/ui-audit');
   const state = JSON.parse(await fs.readFile(path.join(root, 'state.json')));
   assert.match(state.schema, /^biz_review_test_[0-9a-f]{32}$/); assert.ok(process.env.SHUANGGAO_TEST_DB_PASSWORD);
-  const sql = input => execFileSync(process.env.MYSQL_EXE || 'C:/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe', ['--host=127.0.0.1', '--user=root', state.schema], { env: { ...process.env, MYSQL_PWD: process.env.SHUANGGAO_TEST_DB_PASSWORD }, input });
+  const sql = input => execFileSync(process.env.MYSQL_EXE || 'C:/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe', ['--host=127.0.0.1', '--user=root', '--default-character-set=utf8mb4', state.schema], { env: { ...process.env, MYSQL_PWD: process.env.SHUANGGAO_TEST_DB_PASSWORD }, input });
   sql("INSERT INTO sys_file(file_id,file_name,file_path,file_url,file_suffix,upload_by) VALUES(999001,'synthetic.pdf','synthetic.pdf','synthetic.pdf','pdf',910001); INSERT INTO biz_material_submission(sub_id,task_id,file_id,reported_value,submit_by,submit_dept_id,manage_dept_id,file_suffix,flow_status,current_handler_id) VALUES(999001,930002,999001,1,910001,920001,920001,'pdf',30,110228);");
   const api = await request.newContext({ baseURL: state.frontend });
   const auth = async id => (await (await api.post('/api/system/login', { data: { user_id: id, password: 'WorkRecords123' } })).json()).token;
@@ -17,13 +17,26 @@ async function main() {
   const pass = name => { checks.push(name); console.log(name); };
   const out = path.join(root, 'evidence-notice-direct'); await fs.mkdir(out, { recursive: true });
   try {
-    await page.goto(state.frontend + '/home/audit?taskId=930002');
+    sql("INSERT INTO sys_notice(notice_id,from_user_id,to_user_id,type,source_type,source_id,trigger_event,title,content,is_read,is_delete,create_time) VALUES (999001,910001,110228,'1','0',930002,'任务审核','任务审核','当前待办',0,0,NOW()),(999002,910001,110228,'1','0',999999,'任务审核','任务审核','过期提醒',0,0,NOW()),(999003,910001,110228,'1','0',999999,'任务完成','任务已完成','保留结果',0,0,NOW());");
+    await page.goto(state.frontend + '/home/notice');
+    await page.getByRole('tab', { name: '未读消息' }).click();
+    await expect(page.locator('.notice-item')).toHaveCount(2);
+    await expect(page.locator('.notice-list')).not.toContainText('过期提醒');
+    await expect(page.locator('.unread-badge')).toHaveText('2');
+    await page.screenshot({ path: path.join(out, 'notice-cleanup.png') });
+    pass('real-notice-list-hides-obsolete-request-retains-current-and-result-with-correct-unread-count');
+    await page.locator('.notice-item').filter({ hasText: '当前待办' }).click();
+    await page.getByRole('button', { name: '前往处理业务' }).click();
     await expect(page.getByRole('dialog', { name: '业务审批', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: '确认提交', exact: true })).toBeEnabled();
     assert.equal(requests.filter(p => p.includes('/biz/audit/task/')).length, 1);
     assert.equal(requests.filter(p => p.includes('/system/download/')).length, 0);
     pass('real-own-pending-opens-editable-with-one-task-query-and-no-file-download');
     sql('UPDATE biz_material_submission SET flow_status=40,current_handler_id=NULL WHERE sub_id=999001');
+    await page.goto(state.frontend + '/home/notice');
+    await expect(page.locator('.notice-item')).toHaveCount(1);
+    await expect(page.locator('.notice-list')).toContainText('保留结果');
+    pass('real-state-change-removes-old-request-and-preserves-result');
     await page.goto(state.frontend + '/home/audit?taskId=930002');
     const detail = page.getByRole('dialog', { name: '详情查看', exact: true });
     await expect(detail).toBeVisible(); await expect(detail).toContainText('已通过'); await expect(detail.getByRole('button', { name: '确认提交' })).toHaveCount(0);

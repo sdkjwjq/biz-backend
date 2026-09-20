@@ -10,7 +10,7 @@ import tarfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = ROOT.parent / 'releases/shuanggao-update-20260920-r3'
+OUT = ROOT.parent / 'releases/shuanggao-update-20260920-r4'
 MYSQL = shutil.which('mysql') or r'C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe'
 NEW_SOURCES = [
     'data/migrations/2026-05-30-audit-snapshot.sql',
@@ -74,6 +74,14 @@ DEALLOCATE PREPARE release_stmt;
     for migration in ['scripts/work-records/002_work_record_delete.sql', 'scripts/password/001_force_password_change.sql']:
         sql += '\n' + (ROOT/migration).read_text(encoding='utf-8')
     (OUT/'sql/additive.sql').write_text(sql,encoding='utf-8',newline='\n')
+    stale = (ROOT/'src/main/resources/sql/stale-review-notices.sql').read_text(encoding='utf-8').strip()
+    (OUT/'sql/retire-stale-notices.sql').write_text(
+        'START TRANSACTION;\nUPDATE sys_notice n SET n.is_delete=1 WHERE '+stale+';\nSELECT ROW_COUNT();\nCOMMIT;\n',
+        encoding='utf-8',newline='\n')
+    (OUT/'sql/backup-stale-notices.sql').write_text(
+        "SELECT CONCAT('UPDATE sys_notice SET is_delete=', COALESCE(CAST(n.is_delete AS CHAR), 'NULL'), "
+        "' WHERE notice_id=', n.notice_id, ' AND is_delete=1;') FROM sys_notice n WHERE "+stale+';\n',
+        encoding='utf-8',newline='\n')
     base=(ROOT/'data/biz.sql').read_text(encoding='utf-8')
     tables=set(re.findall(r'CREATE TABLE\s+`?(\w+)',base))|added_tables
     selection=','.join("'"+name+"'" for name in sorted(tables))
@@ -95,6 +103,7 @@ DEALLOCATE PREPARE release_stmt;
         'runtime':'Java 17 / MySQL 8 / Bash 4.2+',
         'database_rows_included':True,'backup_contains_user_passwords':True,'runtime_database_password_included':False,
         'restore_requires_explicit_flag':'--restore-backup',
+        'notice_cleanup':'Only obsolete task/performance/achievement review requests are soft-deleted; audit data unchanged',
         'new_tables':sorted(added_tables),'supported_existing_column_additions':['.'.join(key) for key in ADDITIONS],
     }
     backup = ROOT/'data/20260920backup.sql'

@@ -419,6 +419,7 @@ public class AchievementService {
         log.setComment(comment);
         log.setCreateTime(new Date());
         achievementMapper.createAchievementAuditLog(log);
+        sysMapper.retireAchievementNotices(subId);
     }
 
     private void sendNotice(Long fromUserId, Long toUserId, String triggerEvent,
