@@ -60,7 +60,9 @@ def main():
     logs = []
     try:
         subprocess.run(mysql + [schema], input=dump, env=env, check=True, capture_output=True)
+        sql((ROOT / "scripts/password/001_force_password_change.sql").read_text(encoding="utf-8"), schema)
         sql((ROOT / "scripts/ui-audit/fixture.sql").read_text(encoding="utf-8"), schema)
+        sql("UPDATE sys_user SET force_password_change=0", schema)
         if args.fixture == "work-records":
             sql("DROP TABLE IF EXISTS biz_work_record_snapshot; DROP TABLE IF EXISTS biz_work_record_entry; DROP TABLE IF EXISTS biz_work_record;", schema)
             sql((ROOT / "scripts/work-records/001_work_records.sql").read_text(encoding="utf-8"), schema)

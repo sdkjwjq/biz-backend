@@ -9,7 +9,6 @@ import org.example.entity.vo.ErrorVO;
 import org.example.mapper.SysMapper;
 import org.example.mapper.TokenBlacklistMapper;
 import org.example.utils.JWTUtil;
-import org.example.utils.PasswordPolicy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -69,7 +68,7 @@ public class JwtInterceptor implements HandlerInterceptor {
             boolean passwordEndpoint = ("GET".equals(request.getMethod()) && "/system/password/status".equals(path))
                     || ("POST".equals(request.getMethod())
                     && ("/system/password".equals(path) || "/system/logout".equals(path)));
-            if (PasswordPolicy.requiresChange(user.getPassword()) && !passwordEndpoint) {
+            if (Integer.valueOf(1).equals(user.getForcePasswordChange()) && !passwordEndpoint) {
                 sendError(response, 428, "请先修改密码，新密码至少8位，并同时包含大写字母、小写字母和数字");
                 return false;
             }

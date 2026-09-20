@@ -16,8 +16,8 @@ import java.util.List;
 @Mapper
 public interface SysMapper {
     /** 二进制比较保留密码大小写及尾部空格；仅修改密码和更新时间。 */
-    @Update("UPDATE sys_user SET password = #{newPassword}, update_time = NOW() "
-            + "WHERE user_id = #{userId} AND BINARY password = BINARY #{oldPassword} "
+    @Update("UPDATE sys_user SET password = #{newPassword}, force_password_change = 0, update_time = NOW() "
+            + "WHERE user_id = #{userId} AND (BINARY password <=> BINARY #{oldPassword}) "
             + "AND (is_delete = 0 OR is_delete IS NULL)")
     int resetPassword(@Param("userId") Long userId, @Param("oldPassword") String oldPassword,
                       @Param("newPassword") String newPassword);
@@ -115,7 +115,7 @@ public interface SysMapper {
      * @param user 用户实体
      * @return 用户ID
      */
-    @Insert("INSERT INTO sys_user (user_id, dept_id, user_name, nick_name, email, password, role, status, is_delete, create_time, update_time) VALUES (#{userId}, #{deptId}, #{userName}, #{nickName}, #{email}, #{password}, #{role}, #{status}, #{isDelete}, #{createTime}, #{updateTime})")
+    @Insert("INSERT INTO sys_user (user_id, dept_id, user_name, nick_name, email, password, role, status, is_delete, create_time, update_time, force_password_change) VALUES (#{userId}, #{deptId}, #{userName}, #{nickName}, #{email}, #{password}, #{role}, #{status}, #{isDelete}, #{createTime}, #{updateTime}, 1)")
     @Options(useGeneratedKeys = true, keyProperty = "userId", keyColumn = "user_id")
     public void addUser(SysUser user);
 

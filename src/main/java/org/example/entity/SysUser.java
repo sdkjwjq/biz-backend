@@ -17,6 +17,8 @@ public class SysUser {
     private String email; // 邮箱
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password; // 密码仅允许输入，不返回给客户端
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private Integer forcePasswordChange; // 1需要首次改密，0已完成；沿用线上标记
     private String role; // 角色 0:admin 1:user 2:leader
     private String status; // 状态 0:正常 1:停用
     private Integer isDelete; // 0:存在 1:删除

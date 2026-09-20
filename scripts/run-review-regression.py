@@ -48,6 +48,7 @@ def main():
     sql("CREATE DATABASE `" + database + "` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
     try:
         subprocess.run([mysql, *connection, database], input=dump, env=env, check=True)
+        subprocess.run([mysql, *connection, database], input=(root / 'scripts/password/001_force_password_change.sql').read_bytes(), env=env, check=True)
         env["SHUANGGAO_REVIEW_TEST"] = "true"
         env["SHUANGGAO_TEST_DB_USER"] = user
         env["SHUANGGAO_TEST_JDBC_URL"] = ("jdbc:mysql://127.0.0.1:3306/" + database

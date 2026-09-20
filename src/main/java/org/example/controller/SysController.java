@@ -136,13 +136,13 @@ public class SysController {
         }
     }
 
-    /** 刷新页面或使用旧 token 时，按数据库中的当前密码核对改密要求。 */
+    /** 刷新页面或使用旧 token 时，按线上改密标记核对要求。 */
     @GetMapping("/password/status")
     public Object passwordStatus(HttpServletRequest request) {
         Long userId = JWTUtil.getUserIdFromToken(request.getHeader("Authorization"));
         SysUser user = sysService.getUserById(userId);
         return java.util.Map.of("requiresPasswordChange", user == null
-                || org.example.utils.PasswordPolicy.requiresChange(user.getPassword()));
+                || Integer.valueOf(1).equals(user.getForcePasswordChange()));
     }
 
     /**

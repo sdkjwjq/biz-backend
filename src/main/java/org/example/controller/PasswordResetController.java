@@ -8,7 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-/** 登录前凭原密码修改密码，不创建登录会话。 */
+/** 登录前凭原密码或本人工号修改密码，不创建登录会话。 */
 @RestController
 @RequestMapping("/system/password")
 public class PasswordResetController {
@@ -30,7 +30,7 @@ public class PasswordResetController {
             JsonNode oldPassword = body.getOld_password();
             JsonNode newPassword = body.getNew_password();
             if (oldPassword == null || !oldPassword.isTextual() || oldPassword.asText().isEmpty()) {
-                throw new IllegalArgumentException("请输入原密码");
+                throw new IllegalArgumentException("请输入原密码或本人工号");
             }
             if (newPassword == null || !newPassword.isTextual()) throw new IllegalArgumentException("请输入新密码");
             sysService.resetPassword(userId, oldPassword.asText(), newPassword.asText());

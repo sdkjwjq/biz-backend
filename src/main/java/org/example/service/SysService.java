@@ -77,7 +77,8 @@ public class SysService {
         if (user != null && Integer.valueOf(1).equals(user.getIsDelete())) {
             user = null;
         }
-        if (user != null && user.getPassword() != null && user.getPassword().equals(password)) {
+        if (user != null && ((user.getPassword() != null && user.getPassword().equals(password))
+                || (Integer.valueOf(1).equals(user.getForcePasswordChange()) && userId.toString().equals(password)))) {
             SysDept dept = user.getDeptId() == null ? null : sysMapper.getDeptById(user.getDeptId());
             boolean isDepartmentAccount = AchievementPermissionUtil.isAchievementUploadAccount(user, dept);
             boolean canViewAchievement = AchievementPermissionUtil.canViewAchievement(user, dept);
@@ -85,7 +86,7 @@ public class SysService {
             SysLoginVO sysLoginVo = new SysLoginVO(
                     user.getNickName(),
                     JWTUtil.generateJwtToken(user, isDepartmentAccount, canViewAchievement, canUploadAchievement),
-                    org.example.utils.PasswordPolicy.requiresChange(user.getPassword())
+                    Integer.valueOf(1).equals(user.getForcePasswordChange())
             );
             BusinessLogUtil.info("用户登录",
                     "result", "成功",
@@ -122,14 +123,18 @@ public class SysService {
         if (user == null) {
             throw new RuntimeException("用户不存在");
         }
-        user.setPassword(newPassword);
-        sysMapper.updateUser(user);
+        if (sysMapper.resetPassword(userId, user.getPassword(), newPassword) != 1) {
+            throw new IllegalArgumentException("密码已变更，请重新登录后操作");
+        }
     }
 
     /** 原密码作为更新条件，避免并发重置覆盖已经修改的密码。 */
     public void resetPassword(Long userId, String oldPassword, String newPassword) {
         org.example.utils.PasswordPolicy.validate(newPassword);
-        if (sysMapper.resetPassword(userId, oldPassword, newPassword) != 1) {
+        SysUser user = sysMapper.getUserById(userId);
+        if (user == null || Integer.valueOf(1).equals(user.getIsDelete())
+                || !(userId.toString().equals(oldPassword) || (user.getPassword() != null && user.getPassword().equals(oldPassword)))
+                || sysMapper.resetPassword(userId, user.getPassword(), newPassword) != 1) {
             throw new SecurityException("账号或原密码错误");
         }
         BusinessLogUtil.info("密码重置", "result", "成功", "userId", userId);

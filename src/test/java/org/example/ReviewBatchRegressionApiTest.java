@@ -119,8 +119,8 @@ class ReviewBatchRegressionApiTest {
     }
 
     private void seedUser(long id, String role) {
-        jdbc.update("INSERT INTO sys_user (user_id, dept_id, user_name, nick_name, email, password, role, status, is_delete) "
-                        + "VALUES (?, ?, ?, ?, 'review@example.invalid', ?, ?, '1', 0)",
+        jdbc.update("INSERT INTO sys_user (user_id, dept_id, user_name, nick_name, email, password, role, status, is_delete, force_password_change) "
+                        + "VALUES (?, ?, ?, ?, 'review@example.invalid', ?, ?, '1', 0, 0)",
                 id, DEPT, "review" + id, "Review " + id, PASSWORD, role);
     }
 
@@ -404,12 +404,12 @@ class ReviewBatchRegressionApiTest {
     }
 
     @Test
-    void weakPasswordsGateAllRolesAndExistingTokensUntilChanged() throws Exception {
+    void flaggedPasswordsGateAllRolesAndExistingTokensUntilChanged() throws Exception {
         for (long userId : List.of(ADMIN, USER, LEADER, AUDITOR)) {
             String existingToken = login(userId);
             assertFalse(body(request(HttpMethod.GET, "/system/password/status", existingToken, null))
                     .path("requiresPasswordChange").asBoolean());
-            jdbc.update("UPDATE sys_user SET password='110228' WHERE user_id=?", userId);
+            jdbc.update("UPDATE sys_user SET password='110228',force_password_change=1 WHERE user_id=?", userId);
             JsonNode loggedIn = body(request(HttpMethod.POST, "/system/login", null,
                     Map.of("user_id", userId, "password", "110228")));
             assertTrue(loggedIn.path("requiresPasswordChange").asBoolean());
@@ -445,7 +445,7 @@ class ReviewBatchRegressionApiTest {
     void weakPasswordGateAllowsLogoutHandlerButStatusRequiresAuthentication() throws Exception {
         assertEquals(HttpStatus.UNAUTHORIZED, request(HttpMethod.GET, "/system/password/status", null, null).getStatusCode());
         String token = login(USER);
-        jdbc.update("UPDATE sys_user SET password='110228' WHERE user_id=?", USER);
+        jdbc.update("UPDATE sys_user SET password='110228',force_password_change=1 WHERE user_id=?", USER);
         // 这里只验证改密门禁不拦截注销；原库 token_blacklist.token 长度限制不属于本次改动。
         ResponseEntity<String> logout = request(HttpMethod.POST, "/system/logout", token, Map.of());
         assertEquals(HttpStatus.OK, logout.getStatusCode());
@@ -454,17 +454,45 @@ class ReviewBatchRegressionApiTest {
     }
 
     @Test
-    void sixAndSevenCharacterPasswordsRequireUpgradeButEightCharactersPass() throws Exception {
+    void passwordStrengthDoesNotOverrideOnlineFlag() throws Exception {
         for (String password : List.of("Aa1234", "Aa12345", "Aa123456")) {
+          for (int flag : List.of(0, 1)) {
             jdbc.update("UPDATE sys_user SET password=? WHERE user_id=?", password, USER);
+            jdbc.update("UPDATE sys_user SET force_password_change=? WHERE user_id=?", flag, USER);
             JsonNode result = body(request(HttpMethod.POST, "/system/login", null,
                     Map.of("user_id", USER, "password", password)));
-            boolean required = password.length() < 8;
+            boolean required = flag == 1;
             assertEquals(required, result.path("requiresPasswordChange").asBoolean());
             String token = result.path("token").asText();
             assertEquals(required, body(request(HttpMethod.GET, "/system/password/status", token, null))
                     .path("requiresPasswordChange").asBoolean());
             assertEquals(required ? 428 : 200, request(HttpMethod.GET, "/biz/tasks", token, null).getStatusCode().value());
+          }
+        }
+    }
+
+    @Test
+    void employeeIdFirstLoginAndResetForAllRoles() throws Exception {
+        for (long id : List.of(ADMIN, USER, LEADER, AUDITOR)) {
+            jdbc.update("UPDATE sys_user SET force_password_change=1 WHERE user_id=?", id);
+            JsonNode login = body(request(HttpMethod.POST, "/system/login", null, Map.of("user_id", id, "password", String.valueOf(id))));
+            assertTrue(login.hasNonNull("token")); assertTrue(login.path("requiresPasswordChange").asBoolean());
+            assertEquals(428, request(HttpMethod.GET, "/biz/tasks", login.path("token").asText(), null).getStatusCode().value());
+            Map<String,Object> profile = new LinkedHashMap<>(jdbc.queryForMap("SELECT * FROM sys_user WHERE user_id=?", id));
+            profile.remove("password"); profile.remove("update_time"); profile.remove("force_password_change");
+            for (String password : List.of("FirstNew123", "SecondNew123")) {
+                assertEquals(HttpStatus.OK, request(HttpMethod.POST, "/system/password/reset", null,
+                        Map.of("user_id", id, "old_password", String.valueOf(id), "new_password", password)).getStatusCode());
+                assertEquals(0, jdbc.queryForObject("SELECT force_password_change FROM sys_user WHERE user_id=?", Integer.class, id));
+                JsonNode changed = body(request(HttpMethod.POST, "/system/login", null, Map.of("user_id", id, "password", password)));
+                assertTrue(changed.hasNonNull("token")); assertFalse(changed.path("requiresPasswordChange").asBoolean());
+                assertFalse(body(request(HttpMethod.POST, "/system/login", null, Map.of("user_id", id, "password", String.valueOf(id)))).hasNonNull("token"));
+            }
+            Map<String,Object> after = new LinkedHashMap<>(jdbc.queryForMap("SELECT * FROM sys_user WHERE user_id=?", id));
+            after.remove("password"); after.remove("update_time"); after.remove("force_password_change"); assertEquals(profile, after);
+            jdbc.update("UPDATE sys_user SET is_delete=1 WHERE user_id=?", id);
+            assertEquals(HttpStatus.UNAUTHORIZED, request(HttpMethod.POST, "/system/password/reset", null,
+                    Map.of("user_id", id, "old_password", String.valueOf(id), "new_password", "DeletedNew123")).getStatusCode());
         }
     }
 
