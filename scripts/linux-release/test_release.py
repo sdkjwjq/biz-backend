@@ -80,6 +80,10 @@ def main():
     for script in ['update.sh','schema-check.sh']:
         subprocess.run([BASH,'-n',str(PACKAGE/script)],check=True)
     checks.append('bash-syntax')
+    assert b'\r' not in (PACKAGE/'SHA256SUMS').read_bytes(), 'Checksum manifest must use Linux LF line endings'
+    subprocess.run([BASH,'-c','cd "$1" && sha256sum -c SHA256SUMS --quiet','test',
+                    '/'+PACKAGE.as_posix()[0].lower()+PACKAGE.as_posix()[2:]],check=True)
+    checks.append('lf-checksum-manifest-and-native-sha256sum')
     # Exercise rollback functions using real files and tar, but mocked process/health operations.
     # Never run the Linux deployment entry point or access production paths on Windows.
     with tempfile.TemporaryDirectory(prefix='release-shell-',dir=ROOT/'target') as temp:

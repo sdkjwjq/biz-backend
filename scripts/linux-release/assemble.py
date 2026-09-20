@@ -93,7 +93,7 @@ DEALLOCATE PREPARE release_stmt;
     }
     (OUT/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
     files=sorted(p for p in OUT.rglob('*') if p.is_file() and p.name!='SHA256SUMS')
-    (OUT/'SHA256SUMS').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.relative_to(OUT).as_posix()+'\n' for p in files),encoding='ascii')
+    (OUT/'SHA256SUMS').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.relative_to(OUT).as_posix()+'\n' for p in files),encoding='ascii',newline='\n')
     archive=OUT.with_suffix('.tar.gz')
     def mode(info):
         info.uid=info.gid=0; info.uname=info.gname='root'
@@ -101,7 +101,7 @@ DEALLOCATE PREPARE release_stmt;
         return info
     with tarfile.open(archive,'w:gz') as tar:
         tar.add(OUT,arcname=OUT.name,filter=mode)
-    archive.with_suffix(archive.suffix+'.sha256').write_text(hashlib.sha256(archive.read_bytes()).hexdigest()+'  '+archive.name+'\n',encoding='ascii')
+    archive.with_suffix(archive.suffix+'.sha256').write_text(hashlib.sha256(archive.read_bytes()).hexdigest()+'  '+archive.name+'\n',encoding='ascii',newline='\n')
     print(archive)
     print('bytes='+str(archive.stat().st_size))
 
