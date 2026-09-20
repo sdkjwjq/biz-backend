@@ -31,7 +31,7 @@ def query(sql):
     env = os.environ.copy()
     env['MYSQL_PWD'] = os.environ['SHUANGGAO_TEST_DB_PASSWORD']
     return subprocess.check_output([MYSQL,'--host=127.0.0.1','--user=root','--default-character-set=utf8mb4',
-                                    '--batch','--skip-column-names','biz','-e',sql],env=env).decode('utf-8')
+                                    '--batch','--skip-column-names','biz','-e',sql],env=env).decode('utf-8').replace('\r\n','\n')
 
 def main():
     for directory in ['backend','frontend','sql','templates']:

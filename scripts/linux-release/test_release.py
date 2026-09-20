@@ -11,6 +11,7 @@ import tempfile
 import socket
 import time
 import urllib.request
+import shutil
 
 ROOT=Path(__file__).resolve().parents[2]
 PACKAGE=ROOT.parent/'releases/shuanggao-update-20260920'
@@ -39,6 +40,36 @@ def snapshot():
         assert re.fullmatch('[A-Za-z0-9_]+',line)
         values[line]=sql('SELECT * FROM `'+line+'`')
     return values
+
+def mixed_line_endings():
+    with tempfile.TemporaryDirectory(prefix='schema-lines-',dir=ROOT/'target') as temp:
+        base=Path(temp);(base/'sql').mkdir();(base/'bin').mkdir();(base/'fixture').mkdir()
+        shutil.copy2(PACKAGE/'schema-check.sh',base/'schema-check.sh')
+        helper=base/'bin/mysql'
+        helper.write_text('#!/usr/bin/env bash\ncase "$*" in *STATISTICS*) cat "$SCHEMA_FIXTURE_DIR/unique";; *) cat "$SCHEMA_FIXTURE_DIR/columns";; esac\n',encoding='utf-8',newline='\n')
+        os.chmod(helper,0o755)
+        location='/'+base.as_posix()[0].lower()+base.as_posix()[2:]
+        test_env=env.copy();test_env['SCHEMA_FIXTURE_DIR']=location+'/fixture'
+        columns=(PACKAGE/'sql/required-columns.tsv').read_bytes()
+        unique=(PACKAGE/'sql/required-unique.tsv').read_bytes()
+        def run(mode,success):
+            result=subprocess.run([BASH,'-c','export PATH="$1/bin:$PATH"; bash "$1/schema-check.sh" "$2"','test',location,mode],env=test_env,capture_output=True)
+            assert (result.returncode==0)==success,result.stdout.decode('utf-8',errors='replace')
+        for actual_eol in [b'\n',b'\r\n']:
+            for manifest_eol in [b'\n',b'\r\n']:
+                for source in (PACKAGE/'sql').glob('*.tsv'):
+                    (base/'sql'/source.name).write_bytes(source.read_bytes().replace(b'\n',manifest_eol))
+                (base/'fixture/columns').write_bytes(columns.replace(b'\n',actual_eol))
+                (base/'fixture/unique').write_bytes(unique.replace(b'\n',actual_eol))
+                run('before',True);run('after',True)
+                # Real missing columns remain blocked even when line endings differ.
+                missing=b'\n'.join(line for line in columns.splitlines() if line!=b'sys_user\tuser_id')+b'\n'
+                (base/'fixture/columns').write_bytes(missing.replace(b'\n',actual_eol))
+                run('before',False)
+                missing=b'\n'.join(line for line in columns.splitlines() if not line.startswith(b'biz_work_record'))+b'\n'
+                (base/'fixture/columns').write_bytes(missing.replace(b'\n',actual_eol))
+                run('before',True);run('after',False)
+    checks.append('all-four-lf-crlf-combinations-with-real-missing-column-and-allowed-addition-gates')
 
 def smoke_jar():
     sql("UPDATE sys_user SET password='ReleaseSmoke123';")
@@ -80,6 +111,9 @@ def main():
     for script in ['update.sh','schema-check.sh']:
         subprocess.run([BASH,'-n',str(PACKAGE/script)],check=True)
     checks.append('bash-syntax')
+    mixed_line_endings()
+    for table_list in (PACKAGE/'sql').glob('*.tsv'):
+        assert b'\r' not in table_list.read_bytes(), table_list.name+' must use LF'
     assert b'\r' not in (PACKAGE/'SHA256SUMS').read_bytes(), 'Checksum manifest must use Linux LF line endings'
     subprocess.run([BASH,'-c','cd "$1" && sha256sum -c SHA256SUMS --quiet','test',
                     '/'+PACKAGE.as_posix()[0].lower()+PACKAGE.as_posix()[2:]],check=True)
