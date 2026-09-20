@@ -1,0 +1,51 @@
+const { chromium, request } = require('../../target/ui-audit-tools/node_modules/playwright');
+const { expect } = require('../../target/ui-audit-tools/node_modules/playwright/test');
+const { execFileSync } = require('node:child_process');
+const fs = require('node:fs/promises'), path = require('node:path'), assert = require('node:assert/strict');
+async function main() {
+  const root = path.resolve(__dirname, '../../target/ui-audit');
+  const state = JSON.parse(await fs.readFile(path.join(root, 'state.json')));
+  assert.match(state.schema, /^biz_review_test_[0-9a-f]{32}$/); assert.ok(process.env.SHUANGGAO_TEST_DB_PASSWORD);
+  const sql = input => execFileSync(process.env.MYSQL_EXE || 'C:/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe', ['--host=127.0.0.1', '--user=root', state.schema], { env: { ...process.env, MYSQL_PWD: process.env.SHUANGGAO_TEST_DB_PASSWORD }, input });
+  sql("INSERT INTO sys_file(file_id,file_name,file_path,file_url,file_suffix,upload_by) VALUES(999001,'synthetic.pdf','synthetic.pdf','synthetic.pdf','pdf',910001); INSERT INTO biz_material_submission(sub_id,task_id,file_id,reported_value,submit_by,submit_dept_id,manage_dept_id,file_suffix,flow_status,current_handler_id) VALUES(999001,930002,999001,1,910001,920001,920001,'pdf',30,110228);");
+  const api = await request.newContext({ baseURL: state.frontend });
+  const auth = async id => (await (await api.post('/api/system/login', { data: { user_id: id, password: 'WorkRecords123' } })).json()).token;
+  const browser = await chromium.launch({ channel: 'msedge', headless: true });
+  const context = await browser.newContext(); await context.addInitScript(t => localStorage.setItem('token', t), await auth(110228));
+  const page = await context.newPage(); page.setDefaultTimeout(15000); const checks = [], errors = [], requests = [];
+  page.on('pageerror', e => errors.push(e.message)); page.on('request', r => requests.push(new URL(r.url()).pathname));
+  const pass = name => { checks.push(name); console.log(name); };
+  const out = path.join(root, 'evidence-notice-direct'); await fs.mkdir(out, { recursive: true });
+  try {
+    await page.goto(state.frontend + '/home/audit?taskId=930002');
+    await expect(page.getByRole('dialog', { name: '业务审批', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: '确认提交', exact: true })).toBeEnabled();
+    assert.equal(requests.filter(p => p.includes('/biz/audit/task/')).length, 1);
+    assert.equal(requests.filter(p => p.includes('/system/download/')).length, 0);
+    pass('real-own-pending-opens-editable-with-one-task-query-and-no-file-download');
+    sql('UPDATE biz_material_submission SET flow_status=40,current_handler_id=NULL WHERE sub_id=999001');
+    await page.goto(state.frontend + '/home/audit?taskId=930002');
+    const detail = page.getByRole('dialog', { name: '详情查看', exact: true });
+    await expect(detail).toBeVisible(); await expect(detail).toContainText('已通过'); await expect(detail.getByRole('button', { name: '确认提交' })).toHaveCount(0);
+    pass('real-processed-notice-opens-readonly-result');
+    sql('UPDATE biz_material_submission SET flow_status=10,current_handler_id=910003 WHERE sub_id=999001');
+    await page.goto(state.frontend + '/home/audit?taskId=930002'); await expect(detail).toBeVisible();
+    await expect(detail.getByRole('button', { name: '确认提交' })).toHaveCount(0);
+    pass('real-other-handler-cannot-approve-from-notice');
+    await page.route('**/biz/audit/task/930002', async route => { const response = await route.fetch(); await new Promise(resolve => setTimeout(resolve, 1500)); try { await route.fulfill({ response }); } catch { /* Navigation discarded request. */ } });
+    await page.goto(state.frontend + '/home/audit?taskId=930002');
+    await page.getByRole('menuitem', { name: '消息中心', exact: true }).click(); await page.waitForTimeout(1800);
+    await expect(page).toHaveURL(/\/notice$/); await expect(page.getByRole('dialog')).toHaveCount(0); await page.unroute('**/biz/audit/task/930002');
+    pass('simulated-delayed-response-after-navigation-does-not-reopen-dialog');
+    await page.route('**/biz/audit/task/930002', route => route.fulfill({ status: 500, contentType: 'application/json', body: '{"message":"模拟请求失败"}' }));
+    await page.goto(state.frontend + '/home/audit?taskId=930002'); await expect(page.getByText('模拟请求失败', { exact: true })).toBeVisible();
+    await expect(page.locator('.el-table .el-loading-mask')).toHaveCount(0); await expect(page.getByRole('dialog')).toHaveCount(0);
+    pass('simulated-failure-clears-loading-and-shows-error');
+    await page.unroute('**/biz/audit/task/930002');
+    const denied = await browser.newContext(); await denied.addInitScript(t => localStorage.setItem('token', t), await auth(910004));
+    const deniedPage = await denied.newPage(); await deniedPage.goto(state.frontend + '/home/audit?taskId=930002');
+    await expect(deniedPage.getByRole('dialog')).toHaveCount(0); await expect(deniedPage.locator('.el-message--error')).toBeVisible();
+    pass('real-unauthorized-notice-does-not-expose-detail'); assert.deepEqual(errors, []);
+  } finally { await fs.writeFile(path.join(out, 'results.json'), JSON.stringify({ checks, errors }, null, 2)); await browser.close(); await api.dispose(); }
+}
+main().catch(e => { console.error(e); process.exitCode = 1; });
