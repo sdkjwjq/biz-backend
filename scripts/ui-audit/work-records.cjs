@@ -54,6 +54,7 @@ async function main() {
     await button('提交纪实').click(); await expect(page.getByText('请至少选择一项改革任务并填写有效内容')).toBeVisible();
     await select('选择改革任务').click();
     await page.getByRole('option', { name: '审计专用A一级任务' }).click(); await page.keyboard.press('Escape');
+    await button('添加任务').click();
     const progress = page.getByRole('textbox', { name: '关键进展', exact: true });
     await progress.fill('😀'.repeat(301)); await button('保存草稿').click();
     await expect(page.getByText('每项填报内容不得超过300字')).toBeVisible();
@@ -149,8 +150,9 @@ async function main() {
     await button('新建纪实').click(); await select('新建纪实月份', create).click();
     await page.getByRole('option', { name: '2月', exact: true }).click(); await button('确定', create).click();
     await select('选择改革任务').click(); await page.getByRole('option', { name: '审计专用A一级任务' }).click(); await page.keyboard.press('Escape');
+    await button('添加任务').click();
     await progress.fill('保留待移除文本');
-    await page.locator('.reform-picker .el-tag__close').click();
+    await button('移除任务').click();
     await button('取消', page.getByRole('dialog', { name: '移除填报项目' })).click();
     await expect(progress).toHaveValue('保留待移除文本');
     await button('返回列表').first().click(); await button('离开', warning).click();
