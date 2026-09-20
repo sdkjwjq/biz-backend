@@ -33,6 +33,9 @@ public class BizService {
     @Autowired
     private PerformanceService performanceService;
 
+    @Autowired
+    private TaskManagementService taskManagementService;
+
     /**
      * 获取全部任务
      * @return 任务列表
@@ -173,35 +176,8 @@ public class BizService {
      * @param taskDTO 任务数据
      * @param userId 当前用户ID
      */
-    public void addTask(BizTaskDTO taskDTO, Long userId) {
-        try {
-            ensureTaskManager(userId);
-            // 只能添加三级任务,根据parent字段判断二级任务是否正确
-            if (!Integer.valueOf(3).equals(taskDTO.getLevel())) {
-                throw new RuntimeException("只能新增三级任务");
-            }
-            validateTaskHierarchy(taskDTO, new BizTask());
-            if (bizMapper.getTaskById(taskDTO.getParentId()) == null) {
-                throw new RuntimeException("该二级任务不存在");
-            }
-            if (bizMapper.getTaskById(taskDTO.getParentId()).getLevel() != 2) {
-                throw new RuntimeException("该任务不是二级任务,无法添加");
-            }
-            if (!Objects.equals(bizMapper.getTaskById(taskDTO.getParentId()).getDeptId(), taskDTO.getDeptId())) {
-                throw new RuntimeException("该任务所属部门与二级任务部门不一致");
-            }
-            if(taskDTO.getProjectId()!=1){
-                throw new RuntimeException("该任务所属项目id不为1");
-            }
-
-            BizTask task = taskDTO2Task(taskDTO);
-            task.setIsDelete(0);
-            task.setCreateTime(new Date());
-            task.setUpdateTime(new Date());
-            bizMapper.addTask(task);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+    public BizTask addTask(BizTaskDTO taskDTO, Long userId) {
+        return taskManagementService.create(taskDTO, userId);
     }
 
     /**

@@ -617,6 +617,12 @@ class ReviewBatchRegressionApiTest {
     }
 
     private void assertDenied(ResponseEntity<String> response) throws Exception {
+        if (response.getStatusCode() == HttpStatus.FORBIDDEN) {
+            JsonNode error = json.readTree(response.getBody());
+            assertEquals(403, error.path("code").asInt());
+            assertEquals("仅限管理员操作", error.path("message").asText());
+            return;
+        }
         JsonNode error = body(response);
         assertEquals(500, error.path("code").asInt());
         assertTrue(error.path("message").asText().contains("仅限管理员访问"));
@@ -625,6 +631,8 @@ class ReviewBatchRegressionApiTest {
     @Test
     void taskManagementRequiresCurrentAdminRole() throws Exception {
         seedTasks();
+        seedTask(930000L, 0L, 1);
+        jdbc.update("UPDATE biz_task SET parent_id=930000 WHERE task_id=930001");
         String admin = login(ADMIN);
         Map<String, Object> task = json.convertValue(body(request(HttpMethod.GET, "/biz/tasks/930002", admin, null)), Map.class);
         task = new LinkedHashMap<>(task);
@@ -640,6 +648,7 @@ class ReviewBatchRegressionApiTest {
                 assertEquals(original, jdbc.queryForMap("SELECT * FROM biz_task WHERE task_id=930002"));
             }
         }
+        task.remove("taskId"); task.put("taskCode", "ADMIN-CREATE"); task.put("status", "0");
         assertSuccess(request(HttpMethod.POST, "/biz/tasks/manage/add", admin, task), "添加成功");
         long added = jdbc.queryForObject("SELECT task_id FROM biz_task WHERE task_name='Review added task'", Long.class);
         Map<String, Object> created = jdbc.queryForMap("SELECT * FROM biz_task WHERE task_id=?", added);
@@ -659,6 +668,86 @@ class ReviewBatchRegressionApiTest {
         assertDenied(request(HttpMethod.POST, "/biz/tasks/manage/add", admin, task));
         assertEquals(count + 1, jdbc.queryForObject("SELECT COUNT(*) FROM biz_task", Integer.class));
         assertEquals(beforeDenied, jdbc.queryForMap("SELECT * FROM biz_task WHERE task_id=?", added));
+    }
+
+    private Map<String, Object> newManagedTask() {
+        seedTasks(); seedTask(930000L, 0L, 1);
+        jdbc.update("UPDATE biz_task SET parent_id=930000 WHERE task_id=930001");
+        Map<String, Object> task = new LinkedHashMap<>();
+        task.put("projectId", 1); task.put("parentId", 930001); task.put("level", 3); task.put("phase", 2026);
+        task.put("taskCode", " NEW-01 "); task.put("taskName", " New task "); task.put("deptId", DEPT);
+        task.put("leaderId", USER); task.put("auditorId", AUDITOR); task.put("principalId", LEADER);
+        task.put("dataType", "1"); task.put("targetValue", "12.5"); return task;
+    }
+
+    @Test void managedCreateInitializesValuesAndAllowsIndependentDepartment() throws Exception {
+        Map<String, Object> task = newManagedTask(); String admin = login(ADMIN);
+        jdbc.update("INSERT INTO sys_dept(dept_id,dept_name,is_delete) VALUES(920002,'Other department',0)");
+        task.put("deptId", 920002); task.put("ancestors", "forged"); task.put("weight", 99);
+        JsonNode result = body(request(HttpMethod.POST, "/biz/tasks/manage/add?returnDetail=true", admin, task));
+        long id = result.path("taskId").asLong(); assertTrue(id > 0);
+        Map<String, Object> row = jdbc.queryForMap("SELECT * FROM biz_task WHERE task_id=?", id);
+        assertEquals("NEW-01", row.get("task_code")); assertEquals("New task", row.get("task_name"));
+        assertEquals(920002L, ((Number)row.get("dept_id")).longValue());
+        assertEquals("0,930000,930001", row.get("ancestors")); assertEquals("0", row.get("status"));
+        assertEquals(0, ((BigDecimal)row.get("current_value")).signum()); assertEquals(0, ((Number)row.get("progress")).intValue());
+        assertEquals(0, BigDecimal.ONE.compareTo((BigDecimal)row.get("weight")));
+        assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM rel_task_performance WHERE task_id=?", Integer.class, id));
+        // 目录跨年复用；编号只在同项目同年度内唯一。
+        task.put("phase", 2027); assertEquals(200, request(HttpMethod.POST, "/biz/tasks/manage/add", admin, task).getStatusCode().value());
+    }
+
+    @Test void managedCreateRejectsInvalidFieldsWithoutWrites() throws Exception {
+        Map<String, Object> task = newManagedTask(); String admin = login(ADMIN);
+        for (String key : List.of("projectId","parentId","level","phase","taskCode","taskName","deptId","leaderId","auditorId","principalId","dataType","targetValue")) {
+            Map<String, Object> bad = new LinkedHashMap<>(task); bad.remove(key);
+            assertEquals(400, request(HttpMethod.POST, "/biz/tasks/manage/add", admin, bad).getStatusCode().value(), key);
+        }
+        Map<String, Object> invalid = Map.ofEntries(Map.entry("phase",2030),Map.entry("parentId",930002),Map.entry("level",4),
+                Map.entry("taskCode"," "),Map.entry("taskName","x".repeat(501)),Map.entry("deptId",-1),Map.entry("leaderId",-1),
+                Map.entry("auditorId",-1),Map.entry("principalId",-1),Map.entry("dataType","7"),Map.entry("taskId",99),
+                Map.entry("targetValue","1.00001"),Map.entry("currentValue",1),Map.entry("progress",1),Map.entry("status","2"));
+        for (Map.Entry<String, Object> field : invalid.entrySet()) {
+            Map<String, Object> bad = new LinkedHashMap<>(task); bad.put(field.getKey(),field.getValue());
+            assertEquals(400, request(HttpMethod.POST, "/biz/tasks/manage/add", admin, bad).getStatusCode().value(), field.getKey());
+        }
+        for (String value : List.of("-1", "10000000000000000")) {
+            task.put("targetValue",value); assertEquals(400, request(HttpMethod.POST, "/biz/tasks/manage/add", admin, task).getStatusCode().value());
+        }
+        task.put("targetValue", "1");
+        for (String key : List.of("phase", "level", "deptId", "leaderId", "auditorId", "principalId", "parentId")) {
+            Map<String, Object> bad = new LinkedHashMap<>(task); bad.put(key,2026.5);
+            assertEquals(400,request(HttpMethod.POST,"/biz/tasks/manage/add",admin,bad).getStatusCode().value(),key);
+        }
+        assertEquals(3, jdbc.queryForObject("SELECT COUNT(*) FROM biz_task",Integer.class));
+    }
+
+    @Test void managedCreateRejectsDeletedOptionsAndStaleAdminRole() throws Exception {
+        Map<String, Object> task = newManagedTask(); String admin = login(ADMIN);
+        JsonNode options = body(request(HttpMethod.GET,"/biz/tasks/manage/options",admin,null));
+        assertEquals(4, options.path("users").size()); assertFalse(options.toString().contains("password"));
+        for (String update : List.of("UPDATE sys_user SET is_delete=1 WHERE user_id=910001", "UPDATE sys_dept SET is_delete=1 WHERE dept_id=920001", "UPDATE biz_task SET is_delete=1 WHERE task_id=930001")) {
+            jdbc.update(update); assertEquals(400,request(HttpMethod.POST,"/biz/tasks/manage/add",admin,task).getStatusCode().value());
+            jdbc.update("UPDATE sys_user SET is_delete=0"); jdbc.update("UPDATE sys_dept SET is_delete=0"); jdbc.update("UPDATE biz_task SET is_delete=0");
+        }
+        assertFalse(body(request(HttpMethod.GET,"/biz/tasks/manage/capabilities",login(USER),null)).path("canCreate").asBoolean());
+        jdbc.update("UPDATE sys_user SET role='1' WHERE user_id=?",ADMIN);
+        assertFalse(body(request(HttpMethod.GET,"/biz/tasks/manage/capabilities",admin,null)).path("canCreate").asBoolean());
+        assertEquals(403,request(HttpMethod.GET,"/biz/tasks/manage/options",admin,null).getStatusCode().value());
+        assertEquals(403,request(HttpMethod.POST,"/biz/tasks/manage/add",admin,task).getStatusCode().value());
+    }
+
+    @Test void managedCreateConcurrentDuplicateHasExactlyOneWinner() throws Exception {
+        Map<String, Object> task = newManagedTask(); String admin = login(ADMIN);
+        ExecutorService workers = Executors.newFixedThreadPool(2);
+        java.util.concurrent.CountDownLatch ready = new java.util.concurrent.CountDownLatch(2), start = new java.util.concurrent.CountDownLatch(1);
+        try {
+            Callable<Integer> create = () -> { ready.countDown(); assertTrue(start.await(10,TimeUnit.SECONDS)); return request(HttpMethod.POST,"/biz/tasks/manage/add",admin,task).getStatusCode().value(); };
+            Future<Integer> first=workers.submit(create), second=workers.submit(create); assertTrue(ready.await(10,TimeUnit.SECONDS)); start.countDown();
+            List<Integer> statuses = new ArrayList<>(List.of(first.get(20,TimeUnit.SECONDS),second.get(20,TimeUnit.SECONDS))); statuses.sort(Integer::compareTo);
+            assertEquals(List.of(200,409),statuses);
+            assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM biz_task WHERE task_code='NEW-01'",Integer.class));
+        } finally { start.countDown(); workers.shutdownNow(); }
     }
 
     private void seedSubmissionFlow() {

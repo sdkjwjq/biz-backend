@@ -1,0 +1,12 @@
+{
+  "checks": [
+    "real-api-admin-only-entry-and-required-validation",
+    "validation-and-before-after-impact-preview",
+    "real-create-cross-department-zero-values-single-submit-and-open-detail",
+    "created-task-located-in-expanded-directory",
+    "real-duplicate-error-retains-form-and-cancel-retains-edit",
+    "narrow-screen-real-wheel-scroll-and-footer-access",
+    "reload-and-no-browser-exceptions"
+  ],
+  "errors": []
+}

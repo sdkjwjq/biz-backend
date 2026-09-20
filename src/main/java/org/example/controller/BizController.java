@@ -1,5 +1,13 @@
 package org.example.controller;
 
+import org.example.entity.BizTask;
+import org.example.service.TaskManagementService;
+import org.example.service.TaskManagementException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
+import org.springframework.http.ResponseEntity;
+import java.util.Map;
+import java.util.List;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.example.entity.dto.*;
@@ -16,6 +24,24 @@ import org.example.service.BizService;
 @RestController
 @RequestMapping("/biz")
 public class BizController {
+    @Autowired
+    private TaskManagementService taskManagementService;
+    @Autowired
+    private ObjectMapper taskManagementJson;
+
+    @GetMapping("/tasks/manage/capabilities")
+    public Object taskManagementCapabilities(HttpServletRequest request) {
+        return Map.of("canCreate", taskManagementService.canManage(JWTUtil.getUserIdFromToken(request.getHeader("Authorization"))));
+    }
+
+    @GetMapping("/tasks/manage/options")
+    public Object taskManagementOptions(HttpServletRequest request) {
+        try {
+            return taskManagementService.options(JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
+        } catch (TaskManagementException e) {
+            return ResponseEntity.status(e.getCode()).body(new ErrorVO(e.getMessage(), e.getCode()));
+        }
+    }
     @Autowired
     private BizService bizService;
 
@@ -105,10 +131,27 @@ public class BizController {
      * @return 操作结果或错误信息
      */
     @PostMapping("/tasks/manage/add")
-    public Object addTask(@RequestBody BizTaskDTO task, HttpServletRequest request){
+    public Object addTask(@RequestBody JsonNode body, @RequestParam(value="returnDetail", defaultValue="false") boolean returnDetail, HttpServletRequest request){
         try{
-            bizService.addTask(task, JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
+            Long userId = JWTUtil.getUserIdFromToken(request.getHeader("Authorization"));
+            if (!taskManagementService.canManage(userId)) throw new TaskManagementException(403, "仅限管理员操作");
+            if (body == null || !body.isObject()) throw new TaskManagementException(400, "请填写任务信息");
+            // 局部拒绝 Jackson 的小数转整数截断，不改变其他旧接口的数字解析。
+            for (String field : List.of("taskId", "projectId", "parentId", "phase", "level", "deptId", "leaderId", "auditorId", "principalId", "progress")) {
+                JsonNode value = body.get(field);
+                if (value != null && !value.isNull() && !value.isIntegralNumber()
+                        && !(value.isTextual() && value.asText().matches("[0-9]+"))) {
+                    throw new TaskManagementException(400, "年度、层级、人员和部门编号必须为整数");
+                }
+            }
+            BizTaskDTO task;
+            try { task = taskManagementJson.treeToValue(body, BizTaskDTO.class); }
+            catch (Exception e) { throw new TaskManagementException(400, "任务字段格式不正确或数值超出范围"); }
+            BizTask created = bizService.addTask(task, userId);
+            if (returnDetail) return Map.of("taskId", created.getTaskId(), "message", "任务添加成功");
             return "任务"+task.getTaskName()+"添加成功";
+        } catch (TaskManagementException e) {
+            return ResponseEntity.status(e.getCode()).body(new ErrorVO(e.getMessage(), e.getCode()));
         } catch (Exception e) {
             return new ErrorVO(e.getMessage(), 500);
         }
