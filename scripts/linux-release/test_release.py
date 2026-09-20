@@ -12,9 +12,10 @@ import socket
 import time
 import urllib.request
 import shutil
+import gzip
 
 ROOT=Path(__file__).resolve().parents[2]
-PACKAGE=ROOT.parent/'releases/shuanggao-update-20260920'
+PACKAGE=ROOT.parent/'releases/shuanggao-update-20260920-r2'
 MYSQL=Path(r'C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe')
 BASH=r'C:\Program Files\Git\bin\bash.exe'
 env=os.environ.copy()
@@ -72,7 +73,7 @@ def mixed_line_endings():
     checks.append('all-four-lf-crlf-combinations-with-real-missing-column-and-allowed-addition-gates')
 
 def smoke_jar():
-    sql("UPDATE sys_user SET password='ReleaseSmoke123';")
+    sql("UPDATE sys_user SET password='ReleaseSmoke123',force_password_change=0;")
     # Pick a local free port; all uploads, logs and credentials stay in a temporary test directory.
     with socket.socket() as listener:
         listener.bind(('127.0.0.1',0)); port=listener.getsockname()[1]
@@ -107,8 +108,51 @@ def smoke_jar():
                 process.terminate(); process.wait(timeout=30)
     checks.append('packaged-jar-real-start-external-password-login-and-new-module-apis')
 
+def restore_roundtrip():
+    """Exercise the actual Bash restoration helpers against synthetic rows only."""
+    with tempfile.TemporaryDirectory(prefix='release-restore-',dir=ROOT/'target') as temp:
+        base=Path(temp); (base/'restore').mkdir(); (base/'backup').mkdir()
+        for name in ['schema-check.sh','database-restore.sh']:
+            shutil.copy2(PACKAGE/name,base/name)
+        shutil.copytree(PACKAGE/'sql',base/'sql')
+        original=snapshot()
+        def dump():
+            return subprocess.check_output([str(MYSQL.with_name('mysqldump.exe')),*args,'--set-gtid-purged=OFF',schema],env=env)
+        (base/'backup/database.sql.gz').write_bytes(gzip.compress(dump()))
+        sql("UPDATE sys_user SET nick_name='Restored synthetic user',force_password_change=1 WHERE user_id=110228")
+        (base/'restore/20260920backup.sql').write_bytes(dump())
+        sql("UPDATE sys_user SET nick_name='Current synthetic user',force_password_change=0 WHERE user_id=110228")
+        sql('CREATE TABLE only_in_current(id INT); INSERT INTO only_in_current VALUES(1)')
+        harness='''#!/usr/bin/env bash
+set -Eeuo pipefail
+export PATH="/c/Program Files/MySQL/MySQL Server 8.0/bin:$PATH"
+PACKAGE="$1"; BACKUP="$1/backup"; DB_NAME="$2"; export DB_NAME
+DB_HOST=127.0.0.1; DB_PORT=3306; DB_USER=root; export DB_HOST DB_PORT DB_USER
+MYSQL_ADMIN=(mysql --host=127.0.0.1 --user=root --default-character-set=utf8mb4 --batch --skip-column-names)
+MYSQL=("${MYSQL_ADMIN[@]}" "$DB_NAME")
+die() { echo "$*" >&2; exit 1; }
+source "$PACKAGE/database-restore.sh"
+trap 'drop_stage_database' EXIT
+if [[ "$3" == restore ]]; then restore_packaged_database; else restore_saved_database; fi
+'''
+        script=base/'test.sh';script.write_text(harness,encoding='utf-8',newline='\n')
+        bash_base='/'+base.as_posix()[0].lower()+base.as_posix()[2:]
+        def run(mode,success=True):
+            p=subprocess.run([BASH,str(script),bash_base,schema,mode],env=env,capture_output=True)
+            assert (p.returncode==0)==success,p.stderr.decode(errors='replace')
+        run('restore')
+        assert sql('SELECT nick_name,force_password_change FROM sys_user WHERE user_id=110228').decode().strip()=='Restored synthetic user\t1'
+        assert 'only_in_current' not in snapshot()
+        assert (base/'backup/database-replaced').exists()
+        check_schema('after')
+        run('rollback'); assert snapshot()==original
+        checks.append('real-bash-staged-full-restore-and-preupdate-database-rollback-synthetic-only')
+        (base/'restore/20260920backup.sql').write_text('INVALID SYNTHETIC SQL;',encoding='utf-8')
+        run('restore',False); assert snapshot()==original
+        checks.append('invalid-restore-staging-leaves-current-database-untouched')
+
 def main():
-    for script in ['update.sh','schema-check.sh']:
+    for script in ['update.sh','schema-check.sh','database-restore.sh']:
         subprocess.run([BASH,'-n',str(PACKAGE/script)],check=True)
     checks.append('bash-syntax')
     mixed_line_endings()
@@ -122,6 +166,7 @@ def main():
     # Never run the Linux deployment entry point or access production paths on Windows.
     with tempfile.TemporaryDirectory(prefix='release-shell-',dir=ROOT/'target') as temp:
         base=Path(temp)
+        shutil.copy2(PACKAGE/'database-restore.sh',base/'database-restore.sh')
         prefix=(PACKAGE/'update.sh').read_text(encoding='utf-8').split('[[ $EUID == 0 ]]')[0]
         harness=prefix+'''
 BACKEND="$1/backend"; WEB="$1/web"; BACKUP="$1/backup"
@@ -149,7 +194,19 @@ exit 17
         assert (base/'web/new-asset.js').exists() and (base/'backend/uploads/material.docx').exists()
         assert not (base/'backend/.release.properties').exists()
         assert (base/'backup/started').exists()
+        for db_ok in [True,False]:
+            (base/'backup/started').unlink(missing_ok=True)
+            (base/'backup/database-restored').unlink(missing_ok=True)
+            recovery = ('restore_saved_database() { printf restored > "$BACKUP/database-restored"; }' if db_ok
+                        else 'restore_saved_database() { return 1; }')
+            test=harness.replace('CHANGED=1', recovery+'\nDB_REPLACED=1\nCHANGED=1')
+            test=test.replace('start_old() { printf', 'start_old() { [[ -f "$BACKUP/database-restored" ]] || return 1; printf')
+            script.write_text(test,encoding='utf-8',newline='\n')
+            result=subprocess.run([BASH,str(script),bash_base],capture_output=True)
+            assert result.returncode==1,result.stderr
+            assert (base/'backup/started').exists()==db_ok
     checks.append('simulated-failure-restores-app-and-web-keeps-upload-and-assets')
+    checks.append('simulated-database-failure-restores-db-before-app-and-never-starts-app-after-db-recovery-fails')
     for line in (PACKAGE/'SHA256SUMS').read_text().splitlines():
         digest,name=line.split('  ',1)
         assert hashlib.sha256((PACKAGE/name).read_bytes()).hexdigest()==digest
@@ -162,13 +219,17 @@ exit 17
     checks.append('checksums-password-exclusion-and-templates')
     ddl=(PACKAGE/'sql/additive.sql').read_text(encoding='utf-8')
     assert not re.search(r'^\s*(DROP|DELETE|UPDATE|INSERT|TRUNCATE|REPLACE)\b',ddl,re.M|re.I)
-    dump=subprocess.check_output([str(MYSQL.with_name('mysqldump.exe')),*args,'--no-data','--skip-triggers','--set-gtid-purged=OFF','biz'],env=env)
+    # Only table definitions from the supplied online backup, never its business rows.
+    source=(PACKAGE/'restore/20260920backup.sql').read_text(encoding='utf-8')
+    definitions=re.findall(r'CREATE TABLE\s+`\w+`\s*\(.*?\)\s*ENGINE=.*?;',source,re.S)
+    assert len(definitions)==37
+    dump=('SET FOREIGN_KEY_CHECKS=0;\n'+'\n'.join(definitions)+'\nSET FOREIGN_KEY_CHECKS=1;').encode()
     assert not re.search(rb'^\s*(CREATE DATABASE|USE )',dump,re.M)
     sql('CREATE DATABASE `'+schema+'` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci',None)
     try:
         sql(dump)
         sql((ROOT/'scripts/ui-audit/fixture.sql').read_bytes())
-        sql('DROP TABLE biz_work_record_snapshot; DROP TABLE biz_work_record_entry; DROP TABLE biz_work_record;')
+        sql('DROP TABLE IF EXISTS biz_work_record_snapshot; DROP TABLE IF EXISTS biz_work_record_entry; DROP TABLE IF EXISTS biz_work_record;')
         before=snapshot()
         check_schema('before')
         check_schema('after',False)
@@ -185,6 +246,7 @@ exit 17
         check_schema('before'); sql(ddl); check_schema('after')
         checks.append('approved-legacy-missing-columns-added')
         smoke_jar()
+        restore_roundtrip()
         sql('ALTER TABLE biz_task DROP COLUMN exp_effect;')
         check_schema('before',False)
         checks.append('unknown-missing-business-column-blocks-deployment')

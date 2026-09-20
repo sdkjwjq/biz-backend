@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Linux / Bash 4.2+; no Python dependency. Never restore a database automatically.
+# Linux / Bash 4.2+; data restoration requires explicit --restore-backup.
 set -Eeuo pipefail
 umask 077
 PACKAGE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
@@ -19,9 +19,20 @@ NEW_PID=''
 JAVA_BIN=''
 OLD_ARGS=()
 NEW_ARGS=()
+RESTORE_BACKUP=0
 die() { printf '错误：%s\n' "$*" >&2; exit 1; }
 say() { printf '[更新] %s\n' "$*"; }
 need() { command -v "$1" >/dev/null || die "缺少命令 $1；尚未更新程序"; }
+source "$PACKAGE/database-restore.sh"
+
+database_credentials() {
+  if [[ -n ${MYSQL_PWD:-} ]]; then DB_PASSWORD=$MYSQL_PWD
+  else read -r -s -p '请输入服务器 MySQL root 密码（不回显）：' DB_PASSWORD < /dev/tty; printf '\n'; fi
+  [[ -n "$DB_PASSWORD" ]] || die '数据库密码不能为空'
+  export MYSQL_PWD=$DB_PASSWORD
+  MYSQL_ADMIN=(mysql --host="$DB_HOST" --port="$DB_PORT" --user="$DB_USER" --default-character-set=utf8mb4 --batch --skip-column-names)
+  MYSQL=("${MYSQL_ADMIN[@]}" "$DB_NAME")
+}
 
 find_app() {
   local proc arg jar_path found count=0 cwd i
@@ -59,7 +70,7 @@ stop_app() {
 }
 
 start_old() {
-  (cd "$BACKEND"; nohup "$JAVA_BIN" "${OLD_ARGS[@]}" >> "$BACKEND/logs/release-startup.log" 2>&1 < /dev/null 9>&- & echo $! > "$BACKUP/restarted.pid")
+  (cd "$BACKEND"; unset MYSQL_PWD; nohup "$JAVA_BIN" "${OLD_ARGS[@]}" >> "$BACKEND/logs/release-startup.log" 2>&1 < /dev/null 9>&- & echo $! > "$BACKUP/restarted.pid")
 }
 
 health() {
@@ -95,15 +106,26 @@ restore_files() {
 cleanup() {
   local code=$?
   trap - EXIT INT TERM
-  unset MYSQL_PWD DB_PASSWORD
   if [[ $CHANGED == 1 && $FINISHED == 0 ]]; then
-    say "更新未完成，恢复旧程序和前端；增量表结构保留。备份：$BACKUP"
+    say "更新未完成，恢复旧程序和前端。备份：$BACKUP"
     set +e
+    if [[ $DB_REPLACED == 1 ]]; then
+      say '数据库恢复步骤已开始，先恢复本次更新前的完整数据库备份'
+      (set -Eeuo pipefail; stop_app; restore_saved_database)
+      if [[ $? != 0 ]]; then
+        say "数据库自动恢复失败，后端保持停止。保留备份并执行 bash update.sh --rollback-database '$BACKUP'"
+        unset MYSQL_PWD DB_PASSWORD; exit 1
+      fi
+    fi
     (set -Eeuo pipefail; restore_files)
     local restored=$?
-    [[ $restored == 0 ]] && say '旧程序已恢复' || say "自动恢复失败，请执行 bash update.sh --rollback '$BACKUP'"
+    if [[ $restored == 0 ]]; then say '旧程序已恢复'
+    elif [[ $DB_REPLACED == 1 ]]; then say "自动恢复失败，请执行 bash update.sh --rollback-database '$BACKUP'"
+    else say "自动恢复失败，请执行 bash update.sh --rollback '$BACKUP'"; fi
     code=1
   fi
+  if [[ -n "$STAGE_DB" ]]; then drop_stage_database || say "暂存库未清理：$STAGE_DB"; fi
+  unset MYSQL_PWD DB_PASSWORD
   exit "$code"
 }
 
@@ -113,19 +135,42 @@ for command in bash readlink mysql mysqldump gzip tar sha256sum curl flock cp mv
 exec 9> "$BACKEND/.release.lock"
 flock -n 9 || die '另一更新/回滚正在运行'
 MODE=${1:---update}
-if [[ "$MODE" == --rollback ]]; then
+if [[ "$MODE" == --rollback || "$MODE" == --rollback-database ]]; then
   [[ $# == 2 ]] || die '用法：bash update.sh --rollback /root/biz-backend/backups/备份目录'
   BACKUP=$(readlink -f "$2")
   [[ "$BACKUP" == "$BACKEND"/backups/release-* && -f "$BACKUP/state.sh" && -f "$BACKUP/old.jar" ]] || die '不是本脚本生成的完整备份目录'
   [[ "$(stat -c %u "$BACKUP/state.sh")" == 0 ]] || die '备份配置必须属于 root'
   # This file is generated with Bash %q, contains only saved executable/argv, and is root-only.
   source "$BACKUP/state.sh"
-  say '仅恢复程序和前端，不导入数据库备份、不删除新增纪实数据'
+  if [[ "$MODE" == --rollback-database ]]; then
+    database_credentials
+    gzip -t "$BACKUP/database.sql.gz" || die '更新前数据库备份损坏，未停止服务'
+    say '先保留当前数据库，再恢复本次更新前数据库及应用；更新后数据保留在额外备份中'
+    stop_app
+    rollback_copy="$BACKUP/before-rollback-$(date +%Y%m%d-%H%M%S)-$$.sql.gz"
+    database_exists=$("${MYSQL_ADMIN[@]}" -e "SELECT COUNT(*) FROM information_schema.SCHEMATA WHERE SCHEMA_NAME='$DB_NAME'")
+    if [[ "$database_exists" == 1 ]]; then
+      mysqldump --host="$DB_HOST" --port="$DB_PORT" --user="$DB_USER" --single-transaction --routines --triggers --events --hex-blob --set-gtid-purged=OFF "$DB_NAME" | gzip > "$rollback_copy"
+      gzip -t "$rollback_copy"
+    else say '当前业务库不存在，从已校验的更新前备份恢复'; fi
+    restore_saved_database
+  else
+    [[ ! -f "$BACKUP/database-replaced" ]] || die '该更新恢复过数据库，请使用 --rollback-database 备份目录，不能只回滚应用'
+    database_credentials
+    has_marker=$("${MYSQL[@]}" -e "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='biz_work_record' AND COLUMN_NAME='delete_marker'")
+    if [[ "$has_marker" == 1 ]]; then
+      archived=$("${MYSQL[@]}" -e 'SELECT COUNT(*) FROM biz_work_record WHERE delete_marker<>0')
+      [[ "$archived" == 0 ]] || die '存在逻辑删除纪实，禁止直接恢复可能不识别删除标记的旧应用'
+    fi
+  fi
+  say '恢复备份的程序和前端，上传材料保持不变'
   restore_files
   say '回滚完成'
   exit 0
 fi
-[[ "$MODE" == --check || "$MODE" == --update ]] || die '支持 --check、--update 或 --rollback 备份目录'
+[[ "$MODE" == --check || "$MODE" == --update ]] || die '支持 --check、--update [--restore-backup]、--rollback 或 --rollback-database 备份目录'
+if [[ $# == 2 && "$2" == --restore-backup && "$MODE" == --update ]]; then RESTORE_BACKUP=1
+else [[ $# -le 1 ]] || die '仅 --update 可搭配 --restore-backup'; fi
 trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
@@ -149,28 +194,33 @@ done
 "$JAVA_BIN" -version 2>&1 | head -n 1 | grep -Eq 'version "(17|18|19|2[0-9])\.' || die '需要 Java 17 或更新版本'
 if command -v nginx >/dev/null; then nginx -t || die '现有 nginx 配置检查未通过'; fi
 say "目标：$BACKEND/$JAR；前端：$WEB；数据库：$DB_HOST:$DB_PORT/$DB_NAME"
-if [[ -n ${MYSQL_PWD:-} ]]; then
-  DB_PASSWORD=$MYSQL_PWD
-else
-  read -r -s -p '请输入服务器 MySQL root 密码（不回显）：' DB_PASSWORD < /dev/tty
-  printf '\n'
+database_credentials
+restore_digest=$(sha256sum "$PACKAGE/restore/20260920backup.sql" | awk '{print $1}')
+RESTORE_MARKER="$BACKEND/.restored-$restore_digest"
+if [[ $RESTORE_BACKUP == 1 ]]; then
+  [[ ! -f "$RESTORE_MARKER" ]] || die '该备份已成功恢复过；再次更新请使用 --update，避免重复覆盖新数据'
+  say '本次按指定要求恢复 20260920backup.sql；备份后数据库将回到该时点，之后数据仅保留在更新前备份中'
 fi
-[[ -n "$DB_PASSWORD" ]] || die '数据库密码不能为空'
-export MYSQL_PWD=$DB_PASSWORD
-MYSQL=(mysql --host="$DB_HOST" --port="$DB_PORT" --user="$DB_USER" --default-character-set=utf8mb4 --batch --skip-column-names "$DB_NAME")
 version=$("${MYSQL[@]}" -e 'SELECT VERSION()')
 [[ "$version" == 8.* ]] || die '当前迁移包要求 MySQL 8'
 "${MYSQL[@]}" -e 'SELECT 1' >/dev/null
 export DB_HOST DB_PORT DB_USER DB_NAME
-bash "$PACKAGE/schema-check.sh" before
+if [[ $RESTORE_BACKUP == 0 ]]; then bash "$PACKAGE/schema-check.sh" before; fi
 db_kb=$("${MYSQL[@]}" -e 'SELECT CEIL(COALESCE(SUM(DATA_LENGTH+INDEX_LENGTH),0)/1024) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE()')
 files_kb=$(du -sk "$BACKEND/uploads" "$WEB" "$BACKEND/$JAR" | awk '{sum+=$1} END {print sum}')
 free_kb=$(df -Pk "$BACKEND" | awk 'NR==2 {print $4}')
-required_kb=$((db_kb*2 + files_kb*2 + 262144))
+required_kb=$((db_kb*2 + files_kb*2 + 524288))
 [[ $free_kb -gt $required_kb ]] || die '备份分区可用空间不足（预留数据库/文件备份及恢复空间）；未停止服务'
 web_free_kb=$(df -Pk "$WEB" | awk 'NR==2 {print $4}')
 web_required_kb=$(du -sk "$PACKAGE/frontend" | awk '{print $1+65536}')
 [[ $web_free_kb -gt $web_required_kb ]] || die '前端分区空间不足；未停止服务'
+if [[ $RESTORE_BACKUP == 1 ]]; then
+  mysql_data_dir=$("${MYSQL[@]}" -e 'SELECT @@datadir')
+  [[ -d "$mysql_data_dir" ]] || die '无法检查 MySQL 数据分区空间'
+  mysql_free_kb=$(df -Pk "$mysql_data_dir" | awk 'NR==2 {print $4}')
+  restore_kb=$(du -k "$PACKAGE/restore/20260920backup.sql" | awk '{print $1}')
+  [[ $mysql_free_kb -gt $((db_kb + restore_kb*8 + 524288)) ]] || die 'MySQL 数据分区空间不足以建立恢复暂存库'
+fi
 [[ "$MODE" == --update ]] || { say '只读检查通过；尚未停止服务或修改数据库'; FINISHED=1; exit 0; }
 
 BACKUP="$BACKEND/backups/release-$(date +%Y%m%d-%H%M%S)-$$"
@@ -190,7 +240,12 @@ gzip -t "$BACKUP/database.sql.gz"
 [[ $(stat -c %s "$BACKUP/database.sql.gz") -gt 100 ]] || die '数据库备份文件异常'
 tar -czf "$BACKUP/uploads.tar.gz" -C "$BACKEND" uploads
 gzip -t "$BACKUP/uploads.tar.gz"
-say '备份完成，仅补充缺失表/字段；不执行任何业务数据修改 SQL'
+if [[ $RESTORE_BACKUP == 1 ]]; then
+  say '备份完成，先在暂存库验证指定备份和迁移，再恢复业务库'
+  restore_packaged_database
+else
+  say '备份完成，仅补充缺失表/字段；不修改已有业务数据'
+fi
 "${MYSQL[@]}" < "$PACKAGE/sql/additive.sql" > "$BACKUP/migration.log"
 bash "$PACKAGE/schema-check.sh" after
 
@@ -202,11 +257,11 @@ escaped_password=$(printf '%s' "$DB_PASSWORD" | sed -e 's/\\/\\\\/g' -e 's/ /\\ 
 } > "$BACKEND/.release.properties.new"
 chmod 600 "$BACKEND/.release.properties.new"
 mv -f "$BACKEND/.release.properties.new" "$BACKEND/.release.properties"
-unset MYSQL_PWD DB_PASSWORD escaped_password
+unset DB_PASSWORD escaped_password
 cp "$PACKAGE/backend/$JAR" "$BACKEND/$JAR.new"
 chmod 644 "$BACKEND/$JAR.new"
 mv -f "$BACKEND/$JAR.new" "$BACKEND/$JAR"
-(cd "$BACKEND"; nohup "$JAVA_BIN" "${NEW_ARGS[@]}" \
+(cd "$BACKEND"; unset MYSQL_PWD; nohup "$JAVA_BIN" "${NEW_ARGS[@]}" \
   --spring.config.additional-location="file:$BACKEND/.release.properties" --server.port="$PORT" \
   >> "$BACKEND/logs/release-startup.log" 2>&1 < /dev/null 9>&- & echo $! > "$BACKUP/new.pid")
 NEW_PID=$(cat "$BACKUP/new.pid")
@@ -236,7 +291,9 @@ if [[ ! -e "$BACKEND/uploads/budget-template.xlsx" ]]; then
   cp "$PACKAGE/templates/budget-template.xlsx" "$BACKEND/uploads/budget-template.xlsx"
 fi
 cmp "$PACKAGE/frontend/index.html" "$WEB/index.html" || die '前端入口校验失败'
+if [[ $RESTORE_BACKUP == 1 ]]; then printf '%s\n' "$BACKUP" > "$RESTORE_MARKER"; fi
 FINISHED=1
 say "更新成功。备份：$BACKUP"
 say "访问 http://172.19.2.81/ 并刷新浏览器。前端模板位于 $WEB/templates；纪实 Word 模板内置 JAR。"
-say "回滚命令：bash '$PACKAGE/update.sh' --rollback '$BACKUP'"
+if [[ $RESTORE_BACKUP == 1 ]]; then say "回滚命令（数据库及应用）：bash '$PACKAGE/update.sh' --rollback-database '$BACKUP'"
+else say "回滚命令：bash '$PACKAGE/update.sh' --rollback '$BACKUP'"; fi

@@ -1,61 +1,64 @@
-# 双高平台 Linux 更新包（2026-09-20）
+# 双高平台更新包 20260920-r2
 
-适配服务器：172.19.2.81，Java 17、MySQL 8，普通 Java 后台进程（不创建 systemd 服务）。服务端不需要 Python 或 Node。
+适配 172.19.2.81：Java 17、MySQL 8、Bash 4.2+，服务端不需要 Python 或 Node。
 
-## 一键更新
+## 本次一键更新（含已确认的数据恢复）
 
-上传 `shuanggao-update-20260920.tar.gz` 到 `/root`，执行：
+上传整个 `shuanggao-update-20260920-r2` 文件夹到 `/root/biz-backend/`，不要覆盖旧包。
 
 ```bash
-cd /root
-tar -xzf shuanggao-update-20260920.tar.gz
-cd shuanggao-update-20260920
+cd /root/biz-backend/shuanggao-update-20260920-r2
+chmod -R go-rwx .
+bash update.sh --update --restore-backup
+```
+
+按提示输入服务器 MySQL root 密码，不回显。请使用文件传输工具的二进制传输模式，保留目录结构和文件内容。
+
+**该命令将数据库恢复到提供的 20260920backup.sql 时点。** 后续修改的数据（包括新产生的工作纪实）不会并入恢复结果，而是完整保留在更新前备份中。上传材料不删除、不覆盖。恢复仅影响 biz 数据库，不影响其他数据库。
+
+步骤：文件校验 → 验证进程及空间 → 备份程序和前端 → 停止后端 → 完整备份当前数据库及 uploads → 暂存库导入指定备份并验证迁移 → 恢复 biz → 补齐结构 → 启动新后端并验证数据库连通 → 更新前端入口。
+
+同一备份成功恢复后会记录标记，禁止重复恢复覆盖新数据。之后普通更新使用：
+
+```bash
 bash update.sh --update
 ```
 
-根据提示输入服务器 MySQL root 密码。密码不回显，不放进更新包、命令行或 Git；写入服务器 `/root/biz-backend/.release.properties`，权限 600。下次启动应保留脚本使用的 `--spring.config.additional-location=file:/root/biz-backend/.release.properties` 参数。
+普通更新只补充结构，不导入备份、不覆盖业务行。`bash update.sh --check` 只读检查当前环境及普通增量更新兼容性，不执行数据恢复。
 
-可先运行 `bash update.sh --check`，只检查依赖、进程、配置和数据库兼容性，不停服务、不修改数据库。默认数据库为本机 TCP 3306、biz、root；端口为 8080。
+## 本次功能
+
+- 管理员工作纪实逻辑删除、同月重新填报，保留删除原因和原文快照。
+- 工作纪实从现有改革任务逐项添加，兼容原文及 Word 导出。
+- 强制改密读取线上 `force_password_change`；首次改密前工号可登录，成功改密置 0；按已确认规则，所有有效账号也可凭工号重置密码。
+- 工作纪实及相关缺失结构迁移；保留已有线上改密标记，不按密码复杂度改写。
 
 ## 文件位置
 
-| 内容 | 位置 |
-|---|---|
-| 后端程序 | `/root/biz-backend/biz_backend-1.0-SNAPSHOT.jar` |
-| 前端文件 | `/usr/share/nginx/html` |
-| 原上传材料 | `/root/biz-backend/uploads`，完整保留 |
-| 预算下载模板 | `/usr/share/nginx/html/templates/budget-template.xlsx` |
-| 预算兼容副本 | uploads 中缺少同名文件时才补充，不覆盖现有文件 |
-| 工作纪实导出模板 | JAR 内 `templates/work-record.docx`，包含仿宋 GB2312 小四表格字体处理 |
-| 启动输出 | `/root/biz-backend/logs/release-startup.log` |
-| 自动备份 | `/root/biz-backend/backups/release-时间-进程号/` |
+- 后端：`/root/biz-backend/biz_backend-1.0-SNAPSHOT.jar`。
+- 前端：`/usr/share/nginx/html`，保留旧哈希资源及现有上传目录。
+- 原材料：`/root/biz-backend/uploads`，预算模板仅缺失时补充。
+- Word 模板内置 JAR；前端下载模板在 `/usr/share/nginx/html/templates`。
+- 数据库外部配置：`/root/biz-backend/.release.properties`，权限 600。
+- 更新备份：`/root/biz-backend/backups/release-日期时间-PID`，包括更新前 SQL、JAR、前端和材料。
+- 启动日志：`/root/biz-backend/logs/release-startup.log`；迁移和恢复日志在本次备份目录。
 
-更新不改 nginx 配置，不删除旧前端哈希资源、上传材料、`.well-known` 或服务器其他文件；前端入口最后发布。浏览器更新后按 Ctrl+F5 刷新。
+**更新包包含真实业务备份及其中的用户密码，只放在 root 私有目录，不放 nginx 目录或公开分享。** JAR 不内置本地或服务器 MySQL 密码，原始备份不提交 Git。
 
-## 数据库保护
+## 失败与回滚
 
-- 先校验包和当前环境、备份程序及前端，再停止目标后端，完整备份数据库、触发器/存储过程/事件及 uploads；任一备份失败即停止更新并尝试恢复旧服务。
-- 只执行 `sql/additive.sql`：按需创建工作纪实三表，以及兼容旧环境的审核快照、绩效审核、成果审核和预算表；仅补充白名单中的缺失字段。
-- 已有表和列不重建，不导入本地业务记录；没有业务 INSERT、UPDATE、DELETE、TRUNCATE、DROP，不执行历史数据纠偏、账号权限调整、密码重置或审核日志重建。
-- 增量 DDL 在 MySQL 中不是整体事务；中途失败可能已新增部分结构，脚本保留这些结构，重试可跳过已有对象。不会为了回滚而删除新业务数据。
-- 检测到不在迁移范围内的缺失基础字段，会明确报错；不猜测旧数据格式、不覆盖线上数据。
-- 如原进程含显式数据库或自定义 Spring 配置参数，脚本会在修改前停止，需按报错核对参数。
-- 新版正常启动后继续执行平台原有定时业务，本包没有额外数据修复任务。
+失败时自动恢复旧程序和前端；如果已开始替换数据库，先恢复更新前数据库再启动旧程序。数据库自动恢复失败时保持后端停止并显示备份路径。
 
-## 回滚
-
-更新失败时脚本自动尝试恢复旧 JAR、旧前端、旧启动参数。失败或需要人工回滚时，使用更新输出的准确备份路径：
+恢复过数据的更新需同时回滚数据库及应用：
 
 ```bash
-bash /root/shuanggao-update-20260920/update.sh --rollback /root/biz-backend/backups/release-实际备份目录
+bash update.sh --rollback-database /root/biz-backend/backups/release-实际日期时间-PID
 ```
 
-回滚不会导入数据库备份，也不覆盖上传材料。数据库备份 `database.sql.gz` 留作人工灾难恢复；禁止在继续有用户操作的线上库中直接覆盖导入。需要恢复数据时应单独确认恢复时间点。
+回滚先停止写入并额外保存当前数据库到 `before-rollback-*.sql.gz`，再恢复更新前数据与应用。回滚后的在线数据回到更新前，更新后数据保留在额外备份中。不要把此命令当作重启。
 
-## 内容与验证边界
+普通增量更新可用 `--rollback 备份目录` 恢复应用；存在逻辑删除纪实时，禁止直接回滚到可能不识别删除标记的旧应用。任何回滚均不删除上传材料。
 
-包含当前前后端代码及现有前端未提交的成果页、审核中心修改（详见 manifest），不包含测试数据、日志和数据库密码。管理员功能仅包含已经完成的“新增三级任务”，任务移交和绩效关联管理尚未开发。
+## 验证范围
 
-验证包括构建、Shell 语法、隔离 MySQL 增量迁移、重复执行的数据保留检查，以及使用实际发布 JAR 和外部密码配置启动、登录、查询管理员和纪实权限接口；另用模拟进程操作验证失败恢复确实保留上传材料和前端资源。详见 verification.json。程序业务已通过 46 项接口回归及 7 组新增任务 Playwright 操作。脚本完整 Linux 进程启停仍需在目标服务器首次执行时由内置检查验证；本地 Windows 不冒充服务器实测。
-
-原手动备份 `/root/biz-backend/20260920backup.sql` 不会被修改。更新时请暂停用户操作；脚本不会自动安装软件、变更系统服务或修改防火墙。
+结果见 `verification.json`，代码版本及备份摘要见 `manifest.json`，文件校验见 `SHA256SUMS`。本地测试使用合成数据及随机数据库，未连接生产服务器；Linux /proc 进程管理不在 Windows 上实际执行。

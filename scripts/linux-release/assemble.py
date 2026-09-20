@@ -1,4 +1,4 @@
-"""Build a data-free Linux release from verified artifacts. Local build tool only."""
+"""Build Linux release with explicitly requested private restoration data."""
 import hashlib
 import json
 import os
@@ -10,7 +10,7 @@ import tarfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = ROOT.parent / 'releases/shuanggao-update-20260920'
+OUT = ROOT.parent / 'releases/shuanggao-update-20260920-r2'
 MYSQL = shutil.which('mysql') or r'C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe'
 NEW_SOURCES = [
     'data/migrations/2026-05-30-audit-snapshot.sql',
@@ -34,7 +34,7 @@ def query(sql):
                                     '--batch','--skip-column-names','biz','-e',sql],env=env).decode('utf-8').replace('\r\n','\n')
 
 def main():
-    for directory in ['backend','frontend','sql','templates']:
+    for directory in ['backend','frontend','sql','templates','restore']:
         (OUT/directory).mkdir(parents=True,exist_ok=True)
     source = ROOT/'target/linux-release-build/target/biz_backend-1.0-SNAPSHOT.jar'
     with zipfile.ZipFile(source) as jar:
@@ -45,7 +45,7 @@ def main():
     shutil.copy2(source,OUT/'backend'/source.name)
     shutil.copytree(ROOT.parent/'biz/dist',OUT/'frontend',dirs_exist_ok=True)
     shutil.copy2(ROOT.parent/'biz/public/templates/budget-template.xlsx',OUT/'templates/budget-template.xlsx')
-    for name in ['update.sh','schema-check.sh','README.md']:
+    for name in ['update.sh','schema-check.sh','database-restore.sh','README.md']:
         text=(Path(__file__).parent/name).read_text(encoding='utf-8')
         (OUT/name).write_text(text,encoding='utf-8',newline='\n')
     verification=ROOT/'target/linux-release-build/verification.json'
@@ -71,33 +71,46 @@ EXECUTE release_stmt;
 DEALLOCATE PREPARE release_stmt;
 """
     assert not re.search(r'^\s*(?:DROP|DELETE|TRUNCATE|INSERT|UPDATE|REPLACE)\b',sql,re.M|re.I)
+    for migration in ['scripts/work-records/002_work_record_delete.sql', 'scripts/password/001_force_password_change.sql']:
+        sql += '\n' + (ROOT/migration).read_text(encoding='utf-8')
     (OUT/'sql/additive.sql').write_text(sql,encoding='utf-8',newline='\n')
     base=(ROOT/'data/biz.sql').read_text(encoding='utf-8')
     tables=set(re.findall(r'CREATE TABLE\s+`?(\w+)',base))|added_tables
     selection=','.join("'"+name+"'" for name in sorted(tables))
     columns=query('SELECT TABLE_NAME,COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ('+selection+') ORDER BY TABLE_NAME,ORDINAL_POSITION')
     assert {line.split('\t')[0] for line in columns.splitlines()}==tables
+    additional = {('sys_user', 'force_password_change'), *[('biz_work_record', c) for c in ['delete_marker','deleted_by','deleted_time','delete_reason']]}
+    columns = '\n'.join(sorted(set(columns.splitlines()) | {'\t'.join(pair) for pair in additional}))+'\n'
     (OUT/'sql/required-columns.tsv').write_text(columns,encoding='utf-8',newline='\n')
-    allowed='\n'.join(line for line in columns.splitlines() if line.split('\t')[0] in added_tables or tuple(line.split('\t')) in ADDITIONS)+'\n'
+    allowed='\n'.join(line for line in columns.splitlines() if line.split('\t')[0] in added_tables or tuple(line.split('\t')) in ADDITIONS or tuple(line.split('\t')) in additional)+'\n'
     (OUT/'sql/allowed-additions.tsv').write_text(allowed,encoding='utf-8',newline='\n')
     new_selection=','.join("'"+name+"'" for name in sorted(added_tables))
     unique=query("SELECT TABLE_NAME,GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX SEPARATOR ',') FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND NON_UNIQUE=0 AND TABLE_NAME IN ("+new_selection+") GROUP BY TABLE_NAME,INDEX_NAME ORDER BY TABLE_NAME,INDEX_NAME")
+    unique = unique.replace('biz_work_record\towner_id,record_year,record_month\n', 'biz_work_record\towner_id,record_year,record_month,delete_marker\n')
     (OUT/'sql/required-unique.tsv').write_text(unique,encoding='utf-8',newline='\n')
     manifest={
         'backend_commit': subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),
         'frontend_commit': subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT.parent/'biz',text=True).strip(),
         'frontend_working_changes': subprocess.check_output(['git','diff','--name-only'],cwd=ROOT.parent/'biz',text=True).splitlines(),
         'runtime':'Java 17 / MySQL 8 / Bash 4.2+',
-        'database_rows_included':False,'password_included':False,
+        'database_rows_included':True,'backup_contains_user_passwords':True,'runtime_database_password_included':False,
+        'restore_requires_explicit_flag':'--restore-backup',
         'new_tables':sorted(added_tables),'supported_existing_column_additions':['.'.join(key) for key in ADDITIONS],
     }
+    backup = ROOT/'data/20260920backup.sql'
+    backup_text = backup.read_text(encoding='utf-8')
+    assert not re.search(r'(?im)^\s*(?:USE\s|CREATE\s+DATABASE|DROP\s+DATABASE|SOURCE\s|\\[.!])', backup_text), 'Backup must be confined to selected staging database'
+    assert not re.search(r'(?i)`biz`\s*\.', backup_text), 'Qualified original database references are not allowed'
+    assert '`force_password_change`' in backup_text
+    shutil.copy2(backup, OUT/'restore/20260920backup.sql')
+    manifest['restore_source_sha256'] = hashlib.sha256(backup.read_bytes()).hexdigest()
     (OUT/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
     files=sorted(p for p in OUT.rglob('*') if p.is_file() and p.name!='SHA256SUMS')
     (OUT/'SHA256SUMS').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.relative_to(OUT).as_posix()+'\n' for p in files),encoding='ascii',newline='\n')
     archive=OUT.with_suffix('.tar.gz')
     def mode(info):
         info.uid=info.gid=0; info.uname=info.gname='root'
-        info.mode=0o755 if info.isdir() or info.name.endswith('.sh') else 0o644
+        info.mode=0o700 if info.isdir() or info.name.endswith('.sh') else 0o600
         return info
     with tarfile.open(archive,'w:gz') as tar:
         tar.add(OUT,arcname=OUT.name,filter=mode)
