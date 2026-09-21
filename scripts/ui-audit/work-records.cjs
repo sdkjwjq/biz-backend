@@ -115,10 +115,37 @@ async function main() {
 
     for (const user of [110228, 910004]) {
       const viewer = await tab(user); await expect(viewer.getByRole('menuitem', { name: '工作纪实', exact: true })).toBeVisible();
-      await expect(button('新建纪实', viewer)).toHaveCount(0);
+      await expect(button('新建纪实', viewer)).toHaveCount(user === 110228 ? 1 : 0);
       await viewer.getByRole('row').filter({ hasText: '2026年1月' }).getByRole('button', { name: '查看', exact: true }).click();
       await expect(viewer.locator('.readonly-text').first()).toHaveText('故障后保留文本'); await viewer.context().close();
     }
+    const reporterPage = page;
+    page = await tab(910005);
+    await expect(page.getByRole('menuitem', { name: '工作纪实', exact: true })).toBeVisible();
+    assert.equal((await (await call(910005, 'get', '/statistics?year=2026&month=3')).json()).totalTasks, 2);
+    assert.equal((await (await call(910003, 'get', '/statistics?year=2026&month=3')).json()).totalTasks, 1);
+    await button('新建纪实').click();
+    const officeCreate = page.getByRole('dialog', { name: '新建工作纪实' });
+    await select('新建纪实月份', officeCreate).click();
+    await page.getByRole('option', { name: '3月', exact: true }).click();
+    await button('确定', officeCreate).click();
+    await expect(button('保存草稿')).toBeVisible();
+    await select('选择改革任务').click();
+    await page.getByRole('option', { name: '审计专用A一级任务' }).click(); await page.keyboard.press('Escape');
+    await button('添加任务').click();
+    await page.getByRole('textbox', { name: '关键进展', exact: true }).fill('双高办全校口径填报');
+    await button('提交纪实').click();
+    await button('确认提交', page.getByRole('dialog', { name: '提交工作纪实' })).click();
+    await expect(page.locator('.readonly-text').first()).toHaveText('双高办全校口径填报');
+    const officeRecords = await (await call(910005, 'get', '?year=2026&month=3')).json();
+    const officeId = officeRecords.records[0].recordId;
+    const officeDetail = await (await call(910005, 'get', '/' + officeId)).json();
+    assert.equal(officeDetail.statistics.totalTasks, 2);
+    assert.equal((await call(910005, 'post', '/' + officeId + '/delete', { version: officeDetail.record.version, reason: '越权删除' })).status(), 403);
+    await page.screenshot({ path: path.join(output, 'office-school-wide.png'), fullPage: true });
+    await page.context().close(); page = reporterPage;
+    passed('real-office-fills-school-wide-scope-and-cannot-delete');
+
     const outsider = await tab(910001);
     await expect(outsider.getByText('您目前没有工作纪实填报或查阅权限')).toBeVisible();
     await expect(outsider.getByRole('menuitem', { name: '工作纪实', exact: true })).toHaveCount(0);

@@ -31,12 +31,13 @@ public class WorkRecordStatisticsService {
         }
     }
 
-    public Statistics calculate(Long ownerId, int year, int month) {
+    /** schoolWide=true 时统计全校该年度全部三级任务（双高办/管理员填报口径）。 */
+    public Statistics calculate(Long ownerId, int year, int month, boolean schoolWide) {
         validatePeriod(year, month);
         Instant now = clock.instant();
         Instant end = YearMonth.of(year, month).plusMonths(1).atDay(1).atStartOfDay(ZONE).toInstant().minusMillis(1);
         Instant cutoff = now.isBefore(end) ? now : end;
-        List<Task> tasks = mapper.ownedTasks(ownerId, year);
+        List<Task> tasks = schoolWide ? mapper.allLevel3Tasks(year) : mapper.ownedTasks(ownerId, year);
         List<Evidence> evidence = tasks.isEmpty() ? List.of() : mapper.evidence(
                 tasks.stream().map(BizTask::getTaskId).toList(), Date.from(cutoff));
         Map<Long, List<Evidence>> byTask = evidence.stream().collect(Collectors.groupingBy(Evidence::getParentTaskId));

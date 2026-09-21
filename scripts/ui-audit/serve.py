@@ -70,6 +70,9 @@ def main():
             sql("UPDATE sys_user SET password='WorkRecords123';", schema)
             sql("INSERT INTO biz_task(task_id,project_id,parent_id,phase,task_code,task_name,level,leader_id,auditor_id,principal_id,dept_id,data_type,target_value,current_value,status,is_delete) "
                 "VALUES(930003,1,930001,2026,'1.1.2','Export synthetic task',3,910001,910002,910002,920001,'1',10,0,'1',0);", schema)
+            sql("INSERT INTO sys_dept(dept_id,dept_name,is_delete) VALUES(100,'“双高”建设办公室',0);", schema)
+            sql("INSERT INTO sys_user(user_id,dept_id,user_name,nick_name,email,password,role,status,is_delete) "
+                "VALUES(910005,100,'audit_office','审计双高办','office@example.invalid','WorkRecords123','1','1',0);", schema)
             env["WORK_RECORDS_VIEWER_USER_IDS"] = "910004"
         if args.fixture in ("business", "review", "convenience", "convenience2", "continuous", "customer"):
             sql((ROOT / "scripts/ui-audit/fixture-business.sql").read_text(encoding="utf-8"), schema)

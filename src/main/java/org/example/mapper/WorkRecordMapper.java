@@ -19,6 +19,12 @@ public interface WorkRecordMapper {
             + "ORDER BY t.task_code,t.task_id")
     List<WorkRecordVO.Task> ownedTasks(@Param("ownerId") Long ownerId, @Param("year") int year);
 
+    @Select("SELECT t.*, COALESCE(NULLIF(u.nick_name,''),u.user_name,'—') leader_name "
+            + "FROM biz_task t LEFT JOIN sys_user u ON u.user_id=t.leader_id "
+            + "WHERE t.phase=#{year} AND t.level=3 AND COALESCE(t.is_delete,0)=0 "
+            + "ORDER BY t.task_code,t.task_id")
+    List<WorkRecordVO.Task> allLevel3Tasks(@Param("year") int year);
+
     @Select("SELECT task_id,parent_id,level,task_code,task_name FROM biz_task WHERE COALESCE(is_delete,0)=0")
     List<BizTask> structure();
 

@@ -37,7 +37,7 @@ import static org.mockito.Mockito.when;
         "work-records.viewer-user-ids=910005", "logging.file.name=target/work-record-regression.log",
         "logging.level.org.springframework=WARN", "logging.level.org.example.mapper=WARN"})
 class WorkRecordApiTest {
-    private static final long ADMIN=110228, OWNER=910001, OTHER=910002, LEADER=910003, VIEWER=910005;
+    private static final long ADMIN=110228, OWNER=910001, OTHER=910002, LEADER=910003, VIEWER=910005, OFFICE=910006;
     private static final String PASSWORD="WorkRecords123";
     @Autowired private TestRestTemplate http;
     @Autowired private JdbcTemplate jdbc;
@@ -88,11 +88,13 @@ class WorkRecordApiTest {
             }
             return null;
         });
-        jdbc.update("INSERT INTO sys_dept(dept_id,dept_name,is_delete) VALUES(920001,'Synthetic department',0)");
+        jdbc.update("INSERT INTO sys_dept(dept_id,dept_name,is_delete) VALUES(920001,'Synthetic department',0),(100,'“双高”建设办公室',0)");
         for (long id : List.of(ADMIN, OWNER, OTHER, LEADER, VIEWER)) {
             jdbc.update("INSERT INTO sys_user(user_id,dept_id,user_name,nick_name,password,role,status,is_delete) VALUES(?,920001,?,?,?,?, '1',0)",
                     id,"user"+id,"Reporter "+id,PASSWORD,id==ADMIN ? "0" : id==LEADER ? "2" : "1");
         }
+        jdbc.update("INSERT INTO sys_user(user_id,dept_id,user_name,nick_name,password,role,status,is_delete) VALUES(?,100,?,?,?,?,'1',0)",
+                OFFICE,"user"+OFFICE,"Reporter "+OFFICE,PASSWORD,"1");
         jdbc.update("INSERT INTO biz_project(project_id,project_name,leader_id) VALUES(1,'Synthetic work record project',?)", OWNER);
         jdbc.update("INSERT INTO sys_file(file_id,file_name,file_path,file_url,file_suffix,upload_by) VALUES(940001,'synthetic.pdf','synthetic.pdf','/uploads/synthetic.pdf','pdf',?)",OWNER);
         jdbc.update("INSERT INTO biz_task(task_id,project_id,parent_id,phase,task_code,task_name,level,auditor_id,principal_id,dept_id,is_delete) "
@@ -133,16 +135,44 @@ class WorkRecordApiTest {
     @Test void permissionsFollowAuditorNotLeaderAndProtectNewEndpoints() throws Exception {
         assertEquals(401,request(HttpMethod.GET,"/work-records/capabilities",null,null).getStatusCode().value());
         assertEquals(401,request(HttpMethod.POST,"/work-records",null,Map.of("year",2026,"month",1)).getStatusCode().value());
-        for (long user : List.of(OWNER, OTHER, LEADER, VIEWER, ADMIN)) {
+        for (long user : List.of(OWNER, OTHER, LEADER, VIEWER, ADMIN, OFFICE)) {
             String token=login(user);
             JsonNode caps=ok(request(HttpMethod.GET,"/work-records/capabilities",token,null));
-            assertEquals(user==OWNER,caps.path("canCreate").asBoolean());
+            boolean filler=user==OWNER||user==ADMIN||user==OFFICE;
+            assertEquals(filler,caps.path("canCreate").asBoolean());
             assertEquals(user==VIEWER || user==ADMIN,caps.path("canExport").asBoolean());
-            if (user!=OWNER) assertEquals(403,request(HttpMethod.POST,"/work-records",token,Map.of("year",2026,"month",1)).getStatusCode().value());
+            if (!filler) assertEquals(403,request(HttpMethod.POST,"/work-records",token,Map.of("year",2026,"month",1)).getStatusCode().value());
         }
         String token=login(OWNER);
-        jdbc.update("UPDATE sys_user SET password='weak' WHERE user_id=?",OWNER);
+        jdbc.update("UPDATE sys_user SET force_password_change=1 WHERE user_id=?",OWNER);
         assertEquals(428,request(HttpMethod.GET,"/work-records/capabilities",token,null).getStatusCode().value());
+    }
+
+    @Test void privilegedFillersUseSchoolWideScopeAndKeepBoundaries() throws Exception {
+        task(900012,OTHER,2026,10,"1");
+        assertEquals(1,preview(login(OWNER),1).path("totalTasks").asInt());
+        long officeRecord=0;
+        for (long user : List.of(ADMIN, OFFICE)) {
+            String token=login(user);
+            JsonNode caps=ok(request(HttpMethod.GET,"/work-records/capabilities",token,null));
+            List<Integer> years=new ArrayList<>(); caps.path("fillableYears").forEach(year->years.add(year.asInt()));
+            assertEquals(List.of(2025,2026,2027,2028,2029),years);
+            JsonNode stat=preview(token,1);
+            assertEquals(2,stat.path("totalTasks").asInt());
+            assertEquals(1,stat.path("reformTasks").size());
+            JsonNode created=create(token,1);
+            assertEquals(2,created.path("statistics").path("totalTasks").asInt());
+            assertTrue(created.path("editable").asBoolean());
+            long id=created.path("record").path("recordId").asLong();
+            if (user==OFFICE) officeRecord=id;
+            ok(request(HttpMethod.POST,"/work-records/"+id+"/submit",token,narrative(0,"School-wide "+user)));
+            JsonNode detail=ok(request(HttpMethod.GET,"/work-records/"+id,token,null));
+            assertEquals(2,detail.path("statistics").path("totalTasks").asInt());
+            assertFalse(detail.path("editable").asBoolean());
+        }
+        // 双高办账号不是管理员，不能删除任何人的纪实；管理员删除能力不受影响。
+        assertEquals(403,request(HttpMethod.POST,"/work-records/"+officeRecord+"/delete",login(OFFICE),Map.of("version",1,"reason","Not allowed")).getStatusCode().value());
+        ok(request(HttpMethod.POST,"/work-records/"+officeRecord+"/delete",login(ADMIN),Map.of("version",1,"reason","Admin cleanup")));
     }
 
     @Test void monthAndPayloadValidationRejectsInvalidWithoutWriting() throws Exception {
