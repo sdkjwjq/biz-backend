@@ -15,9 +15,12 @@ import shutil
 import gzip
 
 ROOT=Path(__file__).resolve().parents[2]
-PACKAGE=ROOT.parent/'releases/shuanggao-update-20260920-r4'
-MYSQL=Path(r'C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe')
-BASH=r'C:\Program Files\Git\bin\bash.exe'
+PACKAGE=ROOT.parent/'release/shuanggao-update-20260921'
+MYSQL=Path(os.environ.get('MYSQL_EXE') or shutil.which('mysql') or r'C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe')
+BASH=os.environ.get('BASH_EXE') or next((candidate for candidate in
+    [r'D:\Program Files\Git\bin\bash.exe', r'C:\Program Files\Git\bin\bash.exe'] if Path(candidate).exists()), 'bash')
+_MYSQL_BIN=MYSQL.parent.as_posix()
+MYSQL_BASH_BIN='/' + _MYSQL_BIN[0].lower() + _MYSQL_BIN[2:]
 env=os.environ.copy()
 env['MYSQL_PWD']=os.environ['SHUANGGAO_TEST_DB_PASSWORD']
 schema='biz_review_test_'+uuid.uuid4().hex
@@ -31,7 +34,7 @@ def sql(value,db=schema):
 def check_schema(mode,success=True):
     bash_path='/'+PACKAGE.as_posix()[0].lower()+PACKAGE.as_posix()[2:]
     selected=env.copy(); selected['DB_NAME']=schema
-    result=subprocess.run([BASH,'-c','export PATH="/c/Program Files/MySQL/MySQL Server 8.0/bin:$PATH"; bash "$1/schema-check.sh" "$2"',
+    result=subprocess.run([BASH,'-c','export PATH="'+MYSQL_BASH_BIN+':$PATH"; bash "$1/schema-check.sh" "$2"',
                            'test',bash_path,mode],env=selected,capture_output=True)
     assert (result.returncode==0)==success,result.stdout.decode('utf-8',errors='replace')+result.stderr.decode('utf-8',errors='replace')
 
@@ -148,7 +151,7 @@ def restore_roundtrip():
         sql('CREATE TABLE only_in_current(id INT); INSERT INTO only_in_current VALUES(1)')
         harness='''#!/usr/bin/env bash
 set -Eeuo pipefail
-export PATH="/c/Program Files/MySQL/MySQL Server 8.0/bin:$PATH"
+export PATH="__MYSQL_BASH_BIN__:$PATH"
 PACKAGE="$1"; BACKUP="$1/backup"; DB_NAME="$2"; export DB_NAME
 DB_HOST=127.0.0.1; DB_PORT=3306; DB_USER=root; export DB_HOST DB_PORT DB_USER
 MYSQL_ADMIN=(mysql --host=127.0.0.1 --user=root --default-character-set=utf8mb4 --batch --skip-column-names)
@@ -158,6 +161,7 @@ source "$PACKAGE/database-restore.sh"
 trap 'drop_stage_database' EXIT
 if [[ "$3" == restore ]]; then restore_packaged_database; else restore_saved_database; fi
 '''
+        harness=harness.replace('__MYSQL_BASH_BIN__', MYSQL_BASH_BIN)
         script=base/'test.sh';script.write_text(harness,encoding='utf-8',newline='\n')
         bash_base='/'+base.as_posix()[0].lower()+base.as_posix()[2:]
         def run(mode,success=True):
