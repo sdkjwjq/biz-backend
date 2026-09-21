@@ -70,6 +70,10 @@ public final class AchievementPermissionUtil {
         return isActiveUser(user) && isAchievementAuditor(user.getUserId());
     }
 
+    public static boolean isPrimaryAchievementAdmin(SysUser user) {
+        return isActiveUser(user) && PRIMARY_AUDITOR_ID.equals(user.getUserId());
+    }
+
     public static boolean canViewAchievement(SysUser user, SysDept dept) {
         return isAchievementUploadAccount(user, dept) || isAchievementAuditor(user);
     }
