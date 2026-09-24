@@ -16,9 +16,10 @@ public interface TrendDataMapper {
 
     /**
      * 根据年份获取所有数据
+     * 已修改：时间轴必须按时间正序返回（原为 desc，导致仪表盘“建设增长趋势”把上升趋势画成下降）。
      */
     @Select("SELECT * FROM biz_trend_data WHERE year = #{year} AND is_delete = 0 " +
-            "ORDER BY year DESC, month DESC, day DESC")
+            "ORDER BY year, month, day")
     List<BizTrendData> getTrendDataByYear(@Param("year") Integer year);
 
     /**

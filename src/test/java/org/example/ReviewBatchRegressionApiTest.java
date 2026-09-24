@@ -1883,6 +1883,20 @@ class ReviewBatchRegressionApiTest {
     }
 
     @Test
+    void trendDataIsReturnedInChronologicalOrder() throws Exception {
+        seed();
+        jdbc.update("INSERT INTO biz_trend_data (year, month, day, total_tasks, completion_count, completion_rate, is_delete) "
+                + "VALUES (2026, 9, 23, 131, 5, 33.33, 0), (2026, 5, 1, 131, 0, 0.00, 0), (2026, 6, 7, 131, 4, 35.00, 0)");
+        JsonNode data = body(request(HttpMethod.GET, "/dashboard/trend/2026", login(ADMIN), null));
+        assertEquals(3, data.size());
+        assertEquals(5, data.get(0).path("month").asInt(), "最早的一天应排在最前，X 轴时间正序");
+        assertEquals(1, data.get(0).path("day").asInt());
+        assertEquals(6, data.get(1).path("month").asInt());
+        assertEquals(9, data.get(2).path("month").asInt());
+        assertEquals(23, data.get(2).path("day").asInt());
+    }
+
+    @Test
     void performanceRelationValidatesInputAndRequiresAdmin() throws Exception {
         seedSubmissionFlow();
         assertTrue(body(request(HttpMethod.GET, "/manage/performance-relation/capabilities", login(ADMIN), null))
