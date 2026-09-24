@@ -1721,4 +1721,299 @@ class ReviewBatchRegressionApiTest {
         assertSuccess(request(HttpMethod.POST, "/scheduled/update_task_status", login(ADMIN), null), "任务状态更新完成");
         assertEquals("1", jdbc.queryForObject("SELECT status FROM biz_task WHERE task_id=970001", String.class));
     }
+
+    // ---- 管理员归属移交（任务 / 绩效） ----
+
+    private long seedTransferTargets() {
+        jdbc.update("INSERT INTO sys_dept (dept_id, dept_name, is_delete) VALUES (920002, 'Review department B', 0)");
+        jdbc.update("INSERT INTO sys_user (user_id, dept_id, user_name, nick_name, email, password, role, status, is_delete, force_password_change) "
+                + "VALUES (910004, 920002, 'review910004', 'Review new leader', 'review@example.invalid', ?, '1', '1', 0, 0)", PASSWORD);
+        jdbc.update("INSERT INTO sys_user (user_id, dept_id, user_name, nick_name, email, password, role, status, is_delete, force_password_change) "
+                + "VALUES (910005, 920002, 'review910005', 'Review new principal', 'review@example.invalid', ?, '1', '1', 0, 0)", PASSWORD);
+        return 920002L;
+    }
+
+    private Map<String, Object> transferPayload(List<Long> ids, long deptId, long leaderId, long principalId, String reason) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("ids", ids);
+        payload.put("deptId", deptId);
+        payload.put("leaderId", leaderId);
+        payload.put("principalId", principalId);
+        payload.put("reason", reason);
+        return payload;
+    }
+
+    private boolean listContainsTask(String token, long taskId) throws Exception {
+        for (JsonNode item : body(request(HttpMethod.GET, "/biz/tasks", token, null))) {
+            if (item.path("taskId").asLong() == taskId) return true;
+        }
+        return false;
+    }
+
+    @Test
+    void ownershipTransferValidatesInputAndRequiresAdmin() throws Exception {
+        seedTasks();
+        long dept = seedTransferTargets();
+        assertTrue(body(request(HttpMethod.GET, "/manage/transfer/capabilities", login(ADMIN), null))
+                .path("canTransfer").asBoolean());
+        assertFalse(body(request(HttpMethod.GET, "/manage/transfer/capabilities", login(USER), null))
+                .path("canTransfer").asBoolean());
+        assertDenied(request(HttpMethod.POST, "/manage/transfer/tasks", login(USER),
+                transferPayload(List.of(930002L), dept, 910004L, 910005L, "Review transfer")));
+
+        String admin = login(ADMIN);
+        assertEquals(400, request(HttpMethod.POST, "/manage/transfer/tasks", admin,
+                transferPayload(List.of(), dept, 910004L, 910005L, "Review")).getStatusCode().value());
+        assertEquals(400, request(HttpMethod.POST, "/manage/transfer/tasks", admin,
+                transferPayload(List.of(930002L), dept, 910004L, 910005L, "   ")).getStatusCode().value());
+        assertEquals(400, request(HttpMethod.POST, "/manage/transfer/tasks", admin,
+                transferPayload(List.of(930002L), 999999L, 910004L, 910005L, "Review")).getStatusCode().value());
+        assertEquals(400, request(HttpMethod.POST, "/manage/transfer/tasks", admin,
+                transferPayload(List.of(930002L), dept, 999999L, 910005L, "Review")).getStatusCode().value());
+        assertEquals(400, request(HttpMethod.POST, "/manage/transfer/tasks", admin,
+                transferPayload(List.of(999999L), dept, 910004L, 910005L, "Review")).getStatusCode().value());
+        assertEquals(400, request(HttpMethod.POST, "/manage/transfer/tasks", admin,
+                transferPayload(List.of(930001L), dept, 910004L, 910005L, "Review")).getStatusCode().value());
+        ResponseEntity<String> unchanged = request(HttpMethod.POST, "/manage/transfer/tasks", admin,
+                transferPayload(List.of(930002L), DEPT, USER, LEADER, "Review"));
+        assertEquals(400, unchanged.getStatusCode().value());
+        assertTrue(unchanged.getBody().contains("没有需要变更的内容"), unchanged.getBody());
+        assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM biz_ownership_change_log", Integer.class));
+    }
+
+    @Test
+    void ownershipTransferBlocksActiveAuditsAndRecordsTheChange() throws Exception {
+        seedSubmissionFlow();
+        long dept = seedTransferTargets();
+        String user = login(USER);
+        assertSuccess(request(HttpMethod.POST, "/biz/sub", user, submission("3")), "提交成功");
+
+        ResponseEntity<String> blocked = request(HttpMethod.POST, "/manage/transfer/tasks", login(ADMIN),
+                transferPayload(List.of(930002L), dept, 910004L, 910005L, "Review transfer"));
+        assertEquals(409, blocked.getStatusCode().value());
+        assertTrue(blocked.getBody().contains("审核中的单据"), blocked.getBody());
+        assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM biz_ownership_change_log", Integer.class));
+        assertEquals(DEPT, jdbc.queryForObject("SELECT dept_id FROM biz_task WHERE task_id=930002", Long.class));
+
+        assertSuccess(request(HttpMethod.POST, "/biz/drawback/930002", user, null), "已撤回提交");
+        JsonNode result = body(request(HttpMethod.POST, "/manage/transfer/tasks", login(ADMIN),
+                transferPayload(List.of(930002L), dept, 910004L, 910005L, "Review transfer")));
+        assertEquals(1, result.path("updated").asInt());
+        assertEquals(0, result.path("skipped").asInt());
+        assertEquals(36, result.path("batchId").asText().length());
+
+        Map<String, Object> row = jdbc.queryForMap(
+                "SELECT dept_id, leader_id, principal_id, auditor_id FROM biz_task WHERE task_id=930002");
+        assertEquals(dept, ((Number) row.get("dept_id")).longValue());
+        assertEquals(910004L, ((Number) row.get("leader_id")).longValue());
+        assertEquals(910005L, ((Number) row.get("principal_id")).longValue());
+        assertEquals(AUDITOR, ((Number) row.get("auditor_id")).longValue(), "专业群审核人不应改变");
+
+        JsonNode logs = body(request(HttpMethod.GET, "/manage/transfer/logs?targetType=TASK&targetId=930002",
+                login(ADMIN), null));
+        assertEquals(1, logs.size());
+        assertEquals("TASK", logs.get(0).path("targetType").asText());
+        assertEquals(DEPT, logs.get(0).path("deptBeforeId").asLong());
+        assertEquals(dept, logs.get(0).path("deptAfterId").asLong());
+        assertEquals(USER, logs.get(0).path("leaderBeforeId").asLong());
+        assertEquals(910004L, logs.get(0).path("leaderAfterId").asLong());
+        assertEquals(LEADER, logs.get(0).path("principalBeforeId").asLong());
+        assertEquals(910005L, logs.get(0).path("principalAfterId").asLong());
+        assertEquals("Review transfer", logs.get(0).path("reason").asText());
+        assertEquals("Review " + ADMIN, logs.get(0).path("operatorName").asText());
+        assertEquals("Review department B", logs.get(0).path("deptAfterName").asText());
+        assertEquals(result.path("batchId").asText(), logs.get(0).path("batchId").asText());
+        assertEquals(2, jdbc.queryForObject("SELECT COUNT(*) FROM sys_notice WHERE trigger_event='归属移交' AND is_delete=0",
+                Integer.class), "新责任人与新归口审核人各一条通知");
+
+        assertFalse(listContainsTask(user, 930002L), "原责任人不再可见");
+        assertTrue(listContainsTask(login(910004L), 930002L), "新责任人应可见");
+
+        ResponseEntity<String> repeated = request(HttpMethod.POST, "/manage/transfer/tasks", login(ADMIN),
+                transferPayload(List.of(930002L), dept, 910004L, 910005L, "Review transfer"));
+        assertEquals(400, repeated.getStatusCode().value());
+        assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM biz_ownership_change_log", Integer.class));
+    }
+
+    @Test
+    void ownershipTransferHandlesPerformanceAndRejectsActiveAudits() throws Exception {
+        seedManualPerformance("1");
+        long dept = seedTransferTargets();
+        long sub = submitPerformance(2026, "3", login(USER));
+        Map<String, Object> payload = transferPayload(List.of(950001L), dept, 910004L, 910005L, "Review performance transfer");
+
+        ResponseEntity<String> blocked = request(HttpMethod.POST, "/manage/transfer/performances", login(ADMIN), payload);
+        assertEquals(409, blocked.getStatusCode().value());
+        assertSuccess(request(HttpMethod.POST, "/performance/audit/withdraw/" + sub, login(USER), null), "绩效填报已撤回");
+
+        JsonNode result = body(request(HttpMethod.POST, "/manage/transfer/performances", login(ADMIN), payload));
+        assertEquals(1, result.path("updated").asInt());
+        Map<String, Object> row = jdbc.queryForMap(
+                "SELECT dept_id, leader_id, principal_id, auditor_id FROM biz_performance WHERE perf_id=950001");
+        assertEquals(dept, ((Number) row.get("dept_id")).longValue());
+        assertEquals(910004L, ((Number) row.get("leader_id")).longValue());
+        assertEquals(910005L, ((Number) row.get("principal_id")).longValue());
+        assertEquals(AUDITOR, ((Number) row.get("auditor_id")).longValue());
+
+        JsonNode logs = body(request(HttpMethod.GET, "/manage/transfer/logs?targetType=PERFORMANCE&targetId=950001",
+                login(ADMIN), null));
+        assertEquals(1, logs.size());
+        assertEquals("PERFORMANCE", logs.get(0).path("targetType").asText());
+        assertEquals("Review performance transfer", logs.get(0).path("reason").asText());
+
+        assertEquals(400, request(HttpMethod.POST, "/manage/transfer/performances", login(ADMIN), payload)
+                .getStatusCode().value());
+    }
+
+    private Map<String, Object> relationPayload(long perfId, int year, List<Long> addIds, List<Long> removeIds,
+                                                String reason) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("perfId", perfId);
+        payload.put("year", year);
+        payload.put("addTaskIds", addIds);
+        payload.put("removeTaskIds", removeIds);
+        payload.put("reason", reason);
+        return payload;
+    }
+
+    private int relationCount(int year, long perfId) throws Exception {
+        JsonNode counts = body(request(HttpMethod.GET, "/manage/performance-relation/counts?year=" + year,
+                login(ADMIN), null));
+        return counts.path(String.valueOf(perfId)).asInt();
+    }
+
+    @Test
+    void performanceRelationValidatesInputAndRequiresAdmin() throws Exception {
+        seedSubmissionFlow();
+        assertTrue(body(request(HttpMethod.GET, "/manage/performance-relation/capabilities", login(ADMIN), null))
+                .path("canManageRelation").asBoolean());
+        assertFalse(body(request(HttpMethod.GET, "/manage/performance-relation/capabilities", login(USER), null))
+                .path("canManageRelation").asBoolean());
+        assertDenied(request(HttpMethod.POST, "/manage/performance-relation", login(USER),
+                relationPayload(950001L, 2026, List.of(930002L), List.of(), "Review relation")));
+        assertDenied(request(HttpMethod.GET, "/manage/performance-relation/logs?perfId=950001&year=2026",
+                login(USER), null));
+        assertDenied(request(HttpMethod.GET, "/manage/performance-relation/candidates?perfId=950001&year=2026",
+                login(USER), null));
+
+        String admin = login(ADMIN);
+        assertEquals(400, request(HttpMethod.POST, "/manage/performance-relation", admin,
+                relationPayload(950001L, 2026, List.of(), List.of(), "Review relation")).getStatusCode().value());
+        assertEquals(400, request(HttpMethod.POST, "/manage/performance-relation", admin,
+                relationPayload(950001L, 2026, List.of(930002L), List.of(), "   ")).getStatusCode().value());
+        assertEquals(400, request(HttpMethod.POST, "/manage/performance-relation", admin,
+                relationPayload(950001L, 2026, List.of(930002L), List.of(930002L), "Review relation"))
+                .getStatusCode().value());
+        assertEquals(400, request(HttpMethod.POST, "/manage/performance-relation", admin,
+                relationPayload(950001L, 2026, List.of(999999L), List.of(), "Review relation")).getStatusCode().value());
+        assertEquals(400, request(HttpMethod.POST, "/manage/performance-relation", admin,
+                relationPayload(950001L, 2026, List.of(930001L), List.of(), "Review relation")).getStatusCode().value());
+        assertEquals(400, request(HttpMethod.POST, "/manage/performance-relation", admin,
+                relationPayload(950001L, 2027, List.of(930002L), List.of(), "Review relation")).getStatusCode().value());
+        ResponseEntity<String> unchanged = request(HttpMethod.POST, "/manage/performance-relation", admin,
+                relationPayload(950001L, 2026, List.of(930002L), List.of(), "Review relation"));
+        assertEquals(400, unchanged.getStatusCode().value());
+        assertTrue(unchanged.getBody().contains("没有需要变更的内容"), unchanged.getBody());
+
+        // 手动填报指标不参与任务汇总，不允许编辑关联
+        jdbc.update("UPDATE biz_performance SET perf_code='2.review' WHERE perf_id=950001");
+        assertEquals(400, request(HttpMethod.POST, "/manage/performance-relation", admin,
+                relationPayload(950001L, 2026, List.of(930002L), List.of(), "Review relation")).getStatusCode().value());
+        assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM biz_performance_relation_log", Integer.class));
+    }
+
+    @Test
+    void performanceRelationAddsAndRemovesWithHistory() throws Exception {
+        seedSubmissionFlow();
+        String admin = login(ADMIN);
+        jdbc.update("UPDATE biz_task SET current_value=6 WHERE task_id=930002");
+
+        JsonNode candidate = body(request(HttpMethod.GET,
+                "/manage/performance-relation/candidates?perfId=950001&year=2026", admin, null));
+        assertEquals(2026, candidate.path("year").asInt());
+        assertEquals(950002L, candidate.path("yearId").asLong());
+        assertEquals(1, candidate.path("candidates").size());
+        assertEquals(930002L, candidate.path("candidates").get(0).path("taskId").asLong());
+        assertEquals(1, candidate.path("candidates").get(0).path("linked").asInt());
+        assertTrue(candidate.path("candidates").get(0).path("skipReason").isNull());
+        assertEquals(1, relationCount(2026, 950001L));
+
+        JsonNode removed = body(request(HttpMethod.POST, "/manage/performance-relation", admin,
+                relationPayload(950001L, 2026, List.of(), List.of(930002L), "Review remove")));
+        assertEquals(0, removed.path("added").asInt());
+        assertEquals(1, removed.path("removed").asInt());
+        assertEquals(36, removed.path("batchId").asText().length());
+        // 软删除留痕：关联行仍在，只是标记为已解除
+        assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM rel_task_performance WHERE task_id=930002", Integer.class));
+        assertEquals(1, jdbc.queryForObject("SELECT is_delete FROM rel_task_performance WHERE task_id=930002", Integer.class));
+        assertEquals(0, new BigDecimal(jdbc.queryForObject("SELECT actual_value FROM biz_performance_year WHERE year_id=950002",
+                String.class)).compareTo(BigDecimal.ZERO), "解除关联后完成值应重算为 0");
+        assertEquals(0, relationCount(2026, 950001L));
+        assertEquals(0, body(request(HttpMethod.GET, "/performance/task/950001?year=2026", admin, null)).size(),
+                "已解除关联的任务不再出现在关联任务列表");
+
+        JsonNode logs = body(request(HttpMethod.GET, "/manage/performance-relation/logs?perfId=950001&year=2026", admin, null));
+        assertEquals(1, logs.size());
+        assertEquals("REMOVE", logs.get(0).path("action").asText());
+        assertEquals(930002L, logs.get(0).path("taskId").asLong());
+        assertEquals("Review task 930002", logs.get(0).path("taskName").asText());
+        assertEquals("Review remove", logs.get(0).path("reason").asText());
+        assertEquals("Review " + ADMIN, logs.get(0).path("operatorName").asText());
+        assertEquals(removed.path("batchId").asText(), logs.get(0).path("batchId").asText());
+
+        JsonNode added = body(request(HttpMethod.POST, "/manage/performance-relation", admin,
+                relationPayload(950001L, 2026, List.of(930002L), List.of(), "Review add")));
+        assertEquals(1, added.path("added").asInt());
+        assertEquals(0, added.path("removed").asInt());
+        // 复用时复用原关联行，不产生重复记录
+        assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM rel_task_performance WHERE task_id=930002", Integer.class));
+        assertEquals(0, jdbc.queryForObject("SELECT is_delete FROM rel_task_performance WHERE task_id=930002", Integer.class));
+        assertEquals(0, new BigDecimal(jdbc.queryForObject("SELECT actual_value FROM biz_performance_year WHERE year_id=950002",
+                String.class)).compareTo(new BigDecimal("6")), "重新关联后完成值应重算为任务完成值");
+        assertEquals(1, relationCount(2026, 950001L));
+        assertEquals(2, jdbc.queryForObject("SELECT COUNT(*) FROM biz_performance_relation_log WHERE perf_id=950001 AND year=2026",
+                Integer.class));
+
+        ResponseEntity<String> repeated = request(HttpMethod.POST, "/manage/performance-relation", admin,
+                relationPayload(950001L, 2026, List.of(930002L), List.of(), "Review add"));
+        assertEquals(400, repeated.getStatusCode().value());
+        assertEquals(2, jdbc.queryForObject("SELECT COUNT(*) FROM biz_performance_relation_log", Integer.class));
+    }
+
+    @Test
+    void performanceRelationBlocksActiveAuditsAndRejectsTaskMismatch() throws Exception {
+        seedSubmissionFlow();
+        String admin = login(ADMIN);
+        // 直接造一条审核中（10）的绩效单据，编辑关联必须被整批拒绝
+        jdbc.update("INSERT INTO biz_performance_submission (sub_id, perf_id, year_id, year, actual_value, submit_by, "
+                + "submit_time, flow_status, current_handler_id, comment, is_delete) "
+                + "VALUES (971001, 950001, 950002, 2026, 3, ?, NOW(), 10, ?, 'Review submission', 0)", USER, AUDITOR);
+        ResponseEntity<String> blocked = request(HttpMethod.POST, "/manage/performance-relation", admin,
+                relationPayload(950001L, 2026, List.of(930002L), List.of(), "Review relation"));
+        assertEquals(409, blocked.getStatusCode().value());
+        assertTrue(blocked.getBody().contains("审核中的单据"), blocked.getBody());
+        assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM rel_task_performance WHERE COALESCE(is_delete,0)=0",
+                Integer.class), "被阻断时不应落库");
+        jdbc.update("UPDATE biz_performance_submission SET flow_status=-10 WHERE sub_id=971001");
+
+        // 年度不一致、数据类型为 0、已删除的任务都不能新增关联
+        seedTask(930003L, 930001L, 3);
+        jdbc.update("UPDATE biz_task SET phase=2027 WHERE task_id=930003");
+        seedTask(930004L, 930001L, 3);
+        jdbc.update("UPDATE biz_task SET data_type='0' WHERE task_id=930004");
+        seedTask(930005L, 930001L, 3);
+        jdbc.update("UPDATE biz_task SET is_delete=1 WHERE task_id=930005");
+        for (long taskId : List.of(930003L, 930004L, 930005L)) {
+            ResponseEntity<String> rejected = request(HttpMethod.POST, "/manage/performance-relation", admin,
+                    relationPayload(950001L, 2026, List.of(taskId), List.of(), "Review relation"));
+            assertEquals(400, rejected.getStatusCode().value(), "task " + taskId);
+        }
+        // 解除关联不受上述条件限制，可以清理历史数据
+        JsonNode removed = body(request(HttpMethod.POST, "/manage/performance-relation", admin,
+                relationPayload(950001L, 2026, List.of(), List.of(930002L), "Review cleanup")));
+        assertEquals(1, removed.path("removed").asInt());
+        assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM rel_task_performance WHERE task_id=930002", Integer.class));
+        assertEquals(0, jdbc.queryForObject(
+                "SELECT COUNT(*) FROM rel_task_performance WHERE task_id=930002 AND COALESCE(is_delete,0)=0", Integer.class));
+    }
 }

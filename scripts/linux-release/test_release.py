@@ -15,7 +15,7 @@ import shutil
 import gzip
 
 ROOT=Path(__file__).resolve().parents[2]
-PACKAGE=ROOT.parent/'release/shuanggao-update-20260921'
+PACKAGE=ROOT.parent/'release/shuanggao-update-20260924'
 MYSQL=Path(os.environ.get('MYSQL_EXE') or shutil.which('mysql') or r'C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe')
 BASH=os.environ.get('BASH_EXE') or next((candidate for candidate in
     [r'D:\Program Files\Git\bin\bash.exe', r'C:\Program Files\Git\bin\bash.exe'] if Path(candidate).exists()), 'bash')
@@ -38,11 +38,24 @@ def check_schema(mode,success=True):
                            'test',bash_path,mode],env=selected,capture_output=True)
     assert (result.returncode==0)==success,result.stdout.decode('utf-8',errors='replace')+result.stderr.decode('utf-8',errors='replace')
 
-def snapshot():
+def snapshot(projection=None):
+    """Row snapshot per table. projection keeps only the columns known before a schema update,
+    so approved column additions do not look like data changes."""
     values={}
     for line in sql('SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_TYPE="BASE TABLE"').decode().splitlines():
         assert re.fullmatch('[A-Za-z0-9_]+',line)
-        values[line]=sql('SELECT * FROM `'+line+'`')
+        columns=None if projection is None else projection.get(line)
+        select='*' if not columns else ','.join('`'+column+'`' for column in columns)
+        values[line]=sql('SELECT '+select+' FROM `'+line+'`')
+    return values
+
+def current_columns():
+    """Column list per table before the update runs."""
+    values={}
+    for line in sql('SELECT TABLE_NAME,COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() '
+                    'ORDER BY TABLE_NAME,ORDINAL_POSITION').decode().splitlines():
+        table,column=line.split('\t')
+        values.setdefault(table,[]).append(column)
     return values
 
 def notice_cleanup():
@@ -261,11 +274,12 @@ exit 17
         sql((ROOT/'scripts/ui-audit/fixture.sql').read_bytes())
         sql('DROP TABLE IF EXISTS biz_work_record_snapshot; DROP TABLE IF EXISTS biz_work_record_entry; DROP TABLE IF EXISTS biz_work_record;')
         before=snapshot()
+        before_columns=current_columns()
         check_schema('before')
         check_schema('after',False)
         sql(ddl)
         check_schema('after')
-        after=snapshot()
+        after=snapshot(before_columns)
         assert all(after[name]==data for name,data in before.items())
         checks.append('missing-work-record-tables-created-existing-rows-unchanged')
         sql("INSERT INTO biz_work_record(record_id,owner_id,owner_name,record_year,record_month,status,version,create_time,update_time) VALUES(1,910003,'Synthetic',2026,7,1,1,NOW(),NOW());")
@@ -281,6 +295,18 @@ exit 17
         sql('ALTER TABLE biz_task DROP COLUMN exp_effect;')
         check_schema('before',False)
         checks.append('unknown-missing-business-column-blocks-deployment')
+        # The packaged data update must run cleanly and be idempotent; the synthetic schema has none of the
+        # Excel task codes, so nothing is updated and no backup rows are written.
+        data_sql=(PACKAGE/'sql/task-update-20260918.sql').read_bytes()
+        assert b'\r' not in data_sql,'Data update SQL must use LF'
+        assert not re.search(rb'(?im)^\s*(?:DROP\s+TABLE|TRUNCATE|DELETE\s+FROM)\b',data_sql)
+        first=sql(data_sql)
+        second=sql(data_sql)
+        assert b'task_rows_remaining_difference\t0' in first,first[-500:]
+        assert b'task_rows_need_update\t0' in second,second[-500:]
+        assert sql('SELECT COUNT(*) FROM bak_20260918_task_auditor_dept_principal').strip()==b'0'
+        assert sql('SELECT COUNT(*) FROM bak_20260918_task_code_fix').strip()==b'0'
+        checks.append('task-data-update-sql-applies-and-is-idempotent')
     finally:
         assert re.fullmatch(r'biz_review_test_[0-9a-f]{32}',schema)
         sql('DROP DATABASE `'+schema+'`',None)

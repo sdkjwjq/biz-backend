@@ -25,7 +25,7 @@ SPEC.loader.exec_module(RUNNER)
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--fixture", choices=["base", "business", "review", "navigation", "convenience", "convenience2", "continuous", "customer", "work-records"], default="base")
+    parser.add_argument("--fixture", choices=["base", "business", "review", "navigation", "convenience", "convenience2", "continuous", "customer", "work-records", "task-stats", "ownership-transfer", "ownership-transfer-scale", "performance-relation"], default="base")
     parser.add_argument("--frontend-port", type=int, default=15173)
     args = parser.parse_args()
     if not 1024 <= args.frontend_port <= 65535:
@@ -88,6 +88,14 @@ def main():
             sql((ROOT / "scripts/ui-audit/fixture-convenience.sql").read_text(encoding="utf-8"), schema)
         if args.fixture == "convenience2":
             sql((ROOT / "scripts/ui-audit/fixture-convenience2.sql").read_text(encoding="utf-8"), schema)
+        if args.fixture == "task-stats":
+            sql((ROOT / "scripts/ui-audit/fixture-task-stats.sql").read_text(encoding="utf-8"), schema)
+        if args.fixture in ("ownership-transfer", "ownership-transfer-scale"):
+            sql((ROOT / "scripts/ui-audit/fixture-ownership-transfer.sql").read_text(encoding="utf-8"), schema)
+        if args.fixture == "ownership-transfer-scale":
+            sql((ROOT / "scripts/ui-audit/fixture-ownership-transfer-scale.sql").read_text(encoding="utf-8"), schema)
+        if args.fixture == "performance-relation":
+            sql((ROOT / "scripts/ui-audit/fixture-performance-relation.sql").read_text(encoding="utf-8"), schema)
         cp = os.pathsep.join([str(WORK), str(ROOT / "target/classes"), str(ROOT / "target/test-classes"),
                               (ROOT / "target/ui-audit-classpath.txt").read_text().strip()])
         subprocess.run([RUNNER.executable("javac"), "-encoding", "UTF-8", "-cp", cp, "-d", str(WORK),

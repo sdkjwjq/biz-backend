@@ -50,25 +50,27 @@ public interface PerformanceMapper {
     @Select("select * from rel_task_performance where task_id = #{taskId} and perf_id = #{perfId}")
     List<RelTaskPerformance> getRelTaskPerformanceByTaskIdAndPerfId(@Param("taskId") Long taskId, @Param("perfId") Long perfId);
 
-    @Select("select perf_id from rel_task_performance where task_id = #{taskId}")
+    @Select("select perf_id from rel_task_performance where task_id = #{taskId} and (is_delete is null or is_delete = 0)")
     List<Long> getPerfIdByTaskId(@Param("taskId") Long taskId);
 
-    @Select("select * from biz_performance where perf_id in (select perf_id from rel_task_performance where task_id = #{taskId})")
+    @Select("select * from biz_performance where perf_id in (select perf_id from rel_task_performance "
+            + "where task_id = #{taskId} and (is_delete is null or is_delete = 0))")
     List<BizPerformance> getPerformanceByTaskId(@Param("taskId") Long taskId);
 
-    @Select("select task_id from rel_task_performance where perf_id = #{perfId}")
+    @Select("select task_id from rel_task_performance where perf_id = #{perfId} and (is_delete is null or is_delete = 0)")
     List<Long> getTaskIdByPerfId(@Param("perfId") Long perfId);
 
     @Select("select r.task_id from rel_task_performance r " +
             "join biz_performance_year y on y.year_id = r.year_id " +
             "join biz_task t on t.task_id = r.task_id " +
             "where r.perf_id = #{perfId} and y.year = #{year} " +
-            "and t.phase = #{year} and (t.is_delete is null or t.is_delete = 0)")
+            "and t.phase = #{year} and (t.is_delete is null or t.is_delete = 0) " +
+            "and (r.is_delete is null or r.is_delete = 0)")
     List<Long> getTaskIdByPerfIdAndYear(@Param("perfId") Long perfId, @Param("year") Integer year);
 
 
     // 一次性查询所有关联关系
-    @Select("select * from rel_task_performance")
+    @Select("select * from rel_task_performance where (is_delete is null or is_delete = 0)")
     List<RelTaskPerformance> getAllRelTaskPerformance();
 
 

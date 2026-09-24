@@ -3,6 +3,7 @@ package org.example.controller;
 import org.example.entity.BizTask;
 import org.example.service.TaskManagementService;
 import org.example.service.TaskManagementException;
+import org.example.service.TaskExportService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.http.ResponseEntity;
@@ -44,6 +45,34 @@ public class BizController {
     }
     @Autowired
     private BizService bizService;
+
+    @Autowired
+    private TaskExportService taskExportService;
+
+    /**
+     * 导出任务明细（Excel）
+     * 入参为页面上当前筛选出来的任务 ID；服务端按本人可见范围二次校验后生成 xlsx。
+     */
+    @PostMapping("/tasks/export")
+    public Object exportTasks(@RequestBody(required = false) JsonNode body,
+                              HttpServletRequest request, HttpServletResponse response) {
+        try {
+            Long userId = JWTUtil.getUserIdFromToken(request.getHeader("Authorization"));
+            List<Long> ids = new java.util.ArrayList<>();
+            JsonNode selected = body == null ? null : body.get("ids");
+            if (selected != null && selected.isArray()) {
+                for (JsonNode item : selected) {
+                    if (item != null && item.isIntegralNumber() && item.canConvertToLong() && item.asLong() > 0) {
+                        ids.add(item.asLong());
+                    }
+                }
+            }
+            taskExportService.exportTasks(ids, userId, response);
+            return null;
+        } catch (Exception e) {
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
 
     /**
      * 获取全量任务数据

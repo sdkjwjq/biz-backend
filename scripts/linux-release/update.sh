@@ -253,6 +253,15 @@ fi
 "${MYSQL[@]}" < "$PACKAGE/sql/additive.sql" > "$BACKUP/migration.log"
 bash "$PACKAGE/schema-check.sh" after
 
+# Business data correction: professional-group auditor / owning department / owning-department reviewer.
+# Idempotent, single transaction inside the file; writes its own bak_20260918_* backup tables first.
+# Already-committed data stays applied if a later step fails and the application is rolled back.
+say '应用任务数据更新（专业群审核人 / 归口部门 / 归口部门负责人）'
+"${MYSQL[@]}" < "$PACKAGE/sql/task-update-20260918.sql" > "$BACKUP/task-update.log"
+data_diff=$(awk -F'\t' '$1=="task_rows_remaining_difference"{print $2}' "$BACKUP/task-update.log" | tr -d '\r')
+[[ "$data_diff" == 0 ]] || die "任务数据更新未达到预期状态（剩余差异：${data_diff:-未知}），请查看备份目录中的 task-update.log"
+say '任务数据更新完成，更新前后备份见 bak_20260918_task_auditor_dept_principal'
+
 # The backend is stopped and the complete database has already been backed up.
 # Retire review requests only; preserve completed-result messages and audit history.
 "${MYSQL[@]}" < "$PACKAGE/sql/backup-stale-notices.sql" > "$BACKUP/restore-notice-flags.sql"

@@ -10,7 +10,7 @@ import tarfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = ROOT.parent / 'release/shuanggao-update-20260921'
+OUT = ROOT.parent / 'release/shuanggao-update-20260924'
 MYSQL = shutil.which('mysql') or r'C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe'
 NEW_SOURCES = [
     'data/migrations/2026-05-30-audit-snapshot.sql',
@@ -18,6 +18,8 @@ NEW_SOURCES = [
     'data/migrations/2026-05-31-achievement-audit.sql',
     'data/migrations/2026-05-31-budget.sql',
     'scripts/work-records/001_work_records.sql',
+    'data/migrations/2026-09-24-ownership-change-log.sql',
+    'data/migrations/2026-09-24-performance-relation-edit.sql',
 ]
 ADDITIONS = {
     ('biz_audit_snapshot','previous_comment'): 'varchar(500) DEFAULT NULL',
@@ -25,6 +27,7 @@ ADDITIONS = {
     ('biz_achievement','audit_status'): 'int NOT NULL DEFAULT 30',
     ('biz_achievement','current_handler_id'): 'bigint DEFAULT NULL',
     ('biz_achievement','update_time'): 'datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP',
+    ('rel_task_performance','is_delete'): 'tinyint(1) DEFAULT 0',
 }
 
 def query(sql):
@@ -60,7 +63,7 @@ def main():
             assert name not in added_tables
             added_tables.add(name)
             creates.append(re.sub(r'^CREATE TABLE(?: IF NOT EXISTS)?','CREATE TABLE IF NOT EXISTS',match.group(0)))
-    assert len(added_tables)==12
+    assert len(added_tables)==14
     sql='-- Additive structure only. No historical data repair, account writes or seed records.\n'+ '\n\n'.join(creates)+'\n'
     for (table,column),definition in ADDITIONS.items():
         sql+=f"""
@@ -74,6 +77,13 @@ DEALLOCATE PREPARE release_stmt;
     for migration in ['scripts/work-records/002_work_record_delete.sql', 'scripts/password/001_force_password_change.sql']:
         sql += '\n' + (ROOT/migration).read_text(encoding='utf-8')
     (OUT/'sql/additive.sql').write_text(sql,encoding='utf-8',newline='\n')
+    data_update = ROOT/'data/migrations/2026-09-18-task-auditor-dept-principal-update.sql'
+    data_sql = data_update.read_text(encoding='utf-8')
+    assert data_sql.startswith('-- 2026-09-18 task update')
+    assert 'START TRANSACTION;' in data_sql and 'COMMIT;' in data_sql
+    assert not re.search(r'(?im)^\s*(?:DROP\s+TABLE|TRUNCATE|DELETE\s+FROM)\b', data_sql)
+    assert 'bak_20260918_task_auditor_dept_principal' in data_sql
+    (OUT/'sql/task-update-20260918.sql').write_text(data_sql,encoding='utf-8',newline='\n')
     stale = (ROOT/'src/main/resources/sql/stale-review-notices.sql').read_text(encoding='utf-8').strip()
     (OUT/'sql/retire-stale-notices.sql').write_text(
         'START TRANSACTION;\nUPDATE sys_notice n SET n.is_delete=1 WHERE '+stale+';\nSELECT ROW_COUNT();\nCOMMIT;\n',
@@ -104,6 +114,8 @@ DEALLOCATE PREPARE release_stmt;
         'database_rows_included':True,'backup_contains_user_passwords':True,'runtime_database_password_included':False,
         'restore_requires_explicit_flag':'--restore-backup',
         'notice_cleanup':'Only obsolete task/performance/achievement review requests are soft-deleted; audit data unchanged',
+        'data_updates':['sql/task-update-20260918.sql'],
+        'data_update_backup_tables':['bak_20260918_task_code_fix','bak_20260918_task_auditor_dept_principal'],
         'new_tables':sorted(added_tables),'supported_existing_column_additions':['.'.join(key) for key in ADDITIONS],
     }
     backup = ROOT/'data/20260920backup.sql'
