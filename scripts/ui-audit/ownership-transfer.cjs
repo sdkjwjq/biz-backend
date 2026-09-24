@@ -99,6 +99,11 @@ const assert = require('node:assert/strict');
 
     const dialog = page.locator('.transfer-dialog');
     await expect(dialog).toBeVisible();
+    // 默认带出当前值：不改的字段无需重选
+    await expect(dialog.locator('.transfer-fields')).toContainText('审计测试部门A');
+    await expect(dialog.locator('.transfer-fields')).toContainText('审计用户A（910001）');
+    await expect(dialog.getByRole('button', { name: '预览并确认' })).toBeDisabled();
+    await page.screenshot({ path: path.join(output, 'transfer-defaults.png') });
     await selectInDialog(dialog, '目标归口部门', '审计测试部门B');
     await selectInDialog(dialog, '目标责任人', '审计用户B（910004）');
     await selectInDialog(dialog, '目标归口审核人', '审计审核人（910003）');
