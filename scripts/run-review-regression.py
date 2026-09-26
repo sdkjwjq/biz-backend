@@ -49,6 +49,9 @@ def main():
     try:
         subprocess.run([mysql, *connection, database], input=dump, env=env, check=True)
         subprocess.run([mysql, *connection, database], input=(root / 'scripts/password/001_force_password_change.sql').read_bytes(), env=env, check=True)
+        subprocess.run([mysql, *connection, database],
+                       input=(root / 'data/migrations/2026-09-26-budget-import-version.sql').read_bytes(),
+                       env=env, check=True)
         env["SHUANGGAO_REVIEW_TEST"] = "true"
         env["SHUANGGAO_TEST_DB_USER"] = user
         env["SHUANGGAO_TEST_JDBC_URL"] = ("jdbc:mysql://127.0.0.1:3306/" + database

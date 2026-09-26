@@ -112,7 +112,7 @@ python scripts/ui-audit/serve.py --fixture responsibility-filters --frontend-por
 node scripts/ui-audit/responsibility-filters.cjs
 ```
 
-覆盖任务责任人、绩效责任人、成果填报人的筛选、记忆和重置，以及预算按年度、月份浏览和导入表单的年月选择。
+覆盖任务责任人、绩效责任人、成果填报人的筛选、记忆和重置，以及预算按年度、月份浏览、连续导入版本、历史查看和恢复生成新版本。
 
 ### 清理
 

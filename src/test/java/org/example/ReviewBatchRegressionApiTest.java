@@ -2,6 +2,11 @@ package org.example;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.poi.ss.usermodel.DataFormatter;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -14,6 +19,7 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.*;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.context.annotation.Bean;
@@ -21,10 +27,16 @@ import org.springframework.context.annotation.Import;
 import org.springframework.scheduling.config.TaskManagementConfigUtils;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -208,6 +220,118 @@ class ReviewBatchRegressionApiTest {
                 Map.of("user_id", userId, "password", PASSWORD)));
         assertTrue(result.hasNonNull("token"), "Fixture login must succeed");
         return result.get("token").asText();
+    }
+
+    @Test
+    void budgetImportsCreateVersionsAndRestoreWithoutOverwritingHistory() throws Exception {
+        String admin = login(ADMIN);
+        String user = login(USER);
+        Path firstFile = budgetWorkbook("first", 111.25);
+        Path secondFile = budgetWorkbook("second", 222.50);
+        Path failedFile = budgetWorkbook("failed", 333.75);
+        try {
+            JsonNode first = body(uploadBudget(admin, 2029, 11, firstFile));
+            assertEquals(0, decimal(first.path("sources").get(0).path("available")).compareTo(new BigDecimal("111.25")));
+            JsonNode versions = body(request(HttpMethod.GET, "/budget/versions?year=2029&month=11", admin, null));
+            assertEquals(1, versions.size());
+            long firstVersion = versions.get(0).path("versionId").asLong();
+            assertEquals("IMPORT", versions.get(0).path("operationType").asText());
+            assertTrue(versions.get(0).path("current").asBoolean());
+
+            JsonNode second = body(uploadBudget(admin, 2029, 11, secondFile));
+            assertEquals(0, decimal(second.path("sources").get(0).path("available")).compareTo(new BigDecimal("222.50")));
+            versions = body(request(HttpMethod.GET, "/budget/versions?year=2029&month=11", admin, null));
+            assertEquals(2, versions.size());
+            long secondVersion = versions.get(0).path("versionId").asLong();
+            assertFalse(versions.get(1).path("current").asBoolean());
+
+            JsonNode firstDetail = body(request(HttpMethod.GET, "/budget/versions/" + firstVersion, admin, null));
+            assertEquals(0, decimal(firstDetail.path("budget").path("sources").get(0).path("available"))
+                    .compareTo(new BigDecimal("111.25")));
+            JsonNode secondDetail = body(request(HttpMethod.GET, "/budget/versions/" + secondVersion, admin, null));
+            assertEquals(0, decimal(secondDetail.path("budget").path("sources").get(0).path("available"))
+                    .compareTo(new BigDecimal("222.50")));
+
+            JsonNode denied = body(request(HttpMethod.GET, "/budget/versions?year=2029&month=11", user, null));
+            assertEquals(500, denied.path("code").asInt());
+            assertTrue(denied.path("message").asText().contains("仅管理员"));
+            JsonNode missingReason = body(request(HttpMethod.POST, "/budget/versions/" + firstVersion + "/restore",
+                    admin, Map.of("remark", "  ")));
+            assertEquals(500, missingReason.path("code").asInt());
+
+            JsonNode restored = body(request(HttpMethod.POST, "/budget/versions/" + firstVersion + "/restore",
+                    admin, Map.of("remark", "Review restore")));
+            assertEquals(0, decimal(restored.path("sources").get(0).path("available"))
+                    .compareTo(new BigDecimal("111.25")));
+            versions = body(request(HttpMethod.GET, "/budget/versions?year=2029&month=11", admin, null));
+            assertEquals(3, versions.size());
+            assertEquals("RESTORE", versions.get(0).path("operationType").asText());
+            assertEquals(firstVersion, versions.get(0).path("sourceVersionId").asLong());
+            assertEquals("Review restore", versions.get(0).path("remark").asText());
+            assertTrue(versions.get(0).path("current").asBoolean());
+            assertEquals(0, decimal(body(request(HttpMethod.GET, "/budget/versions/" + secondVersion, admin, null))
+                    .path("budget").path("sources").get(0).path("available")).compareTo(new BigDecimal("222.50")),
+                    "恢复后原第二版快照必须保持不变");
+
+            jdbc.execute("CREATE TRIGGER review_budget_version_failure BEFORE INSERT ON biz_budget_import_version "
+                    + "FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='budget version rollback failure'");
+            try {
+                JsonNode failed = body(uploadBudget(admin, 2029, 11, failedFile));
+                assertEquals(500, failed.path("code").asInt());
+            } finally {
+                jdbc.execute("DROP TRIGGER IF EXISTS review_budget_version_failure");
+            }
+            JsonNode current = body(request(HttpMethod.GET, "/budget?year=2029&month=11", admin, null));
+            assertEquals(0, decimal(current.path("sources").get(0).path("available"))
+                    .compareTo(new BigDecimal("111.25")), "快照写入失败时当前预算必须整体回滚");
+            assertEquals(3, jdbc.queryForObject("SELECT COUNT(*) FROM biz_budget_import_version", Integer.class));
+        } finally {
+            Files.deleteIfExists(firstFile);
+            Files.deleteIfExists(secondFile);
+            Files.deleteIfExists(failedFile);
+        }
+    }
+
+    private ResponseEntity<String> uploadBudget(String token, int year, int month, Path file) {
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("year", String.valueOf(year));
+        body.add("month", String.valueOf(month));
+        body.add("file", new FileSystemResource(file));
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        headers.set("Authorization", token);
+        return http.exchange("http://127.0.0.1:" + port + "/api/budget/import", HttpMethod.POST,
+                new HttpEntity<>(body, headers), String.class);
+    }
+
+    private Path budgetWorkbook(String suffix, double available) throws Exception {
+        Path template = Path.of("../biz/public/templates/budget-template.xlsx").toAbsolutePath().normalize();
+        assertTrue(Files.isRegularFile(template), "预算模板不存在：" + template);
+        Path result = Files.createTempFile("budget-version-" + suffix + "-", ".xlsx");
+        try (InputStream input = Files.newInputStream(template); Workbook workbook = WorkbookFactory.create(input)) {
+            Sheet sheet = workbook.getSheetAt(0);
+            DataFormatter formatter = new DataFormatter();
+            int totalColumn = -1;
+            int availableRow = -1;
+            for (Row row : sheet) {
+                for (org.apache.poi.ss.usermodel.Cell cell : row) {
+                    String text = formatter.formatCellValue(cell).replaceAll("\\s+", "");
+                    if (text.contains("合计数") && totalColumn < 0) totalColumn = cell.getColumnIndex();
+                    if (text.contains("可使用资金") && availableRow < 0) availableRow = row.getRowNum();
+                }
+            }
+            assertTrue(totalColumn >= 0 && availableRow >= 0, "预算模板标题不完整");
+            sheet.getRow(availableRow).getCell(totalColumn + 1, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK)
+                    .setCellValue(available);
+            try (OutputStream output = Files.newOutputStream(result)) {
+                workbook.write(output);
+            }
+        }
+        return result;
+    }
+
+    private BigDecimal decimal(JsonNode node) {
+        return new BigDecimal(node.asText("0"));
     }
 
     @Test
