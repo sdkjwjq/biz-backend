@@ -105,6 +105,15 @@ node scripts/ui-audit/audit-center-regression.cjs last-page
 
 `value-contract` 明确使用响应注入，覆盖任务数值零、字符串零、空值、缺省和非零值；其他场景使用真实接口。`tab-race` 延迟真实历史请求，验证快速切换后的待办不被覆盖。`last-page` 实际审批末页 5 条，只能最后执行；重跑需重建隔离库。补充结果位于 `target/ui-audit/evidence-audit-center`，原始缺陷证据保留不变。
 
+### 人员组合筛选与预算年月浏览
+
+```powershell
+python scripts/ui-audit/serve.py --fixture responsibility-filters --frontend-port 15273
+node scripts/ui-audit/responsibility-filters.cjs
+```
+
+覆盖任务责任人、绩效责任人、成果填报人的筛选、记忆和重置，以及预算按年度、月份浏览和导入表单的年月选择。
+
 ### 清理
 
 结束时执行：

@@ -25,7 +25,7 @@ SPEC.loader.exec_module(RUNNER)
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--fixture", choices=["base", "business", "review", "navigation", "convenience", "convenience2", "continuous", "customer", "work-records", "task-stats", "ownership-transfer", "ownership-transfer-scale", "performance-relation", "level4-equal-weight"], default="base")
+    parser.add_argument("--fixture", choices=["base", "business", "review", "navigation", "convenience", "convenience2", "continuous", "customer", "work-records", "task-stats", "ownership-transfer", "ownership-transfer-scale", "performance-relation", "level4-equal-weight", "responsibility-filters"], default="base")
     parser.add_argument("--frontend-port", type=int, default=15173)
     args = parser.parse_args()
     if not 1024 <= args.frontend_port <= 65535:
@@ -98,6 +98,8 @@ def main():
             sql((ROOT / "scripts/ui-audit/fixture-performance-relation.sql").read_text(encoding="utf-8"), schema)
         if args.fixture == "level4-equal-weight":
             sql((ROOT / "scripts/ui-audit/fixture-level4-equal-weight.sql").read_text(encoding="utf-8"), schema)
+        if args.fixture == "responsibility-filters":
+            sql((ROOT / "scripts/ui-audit/fixture-responsibility-filters.sql").read_text(encoding="utf-8"), schema)
         cp = os.pathsep.join([str(WORK), str(ROOT / "target/classes"), str(ROOT / "target/test-classes"),
                               (ROOT / "target/ui-audit-classpath.txt").read_text().strip()])
         subprocess.run([RUNNER.executable("javac"), "-encoding", "UTF-8", "-cp", cp, "-d", str(WORK),
