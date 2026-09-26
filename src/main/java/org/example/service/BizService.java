@@ -21,6 +21,9 @@ import java.util.*;
 @Service
 public class BizService {
 
+    private static final BigDecimal ONE_HUNDRED = BigDecimal.valueOf(100);
+    private static final int LEVEL4_RATE_SCALE = 8;
+
     /** 管理员ID */
     private Long ADMIN_ID = 110228L;
 
@@ -309,6 +312,23 @@ public class BizService {
             if (principalId == null) {
                 throw new RuntimeException("该任务未设置归口负责人，无法模拟完整审核流程");
             }
+            List<BizLevel4Task> level4Tasks = bizMapper.getActiveLevel4TasksByParentIdForUpdate(taskId);
+            Level4Aggregate level4Aggregate = null;
+            if (level4Tasks != null && !level4Tasks.isEmpty()) {
+                level4Aggregate = calculateLevel4Aggregate(taskById, level4Tasks);
+                if (!level4Aggregate.isComplete()) {
+                    String incompleteNames = level4Tasks.stream()
+                            .filter(item -> item.getCountedProgress().compareTo(ONE_HUNDRED) < 0)
+                            .map(BizLevel4Task::getTaskName)
+                            .limit(5)
+                            .reduce((left, right) -> left + "、" + right)
+                            .orElse("存在未完成目标");
+                    throw new RuntimeException("四级目标尚未全部完成，无法一键完结：" + incompleteNames);
+                }
+                for (BizLevel4Task level4Task : level4Tasks) {
+                    bizMapper.updateLevel4Task(level4Task);
+                }
+            }
 
             BusinessLogUtil.info("管理员一键完结",
                     "result", "开始",
@@ -323,10 +343,13 @@ public class BizService {
             completeAuditStepIfNeeded(audit, 30, 40, ADMIN_ID, ADMIN_ID, "同意");
 
             taskById.setStatus("3");
-            taskById.setCurrentValue(taskById.getTargetValue());
-            taskById.setProgress(calculateCappedProgress(taskById.getCurrentValue(), taskById.getTargetValue()));
+            taskById.setCurrentValue(level4Aggregate == null
+                    ? taskById.getTargetValue() : level4Aggregate.parentCurrentValue);
+            taskById.setProgress(level4Aggregate == null
+                    ? calculateCappedProgress(taskById.getCurrentValue(), taskById.getTargetValue())
+                    : level4Aggregate.storedProgress);
             bizMapper.updateTask(taskById);
-            audit.setReportedValue(taskById.getTargetValue());
+            audit.setReportedValue(taskById.getCurrentValue());
             audit.setCurrentHandlerId(ADMIN_ID);
             audit.setFlowStatus(40);
             bizMapper.updateAudit(audit);
@@ -387,6 +410,13 @@ public class BizService {
             ensureTaskSubmitter(task, userId);
             ensureNoActiveAudit(task.getTaskId());
             ensureTaskReviewer(task);
+            if (task.getLevel() == 3) {
+                List<BizLevel4Task> activeLevel4Tasks =
+                        bizMapper.getActiveLevel4TasksByParentIdForUpdate(task.getTaskId());
+                if (activeLevel4Tasks != null && !activeLevel4Tasks.isEmpty()) {
+                    throw new RuntimeException("该任务包含四级目标，请完整填报全部四级目标");
+                }
+            }
             BizMaterialSubmission bizMaterialSubmission = new BizMaterialSubmission();
             bizMaterialSubmission.setTaskId(bizSubDTO.getTask_id());
             bizMaterialSubmission.setFileId(sysMapper.getFileByName(sysFile.getFileName()).getFileId());
@@ -489,80 +519,14 @@ public class BizService {
             throw new RuntimeException("该文件不存在");
         }
 
-        int subTaskCount = bizSubDTOs.getSub_list().size();
-        if (subTaskCount == 0) {
-            throw new RuntimeException("子任务列表不能为空");
-        }
-
-        BigDecimal totalReportedValue = BigDecimal.ZERO;
         List<BizAuditSnapshot> pendingSnapshots = new ArrayList<>();
-        Set<Long> submittedLevel4TaskIds = new HashSet<>();
-        for(BizSubForthDTO bizSubDTO : bizSubDTOs.getSub_list()){
-            if (bizSubDTO == null || bizSubDTO.getTask_id() == null) {
-                throw new RuntimeException("四级任务ID不能为空");
-            }
-            if (!submittedLevel4TaskIds.add(bizSubDTO.getTask_id())) {
-                throw new RuntimeException("四级任务不能重复提交");
-            }
-            if (bizSubDTO.getReported_value() == null || bizSubDTO.getReported_value().compareTo(BigDecimal.ZERO) < 0) {
-                throw new RuntimeException("填报值不能小于0");
-            }
-            BizLevel4Task level4Task = bizMapper.getLevel4TasksById(bizSubDTO.getTask_id());
-            if (level4Task == null) {
-                throw new RuntimeException("该任务不存在");
-            }
-
-            if ("2".equals(level4Task.getDataType()) && bizSubDTO.getReported_value().compareTo(BigDecimal.valueOf(100)) > 0) {
-                throw new RuntimeException("百分比任务填报值不能超过100");
-            }
-
-            if (!level4Task.getParentId().equals(bizSubDTOs.getThird_task_id())) {
-                throw new RuntimeException("任务id"+ bizSubDTO.getTask_id() +"不是三级任务下的四级任务");
-            }
-            if (level4Task.getStatus().equals("2")) {
-                throw new RuntimeException("该任务状态未开始或正在审核中,无法提交");
-            }
-            pendingSnapshots.add(newLevel4TaskSnapshot(null, level4Task));
-            level4Task.setCurrentValue(bizSubDTO.getReported_value());
-            level4Task.setProgress(calculateCappedProgress(level4Task.getCurrentValue(), level4Task.getTargetValue()));
-            level4Task.setStatus("1");
-            level4Task.setUpdateTime(new Date());
-            bizMapper.updateLevel4Task(level4Task);
-            totalReportedValue = totalReportedValue.add(bizSubDTO.getReported_value());
-        }
-        System.out.println("总填报值：" + totalReportedValue);
-
-
-//        BigDecimal averageValue = totalReportedValue.divide(
-//                BigDecimal.valueOf(subTaskCount),
-//                4,
-//                java.math.RoundingMode.HALF_UP
-//        );
-//        System.out.println("平均值：" + averageValue);
-        BizTask task = bizMapper.getTaskById(bizSubDTOs.getThird_task_id());
+        Level4Aggregate aggregate = applySubmittedLevel4Values(ThirdLevelTask,
+                bizSubDTOs.getSub_list(), pendingSnapshots);
+        BizTask task = ThirdLevelTask;
         BizMaterialSubmission bizMaterialSubmission = new BizMaterialSubmission();
         bizMaterialSubmission.setTaskId(bizSubDTOs.getThird_task_id());
         bizMaterialSubmission.setFileId(sysMapper.getFileByName(sysFile.getFileName()).getFileId());
-        BigDecimal rv = BigDecimal.ZERO;
-//        totalReportedValue>task.getTargetValue()
-
-        if(task.getDataType().equals("1") || task.getDataType().equals("0")){
-            rv = totalReportedValue.setScale(0, BigDecimal.ROUND_DOWN);
-            System.out.println("目标值：" + task.getTargetValue());
-            System.out.println("本次填报值：" + rv);
-        }else if(task.getDataType().equals("2")){
-            rv = totalReportedValue.divide(
-                BigDecimal.valueOf(subTaskCount),
-                4,
-                java.math.RoundingMode.HALF_UP
-            );
-            if(rv.compareTo(BigDecimal.valueOf(100.0D))>0){
-                rv = BigDecimal.valueOf(100.0D);
-            }
-        }
-        // 本次填报值只保留整数，并写入任务 current_value（过程即显示进度）
-
-//        System.out.println("本次填报值：" + rv);
+        BigDecimal rv = aggregate.parentCurrentValue;
         bizMaterialSubmission.setReportedValue(rv);
         bizMaterialSubmission.setDataType(task.getDataType());
         bizMaterialSubmission.setSubmitBy(userId);
@@ -590,7 +554,7 @@ public class BizService {
         BizTask bizTask = bizMapper.getTaskById(bizSubDTOs.getThird_task_id());
         if (bizTask != null) {
             bizTask.setCurrentValue(rv);
-            bizTask.setProgress(calculateCappedProgress(rv, bizTask.getTargetValue()));
+            bizTask.setProgress(aggregate.storedProgress);
             bizTask.setStatus("2");
             bizTask.setComment(bizSubDTOs.getComment());
             bizTask.setUpdateTime(new Date());
@@ -636,7 +600,7 @@ public class BizService {
                 "subId", subId,
                 "reportedValue", rv,
                 "targetValue", task.getTargetValue(),
-                "level4Count", subTaskCount,
+                "level4Count", bizSubDTOs.getSub_list().size(),
                 "nextHandlerId", handlerId,
                 "performance", "已触发刷新");
         return resultMsg;
@@ -878,14 +842,28 @@ public class BizService {
                 } else if (bizMaterialSubmission.getFlowStatus() == 30) {
                     if (bizAuditDTO.getIs_pass()) {
 
+                        BizTask bizTask = bizMapper.getTaskById(bizMaterialSubmission.getTaskId());
+                        BigDecimal rv = bizMaterialSubmission.getReportedValue() != null ? bizMaterialSubmission.getReportedValue() : BigDecimal.ZERO;
+                        List<BizLevel4Task> level4Tasks = bizMapper.getActiveLevel4TasksByParentIdForUpdate(bizTask.getTaskId());
+                        Level4Aggregate aggregate = null;
+                        if (level4Tasks != null && !level4Tasks.isEmpty()) {
+                            aggregate = calculateLevel4Aggregate(bizTask, level4Tasks);
+                            rv = aggregate.parentCurrentValue;
+                            for (BizLevel4Task level4Task : level4Tasks) {
+                                bizMapper.updateLevel4Task(level4Task);
+                            }
+                        }
+                        bizMaterialSubmission.setReportedValue(rv);
                         bizMaterialSubmission.setFlowStatus(40);
                         bizMapper.updateAudit(bizMaterialSubmission);
 
-                        BizTask bizTask = bizMapper.getTaskById(bizMaterialSubmission.getTaskId());
-                        BigDecimal rv = bizMaterialSubmission.getReportedValue() != null ? bizMaterialSubmission.getReportedValue() : BigDecimal.ZERO;
                         bizTask.setCurrentValue(rv);
-                        bizTask.setProgress(calculateCappedProgress(rv, bizTask.getTargetValue()));
-                        if (bizTask.getCurrentValue().compareTo(bizTask.getTargetValue()) >= 0) {
+                        bizTask.setProgress(aggregate == null
+                                ? calculateCappedProgress(rv, bizTask.getTargetValue()) : aggregate.storedProgress);
+                        boolean completed = aggregate == null
+                                ? bizTask.getCurrentValue().compareTo(bizTask.getTargetValue()) >= 0
+                                : aggregate.isComplete();
+                        if (completed) {
                             bizTask.setStatus("3");
                         } else {
                             bizTask.setStatus("1");
@@ -971,6 +949,11 @@ public class BizService {
             }
             boolean hasLevel4SubList = resubDTOBiz.getSub_list() != null && !resubDTOBiz.getSub_list().isEmpty();
             if (!hasLevel4SubList) {
+                List<BizLevel4Task> activeLevel4Tasks =
+                        bizMapper.getActiveLevel4TasksByParentIdForUpdate(task.getTaskId());
+                if (activeLevel4Tasks != null && !activeLevel4Tasks.isEmpty()) {
+                    throw new RuntimeException("该任务包含四级目标，请完整填报全部四级目标");
+                }
                 BigDecimal rv = resubDTOBiz.getReported_value();
                 validateReportedValue(task, rv);
 
@@ -1046,65 +1029,11 @@ public class BizService {
                 }
                 return resultMsg;
             }
-            int subTaskCount = resubDTOBiz.getSub_list().size();
-            if (subTaskCount == 0) {
-                throw new RuntimeException("子任务列表不能为空");
-            }
-            BigDecimal totalReportedValue = BigDecimal.ZERO;
             BizTask thirdTask = bizMapper.getTaskById(oldSubmission.getTaskId());
             List<BizAuditSnapshot> pendingSnapshots = new ArrayList<>();
-            Set<Long> submittedLevel4TaskIds = new HashSet<>();
-            for(BizSubForthDTO bizSubDTO : resubDTOBiz.getSub_list()){
-                if (bizSubDTO == null || bizSubDTO.getTask_id() == null) {
-                    throw new RuntimeException("四级任务ID不能为空");
-                }
-                if (!submittedLevel4TaskIds.add(bizSubDTO.getTask_id())) {
-                    throw new RuntimeException("四级任务不能重复提交");
-                }
-                if (bizSubDTO.getReported_value() == null || bizSubDTO.getReported_value().compareTo(BigDecimal.ZERO) < 0) {
-                    throw new RuntimeException("填报值不能小于0");
-                }
-                BizLevel4Task level4Task = bizMapper.getLevel4TasksById(bizSubDTO.getTask_id());
-                if (level4Task == null) {
-                    throw new RuntimeException("该任务不存在");
-                }
-
-                if ("2".equals(level4Task.getDataType()) && bizSubDTO.getReported_value().compareTo(BigDecimal.valueOf(100)) > 0) {
-                    throw new RuntimeException("百分比任务填报值不能超过100");
-                }
-
-                if (!level4Task.getParentId().equals(thirdTask.getTaskId())) {
-                    throw new RuntimeException("任务id"+ bizSubDTO.getTask_id() +"不是三级任务下的四级任务");
-                }
-                if (level4Task.getStatus().equals("2")) {
-                    throw new RuntimeException("该任务状态未开始或正在审核中,无法提交");
-                }
-                pendingSnapshots.add(newLevel4TaskSnapshot(null, level4Task));
-                level4Task.setCurrentValue(bizSubDTO.getReported_value());
-                level4Task.setProgress(calculateCappedProgress(level4Task.getCurrentValue(), level4Task.getTargetValue()));
-                level4Task.setStatus("1");
-                level4Task.setUpdateTime(new Date());
-                bizMapper.updateLevel4Task(level4Task);
-                totalReportedValue = totalReportedValue.add(bizSubDTO.getReported_value());
-            }
-
-            // 重新提交同样只保留整数，并覆盖写任务 current_value
-            BigDecimal rv = BigDecimal.ZERO;
-//        totalReportedValue>task.getTargetValue()
-
-            if(task.getDataType().equals("1")){
-                rv = totalReportedValue.setScale(0, BigDecimal.ROUND_DOWN);
-            }else if(task.getDataType().equals("2")){
-
-                rv = totalReportedValue.divide(
-                        BigDecimal.valueOf(subTaskCount),
-                        4,
-                        java.math.RoundingMode.HALF_UP
-                );
-                if(rv.compareTo(BigDecimal.valueOf(100.0D))>0){
-                    rv = BigDecimal.valueOf(100.0D);
-                }
-            }
+            Level4Aggregate aggregate = applySubmittedLevel4Values(thirdTask,
+                    resubDTOBiz.getSub_list(), pendingSnapshots);
+            BigDecimal rv = aggregate.parentCurrentValue;
 
             SysFile sysFile = sysMapper.getFileById(resubDTOBiz.getFile_id());
             if (sysFile == null) {
@@ -1138,7 +1067,7 @@ public class BizService {
             BizTask bizTask = bizMapper.getTaskById(oldSubmission.getTaskId());
             if (bizTask != null) {
                 bizTask.setCurrentValue(rv);
-                bizTask.setProgress(calculateCappedProgress(rv, bizTask.getTargetValue()));
+                bizTask.setProgress(aggregate.storedProgress);
                 bizTask.setStatus("2");
                 bizTask.setUpdateTime(new Date());
                 bizTask.setComment(resubDTOBiz.getComment());
@@ -1169,7 +1098,7 @@ public class BizService {
                     "newSubId", newSubId,
                     "reportedValue", rv,
                     "targetValue", task.getTargetValue(),
-                    "level4Count", subTaskCount,
+                    "level4Count", resubDTOBiz.getSub_list().size(),
                     "nextHandlerId", nextHandlerId,
                     "performance", "已触发刷新");
             // 已修改，修改内容及原因：添加null检查和异常处理，避免getUserById返回null时出现空指针异常
@@ -1285,7 +1214,9 @@ public class BizService {
             if (task.getLevel() != 3) {
                 throw new RuntimeException("获取任务失败,该任务不是三级任务");
             }
-            return bizMapper.getForthLevelTasksByParentId(parentId);
+            List<BizLevel4Task> level4Tasks = bizMapper.getForthLevelTasksByParentId(parentId);
+            decorateLevel4Progress(level4Tasks);
+            return level4Tasks;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -1315,6 +1246,152 @@ public class BizService {
         if ("2".equals(task.getDataType()) && reportedValue.compareTo(BigDecimal.valueOf(100)) > 0) {
             throw new RuntimeException("百分比任务填报值不能超过100");
         }
+    }
+
+    static final class Level4Aggregate {
+        private final BigDecimal averageProgress;
+        private final BigDecimal parentCurrentValue;
+        private final int storedProgress;
+        private final boolean complete;
+
+        private Level4Aggregate(BigDecimal averageProgress, BigDecimal parentCurrentValue,
+                                int storedProgress, boolean complete) {
+            this.averageProgress = averageProgress;
+            this.parentCurrentValue = parentCurrentValue;
+            this.storedProgress = storedProgress;
+            this.complete = complete;
+        }
+
+        boolean isComplete() {
+            return complete;
+        }
+
+        BigDecimal getAverageProgress() {
+            return averageProgress;
+        }
+
+        BigDecimal getParentCurrentValue() {
+            return parentCurrentValue;
+        }
+
+        int getStoredProgress() {
+            return storedProgress;
+        }
+    }
+
+    /** 四级目标保留实际完成率，计入父任务时每项最高按100%。 */
+    private BigDecimal actualLevel4Progress(BigDecimal currentValue, BigDecimal targetValue) {
+        if (targetValue == null || targetValue.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new RuntimeException("四级目标值必须大于0，请联系管理员修正任务配置");
+        }
+        BigDecimal current = currentValue == null ? BigDecimal.ZERO : currentValue;
+        if (current.compareTo(BigDecimal.ZERO) < 0) {
+            throw new RuntimeException("四级目标填报值不能小于0");
+        }
+        return current.multiply(ONE_HUNDRED)
+                .divide(targetValue, LEVEL4_RATE_SCALE, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal countedLevel4Progress(BigDecimal actualProgress) {
+        if (actualProgress.compareTo(BigDecimal.ZERO) < 0) {
+            return BigDecimal.ZERO;
+        }
+        return actualProgress.min(ONE_HUNDRED);
+    }
+
+    private void decorateLevel4Progress(List<BizLevel4Task> level4Tasks) {
+        if (level4Tasks == null) {
+            return;
+        }
+        for (BizLevel4Task level4Task : level4Tasks) {
+            BigDecimal actual = actualLevel4Progress(level4Task.getCurrentValue(), level4Task.getTargetValue());
+            BigDecimal counted = countedLevel4Progress(actual);
+            level4Task.setActualProgress(actual.setScale(2, RoundingMode.HALF_UP));
+            level4Task.setCountedProgress(counted.setScale(2, RoundingMode.HALF_UP));
+        }
+    }
+
+    Level4Aggregate calculateLevel4Aggregate(BizTask parentTask, List<BizLevel4Task> level4Tasks) {
+        if (parentTask == null || parentTask.getTargetValue() == null
+                || parentTask.getTargetValue().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new RuntimeException("三级任务目标值必须大于0，请联系管理员修正任务配置");
+        }
+        if (level4Tasks == null || level4Tasks.isEmpty()) {
+            throw new RuntimeException("该任务没有有效的四级目标");
+        }
+        BigDecimal total = BigDecimal.ZERO;
+        boolean allComplete = true;
+        for (BizLevel4Task level4Task : level4Tasks) {
+            BigDecimal actual = actualLevel4Progress(level4Task.getCurrentValue(), level4Task.getTargetValue());
+            BigDecimal counted = countedLevel4Progress(actual);
+            level4Task.setActualProgress(actual.setScale(2, RoundingMode.HALF_UP));
+            level4Task.setCountedProgress(counted.setScale(2, RoundingMode.HALF_UP));
+            level4Task.setProgress(counted.setScale(0, RoundingMode.DOWN).intValue());
+            total = total.add(counted);
+            if (level4Task.getCurrentValue() == null
+                    || level4Task.getCurrentValue().compareTo(level4Task.getTargetValue()) < 0) {
+                allComplete = false;
+            }
+        }
+        BigDecimal preciseAverage = total.divide(BigDecimal.valueOf(level4Tasks.size()),
+                LEVEL4_RATE_SCALE, RoundingMode.HALF_UP);
+        BigDecimal average = preciseAverage.setScale(4, RoundingMode.HALF_UP);
+        BigDecimal parentCurrentValue = parentTask.getTargetValue().multiply(preciseAverage)
+                .divide(ONE_HUNDRED, 4, RoundingMode.DOWN);
+        return new Level4Aggregate(average, parentCurrentValue,
+                preciseAverage.setScale(0, RoundingMode.DOWN).intValue(), allComplete);
+    }
+
+    Level4Aggregate applySubmittedLevel4Values(BizTask parentTask,
+                                                List<BizSubForthDTO> submittedValues,
+                                                List<BizAuditSnapshot> pendingSnapshots) {
+        List<BizLevel4Task> level4Tasks = bizMapper.getActiveLevel4TasksByParentIdForUpdate(parentTask.getTaskId());
+        if (level4Tasks == null || level4Tasks.isEmpty()) {
+            throw new RuntimeException("该任务没有有效的四级目标");
+        }
+        if (submittedValues == null || submittedValues.size() != level4Tasks.size()) {
+            throw new RuntimeException("请完整填报全部四级目标");
+        }
+
+        Map<Long, BizSubForthDTO> submittedById = new HashMap<>();
+        for (BizSubForthDTO submitted : submittedValues) {
+            if (submitted == null || submitted.getTask_id() == null) {
+                throw new RuntimeException("四级任务ID不能为空");
+            }
+            if (submittedById.put(submitted.getTask_id(), submitted) != null) {
+                throw new RuntimeException("四级任务不能重复提交");
+            }
+        }
+
+        Set<Long> activeIds = new HashSet<>();
+        for (BizLevel4Task level4Task : level4Tasks) {
+            activeIds.add(level4Task.getTaskId());
+            actualLevel4Progress(BigDecimal.ZERO, level4Task.getTargetValue());
+        }
+        if (!activeIds.equals(submittedById.keySet())) {
+            throw new RuntimeException("提交的四级目标与当前有效目标不一致，请刷新后重试");
+        }
+
+        for (BizLevel4Task level4Task : level4Tasks) {
+            BizSubForthDTO submitted = submittedById.get(level4Task.getTaskId());
+            BigDecimal reportedValue = submitted.getReported_value();
+            if (reportedValue == null || reportedValue.compareTo(BigDecimal.ZERO) < 0) {
+                throw new RuntimeException("填报值不能为空且不能小于0");
+            }
+            if ("2".equals(level4Task.getDataType()) && reportedValue.compareTo(ONE_HUNDRED) > 0) {
+                throw new RuntimeException("百分比任务填报值不能超过100");
+            }
+            pendingSnapshots.add(newLevel4TaskSnapshot(null, level4Task));
+            level4Task.setCurrentValue(reportedValue);
+            level4Task.setStatus("1");
+            level4Task.setUpdateTime(new Date());
+        }
+
+        Level4Aggregate aggregate = calculateLevel4Aggregate(parentTask, level4Tasks);
+        for (BizLevel4Task level4Task : level4Tasks) {
+            bizMapper.updateLevel4Task(level4Task);
+        }
+        return aggregate;
     }
 
     /**
@@ -1493,6 +1570,24 @@ public class BizService {
                 bizMapper.updateLevel4Task(level4Task);
             }
         }
+        refreshLevel4ParentDerivedValues(submission.getTaskId());
+    }
+
+    /** 在退回或撤回恢复四级快照后，重新建立三级任务的派生值，任务原状态保持不变。 */
+    private void refreshLevel4ParentDerivedValues(Long taskId) {
+        BizTask parentTask = bizMapper.getTaskById(taskId);
+        List<BizLevel4Task> level4Tasks = bizMapper.getForthLevelTasksByParentId(taskId);
+        if (parentTask == null || level4Tasks == null || level4Tasks.isEmpty()) {
+            return;
+        }
+        Level4Aggregate aggregate = calculateLevel4Aggregate(parentTask, level4Tasks);
+        for (BizLevel4Task level4Task : level4Tasks) {
+            bizMapper.updateLevel4Task(level4Task);
+        }
+        parentTask.setCurrentValue(aggregate.parentCurrentValue);
+        parentTask.setProgress(aggregate.storedProgress);
+        parentTask.setUpdateTime(new Date());
+        bizMapper.updateTask(parentTask);
     }
 
     private void syncAncestorTaskStatus(Long taskId) {
@@ -1766,12 +1861,17 @@ public class BizService {
         bizAuditVO.setIsDelete(audit.getIsDelete());
 //        获取三级任务的子任务列表
         List<BizLevel4Task> level4Tasks = bizMapper.getForthLevelTasksByParentId(audit.getTaskId());
+        decorateLevel4Progress(level4Tasks);
         List<BizSubForthDTO> subForthDTOs = new ArrayList();
         for (BizLevel4Task level4Task : level4Tasks) {
             BizSubForthDTO subForthDTO = new BizSubForthDTO();
             subForthDTO.setTask_id(level4Task.getTaskId());
             subForthDTO.setReported_value(level4Task.getCurrentValue());
             subForthDTO.setData_type(level4Task.getDataType());
+            subForthDTO.setTask_name(level4Task.getTaskName());
+            subForthDTO.setTarget_value(level4Task.getTargetValue());
+            subForthDTO.setActual_progress(level4Task.getActualProgress());
+            subForthDTO.setCounted_progress(level4Task.getCountedProgress());
             subForthDTOs.add(subForthDTO);
         }
         bizAuditVO.setSub_list(subForthDTOs);

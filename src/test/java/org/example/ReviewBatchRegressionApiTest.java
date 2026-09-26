@@ -1065,6 +1065,32 @@ class ReviewBatchRegressionApiTest {
         assertTaskAndPerformance("5", 50, "2");
     }
 
+    @Test
+    void adminFinishRequiresEveryLevel4GoalAndKeepsRealValues() throws Exception {
+        seedSubmissionFlow();
+        for (long id : new long[]{960001L, 960002L}) {
+            jdbc.update("INSERT INTO biz_level4_task (task_id, parent_id, phase, task_name, leader_id, dept_id, "
+                            + "data_type, target_value, current_value, progress, status) "
+                            + "VALUES (?, 930002, 2026, ?, ?, ?, '1', 5, 0, 0, '1')",
+                    id, "Review level4 " + id, USER, DEPT);
+        }
+        assertSuccess(request(HttpMethod.POST, "/biz/sub", login(USER), level4Submission(2, 5)), "提交成功");
+
+        JsonNode rejected = body(request(HttpMethod.POST, "/biz/tasks/manage/finish/930002", login(ADMIN), null));
+        assertEquals(500, rejected.path("code").asInt());
+        assertTrue(rejected.path("message").asText().contains("四级目标尚未全部完成"), rejected.toString());
+        assertTaskAndPerformance("7", 70, "2");
+        assertDecimal("2", "SELECT current_value FROM biz_level4_task WHERE task_id=960001");
+
+        jdbc.update("UPDATE biz_level4_task SET current_value=5 WHERE task_id=960001");
+        assertSuccess(request(HttpMethod.POST, "/biz/tasks/manage/finish/930002", login(ADMIN), null), "已完成");
+        assertTaskAndPerformance("10", 100, "3");
+        assertDecimal("5", "SELECT current_value FROM biz_level4_task WHERE task_id=960001");
+        assertDecimal("5", "SELECT current_value FROM biz_level4_task WHERE task_id=960002");
+        assertEquals(100, jdbc.queryForObject("SELECT progress FROM biz_level4_task WHERE task_id=960001", Integer.class));
+        assertDecimal("10", "SELECT reported_value FROM biz_material_submission WHERE sub_id=?", newestSubmission());
+    }
+
     private void seedManualPerformance(String dataType) {
         seedSubmissionFlow();
         jdbc.update("UPDATE biz_performance SET perf_code='2.review', data_type=? WHERE perf_id=950001", dataType);
@@ -1159,8 +1185,8 @@ class ReviewBatchRegressionApiTest {
             assertEquals(beforeResub, taskFlowState());
         }
         jdbc.update("UPDATE biz_task SET auditor_id=? WHERE task_id=930002", AUDITOR);
-        assertSuccess(request(HttpMethod.POST, "/biz/sub", user, submission("3")), "提交成功");
-        assertTaskAndPerformance("3", 30, "2");
+        assertSuccess(request(HttpMethod.POST, "/biz/sub", user, level4Submission(2, 3)), "提交成功");
+        assertTaskAndPerformance("5", 50, "2");
     }
 
     @Test

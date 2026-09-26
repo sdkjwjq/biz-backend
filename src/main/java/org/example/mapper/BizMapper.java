@@ -131,12 +131,15 @@ public interface BizMapper {
     List<BizTask> getThirdLevelTasksByParentId(Long parentId);
 
 //    getLevel4TasksById
-    @Select("SELECT * FROM biz_level4_task WHERE task_id = #{taskId}")
+    @Select("SELECT * FROM biz_level4_task WHERE task_id = #{taskId} AND (is_delete IS NULL OR is_delete = 0)")
     BizLevel4Task getLevel4TasksById(Long taskId);
 
 //    getForthLevelTasksByParentId
-    @Select("SELECT * FROM biz_level4_task WHERE parent_id = #{parentId}")
+    @Select("SELECT * FROM biz_level4_task WHERE parent_id = #{parentId} AND (is_delete IS NULL OR is_delete = 0) ORDER BY task_id")
     List<BizLevel4Task> getForthLevelTasksByParentId(Long parentId);
+
+    @Select("SELECT * FROM biz_level4_task WHERE parent_id = #{parentId} AND (is_delete IS NULL OR is_delete = 0) ORDER BY task_id FOR UPDATE")
+    List<BizLevel4Task> getActiveLevel4TasksByParentIdForUpdate(Long parentId);
 
 //    更新四级任务
 @Update("UPDATE biz_level4_task SET " +

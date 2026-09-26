@@ -21,6 +21,10 @@ public class BizLevel4Task {
     private BigDecimal targetValue;
     private BigDecimal currentValue;
     private Integer progress;
+    /** 实际完成率，可超过100%，仅用于接口展示。 */
+    private BigDecimal actualProgress;
+    /** 计入父任务汇总的完成率，范围0-100，仅用于接口展示。 */
+    private BigDecimal countedProgress;
     private String status;
     private Integer isDelete;
     private Date createTime;

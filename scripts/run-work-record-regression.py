@@ -37,6 +37,9 @@ def main():
     sql("CREATE DATABASE `" + schema + "` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
     try:
         sql(dump, schema)
+        sql((ROOT / "scripts/password/001_force_password_change.sql").read_bytes(), schema)
+        sql("UPDATE sys_user SET force_password_change=0; "
+            "ALTER TABLE sys_user ALTER force_password_change SET DEFAULT 0", schema)
         # 本地业务库将来可能已经部署纪实；只在已验证的随机隔离库重建新增表。
         sql("DROP TABLE IF EXISTS biz_work_record_snapshot; DROP TABLE IF EXISTS biz_work_record_entry; DROP TABLE IF EXISTS biz_work_record;", schema)
         migration = (ROOT / "scripts/work-records/001_work_records.sql").read_bytes()
