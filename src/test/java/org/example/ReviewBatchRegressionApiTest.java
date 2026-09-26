@@ -472,7 +472,18 @@ class ReviewBatchRegressionApiTest {
             user.put("status", status);
             assertEquals(HttpStatus.OK, request(HttpMethod.POST, "/system/users/add", admin, user).getStatusCode());
             assertEquals(status, jdbc.queryForObject("SELECT status FROM sys_user WHERE user_id=?", String.class, addedId));
-            login(addedId); // 已确认兼容范围：本次不改变状态与登录的关系。
+            ResponseEntity<String> loginResponse = request(HttpMethod.POST, "/system/login", null,
+                    Map.of("user_id", addedId, "password", PASSWORD));
+            if ("1".equals(status)) {
+                assertEquals(HttpStatus.OK, loginResponse.getStatusCode());
+                assertTrue(body(loginResponse).path("token").isTextual());
+            } else {
+                // 登录接口沿用历史的 HTTP 200 + ErrorVO 响应结构，但不得签发 Token。
+                assertEquals(HttpStatus.OK, loginResponse.getStatusCode());
+                assertEquals(500, body(loginResponse).path("code").asInt());
+                assertEquals("账号已停用", body(loginResponse).path("message").asText());
+                assertFalse(body(loginResponse).has("token"));
+            }
         }
     }
 

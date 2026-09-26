@@ -29,7 +29,7 @@ def main():
     if password is None:
         raise RuntimeError("Set SHUANGGAO_TEST_DB_PASSWORD before running this script")
     method = sys.argv[1] if len(sys.argv) > 1 else None
-    if method and not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", method):
+    if method and not re.fullmatch(r"(?:admin:)?[A-Za-z][A-Za-z0-9_]*", method):
         raise RuntimeError("Expected a single regression test method name")
     database = "biz_review_test_" + uuid.uuid4().hex
     env = os.environ.copy()
@@ -52,11 +52,21 @@ def main():
         subprocess.run([mysql, *connection, database],
                        input=(root / 'data/migrations/2026-09-26-budget-import-version.sql').read_bytes(),
                        env=env, check=True)
+        subprocess.run([mysql, *connection, database],
+                       input=(root / 'data/migrations/2026-09-27-admin-management.sql').read_bytes(),
+                       env=env, check=True)
         env["SHUANGGAO_REVIEW_TEST"] = "true"
         env["SHUANGGAO_TEST_DB_USER"] = user
         env["SHUANGGAO_TEST_JDBC_URL"] = ("jdbc:mysql://127.0.0.1:3306/" + database
                                          + "?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai")
-        selector = "ReviewBatchRegressionApiTest" + ("#" + method if method else "")
+        if method == "admin":
+            selector = "AdminManagementApiTest"
+        elif method and method.startswith("admin:"):
+            selector = "AdminManagementApiTest#" + method.removeprefix("admin:")
+        elif method:
+            selector = "ReviewBatchRegressionApiTest#" + method
+        else:
+            selector = "ReviewBatchRegressionApiTest,AdminManagementApiTest"
         print("Running " + selector + " in isolated schema " + database, flush=True)
         result = subprocess.run([shutil.which("mvn.cmd") or executable("mvn"), "-B", "-Dtest=" + selector, "test"],
                                 cwd=root, env=env)

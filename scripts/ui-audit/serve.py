@@ -62,6 +62,7 @@ def main():
         subprocess.run(mysql + [schema], input=dump, env=env, check=True, capture_output=True)
         sql((ROOT / "scripts/password/001_force_password_change.sql").read_text(encoding="utf-8"), schema)
         sql((ROOT / "data/migrations/2026-09-26-budget-import-version.sql").read_text(encoding="utf-8"), schema)
+        sql((ROOT / "data/migrations/2026-09-27-admin-management.sql").read_text(encoding="utf-8"), schema)
         sql((ROOT / "scripts/ui-audit/fixture.sql").read_text(encoding="utf-8"), schema)
         sql("UPDATE sys_user SET force_password_change=0", schema)
         if args.fixture == "work-records":
