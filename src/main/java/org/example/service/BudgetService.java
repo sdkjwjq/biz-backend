@@ -344,7 +344,8 @@ public class BudgetService {
 
     private void validateAdmin(Long userId) {
         SysUser user = userId == null ? null : sysMapper.getUserById(userId);
-        if (user == null || !"0".equals(user.getRole())) {
+        if (user == null || !"0".equals(user.getRole()) || !"1".equals(user.getStatus())
+                || Integer.valueOf(1).equals(user.getIsDelete())) {
             throw new RuntimeException("仅管理员可以操作预算");
         }
     }

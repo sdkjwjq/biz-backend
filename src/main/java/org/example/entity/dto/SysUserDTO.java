@@ -17,6 +17,6 @@ public class SysUserDTO {
     private String email; // 邮箱
     private String password; // 密码
     private String role; // 角色 0:admin 1:user 2:leader
-    private String status; // 状态 0:正常 1:停用
+    private String status; // 兼容线上既有数据：1正常，0停用
     private Integer isDelete; // 0:存在 1:删除
 }

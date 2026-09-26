@@ -20,7 +20,7 @@ public class SysUser {
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private Integer forcePasswordChange; // 1需要首次改密，0已完成；沿用线上标记
     private String role; // 角色 0:admin 1:user 2:leader
-    private String status; // 状态 0:正常 1:停用
+    private String status; // 兼容线上既有数据：1正常，0停用
     private Integer isDelete; // 0:存在 1:删除
     private Date createTime; // 创建时间
     private Date updateTime; // 更新时间

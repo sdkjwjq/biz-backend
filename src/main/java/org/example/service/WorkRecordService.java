@@ -45,7 +45,7 @@ public class WorkRecordService {
 
     private SysUser user(Long id) {
         SysUser user = users.getUserById(id);
-        if (user == null || Integer.valueOf(1).equals(user.getIsDelete())) throw new WorkRecordException(401, "请重新登录");
+        if (user == null || Integer.valueOf(1).equals(user.getIsDelete()) || !"1".equals(user.getStatus())) throw new WorkRecordException(401, "请重新登录");
         return user;
     }
 

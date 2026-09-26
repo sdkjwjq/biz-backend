@@ -57,7 +57,8 @@ public class PerformanceService {
             return false;
         }
         SysUser user = sysMapper.getUserById(userId);
-        return user != null && "0".equals(user.getRole());
+        return user != null && "0".equals(user.getRole()) && "1".equals(user.getStatus())
+                && !Integer.valueOf(1).equals(user.getIsDelete());
     }
 
     private boolean canViewPerformance(BizPerformance performance, Long userId) {

@@ -38,6 +38,8 @@ public class BizService {
 
     @Autowired
     private TaskManagementService taskManagementService;
+    @Autowired
+    private AdminManagementService adminManagementService;
 
     /**
      * 获取全部任务
@@ -265,7 +267,7 @@ public class BizService {
         if (user == null || Integer.valueOf(1).equals(user.getIsDelete())) {
             throw new RuntimeException("用户不存在");
         }
-        if (!"0".equals(user.getRole())) {
+        if (!"0".equals(user.getRole()) || !"1".equals(user.getStatus())) {
             throw new RuntimeException("仅限管理员访问");
         }
     }
@@ -286,7 +288,8 @@ public class BizService {
             if (sysUser == null) {
                 throw new RuntimeException("用户不存在");
             }
-            if (!sysUser.getRole().equals("0")) {
+            if (!"0".equals(sysUser.getRole()) || !"1".equals(sysUser.getStatus())
+                    || Integer.valueOf(1).equals(sysUser.getIsDelete())) {
                 throw new RuntimeException("仅限管理员访问");
             }
             BizMaterialSubmission audit = bizMapper.getNewestAuditForUpdate(taskId);
@@ -304,6 +307,8 @@ public class BizService {
             if (audit.getFlowStatus() == null || audit.getFlowStatus() <= 0 || audit.getFlowStatus() >= 40) {
                 throw new RuntimeException("当前审批单状态不可完结");
             }
+            String statusBeforeFinish = taskById.getStatus();
+            Integer flowBeforeFinish = audit.getFlowStatus();
             Long auditorId = taskById.getAuditorId();
             Long principalId = taskById.getPrincipalId();
             if (auditorId == null) {
@@ -367,6 +372,11 @@ public class BizService {
                     "targetValue", taskById.getTargetValue(),
                     "flowStatus", audit.getFlowStatus(),
                     "performance", "已触发刷新");
+            adminManagementService.recordOperation("TASK", "FINISH", "TASK", String.valueOf(taskById.getTaskId()),
+                    taskById.getTaskName(), userId, "管理员一键完结任务",
+                    Map.of("status", statusBeforeFinish, "flowStatus", flowBeforeFinish),
+                    Map.of("status", taskById.getStatus(), "flowStatus", 40,
+                            "currentValue", taskById.getCurrentValue(), "progress", taskById.getProgress()));
             return "任务"+taskById.getTaskName()+"已完成";
         } catch (Exception e) {
             throw new RuntimeException(e);

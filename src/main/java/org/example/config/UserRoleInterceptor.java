@@ -3,6 +3,8 @@ package org.example.config;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.example.utils.JWTUtil;
+import org.example.entity.SysUser;
+import org.example.mapper.SysMapper;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -19,17 +21,24 @@ public class UserRoleInterceptor implements HandlerInterceptor {
     /** 允许访问的角色：0-管理员 */
     private static final String ALLOWED_ROLE = "0";
 
+    private final SysMapper sysMapper;
+
+    public UserRoleInterceptor(SysMapper sysMapper) {
+        this.sysMapper = sysMapper;
+    }
+
     /**
      * 角色验证，待调试，待完善
      */
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        // 1. 从请求头解析Token获取角色（你的真实逻辑）
         String token = request.getHeader("Authorization");
-        String userRole = JWTUtil.getRoleFromToken(token);
+        Long userId = JWTUtil.getUserIdFromToken(token);
+        SysUser current = userId == null ? null : sysMapper.getUserById(userId);
 
-        // 2. 角色校验：无角色/角色非0则拒绝访问
-        if (userRole == null || !ALLOWED_ROLE.equals(userRole)) {
+        // 管理接口每次读取数据库中的当前状态，停用或降级立即生效。
+        if (current == null || !ALLOWED_ROLE.equals(current.getRole()) || !"1".equals(current.getStatus())
+                || Integer.valueOf(1).equals(current.getIsDelete())) {
             response.setContentType("application/json;charset=UTF-8");
             response.setStatus(HttpStatus.FORBIDDEN.value());
             PrintWriter writer = response.getWriter();

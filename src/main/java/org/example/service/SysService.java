@@ -77,6 +77,10 @@ public class SysService {
         if (user != null && Integer.valueOf(1).equals(user.getIsDelete())) {
             user = null;
         }
+        if (user != null && !"1".equals(user.getStatus())) {
+            BusinessLogUtil.warn("用户登录", "result", "失败", "reason", "账号已停用", "userId", userId);
+            throw new RuntimeException("账号已停用");
+        }
         if (user != null && ((user.getPassword() != null && user.getPassword().equals(password))
                 || (Integer.valueOf(1).equals(user.getForcePasswordChange()) && userId.toString().equals(password)))) {
             SysDept dept = user.getDeptId() == null ? null : sysMapper.getDeptById(user.getDeptId());
@@ -132,7 +136,7 @@ public class SysService {
     public void resetPassword(Long userId, String oldPassword, String newPassword) {
         org.example.utils.PasswordPolicy.validate(newPassword);
         SysUser user = sysMapper.getUserById(userId);
-        if (user == null || Integer.valueOf(1).equals(user.getIsDelete())
+        if (user == null || Integer.valueOf(1).equals(user.getIsDelete()) || !"1".equals(user.getStatus())
                 || !(userId.toString().equals(oldPassword) || (user.getPassword() != null && user.getPassword().equals(oldPassword)))
                 || sysMapper.resetPassword(userId, user.getPassword(), newPassword) != 1) {
             throw new SecurityException("账号或原密码错误");

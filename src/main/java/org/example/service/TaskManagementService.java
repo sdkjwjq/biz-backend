@@ -15,10 +15,12 @@ public class TaskManagementService {
     @Autowired private SysMapper sysMapper;
     @Autowired private BizMapper bizMapper;
     @Autowired private TaskManagementMapper mapper;
+    @Autowired private AdminManagementService adminManagementService;
 
     public boolean canManage(Long userId) {
         SysUser user = userId == null ? null : sysMapper.getUserById(userId);
-        return user != null && !Integer.valueOf(1).equals(user.getIsDelete()) && "0".equals(user.getRole());
+        return user != null && !Integer.valueOf(1).equals(user.getIsDelete())
+                && "1".equals(user.getStatus()) && "0".equals(user.getRole());
     }
 
     private void requireAdmin(Long userId) {
@@ -29,7 +31,7 @@ public class TaskManagementService {
         requireAdmin(userId);
         List<Map<String, Object>> users = new ArrayList<>();
         for (SysUser user : sysMapper.getAllUsers()) {
-            if (Integer.valueOf(1).equals(user.getIsDelete())) continue;
+            if (Integer.valueOf(1).equals(user.getIsDelete()) || !"1".equals(user.getStatus())) continue;
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("userId", user.getUserId()); item.put("nickName", user.getNickName()); item.put("deptId", user.getDeptId());
             users.add(item);
@@ -69,13 +71,18 @@ public class TaskManagementService {
         task.setCurrentValue(BigDecimal.ZERO); task.setProgress(0); task.setStatus("0"); task.setWeight(BigDecimal.ONE);
         task.setIsDelete(0); task.setCreateTime(new Date()); task.setUpdateTime(new Date());
         bizMapper.addTask(task);
+        adminManagementService.recordOperation("TASK", "CREATE", "TASK", String.valueOf(task.getTaskId()),
+                task.getTaskName(), userId, "管理员新增三级任务", null,
+                Map.of("taskId", task.getTaskId(), "taskCode", task.getTaskCode(), "phase", task.getPhase(),
+                        "deptId", task.getDeptId(), "leaderId", task.getLeaderId(), "auditorId", task.getAuditorId(),
+                        "principalId", task.getPrincipalId()));
         return task;
     }
 
     private boolean active(BizTask task) { return task != null && !Integer.valueOf(1).equals(task.getIsDelete()); }
     private void validUser(Long id, String label) {
         SysUser user = id == null ? null : sysMapper.getUserById(id);
-        if (user == null || Integer.valueOf(1).equals(user.getIsDelete())) fail("请选择有效的" + label);
+        if (user == null || Integer.valueOf(1).equals(user.getIsDelete()) || !"1".equals(user.getStatus())) fail("请选择有效的" + label);
     }
     private String required(String value, int max, String label) {
         if (value == null || value.trim().isEmpty()) fail("请填写" + label);

@@ -21,6 +21,7 @@ NEW_SOURCES = [
     'data/migrations/2026-09-24-ownership-change-log.sql',
     'data/migrations/2026-09-24-performance-relation-edit.sql',
     'data/migrations/2026-09-26-budget-import-version.sql',
+    'data/migrations/2026-09-27-admin-management.sql',
 ]
 ADDITIONS = {
     ('biz_audit_snapshot','previous_comment'): 'varchar(500) DEFAULT NULL',
@@ -64,7 +65,7 @@ def main():
             assert name not in added_tables
             added_tables.add(name)
             creates.append(re.sub(r'^CREATE TABLE(?: IF NOT EXISTS)?','CREATE TABLE IF NOT EXISTS',match.group(0)))
-    assert len(added_tables)==15
+    assert len(added_tables)==16
     sql='-- Additive structure only. No historical data repair, account writes or seed records.\n'+ '\n\n'.join(creates)+'\n'
     for (table,column),definition in ADDITIONS.items():
         sql+=f"""

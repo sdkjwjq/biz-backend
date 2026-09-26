@@ -60,7 +60,8 @@ public class PerformanceRelationService {
 
     public boolean canManageRelation(Long userId) {
         SysUser user = userId == null ? null : sysMapper.getUserById(userId);
-        return user != null && !Integer.valueOf(1).equals(user.getIsDelete()) && "0".equals(user.getRole());
+        return user != null && !Integer.valueOf(1).equals(user.getIsDelete())
+                && "1".equals(user.getStatus()) && "0".equals(user.getRole());
     }
 
     /** 可关联任务候选：已关联的历史数据即使不再满足汇总条件也返回，便于解除。 */

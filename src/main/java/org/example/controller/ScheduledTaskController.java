@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.example.entity.vo.ErrorVO;
 import org.example.service.ScheduledTaskService;
 import org.example.utils.JWTUtil;
+import org.example.service.AdminManagementService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,6 +16,8 @@ public class ScheduledTaskController {
 
     @Autowired
     private ScheduledTaskService scheduledTaskService;
+    @Autowired
+    private AdminManagementService adminManagementService;
 
     @PostMapping("/month_leader_trigger")
     public Object triggerManualReminder(HttpServletRequest request) {
@@ -58,9 +61,6 @@ public class ScheduledTaskController {
     }
 
     private void ensureAdmin(HttpServletRequest request) {
-        String role = JWTUtil.getRoleFromToken(request.getHeader("Authorization"));
-        if (!"0".equals(role)) {
-            throw new RuntimeException("仅管理员可以操作定时任务");
-        }
+        adminManagementService.requireAdmin(JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
     }
 }

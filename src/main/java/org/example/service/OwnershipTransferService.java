@@ -59,7 +59,8 @@ public class OwnershipTransferService {
 
     public boolean canTransfer(Long userId) {
         SysUser user = userId == null ? null : sysMapper.getUserById(userId);
-        return user != null && !Integer.valueOf(1).equals(user.getIsDelete()) && "0".equals(user.getRole());
+        return user != null && !Integer.valueOf(1).equals(user.getIsDelete())
+                && "1".equals(user.getStatus()) && "0".equals(user.getRole());
     }
 
     @Transactional
@@ -206,7 +207,7 @@ public class OwnershipTransferService {
 
     private SysUser user(Long userId) {
         SysUser user = userId == null ? null : sysMapper.getUserById(userId);
-        return user == null || Integer.valueOf(1).equals(user.getIsDelete()) ? null : user;
+        return user == null || Integer.valueOf(1).equals(user.getIsDelete()) || !"1".equals(user.getStatus()) ? null : user;
     }
 
     private Target taskTarget(Long taskId) {
