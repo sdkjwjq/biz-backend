@@ -20,6 +20,7 @@ NEW_SOURCES = [
     'scripts/work-records/001_work_records.sql',
     'data/migrations/2026-09-24-ownership-change-log.sql',
     'data/migrations/2026-09-24-performance-relation-edit.sql',
+    'data/migrations/2026-09-26-budget-import-version.sql',
 ]
 ADDITIONS = {
     ('biz_audit_snapshot','previous_comment'): 'varchar(500) DEFAULT NULL',
@@ -63,7 +64,7 @@ def main():
             assert name not in added_tables
             added_tables.add(name)
             creates.append(re.sub(r'^CREATE TABLE(?: IF NOT EXISTS)?','CREATE TABLE IF NOT EXISTS',match.group(0)))
-    assert len(added_tables)==14
+    assert len(added_tables)==15
     sql='-- Additive structure only. No historical data repair, account writes or seed records.\n'+ '\n\n'.join(creates)+'\n'
     for (table,column),definition in ADDITIONS.items():
         sql+=f"""
@@ -77,6 +78,17 @@ DEALLOCATE PREPARE release_stmt;
     for migration in ['scripts/work-records/002_work_record_delete.sql', 'scripts/password/001_force_password_change.sql']:
         sql += '\n' + (ROOT/migration).read_text(encoding='utf-8')
     (OUT/'sql/additive.sql').write_text(sql,encoding='utf-8',newline='\n')
+    budget_version_migration = (ROOT/'data/migrations/2026-09-26-budget-import-version.sql').read_text(encoding='utf-8')
+    backfill_marker = '-- 为升级前已有的当前预算建立只读初始版本。脚本重复执行不会重复写入。'
+    assert budget_version_migration.count(backfill_marker) == 1
+    budget_version_backfill = budget_version_migration[budget_version_migration.index(backfill_marker):]
+    assert 'INSERT INTO `biz_budget_import_version`' in budget_version_backfill
+    assert 'NOT EXISTS' in budget_version_backfill
+    assert not re.search(r'(?im)^\s*(?:DROP|TRUNCATE|DELETE|UPDATE|REPLACE)\b', budget_version_backfill)
+    (OUT/'sql/budget-version-backfill.sql').write_text(budget_version_backfill,encoding='utf-8',newline='\n')
+    budget_version_check = (ROOT/'data/migrations/2026-09-26-budget-import-version-check.sql').read_text(encoding='utf-8')
+    assert not re.search(r'(?im)^\s*(?:ALTER|CREATE|DROP|TRUNCATE|DELETE|INSERT|UPDATE|REPLACE)\b', budget_version_check)
+    (OUT/'sql/budget-version-check.sql').write_text(budget_version_check,encoding='utf-8',newline='\n')
     data_update = ROOT/'data/migrations/2026-09-18-task-auditor-dept-principal-update.sql'
     data_sql = data_update.read_text(encoding='utf-8')
     assert data_sql.startswith('-- 2026-09-18 task update')
@@ -114,7 +126,7 @@ DEALLOCATE PREPARE release_stmt;
         'database_rows_included':True,'backup_contains_user_passwords':True,'runtime_database_password_included':False,
         'restore_requires_explicit_flag':'--restore-backup',
         'notice_cleanup':'Only obsolete task/performance/achievement review requests are soft-deleted; audit data unchanged',
-        'data_updates':['sql/task-update-20260918.sql'],
+        'data_updates':['sql/budget-version-backfill.sql','sql/task-update-20260918.sql'],
         'data_update_backup_tables':['bak_20260918_task_code_fix','bak_20260918_task_auditor_dept_principal'],
         'new_tables':sorted(added_tables),'supported_existing_column_additions':['.'.join(key) for key in ADDITIONS],
     }

@@ -262,6 +262,14 @@ exit 17
     checks.append('checksums-password-exclusion-and-templates')
     ddl=(PACKAGE/'sql/additive.sql').read_text(encoding='utf-8')
     assert not re.search(r'^\s*(DROP|DELETE|UPDATE|INSERT|TRUNCATE|REPLACE)\b',ddl,re.M|re.I)
+    budget_backfill=(PACKAGE/'sql/budget-version-backfill.sql').read_bytes()
+    assert b'\r' not in budget_backfill, 'Budget version backfill SQL must use LF'
+    assert b'INSERT INTO `biz_budget_import_version`' in budget_backfill and b'NOT EXISTS' in budget_backfill
+    assert not re.search(rb'(?im)^\s*(?:DROP|TRUNCATE|DELETE|UPDATE|REPLACE)\b',budget_backfill)
+    budget_check=(PACKAGE/'sql/budget-version-check.sql').read_bytes()
+    assert b'\r' not in budget_check, 'Budget version check SQL must use LF'
+    assert b'missing_version_sheets' in budget_check
+    assert not re.search(rb'(?im)^\s*(?:ALTER|CREATE|DROP|TRUNCATE|DELETE|INSERT|UPDATE|REPLACE)\b',budget_check)
     # Only table definitions from the supplied online backup, never its business rows.
     source=(PACKAGE/'restore/20260920backup.sql').read_text(encoding='utf-8')
     definitions=re.findall(r'CREATE TABLE\s+`\w+`\s*\(.*?\)\s*ENGINE=.*?;',source,re.S)
@@ -282,6 +290,17 @@ exit 17
         after=snapshot(before_columns)
         assert all(after[name]==data for name,data in before.items())
         checks.append('missing-work-record-tables-created-existing-rows-unchanged')
+        existing_after_structure=snapshot()
+        budget_sheet_count=int(sql('SELECT COUNT(*) FROM biz_budget_sheet WHERE is_delete=0').strip() or b'0')
+        sql(budget_backfill)
+        assert int(sql("SELECT COUNT(*) FROM biz_budget_import_version WHERE operation_type='INITIAL' AND is_delete=0").strip() or b'0')==budget_sheet_count
+        after_first_backfill=snapshot()
+        sql(budget_backfill)
+        assert snapshot()==after_first_backfill
+        assert b'missing_version_sheets\t0' in sql(budget_check)
+        assert all(after_first_backfill[name]==data for name,data in existing_after_structure.items()
+                   if name!='biz_budget_import_version')
+        checks.append('budget-initial-version-backfill-is-idempotent-and-preserves-live-budget-data')
         sql("INSERT INTO biz_work_record(record_id,owner_id,owner_name,record_year,record_month,status,version,create_time,update_time) VALUES(1,910003,'Synthetic',2026,7,1,1,NOW(),NOW());")
         sql("INSERT INTO biz_work_record_snapshot(record_id,statistics_json,generated_time) VALUES(1,'{}',NOW());")
         before=snapshot(); sql(ddl); check_schema('after'); assert snapshot()==before

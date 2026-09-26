@@ -8,10 +8,14 @@ import org.example.utils.JWTUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/budget")
@@ -60,6 +64,39 @@ public class BudgetController {
         try {
             budgetService.exportBudget(year, month, response);
             return null;
+        } catch (Exception e) {
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
+
+    @GetMapping("/versions")
+    public Object versions(@RequestParam("year") Integer year,
+                           @RequestParam("month") Integer month,
+                           HttpServletRequest request) {
+        try {
+            return budgetService.getVersions(year, month, currentUserId(request));
+        } catch (Exception e) {
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
+
+    @GetMapping("/versions/{versionId}")
+    public Object versionDetail(@PathVariable("versionId") Long versionId,
+                                HttpServletRequest request) {
+        try {
+            return budgetService.getVersion(versionId, currentUserId(request));
+        } catch (Exception e) {
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
+
+    @PostMapping("/versions/{versionId}/restore")
+    public Object restoreVersion(@PathVariable("versionId") Long versionId,
+                                 @RequestBody(required = false) Map<String, String> body,
+                                 HttpServletRequest request) {
+        try {
+            String remark = body == null ? null : body.get("remark");
+            return budgetService.restoreVersion(versionId, remark, currentUserId(request));
         } catch (Exception e) {
             return new ErrorVO(e.getMessage(), 500);
         }

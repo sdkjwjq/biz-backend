@@ -1,5 +1,7 @@
 package org.example.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletResponse;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
@@ -13,10 +15,13 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.example.entity.BizBudgetSheet;
 import org.example.entity.BizBudgetSourceItem;
 import org.example.entity.BizBudgetTaskItem;
+import org.example.entity.BizBudgetImportVersion;
 import org.example.entity.SysFile;
 import org.example.entity.SysUser;
 import org.example.entity.dto.FileUploadDTO;
 import org.example.entity.vo.BudgetSheetVO;
+import org.example.entity.vo.BudgetVersionDetailVO;
+import org.example.entity.vo.BudgetVersionVO;
 import org.example.mapper.BudgetMapper;
 import org.example.mapper.SysMapper;
 import org.example.utils.BusinessLogUtil;
@@ -31,6 +36,7 @@ import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -45,6 +51,9 @@ public class BudgetService {
 
     @Autowired
     private SysMapper sysMapper;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     private final DataFormatter formatter = new DataFormatter(Locale.CHINA);
 
@@ -74,7 +83,7 @@ public class BudgetService {
         Long fileId = saveFile(file, userId);
         Date now = new Date();
 
-        BizBudgetSheet sheet = budgetMapper.getSheet(year, month);
+        BizBudgetSheet sheet = budgetMapper.getSheetForUpdate(year, month);
         if (sheet == null) {
             sheet = new BizBudgetSheet();
             sheet.setYear(year);
@@ -94,18 +103,12 @@ public class BudgetService {
             sheet.setUpdateTime(now);
             sheet.setIsDelete(0);
             budgetMapper.updateSheet(sheet);
-            budgetMapper.deleteSources(sheet.getSheetId());
-            budgetMapper.deleteTasks(sheet.getSheetId());
         }
 
-        for (BizBudgetSourceItem source : parsed.sources) {
-            source.setSheetId(sheet.getSheetId());
-            budgetMapper.insertSource(source);
-        }
-        for (BizBudgetTaskItem task : parsed.tasks) {
-            task.setSheetId(sheet.getSheetId());
-            budgetMapper.insertTask(task);
-        }
+        replaceItems(sheet.getSheetId(), parsed.sources, parsed.tasks);
+        BudgetSheetVO current = toVO(sheet);
+        BizBudgetImportVersion version = saveVersion(sheet, current, "IMPORT", null,
+                fileId, originalFileName(file), userId, now, null);
 
         BusinessLogUtil.info("预算导入",
                 "result", "成功",
@@ -114,9 +117,71 @@ public class BudgetService {
                 "month", month,
                 "sheetId", sheet.getSheetId(),
                 "fileId", fileId,
+                "versionId", version.getVersionId(),
+                "versionNo", version.getVersionNo(),
                 "sourceCount", parsed.sources.size(),
                 "taskCount", parsed.tasks.size());
-        return toVO(sheet);
+        return current;
+    }
+
+    public List<BudgetVersionVO> getVersions(Integer year, Integer month, Long userId) {
+        validateAdmin(userId);
+        validateYearMonth(year, month);
+        List<BudgetVersionVO> versions = budgetMapper.getVersions(year, month);
+        for (int index = 0; index < versions.size(); index++) {
+            versions.get(index).setCurrent(index == 0);
+        }
+        return versions;
+    }
+
+    public BudgetVersionDetailVO getVersion(Long versionId, Long userId) {
+        validateAdmin(userId);
+        BizBudgetImportVersion version = requireVersion(versionId);
+        BudgetVersionVO metadata = budgetMapper.getVersionVO(versionId);
+        metadata.setCurrent(isLatest(version));
+        return new BudgetVersionDetailVO(metadata, snapshot(version));
+    }
+
+    @Transactional
+    public BudgetSheetVO restoreVersion(Long versionId, String remark, Long userId) {
+        validateAdmin(userId);
+        String reason = normalizeRestoreRemark(remark);
+        BizBudgetImportVersion source = requireVersion(versionId);
+        BizBudgetSheet sheet = budgetMapper.getSheetForUpdate(source.getYear(), source.getMonth());
+        if (sheet == null || !Objects.equals(sheet.getSheetId(), source.getSheetId())) {
+            throw new RuntimeException("当前预算表不存在，无法恢复历史版本");
+        }
+        if (isLatest(source)) {
+            throw new RuntimeException("当前版本无需恢复");
+        }
+
+        BudgetSheetVO old = snapshot(source);
+        if (old.getSources() == null || old.getSources().isEmpty() || old.getTasks() == null || old.getTasks().isEmpty()) {
+            throw new RuntimeException("历史版本数据不完整，无法恢复");
+        }
+
+        Date now = new Date();
+        sheet.setLocked(1);
+        sheet.setFileId(source.getFileId());
+        sheet.setImportBy(userId);
+        sheet.setImportTime(now);
+        sheet.setUpdateTime(now);
+        sheet.setIsDelete(0);
+        budgetMapper.updateSheet(sheet);
+        replaceItems(sheet.getSheetId(), old.getSources(), old.getTasks());
+
+        BudgetSheetVO current = toVO(sheet);
+        BizBudgetImportVersion restored = saveVersion(sheet, current, "RESTORE", source.getVersionId(),
+                source.getFileId(), source.getFileName(), userId, now, reason);
+        BusinessLogUtil.info("预算版本恢复",
+                "result", "成功",
+                "userId", userId,
+                "year", sheet.getYear(),
+                "month", sheet.getMonth(),
+                "sourceVersionId", source.getVersionId(),
+                "newVersionId", restored.getVersionId(),
+                "newVersionNo", restored.getVersionNo());
+        return current;
     }
 
     public BudgetSheetVO updateLock(Integer year, Integer month, Boolean locked, Long userId) {
@@ -178,6 +243,103 @@ public class BudgetService {
         vo.setSources(budgetMapper.getSources(sheet.getSheetId()));
         vo.setTasks(budgetMapper.getTasks(sheet.getSheetId()));
         return vo;
+    }
+
+    private void replaceItems(Long sheetId, List<BizBudgetSourceItem> sources, List<BizBudgetTaskItem> tasks) {
+        budgetMapper.deleteSources(sheetId);
+        budgetMapper.deleteTasks(sheetId);
+        for (BizBudgetSourceItem source : sources) {
+            source.setItemId(null);
+            source.setSheetId(sheetId);
+            budgetMapper.insertSource(source);
+        }
+        for (BizBudgetTaskItem task : tasks) {
+            task.setItemId(null);
+            task.setSheetId(sheetId);
+            budgetMapper.insertTask(task);
+        }
+    }
+
+    private BizBudgetImportVersion saveVersion(BizBudgetSheet sheet, BudgetSheetVO budget, String operationType,
+                                                Long sourceVersionId, Long fileId, String fileName, Long userId,
+                                                Date createTime, String remark) {
+        BizBudgetImportVersion version = new BizBudgetImportVersion();
+        version.setSheetId(sheet.getSheetId());
+        version.setYear(sheet.getYear());
+        version.setMonth(sheet.getMonth());
+        version.setVersionNo(budgetMapper.nextVersionNo(sheet.getSheetId()));
+        version.setOperationType(operationType);
+        version.setSourceVersionId(sourceVersionId);
+        version.setFileId(fileId);
+        version.setFileName(limit(fileName, 255));
+        try {
+            version.setSnapshotJson(objectMapper.writeValueAsString(budget));
+        } catch (JsonProcessingException error) {
+            throw new RuntimeException("预算版本快照保存失败", error);
+        }
+        version.setCreatedBy(userId);
+        version.setCreateTime(createTime);
+        version.setRemark(limit(remark, 200));
+        version.setIsDelete(0);
+        budgetMapper.insertVersion(version);
+        return version;
+    }
+
+    private BizBudgetImportVersion requireVersion(Long versionId) {
+        if (versionId == null || versionId <= 0) {
+            throw new RuntimeException("预算版本不存在");
+        }
+        BizBudgetImportVersion version = budgetMapper.getVersion(versionId);
+        if (version == null) {
+            throw new RuntimeException("预算版本不存在");
+        }
+        return version;
+    }
+
+    private BudgetSheetVO snapshot(BizBudgetImportVersion version) {
+        try {
+            BudgetSheetVO budget = objectMapper.readValue(version.getSnapshotJson(), BudgetSheetVO.class);
+            if (budget.getSources() == null) budget.setSources(new ArrayList<>());
+            if (budget.getTasks() == null) budget.setTasks(new ArrayList<>());
+            budget.getSources().sort(Comparator.comparing(item -> item.getDisplayOrder() == null ? 0 : item.getDisplayOrder()));
+            budget.getTasks().sort(Comparator.comparing(item -> item.getTaskIndex() == null ? 0 : item.getTaskIndex()));
+            BizBudgetSheet sheet = new BizBudgetSheet();
+            sheet.setSheetId(version.getSheetId());
+            sheet.setYear(version.getYear());
+            sheet.setMonth(version.getMonth());
+            sheet.setLocked(1);
+            sheet.setFileId(version.getFileId());
+            sheet.setImportBy(version.getCreatedBy());
+            sheet.setImportTime(version.getCreateTime());
+            sheet.setIsDelete(0);
+            budget.setSheet(sheet);
+            return budget;
+        } catch (JsonProcessingException error) {
+            throw new RuntimeException("预算版本快照读取失败", error);
+        }
+    }
+
+    private boolean isLatest(BizBudgetImportVersion version) {
+        List<BudgetVersionVO> versions = budgetMapper.getVersions(version.getYear(), version.getMonth());
+        return !versions.isEmpty() && Objects.equals(versions.get(0).getVersionId(), version.getVersionId());
+    }
+
+    private String normalizeRestoreRemark(String remark) {
+        String value = remark == null ? "" : remark.trim();
+        if (value.isEmpty()) throw new RuntimeException("请填写恢复原因");
+        if (value.length() > 200) throw new RuntimeException("恢复原因不能超过200字");
+        return value;
+    }
+
+    private String originalFileName(MultipartFile file) {
+        String value = file == null ? null : file.getOriginalFilename();
+        return value == null || value.isBlank() ? "预算导入文件" : value.trim();
+    }
+
+    private String limit(String value, int max) {
+        if (value == null) return null;
+        String normalized = value.trim();
+        return normalized.length() <= max ? normalized : normalized.substring(0, max);
     }
 
     private void validateAdmin(Long userId) {

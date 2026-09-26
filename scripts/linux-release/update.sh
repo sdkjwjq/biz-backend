@@ -248,10 +248,18 @@ if [[ $RESTORE_BACKUP == 1 ]]; then
   say '备份完成，先在暂存库验证指定备份和迁移，再恢复业务库'
   restore_packaged_database
 else
-  say '备份完成，仅补充缺失表/字段；不修改已有业务数据'
+  say '备份完成，仅补充缺失表/字段并保存当前预算初始快照；不改写现有业务表数据'
 fi
 "${MYSQL[@]}" < "$PACKAGE/sql/additive.sql" > "$BACKUP/migration.log"
 bash "$PACKAGE/schema-check.sh" after
+
+# Preserve the current budget state as V1 on first upgrade. This only inserts into the new
+# immutable history table and is idempotent; existing budget sheets and detail rows stay untouched.
+"${MYSQL[@]}" < "$PACKAGE/sql/budget-version-backfill.sql" > "$BACKUP/budget-version-backfill.log"
+"${MYSQL[@]}" < "$PACKAGE/sql/budget-version-check.sql" > "$BACKUP/budget-version-check.log"
+missing_budget_versions=$(awk -F'\t' '$1=="missing_version_sheets"{print $2}' "$BACKUP/budget-version-check.log" | tr -d '\r')
+[[ "$missing_budget_versions" == 0 ]] || die "预算初始版本建立不完整（缺失：${missing_budget_versions:-未知}），请查看备份目录中的 budget-version-check.log"
+say '现有预算已建立初始版本记录；重复更新不会重复生成版本'
 
 # Business data correction: professional-group auditor / owning department / owning-department reviewer.
 # Idempotent, single transaction inside the file; writes its own bak_20260918_* backup tables first.
