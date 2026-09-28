@@ -5,17 +5,6 @@ DELIMITER $$
 DROP PROCEDURE IF EXISTS migrate_level4_equal_weight_20260926$$
 CREATE PROCEDURE migrate_level4_equal_weight_20260926()
 BEGIN
-  IF EXISTS (
-    SELECT 1 FROM biz_level4_task c
-    JOIN biz_task t ON t.task_id = c.parent_id
-    WHERE COALESCE(c.is_delete, 0) = 0 AND COALESCE(t.is_delete, 0) = 0
-      AND (c.target_value IS NULL OR c.target_value <= 0
-           OR t.target_value IS NULL OR t.target_value <= 0)
-  ) THEN
-    SIGNAL SQLSTATE '45000'
-      SET MESSAGE_TEXT = 'Level-four or parent target_value is not positive; migration stopped';
-  END IF;
-
   -- CTAS intentionally avoids copying source CHECK constraint names. MySQL requires
   -- those names to be unique within a schema, so CREATE TABLE ... LIKE would fail.
   CREATE TABLE IF NOT EXISTS biz_task_backup_before_level4_equal_weight_20260926
@@ -56,6 +45,35 @@ BEGIN
   SELECT py.* FROM biz_performance_year py
   WHERE NOT EXISTS (SELECT 1 FROM biz_performance_year_backup_before_equal_weight_20260926 b
                     WHERE b.year_id = py.year_id);
+
+  -- Two historical imports have a zero parent target but exactly one valid level-four
+  -- target. In that unambiguous case the parent uses the only child's target. The full
+  -- parent row has already been backed up above. Any other invalid target remains a hard
+  -- stop so the migration never guesses a business value.
+  UPDATE biz_task t
+  JOIN (
+    SELECT parent_id, COUNT(*) AS child_count, MAX(target_value) AS only_target
+    FROM biz_level4_task
+    WHERE COALESCE(is_delete, 0) = 0
+    GROUP BY parent_id
+  ) c ON c.parent_id = t.task_id
+  SET t.target_value = c.only_target,
+      t.update_time = NOW()
+  WHERE COALESCE(t.is_delete, 0) = 0
+    AND (t.target_value IS NULL OR t.target_value <= 0)
+    AND c.child_count = 1
+    AND c.only_target > 0;
+
+  IF EXISTS (
+    SELECT 1 FROM biz_level4_task c
+    JOIN biz_task t ON t.task_id = c.parent_id
+    WHERE COALESCE(c.is_delete, 0) = 0 AND COALESCE(t.is_delete, 0) = 0
+      AND (c.target_value IS NULL OR c.target_value <= 0
+           OR t.target_value IS NULL OR t.target_value <= 0)
+  ) THEN
+    SIGNAL SQLSTATE '45000'
+      SET MESSAGE_TEXT = 'Level-four or parent target_value is not positive; migration stopped';
+  END IF;
 
   DROP TEMPORARY TABLE IF EXISTS tmp_level4_equal_weight_20260926;
   CREATE TEMPORARY TABLE tmp_level4_equal_weight_20260926 AS

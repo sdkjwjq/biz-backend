@@ -15,7 +15,7 @@ import shutil
 import gzip
 
 ROOT=Path(__file__).resolve().parents[2]
-PACKAGE=ROOT.parent/'release/shuanggao-update-20260924'
+PACKAGE=ROOT.parent/'releases/shuanggao-update-20260928'
 MYSQL=Path(os.environ.get('MYSQL_EXE') or shutil.which('mysql') or r'C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe')
 BASH=os.environ.get('BASH_EXE') or next((candidate for candidate in
     [r'D:\Program Files\Git\bin\bash.exe', r'C:\Program Files\Git\bin\bash.exe'] if Path(candidate).exists()), 'bash')
@@ -57,6 +57,41 @@ def current_columns():
         table,column=line.split('\t')
         values.setdefault(table,[]).append(column)
     return values
+
+def online_backup_migration_rehearsal():
+    """Run the cumulative migrations against the supplied online backup in a disposable schema."""
+    rehearsal='biz_review_test_'+uuid.uuid4().hex
+    def run(value,db=rehearsal):
+        return subprocess.run([str(MYSQL),*args,'--batch','--skip-column-names',*([db] if db else [])],
+                              input=value.encode('utf-8') if isinstance(value,str) else value,
+                              env=env,check=True,capture_output=True).stdout
+    run('CREATE DATABASE `'+rehearsal+'` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci',None)
+    try:
+        run((PACKAGE/'restore/20260920backup.sql').read_bytes())
+        task_count=run('SELECT COUNT(*) FROM biz_task').strip()
+        level4_count=run('SELECT COUNT(*) FROM biz_level4_task').strip()
+        run((PACKAGE/'sql/additive.sql').read_bytes())
+        run((PACKAGE/'sql/budget-version-backfill.sql').read_bytes())
+        assert b'missing_version_sheets\t0' in run((PACKAGE/'sql/budget-version-check.sql').read_bytes())
+        task_result=run((PACKAGE/'sql/task-update-20260918.sql').read_bytes())
+        assert b'task_rows_remaining_difference\t0' in task_result,task_result[-1000:]
+        run((PACKAGE/'sql/achievement-archive-record-fix.sql').read_bytes())
+        child_values=hashlib.sha256(run('SELECT task_id,current_value FROM biz_level4_task ORDER BY task_id')).hexdigest()
+        audit_logs=hashlib.sha256(run('SELECT * FROM biz_audit_log ORDER BY log_id')).hexdigest()
+        run((PACKAGE/'sql/level4-equal-weight-recalculate.sql').read_bytes())
+        verify=run((PACKAGE/'sql/level4-equal-weight-verify.sql').read_bytes())
+        for check_name in ('invalid_target','level4_progress','parent_progress','active_submission',
+                           'original_level4_value','auto_performance_year','auto_performance_total'):
+            assert (check_name.encode()+b'\t0') in verify,verify[-2000:]
+        assert run('SELECT task_id,target_value FROM biz_task WHERE task_id IN (344,491) ORDER BY task_id').splitlines()==[b'344\t1.0000',b'491\t100.0000']
+        assert hashlib.sha256(run('SELECT task_id,current_value FROM biz_level4_task ORDER BY task_id')).hexdigest()==child_values
+        assert hashlib.sha256(run('SELECT * FROM biz_audit_log ORDER BY log_id')).hexdigest()==audit_logs
+        assert run('SELECT COUNT(*) FROM biz_task').strip()==task_count
+        assert run('SELECT COUNT(*) FROM biz_level4_task').strip()==level4_count
+    finally:
+        assert re.fullmatch(r'biz_review_test_[0-9a-f]{32}',rehearsal)
+        run('DROP DATABASE `'+rehearsal+'`',None)
+    checks.append('supplied-online-backup-cumulative-migration-preserves-task-count-child-values-and-audit-logs')
 
 def notice_cleanup():
     sql("""INSERT INTO sys_notice(content,notice_id,to_user_id,source_type,source_id,trigger_event,title,is_delete,is_read) VALUES
@@ -326,10 +361,36 @@ exit 17
         assert sql('SELECT COUNT(*) FROM bak_20260918_task_auditor_dept_principal').strip()==b'0'
         assert sql('SELECT COUNT(*) FROM bak_20260918_task_code_fix').strip()==b'0'
         checks.append('task-data-update-sql-applies-and-is-idempotent')
+        achievement_sql=(PACKAGE/'sql/achievement-archive-record-fix.sql').read_bytes()
+        assert b'\r' not in achievement_sql, 'Achievement repair SQL must use LF'
+        sql(achievement_sql)
+        sql(achievement_sql)
+        assert sql("SELECT COUNT(*) FROM biz_achievement a LEFT JOIN biz_achievement_submission s ON s.ach_id=a.ach_id AND s.is_delete=0 WHERE a.is_delete=0 AND a.audit_status=30 AND s.sub_id IS NULL").strip()==b'0'
+        assert sql("SELECT COUNT(*) FROM biz_achievement a JOIN biz_achievement_submission s ON s.ach_id=a.ach_id AND s.is_delete=0 WHERE a.is_delete=1").strip()==b'0'
+        checks.append('achievement-archive-repair-applies-and-is-idempotent')
+        sql((ROOT/'scripts/ui-audit/fixture-level4-equal-weight.sql').read_bytes())
+        sql("INSERT INTO biz_task (task_id,project_id,parent_id,phase,task_code,task_name,level,leader_id,auditor_id,principal_id,dept_id,data_type,target_value,current_value,progress,status,is_delete) VALUES (930099,1,930001,2026,'TEST-ZERO-PARENT','single-child target repair',3,910001,910003,910002,920001,'1',0,0,0,'0',0); INSERT INTO biz_level4_task (task_id,parent_id,phase,task_name,leader_id,dept_id,data_type,target_value,current_value,progress,status,is_delete) VALUES (961099,930099,2026,'only child',910001,920001,'1',5,10,0,'1',0);")
+        child_values=sql('SELECT task_id,current_value FROM biz_level4_task WHERE parent_id=930002 ORDER BY task_id')
+        level4_sql=(PACKAGE/'sql/level4-equal-weight-recalculate.sql').read_bytes()
+        assert b'\r' not in level4_sql, 'Level-four migration SQL must use LF'
+        sql(level4_sql)
+        level4_verify=sql((PACKAGE/'sql/level4-equal-weight-verify.sql').read_bytes())
+        for check_name in ('invalid_target','level4_progress','parent_progress','active_submission',
+                           'original_level4_value','auto_performance_year','auto_performance_total'):
+            assert (check_name.encode()+b'\t0') in level4_verify, level4_verify[-1500:]
+        assert sql('SELECT current_value,progress FROM biz_task WHERE task_id=930002').strip()==b'8.3333\t83'
+        assert sql('SELECT target_value,current_value,progress FROM biz_task WHERE task_id=930099').strip()==b'5.0000\t5.0000\t100'
+        assert sql('SELECT progress FROM biz_level4_task WHERE parent_id=930002 ORDER BY task_id').splitlines()==[b'100',b'50',b'100']
+        assert sql('SELECT task_id,current_value FROM biz_level4_task WHERE parent_id=930002 ORDER BY task_id')==child_values
+        first_level4_state=sql('SELECT current_value,progress,status FROM biz_task WHERE task_id=930002; SELECT task_id,current_value,progress FROM biz_level4_task WHERE parent_id=930002 ORDER BY task_id; SELECT actual_value FROM biz_performance_year WHERE year_id=950002; SELECT current_value FROM biz_performance WHERE perf_id=950001')
+        sql(level4_sql)
+        assert sql('SELECT current_value,progress,status FROM biz_task WHERE task_id=930002; SELECT task_id,current_value,progress FROM biz_level4_task WHERE parent_id=930002 ORDER BY task_id; SELECT actual_value FROM biz_performance_year WHERE year_id=950002; SELECT current_value FROM biz_performance WHERE perf_id=950001')==first_level4_state
+        checks.append('level4-equal-weight-recalculation-is-correct-idempotent-and-preserves-child-values')
     finally:
         assert re.fullmatch(r'biz_review_test_[0-9a-f]{32}',schema)
         sql('DROP DATABASE `'+schema+'`',None)
     checks.append('isolated-database-removed')
+    online_backup_migration_rehearsal()
     result={'checks':checks,'production_database_accessed':False,'linux_process_test':'not run on Windows'}
     (ROOT/'target/linux-release-build/verification.json').write_text(json.dumps(result,indent=2),encoding='utf-8')
     print(json.dumps(result,indent=2))

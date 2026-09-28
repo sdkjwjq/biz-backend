@@ -10,7 +10,7 @@ import tarfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = ROOT.parent / 'release/shuanggao-update-20260924'
+OUT = ROOT.parent / 'releases/shuanggao-update-20260928'
 MYSQL = shutil.which('mysql') or r'C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe'
 NEW_SOURCES = [
     'data/migrations/2026-05-30-audit-snapshot.sql',
@@ -22,6 +22,7 @@ NEW_SOURCES = [
     'data/migrations/2026-09-24-performance-relation-edit.sql',
     'data/migrations/2026-09-26-budget-import-version.sql',
     'data/migrations/2026-09-27-admin-management.sql',
+    'data/migrations/2026-09-28-release-migration.sql',
 ]
 ADDITIONS = {
     ('biz_audit_snapshot','previous_comment'): 'varchar(500) DEFAULT NULL',
@@ -39,6 +40,8 @@ def query(sql):
                                     '--batch','--skip-column-names','biz','-e',sql],env=env).decode('utf-8').replace('\r\n','\n')
 
 def main():
+    if OUT.exists():
+        shutil.rmtree(OUT)
     for directory in ['backend','frontend','sql','templates','restore']:
         (OUT/directory).mkdir(parents=True,exist_ok=True)
     source = ROOT/'target/linux-release-build/target/biz_backend-1.0-SNAPSHOT.jar'
@@ -65,7 +68,7 @@ def main():
             assert name not in added_tables
             added_tables.add(name)
             creates.append(re.sub(r'^CREATE TABLE(?: IF NOT EXISTS)?','CREATE TABLE IF NOT EXISTS',match.group(0)))
-    assert len(added_tables)==16
+    assert len(added_tables)==17
     sql='-- Additive structure only. No historical data repair, account writes or seed records.\n'+ '\n\n'.join(creates)+'\n'
     for (table,column),definition in ADDITIONS.items():
         sql+=f"""
@@ -90,6 +93,16 @@ DEALLOCATE PREPARE release_stmt;
     budget_version_check = (ROOT/'data/migrations/2026-09-26-budget-import-version-check.sql').read_text(encoding='utf-8')
     assert not re.search(r'(?im)^\s*(?:ALTER|CREATE|DROP|TRUNCATE|DELETE|INSERT|UPDATE|REPLACE)\b', budget_version_check)
     (OUT/'sql/budget-version-check.sql').write_text(budget_version_check,encoding='utf-8',newline='\n')
+    for source, destination in [
+        ('deploy/2026-06-26-achievement-archive-record-fix.sql', 'achievement-archive-record-fix.sql'),
+        ('data/migrations/2026-09-26-level4-equal-weight-recalculate.sql', 'level4-equal-weight-recalculate.sql'),
+        ('data/migrations/2026-09-26-level4-equal-weight-verify.sql', 'level4-equal-weight-verify.sql'),
+        ('data/migrations/2026-09-26-level4-equal-weight-rollback.sql', 'manual-level4-equal-weight-rollback.sql'),
+        ('data/migrations/2026-09-26-budget-import-version-rollback.sql', 'manual-budget-version-rollback.sql'),
+        ('data/migrations/2026-09-27-admin-management-rollback.sql', 'manual-admin-management-rollback.sql'),
+    ]:
+        text = (ROOT/source).read_text(encoding='utf-8')
+        (OUT/'sql'/destination).write_text(text,encoding='utf-8',newline='\n')
     data_update = ROOT/'data/migrations/2026-09-18-task-auditor-dept-principal-update.sql'
     data_sql = data_update.read_text(encoding='utf-8')
     assert data_sql.startswith('-- 2026-09-18 task update')
@@ -127,8 +140,17 @@ DEALLOCATE PREPARE release_stmt;
         'database_rows_included':True,'backup_contains_user_passwords':True,'runtime_database_password_included':False,
         'restore_requires_explicit_flag':'--restore-backup',
         'notice_cleanup':'Only obsolete task/performance/achievement review requests are soft-deleted; audit data unchanged',
-        'data_updates':['sql/budget-version-backfill.sql','sql/task-update-20260918.sql'],
-        'data_update_backup_tables':['bak_20260918_task_code_fix','bak_20260918_task_auditor_dept_principal'],
+        'data_updates':['sql/budget-version-backfill.sql','sql/task-update-20260918.sql',
+                        'sql/achievement-archive-record-fix.sql','sql/level4-equal-weight-recalculate.sql'],
+        'one_time_migrations':['task-auditor-dept-principal-20260918',
+                               'achievement-archive-record-fix-20260626',
+                               'level4-equal-weight-recalculate-20260926'],
+        'data_update_backup_tables':['bak_20260918_task_code_fix','bak_20260918_task_auditor_dept_principal',
+                                     'biz_task_backup_before_level4_equal_weight_20260926',
+                                     'biz_level4_task_backup_before_equal_weight_20260926',
+                                     'biz_material_submission_backup_before_equal_weight_20260926',
+                                     'biz_performance_backup_before_equal_weight_20260926',
+                                     'biz_performance_year_backup_before_equal_weight_20260926'],
         'new_tables':sorted(added_tables),'supported_existing_column_additions':['.'.join(key) for key in ADDITIONS],
     }
     backup = ROOT/'data/20260920backup.sql'

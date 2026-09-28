@@ -248,10 +248,17 @@ if [[ $RESTORE_BACKUP == 1 ]]; then
   say '备份完成，先在暂存库验证指定备份和迁移，再恢复业务库'
   restore_packaged_database
 else
-  say '备份完成，仅补充缺失表/字段并保存当前预算初始快照；不改写现有业务表数据'
+  say '备份完成，补充缺失结构并执行尚未完成的一次性数据迁移'
 fi
 "${MYSQL[@]}" < "$PACKAGE/sql/additive.sql" > "$BACKUP/migration.log"
 bash "$PACKAGE/schema-check.sh" after
+
+# From this point forward the update writes migration history or derived business values.
+# A failed update must therefore restore the complete database backup before restarting the old JAR.
+if [[ $DB_REPLACED == 0 ]]; then
+  DB_REPLACED=1
+  printf 'ordinary-data-migration\n' > "$BACKUP/database-replaced"
+fi
 
 # Preserve the current budget state as V1 on first upgrade. This only inserts into the new
 # immutable history table and is idempotent; existing budget sheets and detail rows stay untouched.
@@ -262,13 +269,71 @@ missing_budget_versions=$(awk -F'\t' '$1=="missing_version_sheets"{print $2}' "$
 say '现有预算已建立初始版本记录；重复更新不会重复生成版本'
 
 # Business data correction: professional-group auditor / owning department / owning-department reviewer.
-# Idempotent, single transaction inside the file; writes its own bak_20260918_* backup tables first.
-# Already-committed data stays applied if a later step fails and the application is rolled back.
-say '应用任务数据更新（专业群审核人 / 归口部门 / 归口部门负责人）'
-"${MYSQL[@]}" < "$PACKAGE/sql/task-update-20260918.sql" > "$BACKUP/task-update.log"
-data_diff=$(awk -F'\t' '$1=="task_rows_remaining_difference"{print $2}' "$BACKUP/task-update.log" | tr -d '\r')
-[[ "$data_diff" == 0 ]] || die "任务数据更新未达到预期状态（剩余差异：${data_diff:-未知}），请查看备份目录中的 task-update.log"
-say '任务数据更新完成，更新前后备份见 bak_20260918_task_auditor_dept_principal'
+# Older packages did not have sys_release_migration. Their backup table is therefore also accepted as
+# proof that this migration already ran, so later administrator transfers are never overwritten.
+task_migration=$({ "${MYSQL[@]}" -e "SELECT COUNT(*) FROM sys_release_migration WHERE migration_key='task-auditor-dept-principal-20260918'"; } | tr -d '\r')
+task_backup_exists=$({ "${MYSQL[@]}" -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='bak_20260918_task_auditor_dept_principal'"; } | tr -d '\r')
+if [[ "$task_migration" == 0 && "$task_backup_exists" != 0 ]]; then
+  "${MYSQL[@]}" -e "INSERT INTO sys_release_migration(migration_key,description) VALUES('task-auditor-dept-principal-20260918','检测到旧版任务归属迁移备份，补登记迁移标记')"
+  task_migration=1
+fi
+if [[ "$task_migration" == 0 ]]; then
+  say '应用任务数据更新（专业群审核人 / 归口部门 / 归口部门负责人）'
+  "${MYSQL[@]}" < "$PACKAGE/sql/task-update-20260918.sql" > "$BACKUP/task-update.log"
+  data_diff=$(awk -F'\t' '$1=="task_rows_remaining_difference"{print $2}' "$BACKUP/task-update.log" | tr -d '\r')
+  [[ "$data_diff" == 0 ]] || die "任务数据更新未达到预期状态（剩余差异：${data_diff:-未知}），请查看备份目录中的 task-update.log"
+  "${MYSQL[@]}" -e "INSERT INTO sys_release_migration(migration_key,description) VALUES('task-auditor-dept-principal-20260918','任务专业群审核人、归口部门及归口审核人修正')"
+  say '任务数据更新完成，更新前后备份见 bak_20260918_task_auditor_dept_principal'
+else
+  say '任务归属数据迁移已执行过，本次跳过，避免覆盖后续管理员移交'
+fi
+
+achievement_migration=$({ "${MYSQL[@]}" -e "SELECT COUNT(*) FROM sys_release_migration WHERE migration_key='achievement-archive-record-fix-20260626'"; } | tr -d '\r')
+achievement_backup_exists=$({ "${MYSQL[@]}" -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='bak_achievement_archive_missing_20260626'"; } | tr -d '\r')
+if [[ "$achievement_migration" == 0 && "$achievement_backup_exists" != 0 ]]; then
+  "${MYSQL[@]}" -e "INSERT INTO sys_release_migration(migration_key,description) VALUES('achievement-archive-record-fix-20260626','检测到旧版成果归档修复备份，补登记迁移标记')"
+  achievement_migration=1
+fi
+if [[ "$achievement_migration" == 0 ]]; then
+  say '修复成果归档历史记录并隐藏已删除成果的活动审核单'
+  "${MYSQL[@]}" < "$PACKAGE/sql/achievement-archive-record-fix.sql" > "$BACKUP/achievement-archive-fix.log"
+  "${MYSQL[@]}" -e "
+    SELECT 'archived_missing_submission', COUNT(*) FROM biz_achievement a
+      LEFT JOIN biz_achievement_submission s ON s.ach_id=a.ach_id AND s.is_delete=0
+      WHERE a.is_delete=0 AND a.audit_status=30 AND s.sub_id IS NULL
+    UNION ALL
+    SELECT 'deleted_active_submission', COUNT(*) FROM biz_achievement a
+      JOIN biz_achievement_submission s ON s.ach_id=a.ach_id AND s.is_delete=0 WHERE a.is_delete=1
+    UNION ALL
+    SELECT 'archived_missing_log', COUNT(*) FROM biz_achievement a
+      JOIN biz_achievement_submission s ON s.ach_id=a.ach_id AND s.is_delete=0 AND s.flow_status=30
+      LEFT JOIN biz_achievement_audit_log l ON l.sub_id=s.sub_id
+      WHERE a.is_delete=0 AND a.audit_status=30 AND l.log_id IS NULL" > "$BACKUP/achievement-archive-check.log"
+  achievement_diff=$(awk -F'\t' '$2!="0"{print $1 "=" $2}' "$BACKUP/achievement-archive-check.log" | tr '\n' ' ')
+  [[ -z "$achievement_diff" ]] || die "成果归档历史修复校验失败（$achievement_diff），请查看 achievement-archive-check.log"
+  "${MYSQL[@]}" -e "INSERT INTO sys_release_migration(migration_key,description) VALUES('achievement-archive-record-fix-20260626','成果归档审核记录修复')"
+  say '成果归档历史记录修复完成'
+else
+  say '成果归档历史迁移已执行过，本次跳过'
+fi
+
+level4_migration=$({ "${MYSQL[@]}" -e "SELECT COUNT(*) FROM sys_release_migration WHERE migration_key='level4-equal-weight-recalculate-20260926'"; } | tr -d '\r')
+level4_backup_exists=$({ "${MYSQL[@]}" -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='biz_task_backup_before_level4_equal_weight_20260926'"; } | tr -d '\r')
+if [[ "$level4_migration" == 0 && "$level4_backup_exists" != 0 ]]; then
+  "${MYSQL[@]}" -e "INSERT INTO sys_release_migration(migration_key,description) VALUES('level4-equal-weight-recalculate-20260926','检测到四级目标重算备份，补登记迁移标记')"
+  level4_migration=1
+fi
+if [[ "$level4_migration" == 0 ]]; then
+  say '按四级目标等权、单项目标最高计入 100% 的规则重算任务及自动绩效'
+  "${MYSQL[@]}" < "$PACKAGE/sql/level4-equal-weight-recalculate.sql" > "$BACKUP/level4-equal-weight.log"
+  "${MYSQL[@]}" < "$PACKAGE/sql/level4-equal-weight-verify.sql" > "$BACKUP/level4-equal-weight-check.log"
+  level4_diff=$(awk -F'\t' '$1 ~ /^(invalid_target|level4_progress|parent_progress|active_submission|original_level4_value|auto_performance_year|auto_performance_total)$/ && $2!="0" {print $1 "=" $2}' "$BACKUP/level4-equal-weight-check.log" | tr '\n' ' ')
+  [[ -z "$level4_diff" ]] || die "四级目标等权重算校验失败（$level4_diff），请查看 level4-equal-weight-check.log"
+  "${MYSQL[@]}" -e "INSERT INTO sys_release_migration(migration_key,description) VALUES('level4-equal-weight-recalculate-20260926','四级目标等权汇总及关联绩效重算')"
+  say '四级目标及关联绩效重算完成；原始四级填报值和历史审核日志未修改'
+else
+  say '四级目标等权重算迁移已执行过，本次跳过'
+fi
 
 # The backend is stopped and the complete database has already been backed up.
 # Retire review requests only; preserve completed-result messages and audit history.
@@ -323,5 +388,5 @@ if [[ $RESTORE_BACKUP == 1 ]]; then printf '%s\n' "$BACKUP" > "$RESTORE_MARKER";
 FINISHED=1
 say "更新成功。备份：$BACKUP"
 say "访问 http://172.19.2.81/ 并刷新浏览器。前端模板位于 $WEB/templates；纪实 Word 模板内置 JAR。"
-if [[ $RESTORE_BACKUP == 1 ]]; then say "回滚命令（数据库及应用）：bash '$PACKAGE/update.sh' --rollback-database '$BACKUP'"
+if [[ $DB_REPLACED == 1 ]]; then say "回滚命令（数据库及应用）：bash '$PACKAGE/update.sh' --rollback-database '$BACKUP'"
 else say "回滚命令：bash '$PACKAGE/update.sh' --rollback '$BACKUP'"; fi
