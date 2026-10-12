@@ -199,9 +199,10 @@ done
 if command -v nginx >/dev/null; then nginx -t || die '现有 nginx 配置检查未通过'; fi
 say "目标：$BACKEND/$JAR；前端：$WEB；数据库：$DB_HOST:$DB_PORT/$DB_NAME"
 database_credentials
-restore_digest=$(sha256sum "$PACKAGE/restore/20260920backup.sql" | awk '{print $1}')
-RESTORE_MARKER="$BACKEND/.restored-$restore_digest"
 if [[ $RESTORE_BACKUP == 1 ]]; then
+  [[ -f "$PACKAGE/restore/20260920backup.sql" ]] || die '本更新包不包含旧数据库备份；仅支持保留当前数据的普通更新'
+  restore_digest=$(sha256sum "$PACKAGE/restore/20260920backup.sql" | awk '{print $1}')
+  RESTORE_MARKER="$BACKEND/.restored-$restore_digest"
   [[ ! -f "$RESTORE_MARKER" ]] || die '该备份已成功恢复过；再次更新请使用 --update，避免重复覆盖新数据'
   say '本次按指定要求恢复 20260920backup.sql；备份后数据库将回到该时点，之后数据仅保留在更新前备份中'
 fi
@@ -334,6 +335,18 @@ if [[ "$level4_migration" == 0 ]]; then
 else
   say '四级目标等权重算迁移已执行过，本次跳过'
 fi
+
+# Initialize new configuration and dates once, preserving later administrator edits.
+for module in leadership-access task-attributes core-indicators; do
+  migration_key="${module}-20261012"
+  applied=$("${MYSQL[@]}" -e "SELECT COUNT(*) FROM sys_release_migration WHERE migration_key='$migration_key'")
+  if [[ "$applied" == 0 ]]; then
+    "${MYSQL[@]}" < "$PACKAGE/sql/2026-10-12-$module.sql" > "$BACKUP/$module-migration.log"
+    "${MYSQL[@]}" -e "INSERT INTO sys_release_migration(migration_key,description) VALUES('$migration_key','20261012 incremental configuration initialization')"
+  fi
+  "${MYSQL[@]}" < "$PACKAGE/sql/2026-10-12-$module-check.sql" > "$BACKUP/$module-check.log"
+done
+say '领导查阅配置、任务标记日期及核心指标已升级；既有填报与审核历史保留'
 
 # The backend is stopped and the complete database has already been backed up.
 # Retire review requests only; preserve completed-result messages and audit history.

@@ -15,7 +15,8 @@ import shutil
 import gzip
 
 ROOT=Path(__file__).resolve().parents[2]
-PACKAGE=ROOT.parent/'releases/shuanggao-update-20260928'
+PACKAGE=ROOT.parent/('releases/'+os.environ.get('RELEASE_NAME','shuanggao-update-20261012'))
+ONLINE_BACKUP=ROOT/'data/20260920backup.sql'
 MYSQL=Path(os.environ.get('MYSQL_EXE') or shutil.which('mysql') or r'C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe')
 BASH=os.environ.get('BASH_EXE') or next((candidate for candidate in
     [r'D:\Program Files\Git\bin\bash.exe', r'C:\Program Files\Git\bin\bash.exe'] if Path(candidate).exists()), 'bash')
@@ -67,7 +68,7 @@ def online_backup_migration_rehearsal():
                               env=env,check=True,capture_output=True).stdout
     run('CREATE DATABASE `'+rehearsal+'` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci',None)
     try:
-        run((PACKAGE/'restore/20260920backup.sql').read_bytes())
+        run(ONLINE_BACKUP.read_bytes())
         task_count=run('SELECT COUNT(*) FROM biz_task').strip()
         level4_count=run('SELECT COUNT(*) FROM biz_level4_task').strip()
         run((PACKAGE/'sql/additive.sql').read_bytes())
@@ -88,6 +89,15 @@ def online_backup_migration_rehearsal():
         assert hashlib.sha256(run('SELECT * FROM biz_audit_log ORDER BY log_id')).hexdigest()==audit_logs
         assert run('SELECT COUNT(*) FROM biz_task').strip()==task_count
         assert run('SELECT COUNT(*) FROM biz_level4_task').strip()==level4_count
+        accounts=run('SELECT * FROM sys_user ORDER BY user_id')
+        for module in ['leadership-access','task-attributes','core-indicators']:
+            run((PACKAGE/('sql/2026-10-12-'+module+'.sql')).read_bytes())
+            run((PACKAGE/('sql/2026-10-12-'+module+'-check.sql')).read_bytes())
+        assert run('SELECT * FROM sys_user ORDER BY user_id')==accounts
+        assert run('SELECT COUNT(*) FROM biz_core_report').strip()==b'0'
+        assert hashlib.sha256(run('SELECT task_id,current_value FROM biz_level4_task ORDER BY task_id')).hexdigest()==child_values
+        assert hashlib.sha256(run('SELECT * FROM biz_audit_log ORDER BY log_id')).hexdigest()==audit_logs
+        checks.append('online-backup-new-migrations-preserve-accounts-original-values-and-audit-history')
     finally:
         assert re.fullmatch(r'biz_review_test_[0-9a-f]{32}',rehearsal)
         run('DROP DATABASE `'+rehearsal+'`',None)
@@ -306,7 +316,7 @@ exit 17
     assert b'missing_version_sheets' in budget_check
     assert not re.search(rb'(?im)^\s*(?:ALTER|CREATE|DROP|TRUNCATE|DELETE|INSERT|UPDATE|REPLACE)\b',budget_check)
     # Only table definitions from the supplied online backup, never its business rows.
-    source=(PACKAGE/'restore/20260920backup.sql').read_text(encoding='utf-8')
+    source=ONLINE_BACKUP.read_text(encoding='utf-8')
     definitions=re.findall(r'CREATE TABLE\s+`\w+`\s*\(.*?\)\s*ENGINE=.*?;',source,re.S)
     assert len(definitions)==37
     dump=('SET FOREIGN_KEY_CHECKS=0;\n'+'\n'.join(definitions)+'\nSET FOREIGN_KEY_CHECKS=1;').encode()
@@ -325,6 +335,17 @@ exit 17
         after=snapshot(before_columns)
         assert all(after[name]==data for name,data in before.items())
         checks.append('missing-work-record-tables-created-existing-rows-unchanged')
+        for module in ['leadership-access','task-attributes','core-indicators']:
+            migration=(PACKAGE/('sql/2026-10-12-'+module+'.sql')).read_bytes()
+            sql(migration)
+            first=snapshot()
+            sql(migration)
+            assert snapshot()==first, module+' must be idempotent'
+            sql((PACKAGE/('sql/2026-10-12-'+module+'-check.sql')).read_bytes())
+        assert sql('SELECT COUNT(*) FROM biz_core_indicator').strip()==b'10'
+        assert sql('SELECT COUNT(*) FROM biz_core_report').strip()==b'0'
+        assert not (PACKAGE/'restore/20260920backup.sql').exists()
+        checks.append('new-migrations-idempotent-ten-mappings-no-fabricated-reports-no-backup-in-package')
         existing_after_structure=snapshot()
         budget_sheet_count=int(sql('SELECT COUNT(*) FROM biz_budget_sheet WHERE is_delete=0').strip() or b'0')
         sql(budget_backfill)

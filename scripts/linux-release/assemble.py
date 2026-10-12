@@ -10,7 +10,7 @@ import tarfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = ROOT.parent / 'releases/shuanggao-update-20260928'
+OUT = ROOT.parent / ('releases/' + os.environ.get('RELEASE_NAME', 'shuanggao-update-20261012'))
 MYSQL = shutil.which('mysql') or r'C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe'
 NEW_SOURCES = [
     'data/migrations/2026-05-30-audit-snapshot.sql',
@@ -23,8 +23,15 @@ NEW_SOURCES = [
     'data/migrations/2026-09-26-budget-import-version.sql',
     'data/migrations/2026-09-27-admin-management.sql',
     'data/migrations/2026-09-28-release-migration.sql',
+    'data/migrations/2026-10-12-leadership-access.sql',
+    'data/migrations/2026-10-12-core-indicators.sql',
 ]
 ADDITIONS = {
+    ('biz_task','is_priority'): 'tinyint NOT NULL DEFAULT 0',
+    ('biz_task','is_difficult'): 'tinyint NOT NULL DEFAULT 0',
+    ('biz_task','planned_completion_date'): 'date DEFAULT NULL',
+    ('biz_task','actual_completion_date'): 'datetime DEFAULT NULL',
+    ('biz_task','management_version'): 'bigint NOT NULL DEFAULT 0',
     ('biz_audit_snapshot','previous_comment'): 'varchar(500) DEFAULT NULL',
     ('biz_performance_audit_snapshot','previous_year_target_value'): 'decimal(20,4) DEFAULT 0.0000',
     ('biz_achievement','audit_status'): 'int NOT NULL DEFAULT 30',
@@ -37,7 +44,7 @@ def query(sql):
     env = os.environ.copy()
     env['MYSQL_PWD'] = os.environ['SHUANGGAO_TEST_DB_PASSWORD']
     return subprocess.check_output([MYSQL,'--host=127.0.0.1','--user=root','--default-character-set=utf8mb4',
-                                    '--batch','--skip-column-names','biz','-e',sql],env=env).decode('utf-8').replace('\r\n','\n')
+                                    '--batch','--skip-column-names',os.environ.get('RELEASE_METADATA_DB','biz'),'-e',sql],env=env).decode('utf-8').replace('\r\n','\n')
 
 def main():
     if OUT.exists():
@@ -68,7 +75,7 @@ def main():
             assert name not in added_tables
             added_tables.add(name)
             creates.append(re.sub(r'^CREATE TABLE(?: IF NOT EXISTS)?','CREATE TABLE IF NOT EXISTS',match.group(0)))
-    assert len(added_tables)==17
+    assert len(added_tables)==23
     sql='-- Additive structure only. No historical data repair, account writes or seed records.\n'+ '\n\n'.join(creates)+'\n'
     for (table,column),definition in ADDITIONS.items():
         sql+=f"""
@@ -82,6 +89,13 @@ DEALLOCATE PREPARE release_stmt;
     for migration in ['scripts/work-records/002_work_record_delete.sql', 'scripts/password/001_force_password_change.sql']:
         sql += '\n' + (ROOT/migration).read_text(encoding='utf-8')
     (OUT/'sql/additive.sql').write_text(sql,encoding='utf-8',newline='\n')
+    for module in ['leadership-access', 'task-attributes', 'core-indicators']:
+        for suffix in ['', '-check', '-rollback']:
+            source = ROOT / ('data/migrations/2026-10-12-' + module + suffix + '.sql')
+            contents = source.read_text(encoding='utf-8')
+            if module == 'core-indicators' and suffix == '-check':
+                contents = contents.replace('p.perf_code=c.indicator_code', 'BINARY p.perf_code=BINARY c.indicator_code')
+            (OUT/'sql'/source.name).write_text(contents,encoding='utf-8',newline='\n')
     budget_version_migration = (ROOT/'data/migrations/2026-09-26-budget-import-version.sql').read_text(encoding='utf-8')
     backfill_marker = '-- 为升级前已有的当前预算建立只读初始版本。脚本重复执行不会重复写入。'
     assert budget_version_migration.count(backfill_marker) == 1
@@ -137,7 +151,7 @@ DEALLOCATE PREPARE release_stmt;
         'frontend_commit': subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT.parent/'biz',text=True).strip(),
         'frontend_working_changes': subprocess.check_output(['git','diff','--name-only'],cwd=ROOT.parent/'biz',text=True).splitlines(),
         'runtime':'Java 17 / MySQL 8 / Bash 4.2+',
-        'database_rows_included':True,'backup_contains_user_passwords':True,'runtime_database_password_included':False,
+        'database_rows_included':False,'backup_contains_user_passwords':False,'runtime_database_password_included':False,
         'restore_requires_explicit_flag':'--restore-backup',
         'notice_cleanup':'Only obsolete task/performance/achievement review requests are soft-deleted; audit data unchanged',
         'data_updates':['sql/budget-version-backfill.sql','sql/task-update-20260918.sql',
@@ -153,13 +167,9 @@ DEALLOCATE PREPARE release_stmt;
                                      'biz_performance_year_backup_before_equal_weight_20260926'],
         'new_tables':sorted(added_tables),'supported_existing_column_additions':['.'.join(key) for key in ADDITIONS],
     }
-    backup = ROOT/'data/20260920backup.sql'
-    backup_text = backup.read_text(encoding='utf-8')
-    assert not re.search(r'(?im)^\s*(?:USE\s|CREATE\s+DATABASE|DROP\s+DATABASE|SOURCE\s|\\[.!])', backup_text), 'Backup must be confined to selected staging database'
-    assert not re.search(r'(?i)`biz`\s*\.', backup_text), 'Qualified original database references are not allowed'
-    assert '`force_password_change`' in backup_text
-    shutil.copy2(backup, OUT/'restore/20260920backup.sql')
-    manifest['restore_source_sha256'] = hashlib.sha256(backup.read_bytes()).hexdigest()
+    manifest['release_name'] = OUT.name
+    manifest['budget_trend_visible'] = False
+    manifest['data_updates'] += ['sql/2026-10-12-'+module+'.sql' for module in ['leadership-access','task-attributes','core-indicators']]
     (OUT/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
     files=sorted(p for p in OUT.rglob('*') if p.is_file() and p.name!='SHA256SUMS')
     (OUT/'SHA256SUMS').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.relative_to(OUT).as_posix()+'\n' for p in files),encoding='ascii',newline='\n')
