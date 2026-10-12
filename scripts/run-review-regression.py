@@ -56,20 +56,29 @@ def main():
                        input=(root / 'data/migrations/2026-09-27-admin-management.sql').read_bytes(),
                        env=env, check=True)
         env["SHUANGGAO_REVIEW_TEST"] = "true"
+        subprocess.run([mysql, *connection, database], input=(root / 'data/migrations/2026-10-12-leadership-access.sql').read_bytes(), env=env, check=True)
         env["SHUANGGAO_TEST_DB_USER"] = user
         env["SHUANGGAO_TEST_JDBC_URL"] = ("jdbc:mysql://127.0.0.1:3306/" + database
                                          + "?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai")
-        if method == "admin":
+        if method == "leadership":
+            selector = "LeadershipAccessApiTest"
+        elif method == "admin":
             selector = "AdminManagementApiTest"
         elif method and method.startswith("admin:"):
             selector = "AdminManagementApiTest#" + method.removeprefix("admin:")
         elif method:
             selector = "ReviewBatchRegressionApiTest#" + method
         else:
-            selector = "ReviewBatchRegressionApiTest,AdminManagementApiTest"
+            selector = "ReviewBatchRegressionApiTest,AdminManagementApiTest,LeadershipAccessApiTest"
         print("Running " + selector + " in isolated schema " + database, flush=True)
         result = subprocess.run([shutil.which("mvn.cmd") or executable("mvn"), "-B", "-Dtest=" + selector, "test"],
                                 cwd=root, env=env)
+        if result.returncode == 0:
+            subprocess.run([mysql, *connection, database], input=b"INSERT INTO sys_leadership_access(user_id,scope,version) VALUES(999999,'ALL',1) ON DUPLICATE KEY UPDATE scope='ALL';", env=env, check=True)
+            blocked = subprocess.run([mysql, *connection, database], input=(root / 'data/migrations/2026-10-12-leadership-access-rollback.sql').read_bytes(), env=env, capture_output=True)
+            if blocked.returncode == 0 or b'Leadership configuration or trends exist' not in blocked.stderr:
+                raise RuntimeError("Leadership rollback must retain existing configuration")
+            print("Leadership rollback correctly refused to discard configuration", flush=True)
         return result.returncode
     finally:
         # Only the schema name created above can reach this cleanup.

@@ -25,7 +25,7 @@ SPEC.loader.exec_module(RUNNER)
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--fixture", choices=["base", "business", "review", "navigation", "convenience", "convenience2", "continuous", "customer", "work-records", "task-stats", "ownership-transfer", "ownership-transfer-scale", "performance-relation", "level4-equal-weight", "responsibility-filters"], default="base")
+    parser.add_argument("--fixture", choices=["base", "business", "review", "navigation", "convenience", "convenience2", "continuous", "customer", "work-records", "task-stats", "ownership-transfer", "ownership-transfer-scale", "performance-relation", "level4-equal-weight", "responsibility-filters", "leadership"], default="base")
     parser.add_argument("--frontend-port", type=int, default=15173)
     args = parser.parse_args()
     if not 1024 <= args.frontend_port <= 65535:
@@ -63,8 +63,11 @@ def main():
         sql((ROOT / "scripts/password/001_force_password_change.sql").read_text(encoding="utf-8"), schema)
         sql((ROOT / "data/migrations/2026-09-26-budget-import-version.sql").read_text(encoding="utf-8"), schema)
         sql((ROOT / "data/migrations/2026-09-27-admin-management.sql").read_text(encoding="utf-8"), schema)
+        sql((ROOT / "data/migrations/2026-10-12-leadership-access.sql").read_text(encoding="utf-8"), schema)
         sql((ROOT / "scripts/ui-audit/fixture.sql").read_text(encoding="utf-8"), schema)
         sql("UPDATE sys_user SET force_password_change=0", schema)
+        if args.fixture == "leadership":
+            sql((ROOT / "scripts/ui-audit/fixture-leadership.sql").read_text(encoding="utf-8"), schema)
         if args.fixture == "work-records":
             sql("DROP TABLE IF EXISTS biz_work_record_snapshot; DROP TABLE IF EXISTS biz_work_record_entry; DROP TABLE IF EXISTS biz_work_record;", schema)
             sql((ROOT / "scripts/work-records/001_work_records.sql").read_text(encoding="utf-8"), schema)

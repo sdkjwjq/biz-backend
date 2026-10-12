@@ -37,6 +37,8 @@ public class AchievementService {
 
     @Autowired
     private SysMapper sysMapper;
+    @Autowired
+    private LeadershipAccessService leadershipAccess;
 
     private SysUser getActiveUser(Long userId) {
         if (userId == null) {
@@ -66,7 +68,7 @@ public class AchievementService {
 
     private boolean canViewAchievement(Long userId) {
         SysUser user = getActiveUser(userId);
-        return AchievementPermissionUtil.canViewAchievement(user, getActiveDept(user));
+        return leadershipAccess.isLeader(userId) || AchievementPermissionUtil.canViewAchievement(user, getActiveDept(user));
     }
 
     private boolean canAuditAchievement(Long userId) {
@@ -108,7 +110,7 @@ public class AchievementService {
         try {
             SysUser user = getActiveUser(userId);
             SysDept dept = getActiveDept(user);
-            if (!AchievementPermissionUtil.canViewAchievement(user, dept)) {
+            if (!leadershipAccess.isLeader(userId) && !AchievementPermissionUtil.canViewAchievement(user, dept)) {
                 throw new RuntimeException("无权访问成果模块");
             }
             return achievementMapper.listAllAchievements();
@@ -370,7 +372,7 @@ public class AchievementService {
         }
         SysUser user = getActiveUser(userId);
         SysDept dept = getActiveDept(user);
-        boolean canSee = AchievementPermissionUtil.isAchievementAuditor(user)
+        boolean canSee = leadershipAccess.isLeader(userId) || AchievementPermissionUtil.isAchievementAuditor(user)
                 || (AchievementPermissionUtil.isAchievementUploadAccount(user, dept)
                 && Objects.equals(achievement.getDeptId(), user.getDeptId()));
         if (!canSee) {
@@ -387,7 +389,7 @@ public class AchievementService {
         SysUser user = getActiveUser(userId);
         SysDept dept = getActiveDept(user);
         BizAchievement achievement = achievementMapper.getAchievementById(submission.getAchId());
-        boolean canSee = AchievementPermissionUtil.isAchievementAuditor(user)
+        boolean canSee = leadershipAccess.isLeader(userId) || AchievementPermissionUtil.isAchievementAuditor(user)
                 || (achievement != null
                 && AchievementPermissionUtil.isAchievementUploadAccount(user, dept)
                 && Objects.equals(achievement.getDeptId(), user.getDeptId())

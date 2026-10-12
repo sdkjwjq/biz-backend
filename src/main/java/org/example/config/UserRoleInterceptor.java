@@ -22,9 +22,11 @@ public class UserRoleInterceptor implements HandlerInterceptor {
     private static final String ALLOWED_ROLE = "0";
 
     private final SysMapper sysMapper;
+    private final org.example.service.LeadershipAccessService access;
 
-    public UserRoleInterceptor(SysMapper sysMapper) {
+    public UserRoleInterceptor(SysMapper sysMapper, org.example.service.LeadershipAccessService access) {
         this.sysMapper = sysMapper;
+        this.access = access;
     }
 
     /**
@@ -35,6 +37,8 @@ public class UserRoleInterceptor implements HandlerInterceptor {
         String token = request.getHeader("Authorization");
         Long userId = JWTUtil.getUserIdFromToken(token);
         SysUser current = userId == null ? null : sysMapper.getUserById(userId);
+        String path = request.getRequestURI().substring(request.getContextPath().length()).replaceAll("/+$", "");
+        if ("GET".equals(request.getMethod()) && "/admin/overview".equals(path) && access.isLeader(userId)) return true;
 
         // 管理接口每次读取数据库中的当前状态，停用或降级立即生效。
         if (current == null || !ALLOWED_ROLE.equals(current.getRole()) || !"1".equals(current.getStatus())

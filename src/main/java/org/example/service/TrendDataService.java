@@ -22,6 +22,8 @@ public class TrendDataService {
 
     @Autowired
     private BizMapper bizMapper;
+    @Autowired
+    private LeadershipDashboardService leadershipDashboard;
 
     /**
      * 每日记录趋势数据（定时任务）
@@ -33,6 +35,7 @@ public class TrendDataService {
 
     private String recordTrendData() {
         try {
+            leadershipDashboard.recordDepartmentTrend();
             // 检查今天是否已记录
             Integer count = trendDataMapper.checkTodayRecorded();
             if (count > 0) {
@@ -131,6 +134,7 @@ public class TrendDataService {
      * 根据年份获取趋势数据（直接返回数据库记录）
      */
     public List<BizTrendData> getTrendDataByYear(Integer year) {
+        if (leadershipDashboard.restricted()) return leadershipDashboard.trends(year);
         try {
             if (year == null) {
                 // 默认当前年份

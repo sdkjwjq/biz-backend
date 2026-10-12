@@ -41,11 +41,16 @@ public class AdminManagementService {
     private final AdminManagementMapper mapper;
     private final SysMapper users;
     private final ObjectMapper json;
+    private final LeadershipAccessService leadershipAccess;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
 
-    public AdminManagementService(AdminManagementMapper mapper, SysMapper users, ObjectMapper json) {
+    public AdminManagementService(AdminManagementMapper mapper, SysMapper users, ObjectMapper json,
+                                   LeadershipAccessService leadershipAccess, org.springframework.jdbc.core.JdbcTemplate jdbc) {
         this.mapper = mapper;
         this.users = users;
         this.json = json;
+        this.leadershipAccess = leadershipAccess;
+        this.jdbc = jdbc;
     }
 
     public void requireAdmin(Long userId) {
@@ -57,10 +62,14 @@ public class AdminManagementService {
     }
 
     public Map<String, Object> overview(Integer year, Integer month, Long operatorId) {
-        requireAdmin(operatorId);
+        if (!leadershipAccess.isLeader(operatorId)) requireAdmin(operatorId);
         validateYearMonth(year, month);
         List<Map<String, Object>> taskIssues = mapper.taskIssues(year);
         List<Map<String, Object>> performanceIssues = mapper.performanceIssues(year);
+        if (leadershipAccess.restricted(operatorId)) {
+            taskIssues = taskIssues.stream().filter(row -> leadershipAccess.canReadDepartment(operatorId, number(row.get("deptId")))).toList();
+            performanceIssues = performanceIssues.stream().filter(row -> leadershipAccess.canReadDepartment(operatorId, number(row.get("deptId")))).toList();
+        }
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("year", year);
         result.put("month", month);
@@ -68,13 +77,23 @@ public class AdminManagementService {
         result.put("disabledUsers", mapper.userCountByStatus("0"));
         result.put("taskIssueCount", taskIssues.size());
         result.put("performanceIssueCount", performanceIssues.size());
-        result.put("invalidPendingCount", mapper.invalidPendingCount());
+        result.put("invalidPendingCount", leadershipAccess.restricted(operatorId) ? scopedPendingCount(operatorId) : mapper.invalidPendingCount());
         result.put("budget", mapper.budgetSummary(year, month));
         result.put("expectedWorkRecordAuthors", mapper.expectedWorkRecordAuthors(year));
         result.put("submittedWorkRecordAuthors", mapper.submittedWorkRecordAuthors(year, month));
-        result.put("taskIssues", taskIssues);
-        result.put("performanceIssues", performanceIssues);
+        result.put("taskIssues", taskIssues.stream().limit(100).toList());
+        result.put("performanceIssues", performanceIssues.stream().limit(100).toList());
+        result.put("readOnly", !leadershipAccess.isAdmin(operatorId));
+        result.put("scope", leadershipAccess.scope(operatorId));
         return result;
+    }
+
+    private int scopedPendingCount(Long userId) {
+        // 返回异常所属部门后再限定范围，避免把全校待办数量透露给部门范围账号。
+        String sql = "SELECT t.dept_id deptId FROM biz_material_submission s JOIN biz_task t ON t.task_id=s.task_id LEFT JOIN sys_user u ON u.user_id=s.current_handler_id AND COALESCE(u.is_delete,0)=0 WHERE COALESCE(s.is_delete,0)=0 AND s.flow_status IN (10,20,30) AND (u.user_id IS NULL OR u.status<>'1' OR (s.flow_status=10 AND NOT(s.current_handler_id <=> t.auditor_id)) OR (s.flow_status=20 AND NOT(s.current_handler_id <=> t.principal_id)) OR (s.flow_status=30 AND u.role<>'0')) UNION ALL SELECT p.dept_id deptId FROM biz_performance_submission s JOIN biz_performance p ON p.perf_id=s.perf_id LEFT JOIN sys_user u ON u.user_id=s.current_handler_id AND COALESCE(u.is_delete,0)=0 WHERE COALESCE(s.is_delete,0)=0 AND s.flow_status IN (10,20) AND (u.user_id IS NULL OR u.status<>'1' OR (s.flow_status=10 AND NOT(s.current_handler_id <=> p.auditor_id)) OR (s.flow_status=20 AND u.role<>'0'))";
+        int scoped = (int) jdbc.queryForList(sql).stream().filter(row -> leadershipAccess.canReadDepartment(userId, number(row.get("deptId")))).count();
+        int achievements = jdbc.queryForObject("SELECT COUNT(*) FROM biz_achievement a LEFT JOIN sys_user u ON u.user_id=a.current_handler_id AND COALESCE(u.is_delete,0)=0 WHERE COALESCE(a.is_delete,0)=0 AND a.audit_status=10 AND (u.user_id IS NULL OR u.status<>'1' OR u.role<>'0')", Integer.class);
+        return scoped + achievements;
     }
 
     public Map<String, Object> users(String keyword, Long deptId, String role, String status,

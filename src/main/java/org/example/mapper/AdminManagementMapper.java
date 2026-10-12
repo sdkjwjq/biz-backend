@@ -111,7 +111,7 @@ public interface AdminManagementMapper {
             + "(t.dept_id IS NULL OR d.dept_id IS NULL OR d.status<>'0' OR t.leader_id IS NULL OR ul.user_id IS NULL OR ul.status<>'1' "
             + "OR t.auditor_id IS NULL OR ua.user_id IS NULL OR ua.status<>'1' OR t.principal_id IS NULL OR up.user_id IS NULL OR up.status<>'1' "
             + "OR EXISTS (SELECT 1 FROM biz_material_submission s LEFT JOIN sys_user hu ON hu.user_id=s.current_handler_id AND COALESCE(hu.is_delete,0)=0 WHERE s.task_id=t.task_id AND COALESCE(s.is_delete,0)=0 AND s.flow_status IN (10,20,30) AND (hu.user_id IS NULL OR hu.status<>'1' OR (s.flow_status=10 AND NOT (s.current_handler_id <=> t.auditor_id)) OR (s.flow_status=20 AND NOT (s.current_handler_id <=> t.principal_id)) OR (s.flow_status=30 AND hu.role<>'0')))) "
-            + "ORDER BY t.task_code LIMIT 100")
+            + "ORDER BY t.task_code")
     List<Map<String, Object>> taskIssues(Integer year);
 
     @Select("SELECT p.perf_id perfId,p.perf_code perfCode,p.perf_name perfName,p.dept_id deptId,d.dept_name deptName,"
@@ -133,7 +133,7 @@ public interface AdminManagementMapper {
             + "AND (p.dept_id IS NULL OR d.dept_id IS NULL OR d.status<>'0' OR p.leader_id IS NULL OR ul.user_id IS NULL OR ul.status<>'1' "
             + "OR p.auditor_id IS NULL OR ua.user_id IS NULL OR ua.status<>'1' OR ((p.perf_code LIKE '1.1.%' OR p.perf_code LIKE '1.2.%') "
             + "AND NOT EXISTS (SELECT 1 FROM rel_task_performance r JOIN biz_performance_year py ON py.year_id=r.year_id WHERE r.perf_id=p.perf_id AND py.year=#{year} AND COALESCE(r.is_delete,0)=0 AND COALESCE(py.is_delete,0)=0))) "
-            + "ORDER BY p.perf_code LIMIT 100")
+            + "ORDER BY p.perf_code")
     List<Map<String, Object>> performanceIssues(Integer year);
 
     @Select("SELECT COUNT(*) FROM ("

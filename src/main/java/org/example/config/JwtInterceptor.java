@@ -72,7 +72,7 @@ public class JwtInterceptor implements HandlerInterceptor {
                 sendError(response, 428, "请先修改密码，新密码至少8位，并同时包含大写字母、小写字母和数字");
                 return false;
             }
-            request.setAttribute("userRole", decodedJWT.getClaim("role").asString());
+            request.setAttribute("userRole", user.getRole());
             return true;
         } catch (Exception e) {
             sendError(response, 401, "No Token: " + e.getMessage());

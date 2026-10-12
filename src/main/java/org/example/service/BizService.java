@@ -40,17 +40,22 @@ public class BizService {
     private TaskManagementService taskManagementService;
     @Autowired
     private AdminManagementService adminManagementService;
+    @Autowired
+    private LeadershipAccessService leadershipAccess;
+    @Autowired
+    private LeadershipDashboardService leadershipDashboard;
 
     /**
      * 获取全部任务
      * @return 任务列表
      */
     public List<BizTask> getAllTasks() {
-        return bizMapper.getAllTasks();
+        return leadershipAccess.filterTasks(leadershipAccess.currentUserId(), bizMapper.getAllTasks());
     }
 
     /** 对比图使用实际任务汇总，空级别保留零值，空年份不参与年度对比。 */
     public List<Map<String, Object>> getTaskComparisonData(boolean byYear) {
+        if (leadershipDashboard.restricted()) return leadershipDashboard.comparison(byYear);
         Map<Integer, Map<String, Object>> counts = new TreeMap<>();
         if (!byYear) {
             for (int level = 1; level <= 3; level++) counts.put(level, Collections.emptyMap());
@@ -84,6 +89,7 @@ public class BizService {
      * @return 任务对象
      */
     public BizTask getTaskById(Long taskId) {
+        if (leadershipDashboard.restricted()) return leadershipAccess.visibleTasks(leadershipAccess.currentUserId()).stream().filter(t -> Objects.equals(t.getTaskId(), taskId)).findFirst().orElseThrow(() -> new AdminManagementException(403, "任务不在查阅范围内"));
         try {
             if (taskId == null) {
                 throw new RuntimeException("taskID为空");
@@ -110,7 +116,7 @@ public class BizService {
             if (bizMapper.getTaskById(taskId) == null) {
                 throw new RuntimeException("该任务不存在");
             }
-            return bizMapper.getAllChildrenTasks(taskId);
+            return leadershipAccess.filterTasks(leadershipAccess.currentUserId(), bizMapper.getAllChildrenTasks(taskId));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -130,7 +136,7 @@ public class BizService {
                 throw new RuntimeException("该任务不存在");
             }
             Long parentId = bizMapper.getTaskById(taskId).getParentId();
-            return bizMapper.getTaskById(parentId);
+            return getTaskById(parentId);
         } catch (RuntimeException e) {
             throw new RuntimeException(e);
         }
@@ -143,7 +149,7 @@ public class BizService {
      */
     public List<BizTask> getTasksByDeptId(Long deptId) {
         try {
-            return bizMapper.getTasksByDeptId(deptId);
+            return leadershipAccess.filterTasks(leadershipAccess.currentUserId(), bizMapper.getTasksByDeptId(deptId));
         } catch (Exception e) {
             throw new RuntimeException("获取任务失败,请检查部门id是否正确");
         }
@@ -158,6 +164,7 @@ public class BizService {
      */
     public List<BizTaskVo> getTasksByUserRole(Long userId) {
         try {
+            if (leadershipAccess.isLeader(userId)) return taskListToTaskVoList(leadershipAccess.visibleTasks(userId));
             SysUser sysUser = sysMapper.getUserById(userId);
             if (sysUser == null) {
                 throw new RuntimeException("用户不存在");
@@ -668,7 +675,7 @@ public class BizService {
                 throw new RuntimeException("用户不存在");
 
             // 最小权限校验：管理员/任务负责人/归口负责人可查看；或本人提交过该任务审批单也可查看
-            if ("0".equals(me.getRole())
+            if ("0".equals(me.getRole()) || leadershipAccess.canReadTask(userId, taskId)
                     || (task.getLeaderId() != null && task.getLeaderId().equals(userId))
                     || (task.getAuditorId() != null && task.getAuditorId().equals(userId))
                     || (task.getPrincipalId() != null && task.getPrincipalId().equals(userId))) {
@@ -715,7 +722,7 @@ public class BizService {
                 throw new RuntimeException("用户不存在");
 
             // 最小权限校验：管理员/任务部门负责人/归口负责人/提交人可查看
-            boolean allowed = "0".equals(me.getRole())
+            boolean allowed = "0".equals(me.getRole()) || leadershipAccess.canReadTask(userId, submission.getTaskId())
                     || (task.getLeaderId() != null && task.getLeaderId().equals(userId))
                     || (task.getAuditorId() != null && task.getAuditorId().equals(userId))
                     || (task.getPrincipalId() != null && task.getPrincipalId().equals(userId))
@@ -1910,6 +1917,7 @@ public class BizService {
      * @return 看板数据汇总
      */
     public DashboardSummaryVO getDashboardSummary() {
+        if (leadershipDashboard.restricted()) return leadershipDashboard.summary();
         DashboardSummaryVO summary = new DashboardSummaryVO();
 
         try {
@@ -2122,6 +2130,7 @@ public class BizService {
      * @return 所有任务完成率
      */
     public TaskCompletionVO getAllTaskCompletionRate() {
+        if (leadershipDashboard.restricted()) return leadershipDashboard.completion(null, null, false);
         try {
             Integer totalTasks = bizMapper.getTotalTaskCount();
             Integer completedTasks = bizMapper.getCompletedTaskCount();
@@ -2150,6 +2159,7 @@ public class BizService {
      * @return 本年度任务完成率
      */
     public TaskCompletionVO getYearTaskCompletionRate(Integer year) {
+        if (leadershipDashboard.restricted()) return leadershipDashboard.completion(year == null ? java.time.LocalDate.now().getYear() : year, null, false);
         try {
             if (year == null) {
                 Calendar cal = Calendar.getInstance();
@@ -2183,6 +2193,7 @@ public class BizService {
      * @return 中期任务完成率
      */
     public TaskCompletionVO getMidTermTaskCompletionRate(Integer endYear) {
+        if (leadershipDashboard.restricted()) return leadershipDashboard.completion(null, endYear == null ? 2028 : endYear, false);
         try {
             if (endYear == null) {
                 endYear = MID_TERM_END_YEAR;
@@ -2214,6 +2225,7 @@ public class BizService {
      * @return 一级任务完成率
      */
     public TaskCompletionVO getFirstLevelTaskCompletionRate() {
+        if (leadershipDashboard.restricted()) return leadershipDashboard.completion(null, null, true);
         try {
             Integer totalTasks = bizMapper.getFirstLevelTaskCount();
             Integer completedTasks = bizMapper.getFirstLevelCompletedTaskCount();
@@ -2241,6 +2253,7 @@ public class BizService {
      * @return 各部门任务完成率列表
      */
     public List<DeptTaskStatsVO> getDeptTaskCompletionRates() {
+        if (leadershipDashboard.restricted()) return leadershipDashboard.departments(null, null);
         try {
             List<DeptTaskStatsVO> stats = bizMapper.getDeptTaskStats();
             // 补充每个部门的状态统计
@@ -2278,6 +2291,7 @@ public class BizService {
      * @return 各部门本年度任务完成率列表
      */
     public List<DeptTaskStatsVO> getDeptYearTaskCompletionRates(Integer year) {
+        if (leadershipDashboard.restricted()) return leadershipDashboard.departments(year == null ? java.time.LocalDate.now().getYear() : year, null);
         try {
             if (year == null) {
                 Calendar cal = Calendar.getInstance();
@@ -2320,6 +2334,7 @@ public class BizService {
      * @return 各部门中期任务完成率列表
      */
     public List<DeptTaskStatsVO> getDeptMidTermTaskCompletionRates(Integer endYear) {
+        if (leadershipDashboard.restricted()) return leadershipDashboard.departments(null, endYear == null ? 2028 : endYear);
         try {
             if (endYear == null) {
                 endYear = MID_TERM_END_YEAR;
@@ -2364,6 +2379,7 @@ public class BizService {
      * @return 一级任务详情列表
      */
     public List<FirstLevelTaskDetailVO> getFirstLevelTaskDetails() {
+        if (leadershipDashboard.restricted()) return leadershipDashboard.details(true);
         try {
             return bizMapper.getFirstLevelTaskDetails();
         } catch (Exception e) {
@@ -2373,6 +2389,7 @@ public class BizService {
 
 //    获取全量任务详细情况
     public List<BizTask> getAllTaskDetails() {
+        if (leadershipDashboard.restricted()) return leadershipDashboard.tasks();
 
         try {
             return bizMapper.getAllTasks();
@@ -2386,6 +2403,7 @@ public class BizService {
      * @return 部门统计信息
      */
     public Map<String, Object> getDeptStatsDetail(Long deptId) {
+        if (leadershipDashboard.restricted()) return leadershipDashboard.departmentDetail(deptId);
         try {
             Map<String, Object> result = new HashMap<>();
 

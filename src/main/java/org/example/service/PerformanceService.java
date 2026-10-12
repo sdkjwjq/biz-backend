@@ -35,6 +35,8 @@ public class PerformanceService {
 
     @Autowired
     private SysMapper sysMapper;
+    @Autowired
+    private LeadershipAccessService leadershipAccess;
 
     /**
      * 判断绩效是否需要手动填报。
@@ -65,6 +67,7 @@ public class PerformanceService {
         if (performance == null || userId == null) {
             return false;
         }
+        if (leadershipAccess.isLeader(userId) && !isAdmin(userId)) return leadershipAccess.canReadPerformance(userId, performance.getPerfId());
         return isAdmin(userId)
                 || Objects.equals(performance.getLeaderId(), userId)
                 || Objects.equals(performance.getAuditorId(), userId)
@@ -282,6 +285,7 @@ public class PerformanceService {
     }
 
     public Object getAllPerformance(Long userId) {
+        if (leadershipAccess.isLeader(userId)) return leadershipAccess.visiblePerformances(userId);
         if (isAdmin(userId)) {
             return performanceMapper.getAllPerformance();
         }
@@ -307,6 +311,7 @@ public class PerformanceService {
         if (!canViewPerformance(performance, userId)) {
             throw new RuntimeException("无权查看该绩效");
         }
+        if (leadershipAccess.restricted(userId)) return leadershipAccess.visiblePerformances(userId).stream().filter(p -> Objects.equals(p.getPerfId(), perfId)).findFirst().orElseThrow();
         return performance;
     }
 
@@ -390,7 +395,7 @@ public class PerformanceService {
         if (!canViewPerformance(performance, userId)) {
             throw new RuntimeException("无权查看该绩效关联任务");
         }
-        return getTaskByPerfId(perfId);
+        return leadershipAccess.filterTasks(userId, (List<BizTask>) getTaskByPerfId(perfId));
     }
 
     /**
@@ -401,7 +406,7 @@ public class PerformanceService {
         if (!canViewPerformance(performance, userId)) {
             throw new RuntimeException("无权查看该绩效关联任务");
         }
-        return getTaskByPerfId(perfId, year);
+        return leadershipAccess.filterTasks(userId, (List<BizTask>) getTaskByPerfId(perfId, year));
     }
 
     public Object getPerformanceByYear(Integer year) {
@@ -447,6 +452,15 @@ public class PerformanceService {
     @SuppressWarnings("unchecked")
     public Object getPerformanceByYear(Integer year, Long userId) {
         List<PerformanceYearVO> list = (List<PerformanceYearVO>) getPerformanceByYear(year);
+        if (leadershipAccess.isLeader(userId) && !isAdmin(userId)) {
+            Map<Long, BizPerformance> visible = new HashMap<>();
+            leadershipAccess.visiblePerformances(userId).forEach(p -> visible.put(p.getPerfId(), p));
+            return list.stream().filter(p -> visible.containsKey(p.getPerfId())).peek(p -> {
+                if (leadershipAccess.restricted(userId) && visible.get(p.getPerfId()).getTargetValue() == null) {
+                    p.setCurrentValue(null); p.setTargetValue(null);
+                }
+            }).toList();
+        }
         if (isAdmin(userId)) {
             return list;
         }

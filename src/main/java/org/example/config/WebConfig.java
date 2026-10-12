@@ -41,6 +41,8 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Autowired
     private UserRoleInterceptor userRoleInterceptor;
+    @Autowired
+    private LeadershipReadInterceptor leadershipReadInterceptor;
 
     /**
      * 配置拦截器
@@ -64,5 +66,8 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addInterceptor(userRoleInterceptor)
                 .addPathPatterns("/system/users/**")
                 .addPathPatterns("/admin/**");
+        registry.addInterceptor(leadershipReadInterceptor)
+                .addPathPatterns("/system/**", "/biz/**", "/performance/**", "/dashboard/**", "/budget/**", "/achievement/**", "/scheduled/**", "/work-records/**", "/manage/**", "/admin/**")
+                .excludePathPatterns("/system/login", "/system/password/reset", "/system/password/reset/");
     }
 }

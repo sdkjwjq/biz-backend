@@ -17,13 +17,14 @@ public class WorkShortcutController {
     @Autowired private BizMapper tasks;
     @Autowired private PerformanceMapper performances;
     @Autowired private WorkShortcutMapper shortcuts;
+    @Autowired private org.example.service.LeadershipAccessService leadershipAccess;
 
     @GetMapping("/biz/tasks/quick-filters")
     public Object taskFilters(HttpServletRequest request) {
         try {
             Long userId = JWTUtil.getUserIdFromToken(request.getHeader("Authorization"));
             SysUser user = users.getUserById(userId);
-            List<BizTask> visible = "0".equals(user.getRole()) ? tasks.getAllTasks() : tasks.getVisibleTasks(userId);
+            List<BizTask> visible = leadershipAccess.isLeader(userId) ? leadershipAccess.visibleTasks(userId) : "0".equals(user.getRole()) ? tasks.getAllTasks() : tasks.getVisibleTasks(userId);
             List<Long> ids = visible.stream().filter(t -> !Integer.valueOf(1).equals(t.getIsDelete()) && Integer.valueOf(3).equals(t.getLevel()))
                     .map(BizTask::getTaskId).toList();
             Set<Long> returned = new LinkedHashSet<>(), todo = new LinkedHashSet<>();
@@ -46,7 +47,7 @@ public class WorkShortcutController {
         try {
             Long userId = JWTUtil.getUserIdFromToken(request.getHeader("Authorization"));
             SysUser user = users.getUserById(userId);
-            List<BizPerformance> visible = "0".equals(user.getRole()) ? performances.getAllPerformance() : performances.getVisiblePerformance(userId);
+            List<BizPerformance> visible = leadershipAccess.isLeader(userId) ? leadershipAccess.visiblePerformances(userId) : "0".equals(user.getRole()) ? performances.getAllPerformance() : performances.getVisiblePerformance(userId);
             List<Long> ids = visible.stream().filter(p -> !Integer.valueOf(1).equals(p.getIsDelete()))
                     .filter(p -> p.getPerfCode() == null || !(p.getPerfCode().startsWith("1.1.") || p.getPerfCode().startsWith("1.2.")))
                     .map(BizPerformance::getPerfId).toList();

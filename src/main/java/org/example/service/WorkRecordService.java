@@ -26,15 +26,17 @@ public class WorkRecordService {
     private final ObjectMapper json;
     private final Clock clock;
     private final Set<Long> viewers;
+    private final LeadershipAccessService leadershipAccess;
 
     public WorkRecordService(WorkRecordMapper records, SysMapper users, WorkRecordStatisticsService statistics,
                              ObjectMapper json, @Qualifier("workRecordClock") Clock clock,
-                             @Value("${work-records.viewer-user-ids:}") String viewerIds) {
+                             @Value("${work-records.viewer-user-ids:}") String viewerIds, LeadershipAccessService leadershipAccess) {
         this.records = records;
         this.users = users;
         this.statistics = statistics;
         this.json = json;
         this.clock = clock;
+        this.leadershipAccess = leadershipAccess;
         this.viewers = Arrays.stream(viewerIds.split(",")).map(String::trim).filter(value -> !value.isEmpty())
                 .map(Long::valueOf).collect(Collectors.toUnmodifiableSet());
     }
@@ -60,7 +62,7 @@ public class WorkRecordService {
     public Capabilities capabilities(Long userId) {
         SysUser user = user(userId);
         List<Integer> years = fillableYears(user);
-        boolean export = "0".equals(user.getRole()) || viewers.contains(userId);
+        boolean export = "0".equals(user.getRole()) || viewers.contains(userId) || leadershipAccess.isLeader(userId);
         return new Capabilities(!years.isEmpty(), export || !years.isEmpty(), export,
                 records.ownSubmitted(userId) > 0, years, records.ownRecords(userId) > 0, "0".equals(user.getRole()));
     }
