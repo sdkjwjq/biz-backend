@@ -39,6 +39,7 @@ def main():
         sql(dump, schema)
         sql((ROOT / "data/migrations/2026-10-12-leadership-access.sql").read_bytes(), schema)
         sql((ROOT / "data/migrations/2026-10-12-task-attributes.sql").read_bytes(), schema)
+        sql((ROOT / "data/migrations/2026-10-12-core-indicators.sql").read_bytes(), schema)
         sql((ROOT / "scripts/password/001_force_password_change.sql").read_bytes(), schema)
         sql("UPDATE sys_user SET force_password_change=0; "
             "ALTER TABLE sys_user ALTER force_password_change SET DEFAULT 0", schema)

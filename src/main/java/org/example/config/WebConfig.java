@@ -61,6 +61,7 @@ public class WebConfig implements WebMvcConfigurer {
                 .addPathPatterns("/work-records/**")
                 .addPathPatterns("/manage/**")
                 .addPathPatterns("/admin/**")
+                .addPathPatterns("/core-indicators/**")
                 .excludePathPatterns("/system/login", "/system/password/reset", "/system/password/reset/");
 
         registry.addInterceptor(userRoleInterceptor)

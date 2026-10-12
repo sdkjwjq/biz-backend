@@ -41,10 +41,6 @@ public class WorkRecordService {
                 .map(Long::valueOf).collect(Collectors.toUnmodifiableSet());
     }
 
-    /** “双高”建设办公室部门ID：与 role=0 的管理员一样可按全校口径填报工作纪实。 */
-    private static final long OFFICE_DEPT_ID = 100L;
-    private static final List<Integer> PRIVILEGED_FILL_YEARS = List.of(2025, 2026, 2027, 2028, 2029);
-
     private SysUser user(Long id) {
         SysUser user = users.getUserById(id);
         if (user == null || Integer.valueOf(1).equals(user.getIsDelete()) || !"1".equals(user.getStatus())) throw new WorkRecordException(401, "请重新登录");
@@ -52,11 +48,11 @@ public class WorkRecordService {
     }
 
     private boolean privilegedFiller(SysUser user) {
-        return "0".equals(user.getRole()) || Objects.equals(OFFICE_DEPT_ID, user.getDeptId());
+        return false; // 填报与统计仅按实际三级、四级责任关系，不因角色扩大范围。
     }
 
     private List<Integer> fillableYears(SysUser user) {
-        return privilegedFiller(user) ? PRIVILEGED_FILL_YEARS : records.fillableYears(user.getUserId());
+        return records.fillableYears(user.getUserId());
     }
 
     public Capabilities capabilities(Long userId) {
@@ -84,7 +80,7 @@ public class WorkRecordService {
     }
 
     private void requireFiller(SysUser user, int year) {
-        if (!fillableYears(user).contains(year)) throw new WorkRecordException(403, "您不是该年度任务的专业群审核人，不能填报或刷新纪实");
+        if (!fillableYears(user).contains(year)) throw new WorkRecordException(403, "您不是该年度有效三级任务或四级目标的责任人，不能填报或刷新纪实");
     }
 
     @Transactional(readOnly=true, isolation=Isolation.REPEATABLE_READ)

@@ -9,13 +9,13 @@ import java.util.List;
 
 @Mapper
 public interface WorkRecordMapper {
-    @Select("SELECT DISTINCT phase FROM biz_task WHERE auditor_id=#{userId} AND level=3 "
-            + "AND COALESCE(is_delete,0)=0 AND phase BETWEEN 2025 AND 2029 ORDER BY phase")
+    @Select("SELECT DISTINCT t.phase FROM biz_task t WHERE t.level=3 AND COALESCE(t.is_delete,0)=0 AND t.phase BETWEEN 2025 AND 2029 "
+            + "AND (t.leader_id=#{userId} OR EXISTS(SELECT 1 FROM biz_level4_task c WHERE c.parent_id=t.task_id AND c.leader_id=#{userId} AND COALESCE(c.is_delete,0)=0)) ORDER BY t.phase")
     List<Integer> fillableYears(Long userId);
 
     @Select("SELECT t.*, COALESCE(NULLIF(u.nick_name,''),u.user_name,'—') leader_name "
             + "FROM biz_task t LEFT JOIN sys_user u ON u.user_id=t.leader_id "
-            + "WHERE t.auditor_id=#{ownerId} AND t.phase=#{year} AND t.level=3 AND COALESCE(t.is_delete,0)=0 "
+            + "WHERE (t.leader_id=#{ownerId} OR EXISTS(SELECT 1 FROM biz_level4_task c WHERE c.parent_id=t.task_id AND c.leader_id=#{ownerId} AND COALESCE(c.is_delete,0)=0)) AND t.phase=#{year} AND t.level=3 AND COALESCE(t.is_delete,0)=0 "
             + "ORDER BY t.task_code,t.task_id")
     List<WorkRecordVO.Task> ownedTasks(@Param("ownerId") Long ownerId, @Param("year") int year);
 

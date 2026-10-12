@@ -58,10 +58,13 @@ def main():
         env["SHUANGGAO_REVIEW_TEST"] = "true"
         subprocess.run([mysql, *connection, database], input=(root / 'data/migrations/2026-10-12-leadership-access.sql').read_bytes(), env=env, check=True)
         subprocess.run([mysql, *connection, database], input=(root / 'data/migrations/2026-10-12-task-attributes.sql').read_bytes(), env=env, check=True)
+        subprocess.run([mysql, *connection, database], input=(root / 'data/migrations/2026-10-12-core-indicators.sql').read_bytes(), env=env, check=True)
         env["SHUANGGAO_TEST_DB_USER"] = user
         env["SHUANGGAO_TEST_JDBC_URL"] = ("jdbc:mysql://127.0.0.1:3306/" + database
                                          + "?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai")
-        if method == "leadership":
+        if method == "core":
+            selector = "CoreIndicatorApiTest"
+        elif method == "leadership":
             selector = "LeadershipAccessApiTest"
         elif method == "attributes":
             selector = "TaskAttributesApiTest,ReviewBatchRegressionApiTest#directSubmissionAndResubmissionStoreActualValuesThroughApproval+adminFinishRequiresEveryLevel4GoalAndKeepsRealValues"
@@ -72,11 +75,17 @@ def main():
         elif method:
             selector = "ReviewBatchRegressionApiTest#" + method
         else:
-            selector = "ReviewBatchRegressionApiTest,AdminManagementApiTest,LeadershipAccessApiTest,TaskAttributesApiTest"
+            selector = "ReviewBatchRegressionApiTest,AdminManagementApiTest,LeadershipAccessApiTest,TaskAttributesApiTest,CoreIndicatorApiTest"
         print("Running " + selector + " in isolated schema " + database, flush=True)
         result = subprocess.run([shutil.which("mvn.cmd") or executable("mvn"), "-B", "-Dtest=" + selector, "test"],
                                 cwd=root, env=env)
         if result.returncode == 0:
+            subprocess.run([mysql, *connection, database], input=(root / 'data/migrations/2026-10-12-core-indicators.sql').read_bytes(), env=env, check=True)
+            subprocess.run([mysql, *connection, database], input=b"INSERT INTO biz_core_report(indicator_id,record_year,record_month,indicator_name,submit_by) VALUES(1,2026,1,'Rollback guard fixture',110228);", env=env, check=True)
+            core_rollback = subprocess.run([mysql, *connection, database], input=(root / 'data/migrations/2026-10-12-core-indicators-rollback.sql').read_bytes(), env=env, capture_output=True)
+            if core_rollback.returncode == 0 or b'Core indicator history exists' not in core_rollback.stderr:
+                raise RuntimeError("Core rollback must retain existing reports and drafts")
+            print("Core rollback correctly refused to discard reports and drafts", flush=True)
             subprocess.run([mysql, *connection, database], input=b"INSERT INTO sys_leadership_access(user_id,scope,version) VALUES(999999,'ALL',1) ON DUPLICATE KEY UPDATE scope='ALL';", env=env, check=True)
             blocked = subprocess.run([mysql, *connection, database], input=(root / 'data/migrations/2026-10-12-leadership-access-rollback.sql').read_bytes(), env=env, capture_output=True)
             if blocked.returncode == 0 or b'Leadership configuration or trends exist' not in blocked.stderr:

@@ -54,7 +54,7 @@ public class WorkRecordStatisticsService {
         int unknown = (int) details.stream().filter(TaskSummary::needsVerification).count();
         BigDecimal rate = tasks.isEmpty() ? null : BigDecimal.valueOf(completed).multiply(BigDecimal.valueOf(100))
                 .divide(BigDecimal.valueOf(tasks.size()), 2, RoundingMode.HALF_UP);
-        String notice = "采用生成时的年度任务配置；统计按三级任务去重，勾选文字填报项目不改变统计范围。";
+        String notice = "采用生成时的年度任务配置；本人三级任务及本人四级目标所属三级任务按三级任务ID去重，勾选文字填报项目不改变统计范围。";
         if (unknown > 0) notice += "可核实统计：" + unknown + "条任务历史完成时间待核实，未计入完成数量。";
         if (details.stream().anyMatch(row -> row.reformTaskId() == null)) notice += "部分任务缺少有效一级任务目录，请先核实任务配置。";
         return new Statistics(1, year, month, format(now), format(cutoff), tasks.size(), added, completed, rate,
