@@ -56,4 +56,9 @@ public class BizTaskVo {
     private Integer isDelete; // 0:存在 1:删除
     private Date createTime; // 创建时间
     private Date updateTime; // 更新时间
+    private Boolean isPriority;
+    private Boolean isDifficult;
+    private java.time.LocalDate plannedCompletionDate;
+    private Date actualCompletionDate;
+    private Long managementVersion;
 }

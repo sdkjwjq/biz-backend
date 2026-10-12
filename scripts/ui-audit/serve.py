@@ -64,6 +64,7 @@ def main():
         sql((ROOT / "data/migrations/2026-09-26-budget-import-version.sql").read_text(encoding="utf-8"), schema)
         sql((ROOT / "data/migrations/2026-09-27-admin-management.sql").read_text(encoding="utf-8"), schema)
         sql((ROOT / "data/migrations/2026-10-12-leadership-access.sql").read_text(encoding="utf-8"), schema)
+        sql((ROOT / "data/migrations/2026-10-12-task-attributes.sql").read_text(encoding="utf-8"), schema)
         sql((ROOT / "scripts/ui-audit/fixture.sql").read_text(encoding="utf-8"), schema)
         sql("UPDATE sys_user SET force_password_change=0", schema)
         if args.fixture == "leadership":

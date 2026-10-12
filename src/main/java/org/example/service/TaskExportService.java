@@ -43,12 +43,12 @@ public class TaskExportService {
     private static final String[] HEADERS = {
             "序号", "任务层级", "任务编号", "任务名称", "年度", "当前进度(%)", "状态",
             "归口部门", "负责人", "专业群审核人", "归口负责人", "目标值", "完成值", "数据类型",
-            "起止时间", "预期达成目标", "预期成效", "材料清单", "完成情况", "更新时间"
+            "起止时间", "预期达成目标", "预期成效", "材料清单", "完成情况", "更新时间", "任务类型", "计划完成日期", "实际完成日期"
     };
     private static final int[] WIDTHS = {
             6, 8, 14, 46, 8, 12, 10,
             16, 12, 14, 12, 12, 12, 14,
-            22, 34, 34, 40, 30, 20
+            22, 34, 34, 40, 30, 20, 16, 16, 16
     };
 
     @Autowired
@@ -125,6 +125,9 @@ public class TaskExportService {
                 cellWithWrap(row.createCell(c++), task.getExpMaterialDesc(), wrapStyle);
                 cellWithWrap(row.createCell(c++), task.getComment(), wrapStyle);
                 row.createCell(c++).setCellValue(task.getUpdateTime() == null ? "" : day.format(task.getUpdateTime()));
+                row.createCell(c++).setCellValue(Boolean.TRUE.equals(task.getIsPriority()) ? (Boolean.TRUE.equals(task.getIsDifficult()) ? "重点、困难" : "重点") : (Boolean.TRUE.equals(task.getIsDifficult()) ? "困难" : "一般"));
+                row.createCell(c++).setCellValue(task.getPlannedCompletionDate() == null ? "" : task.getPlannedCompletionDate().toString());
+                row.createCell(c++).setCellValue(task.getActualCompletionDate() == null ? "" : day.format(task.getActualCompletionDate()));
                 index++;
             }
 

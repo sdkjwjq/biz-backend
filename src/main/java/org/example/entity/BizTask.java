@@ -51,4 +51,9 @@ public class BizTask {
     private Integer isDelete; // 0:存在 1:删除
     private Date createTime; // 创建时间
     private Date updateTime; // 更新时间
+    private Boolean isPriority; // 重点任务
+    private Boolean isDifficult; // 困难任务
+    private java.time.LocalDate plannedCompletionDate; // 独立计划完成日期
+    private Date actualCompletionDate; // 首次达标归档时间，只读
+    private Long managementVersion; // 管理属性并发版本
 }

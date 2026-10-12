@@ -80,9 +80,24 @@ public class BizController {
      * @return 任务列表或错误信息
      */
     @GetMapping("/tasks")
-    public Object getTasks(HttpServletRequest request){
+    public Object getTasks(HttpServletRequest request, @RequestParam(value="taskType",required=false) String taskType){
         try{
-            return bizService.getTasksByUserRole(JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
+            var visible = bizService.getTasksByUserRole(JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
+            if (taskType == null || taskType.isEmpty()) return visible;
+            if (!List.of("normal","priority","difficult","both").contains(taskType)) return ResponseEntity.badRequest().body(new ErrorVO("任务类型不正确",400));
+            java.util.Set<Long> selected = new java.util.HashSet<>();
+            Map<Long,org.example.entity.vo.BizTaskVo> byId = new java.util.HashMap<>();
+            for (var task : visible) byId.put(task.getTaskId(),task);
+            for (var task : visible) {
+                if (!Integer.valueOf(3).equals(task.getLevel())) continue;
+                boolean priority = Boolean.TRUE.equals(task.getIsPriority()), difficult = Boolean.TRUE.equals(task.getIsDifficult());
+                boolean match = switch(taskType) {case "normal" -> !priority && !difficult; case "priority" -> priority; case "difficult" -> difficult; default -> priority && difficult;};
+                if (match) {
+                    var current=task;
+                    while(current!=null && selected.add(current.getTaskId())) current=byId.get(current.getParentId());
+                }
+            }
+            return visible.stream().filter(task -> selected.contains(task.getTaskId())).toList();
         } catch (Exception e) {
             return new ErrorVO(e.getMessage(), 500);
         }

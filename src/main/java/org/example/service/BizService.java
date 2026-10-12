@@ -361,6 +361,7 @@ public class BizService {
                     ? calculateCappedProgress(taskById.getCurrentValue(), taskById.getTargetValue())
                     : level4Aggregate.storedProgress);
             bizMapper.updateTask(taskById);
+            bizMapper.recordActualCompletion(taskById.getTaskId());
             audit.setReportedValue(taskById.getCurrentValue());
             audit.setCurrentHandlerId(ADMIN_ID);
             audit.setFlowStatus(40);
@@ -886,6 +887,7 @@ public class BizService {
                             bizTask.setStatus("1");
                         }
                         bizMapper.updateCurrentTask(bizTask);
+                        if (completed) bizMapper.recordActualCompletion(bizTask.getTaskId());
                         syncAncestorTaskStatus(bizTask.getTaskId());
 
                         sendNotice(userId,
@@ -1806,6 +1808,11 @@ public class BizService {
         taskVo.setIsDelete(task.getIsDelete());
         taskVo.setCreateTime(task.getCreateTime());
         taskVo.setUpdateTime(task.getUpdateTime());
+        taskVo.setIsPriority(task.getIsPriority());
+        taskVo.setIsDifficult(task.getIsDifficult());
+        taskVo.setPlannedCompletionDate(task.getPlannedCompletionDate());
+        taskVo.setActualCompletionDate(task.getActualCompletionDate());
+        taskVo.setManagementVersion(task.getManagementVersion());
         return taskVo;
     }
 

@@ -10,6 +10,7 @@ import java.util.Date;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@com.fasterxml.jackson.annotation.JsonIgnoreProperties({"isPriority","isDifficult","plannedCompletionDate","actualCompletionDate","managementVersion"})
 public class BizTaskDTO {
     private Long taskId; // 任务ID
     private Long projectId; // 项目ID

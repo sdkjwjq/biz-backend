@@ -1116,6 +1116,7 @@ class ReviewBatchRegressionApiTest {
         review(second, true, admin);
         assertEquals(40, jdbc.queryForObject("SELECT flow_status FROM biz_material_submission WHERE sub_id=?", Integer.class, second));
         assertTaskAndPerformance("4", 40, "1");
+        assertNull(jdbc.queryForObject("SELECT actual_completion_date FROM biz_task WHERE task_id=930002", java.sql.Timestamp.class), "未达标归档不能记录完成日期");
         assertEquals(6, jdbc.queryForObject("SELECT COUNT(*) FROM biz_audit_log", Integer.class));
         assertEquals(6, jdbc.queryForObject("SELECT COUNT(*) FROM sys_notice", Integer.class));
     }
@@ -1224,6 +1225,7 @@ class ReviewBatchRegressionApiTest {
         assertDecimal("5", "SELECT current_value FROM biz_level4_task WHERE task_id=960002");
         assertEquals(100, jdbc.queryForObject("SELECT progress FROM biz_level4_task WHERE task_id=960001", Integer.class));
         assertDecimal("10", "SELECT reported_value FROM biz_material_submission WHERE sub_id=?", newestSubmission());
+        assertNotNull(jdbc.queryForObject("SELECT actual_completion_date FROM biz_task WHERE task_id=930002", java.sql.Timestamp.class), "一键完结也记录首次达标归档日期");
     }
 
     private void seedManualPerformance(String dataType) {

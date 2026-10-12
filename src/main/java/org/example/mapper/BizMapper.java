@@ -50,6 +50,9 @@ public interface BizMapper {
     @Select("SELECT * FROM biz_task WHERE task_id = #{taskId} FOR UPDATE")
     BizTask getTaskByIdForUpdate(Long taskId);
 
+    @Update("UPDATE biz_task SET actual_completion_date=COALESCE(actual_completion_date,NOW()) WHERE task_id=#{taskId} AND level=3 AND target_value>0 AND current_value>=target_value AND status='3'")
+    void recordActualCompletion(Long taskId);
+
     /**
      * 根据部门id获取任务
      * @param deptId 部门ID
@@ -184,12 +187,12 @@ void updateLevel4Task(BizLevel4Task task);
             "project_id, parent_id, ancestors, phase, task_code, task_name, level, comment, " +
             "leader_id, auditor_id, principal_id, dept_id, exp_target, exp_level, exp_effect, " +
             "exp_material_desc, data_type, target_value, current_value, weight, progress, " +
-            "status, is_delete, create_time, update_time" +
+            "status, is_delete, create_time, update_time, planned_completion_date" +
             ") VALUES (" +
             "#{projectId}, #{parentId}, #{ancestors}, #{phase}, #{taskCode}, #{taskName}, #{level}, #{comment}, " +
             "#{leaderId}, #{auditorId}, #{principalId}, #{deptId}, #{expTarget}, #{expLevel}, #{expEffect}, " +
             "#{expMaterialDesc}, #{dataType}, #{targetValue}, #{currentValue}, #{weight}, #{progress}, " +
-            "#{status}, #{isDelete}, #{createTime}, #{updateTime}" +
+            "#{status}, #{isDelete}, #{createTime}, #{updateTime}, STR_TO_DATE(CONCAT(#{phase},'-12-31'),'%Y-%m-%d')" +
             ")")
     // 新增注解：返回自增的taskId到实体对象中
     @Options(useGeneratedKeys = true, keyProperty = "taskId", keyColumn = "task_id")
