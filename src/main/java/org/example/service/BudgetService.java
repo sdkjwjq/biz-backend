@@ -54,6 +54,8 @@ public class BudgetService {
 
     @Autowired
     private ObjectMapper objectMapper;
+    @Autowired
+    private CoreIndicatorService coreIndicators;
 
     private final DataFormatter formatter = new DataFormatter(Locale.CHINA);
 
@@ -68,9 +70,18 @@ public class BudgetService {
             emptySheet.setLocked(0);
             emptySheet.setIsDelete(0);
             empty.setSheet(emptySheet);
-            return empty;
+            return attachIndicators(empty,year,month);
         }
-        return toVO(sheet);
+        BudgetSheetVO current = toVO(sheet);
+        return attachIndicators(current,year,month);
+    }
+
+    private BudgetSheetVO attachIndicators(BudgetSheetVO current,Integer year,Integer month) {
+        for (int index=1;index<=10;index++) {
+            Map<String,Object> effective=coreIndicators.effective((long)index,year,month);
+            if(effective!=null)current.getArchivedIndicators().put(index,effective);
+        }
+        return current;
     }
 
     @Transactional
@@ -121,7 +132,7 @@ public class BudgetService {
                 "versionNo", version.getVersionNo(),
                 "sourceCount", parsed.sources.size(),
                 "taskCount", parsed.tasks.size());
-        return current;
+        return attachIndicators(current,year,month);
     }
 
     public List<BudgetVersionVO> getVersions(Integer year, Integer month, Long userId) {
@@ -181,7 +192,7 @@ public class BudgetService {
                 "sourceVersionId", source.getVersionId(),
                 "newVersionId", restored.getVersionId(),
                 "newVersionNo", restored.getVersionNo());
-        return current;
+        return attachIndicators(current,sheet.getYear(),sheet.getMonth());
     }
 
     public BudgetSheetVO updateLock(Integer year, Integer month, Boolean locked, Long userId) {
@@ -219,6 +230,14 @@ public class BudgetService {
             int base = 7;
             writeRow(sheet, base, "资金支持方向", "改革任务", "", "合计数");
             List<BizBudgetTaskItem> tasks = vo.getTasks();
+            for(var task:tasks) {
+                Map<String,Object> archived=vo.getArchivedIndicators().get(task.getTaskIndex());
+                task.setAchieved(archived==null?"":archived.get("actualValue")+"（"+year+"年"+archived.get("month")+"月归档）");
+                if(archived!=null) {
+                    task.setCoreOutput(String.valueOf(archived.get("indicatorName")));
+                    task.setTargetValue(archived.get("targetValue")==null?"":String.valueOf(archived.get("targetValue")));
+                }
+            }
             for (int i = 0; i < tasks.size(); i++) {
                 sheet.getRow(base).createCell(4 + i).setCellValue(tasks.get(i).getTaskIndex() + " " + tasks.get(i).getTaskName());
             }
@@ -228,7 +247,7 @@ public class BudgetService {
             writeTaskRow(sheet, base + 4, "", "其他支出", tasks, "other");
             writeTaskTextRow(sheet, base + 5, "资金使用有效性", "指标名称", tasks, "coreOutput");
             writeTaskTextRow(sheet, base + 6, "", "项目期满的目标值", tasks, "targetValue");
-            writeTaskTextRow(sheet, base + 7, "", "截至" + year + "年年末目标累计实现情况", tasks, "achieved");
+            writeTaskTextRow(sheet, base + 7, "", "截至" + year + "年" + month + "月最近归档累计实现情况", tasks, "achieved");
 
             String filename = "预算数据-" + year + "年" + month + "月.xlsx";
             response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");

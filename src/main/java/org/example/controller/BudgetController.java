@@ -22,6 +22,23 @@ import java.util.Map;
 public class BudgetController {
     @Autowired
     private BudgetService budgetService;
+    @Autowired
+    private org.example.service.BudgetTrendService budgetTrends;
+    @Autowired
+    private org.example.service.LeadershipAccessService budgetAccess;
+
+    @GetMapping("/trends")
+    public org.springframework.http.ResponseEntity<?> trends(@RequestParam Integer year,
+            @RequestParam(defaultValue="0") Integer taskIndex,HttpServletRequest request) {
+        try {
+            if(!Boolean.TRUE.equals(budgetAccess.capabilities(currentUserId(request)).get("canViewBudget")))
+                throw new org.example.service.TaskManagementException(403,"没有预算查阅权限");
+            return org.springframework.http.ResponseEntity.ok(budgetTrends.trends(year,taskIndex));
+        }
+        catch(org.example.service.TaskManagementException error) {
+            return org.springframework.http.ResponseEntity.status(error.getCode()).body(new ErrorVO(error.getMessage(),error.getCode()));
+        }
+    }
 
     @GetMapping
     public Object getBudget(@RequestParam("year") Integer year,

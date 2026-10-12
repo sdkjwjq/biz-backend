@@ -62,7 +62,9 @@ def main():
         env["SHUANGGAO_TEST_DB_USER"] = user
         env["SHUANGGAO_TEST_JDBC_URL"] = ("jdbc:mysql://127.0.0.1:3306/" + database
                                          + "?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai")
-        if method == "core":
+        if method == "budgettrends":
+            selector = "BudgetTrendApiTest,ReviewBatchRegressionApiTest#budgetImportsCreateVersionsAndRestoreWithoutOverwritingHistory"
+        elif method == "core":
             selector = "CoreIndicatorApiTest"
         elif method == "leadership":
             selector = "LeadershipAccessApiTest"
@@ -75,7 +77,7 @@ def main():
         elif method:
             selector = "ReviewBatchRegressionApiTest#" + method
         else:
-            selector = "ReviewBatchRegressionApiTest,AdminManagementApiTest,LeadershipAccessApiTest,TaskAttributesApiTest,CoreIndicatorApiTest"
+            selector = "ReviewBatchRegressionApiTest,AdminManagementApiTest,LeadershipAccessApiTest,TaskAttributesApiTest,CoreIndicatorApiTest,BudgetTrendApiTest"
         print("Running " + selector + " in isolated schema " + database, flush=True)
         result = subprocess.run([shutil.which("mvn.cmd") or executable("mvn"), "-B", "-Dtest=" + selector, "test"],
                                 cwd=root, env=env)
