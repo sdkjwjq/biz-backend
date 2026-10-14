@@ -224,7 +224,7 @@ public class LeadershipAccessService {
         boolean duties = admin || jdbc.queryForObject("SELECT (EXISTS(SELECT 1 FROM biz_task WHERE COALESCE(is_delete,0)=0 AND (auditor_id=? OR principal_id=?)) OR EXISTS(SELECT 1 FROM biz_performance WHERE COALESCE(is_delete,0)=0 AND (auditor_id=? OR principal_id=?)))", Integer.class,
                 userId, userId, userId, userId) == 1;
         Map<String, Object> result = new LinkedHashMap<>();
-        boolean coreDuties = jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM biz_core_report WHERE current_handler_id=? AND flow_status IN(10,20))", Integer.class, userId) == 1;
+        boolean coreDuties = jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM biz_core_report r JOIN biz_core_indicator c ON c.indicator_id=r.indicator_id AND BINARY c.indicator_code=BINARY r.performance_code WHERE r.current_handler_id=? AND r.flow_status IN(10,20))", Integer.class, userId) == 1;
         boolean coreFiller = jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM biz_task t WHERE t.level=3 AND t.phase BETWEEN 2025 AND 2029 AND COALESCE(t.is_delete,0)=0 AND (t.leader_id=? OR EXISTS(SELECT 1 FROM biz_level4_task c WHERE c.parent_id=t.task_id AND c.leader_id=? AND COALESCE(c.is_delete,0)=0)))", Integer.class, userId,userId) == 1;
         boolean coreReviewer = jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM biz_performance p JOIN biz_core_indicator c ON BINARY c.indicator_code=BINARY p.perf_code WHERE p.principal_id=? AND COALESCE(p.is_delete,0)=0)",Integer.class,userId)==1;
         result.put("canViewCoreIndicators", admin || scope.leader() || coreFiller || coreReviewer || coreDuties);

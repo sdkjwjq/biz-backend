@@ -103,11 +103,12 @@ class CoreIndicatorApiTest {
         jdbc.update("UPDATE sys_user SET force_password_change=0");
         task(900010, OWNER, 2026, 10, "1");
         jdbc.update("INSERT INTO biz_level4_task(task_id,parent_id,task_name,leader_id,dept_id,is_delete) VALUES(950001,900010,'Goal',?,920001,0)",OTHER);
-        String[] codes={"1.1.5","1.1.7","1.1.55","1.1.14","1.1.20","1.1.28","1.1.63","1.1.66","1.1.45","1.2.15"};
+        String[] codes={"1.1.5","1.1.7","1.1.55","1.1.14","1.1.20","1.1.28","1.1.63","1.1.66","1.1.45","1.2.45"};
         for(int i=0;i<codes.length;i++) {
             jdbc.update("INSERT INTO biz_core_indicator(indicator_id,indicator_code,sort_order) VALUES(?,?,?)",i+1,codes[i],i+1);
             jdbc.update("INSERT INTO biz_performance(perf_id,project_id,parent_id,perf_code,perf_name,dept_id,leader_id,auditor_id,principal_id,target_value,current_value,data_type,is_delete) VALUES(?,1,0,?,'Synthetic indicator',920001,?,?,?,10,7,'1',0)",960001+i,codes[i],OWNER,VIEWER,LEADER);
         }
+        jdbc.update("UPDATE biz_performance SET perf_name='发布《工程机械产业发展报告》数量',target_value=5 WHERE perf_id=960010");
     }
 
     private void task(long id, long auditor, int year, int target, String status) {
@@ -143,6 +144,62 @@ class CoreIndicatorApiTest {
 
     private JsonNode draft(String token,int month) throws Exception {
         return ok(request(HttpMethod.POST,"/core-indicators/1/draft",token,Map.of("year",2026,"month",month)));
+    }
+
+    @Test
+    void reportIndicatorUsesCorrectMetadataAndPrincipalWithoutChangingPerformance() throws Exception {
+        jdbc.update("INSERT INTO biz_performance(perf_id,project_id,perf_code,perf_name,target_value,data_type,dept_id,leader_id,auditor_id,principal_id,is_delete) VALUES(960015,1,'1.2.15','毕业生就业相关度',85,'2',920001,?,?,?,0)",OWNER,VIEWER,OTHER);
+        String token=login(OWNER);
+        JsonNode items=ok(request(HttpMethod.GET,"/core-indicators?year=2026",token,null));
+        JsonNode item=items.get(9);
+        assertEquals("1.2.45",item.path("indicatorCode").asText());
+        assertEquals("发布《工程机械产业发展报告》数量",item.path("indicatorName").asText());
+        assertEquals(5,item.path("targetValue").asInt());
+        assertEquals("1",item.path("dataType").asText());
+        JsonNode d=ok(request(HttpMethod.POST,"/core-indicators/10/draft",token,Map.of("year",2026,"month",8)));
+        d=ok(request(HttpMethod.PUT,"/core-indicators/reports/"+d.path("reportId").asLong(),token,Map.of("version",d.path("version").asLong(),"previousYearValue",0,"actualValue",2,"comment","Report progress")));
+        JsonNode submitted=ok(request(HttpMethod.POST,"/core-indicators/reports/"+d.path("reportId").asLong()+"/submit",token,Map.of("version",d.path("version").asLong())));
+        assertEquals("1.2.45",submitted.path("performanceCode").asText());
+        assertEquals(LEADER,submitted.path("currentHandlerId").asLong());
+        assertEquals(403,request(HttpMethod.POST,"/core-indicators/reports/"+submitted.path("reportId").asLong()+"/audit",login(OTHER),Map.of("version",0,"pass",true)).getStatusCode().value());
+        assertEquals("毕业生就业相关度",jdbc.queryForObject("SELECT perf_name FROM biz_performance WHERE perf_id=960015",String.class));
+        assertEquals(85,jdbc.queryForObject("SELECT target_value FROM biz_performance WHERE perf_id=960015",Integer.class));
+        assertEquals(7,jdbc.queryForObject("SELECT current_value FROM biz_performance WHERE perf_id=960010",Integer.class));
+    }
+
+    @Test
+    void obsoleteReportsRemainReadableButCannotAffectCurrentResultsOrWorkflow() throws Exception {
+        for(int status:List.of(0,10,30,-10)) {
+            jdbc.update("INSERT INTO biz_core_report(indicator_id,record_year,record_month,performance_code,indicator_name,target_value,data_type,actual_value,submit_by,principal_id,current_handler_id,flow_status,submit_time,archive_time) VALUES(10,2026,8,'1.2.15','毕业生就业相关度',85,'2',85,?,?,?, ?,NOW(),NOW())",OWNER,LEADER,LEADER,status);
+        }
+        String token=login(OWNER);
+        JsonNode item=ok(request(HttpMethod.GET,"/core-indicators?year=2026",token,null)).get(9);
+        assertEquals(0,item.path("recentReports").size());
+        assertTrue(item.path("effectiveResult").isNull());
+        assertNull(core.effective(10L,2026,8));
+        assertTrue(core.audits(LEADER,true).isEmpty());
+        JsonNode history=ok(request(HttpMethod.GET,"/core-indicators/10/history",token,null));
+        long id=history.get(0).path("reportId").asLong();
+        JsonNode detail=ok(request(HttpMethod.GET,"/core-indicators/reports/"+id,token,null));
+        assertEquals("毕业生就业相关度",detail.path("indicatorName").asText());
+        assertTrue(detail.path("mappingObsolete").asInt()==1||detail.path("mappingObsolete").asBoolean());
+        long pending=jdbc.queryForObject("SELECT report_id FROM biz_core_report WHERE flow_status=10",Long.class);
+        assertEquals(409,request(HttpMethod.POST,"/core-indicators/reports/"+pending+"/audit",login(LEADER),Map.of("version",0,"pass",true)).getStatusCode().value());
+        JsonNode d=ok(request(HttpMethod.POST,"/core-indicators/10/draft",token,Map.of("year",2026,"month",8)));
+        assertTrue(d.path("actualValue").isNull());
+        d=ok(request(HttpMethod.PUT,"/core-indicators/reports/"+d.path("reportId").asLong(),token,Map.of("version",d.path("version").asLong(),"previousYearValue",0,"actualValue",2)));
+        assertEquals(10,ok(request(HttpMethod.POST,"/core-indicators/reports/"+d.path("reportId").asLong()+"/submit",token,Map.of("version",d.path("version").asLong()))).path("flowStatus").asInt());
+        assertEquals(4,jdbc.queryForObject("SELECT COUNT(*) FROM biz_core_report WHERE performance_code='1.2.15'",Integer.class));
+    }
+
+    @Test
+    void reportIndicatorRefusesAUniqueButWrongPerformanceName() throws Exception {
+        jdbc.update("UPDATE biz_performance SET perf_name='毕业生就业相关度' WHERE perf_id=960010");
+        String token=login(OWNER);
+        JsonNode item=ok(request(HttpMethod.GET,"/core-indicators",token,null)).get(9);
+        assertTrue(item.path("configurationError").asText().contains("关联名称不符"));
+        assertEquals(409,request(HttpMethod.POST,"/core-indicators/10/draft",token,Map.of("year",2026,"month",8)).getStatusCode().value());
+        assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM biz_core_report",Integer.class));
     }
     private JsonNode saved(String token,int month) throws Exception {
         JsonNode d=draft(token,month);
