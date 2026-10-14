@@ -1,4 +1,4 @@
-"""Build Linux release with explicitly requested private restoration data."""
+"""Build an incremental Linux release without credentials or production backups."""
 import hashlib
 import json
 import os
@@ -10,7 +10,9 @@ import tarfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = ROOT.parent / ('releases/' + os.environ.get('RELEASE_NAME', 'shuanggao-update-20261012'))
+OUT = ROOT.parent / ('releases/' + os.environ.get('RELEASE_NAME', 'shuanggao-update-20261014'))
+assert re.fullmatch(r'shuanggao-update-\d{8}(?:-r\d+)?', OUT.name)
+assert OUT.resolve().parent == (ROOT.parent/'releases').resolve()
 MYSQL = shutil.which('mysql') or r'C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe'
 NEW_SOURCES = [
     'data/migrations/2026-05-30-audit-snapshot.sql',
@@ -27,6 +29,7 @@ NEW_SOURCES = [
     'data/migrations/2026-10-12-core-indicators.sql',
 ]
 ADDITIONS = {
+    ('biz_core_report','performance_code'): 'varchar(30) DEFAULT NULL',
     ('biz_task','is_priority'): 'tinyint NOT NULL DEFAULT 0',
     ('biz_task','is_difficult'): 'tinyint NOT NULL DEFAULT 0',
     ('biz_task','planned_completion_date'): 'date DEFAULT NULL',
@@ -49,7 +52,7 @@ def query(sql):
 def main():
     if OUT.exists():
         shutil.rmtree(OUT)
-    for directory in ['backend','frontend','sql','templates','restore']:
+    for directory in ['backend','frontend','sql','templates']:
         (OUT/directory).mkdir(parents=True,exist_ok=True)
     source = ROOT/'target/linux-release-build/target/biz_backend-1.0-SNAPSHOT.jar'
     with zipfile.ZipFile(source) as jar:
@@ -96,6 +99,9 @@ DEALLOCATE PREPARE release_stmt;
             if module == 'core-indicators' and suffix == '-check':
                 contents = contents.replace('p.perf_code=c.indicator_code', 'BINARY p.perf_code=BINARY c.indicator_code')
             (OUT/'sql'/source.name).write_text(contents,encoding='utf-8',newline='\n')
+    for suffix in ['', '-check', '-rollback']:
+        source = ROOT / ('data/migrations/2026-10-14-core-indicator-report-mapping'+suffix+'.sql')
+        (OUT/'sql'/source.name).write_text(source.read_text(encoding='utf-8'),encoding='utf-8',newline='\n')
     budget_version_migration = (ROOT/'data/migrations/2026-09-26-budget-import-version.sql').read_text(encoding='utf-8')
     backfill_marker = '-- 为升级前已有的当前预算建立只读初始版本。脚本重复执行不会重复写入。'
     assert budget_version_migration.count(backfill_marker) == 1
@@ -152,7 +158,7 @@ DEALLOCATE PREPARE release_stmt;
         'frontend_working_changes': subprocess.check_output(['git','diff','--name-only'],cwd=ROOT.parent/'biz',text=True).splitlines(),
         'runtime':'Java 17 / MySQL 8 / Bash 4.2+',
         'database_rows_included':False,'backup_contains_user_passwords':False,'runtime_database_password_included':False,
-        'restore_requires_explicit_flag':'--restore-backup',
+        'restore_supported':False,
         'notice_cleanup':'Only obsolete task/performance/achievement review requests are soft-deleted; audit data unchanged',
         'data_updates':['sql/budget-version-backfill.sql','sql/task-update-20260918.sql',
                         'sql/achievement-archive-record-fix.sql','sql/level4-equal-weight-recalculate.sql'],
@@ -164,12 +170,15 @@ DEALLOCATE PREPARE release_stmt;
                                      'biz_level4_task_backup_before_equal_weight_20260926',
                                      'biz_material_submission_backup_before_equal_weight_20260926',
                                      'biz_performance_backup_before_equal_weight_20260926',
-                                     'biz_performance_year_backup_before_equal_weight_20260926'],
+                                     'biz_performance_year_backup_before_equal_weight_20260926',
+                                     'bak_20261014_core_mapping','bak_20261014_core_report_source','bak_20261014_core_notice'],
         'new_tables':sorted(added_tables),'supported_existing_column_additions':['.'.join(key) for key in ADDITIONS],
     }
     manifest['release_name'] = OUT.name
     manifest['budget_trend_visible'] = False
     manifest['data_updates'] += ['sql/2026-10-12-'+module+'.sql' for module in ['leadership-access','task-attributes','core-indicators']]
+    manifest['data_updates'].append('sql/2026-10-14-core-indicator-report-mapping.sql')
+    manifest['one_time_migrations'].append('core-indicator-report-mapping-20261014')
     (OUT/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
     files=sorted(p for p in OUT.rglob('*') if p.is_file() and p.name!='SHA256SUMS')
     (OUT/'SHA256SUMS').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.relative_to(OUT).as_posix()+'\n' for p in files),encoding='ascii',newline='\n')

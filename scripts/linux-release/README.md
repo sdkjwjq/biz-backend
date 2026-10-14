@@ -1,13 +1,13 @@
-# 双高平台更新包 20261012
+# 双高平台更新包 20261014
 
 适用环境：Java 17、MySQL 8、Bash 4.2+。服务器不需要安装 Python 或 Node。
 
 ## 一键更新
 
-将完整文件夹 `shuanggao-update-20261012` 上传到 `/root/biz-backend/`，不要覆盖旧更新包，然后执行：
+将完整文件夹 `shuanggao-update-20261014` 上传到 `/root/biz-backend/`，不要覆盖旧更新包，然后执行：
 
 ```bash
-cd /root/biz-backend/shuanggao-update-20261012
+cd /root/biz-backend/shuanggao-update-20261014
 chmod -R go-rwx .
 sha256sum -c SHA256SUMS --quiet
 bash update.sh --check
@@ -36,14 +36,15 @@ bash update.sh --update
 
 ## 本次主要内容
 
-- 校级领导全校或分管部门查阅、只读管理概览，后端统一校验权限。仅首次按已核实工号及姓名初始化刘莹、鲍桂楠全校权限，其他领导由管理员配置。
-- 三级任务重点／困难标记与筛选、计划完成日期和有可靠归档证据的实际完成日期。
-- 核心指标独立月度填报、归口审核及归档，接入通知和审核中心；不反写原绩效。
-- 工作纪实按三级／四级任务责任人判定资格和统计范围；已提交快照不变。
-- 预算页面及导出使用所选年月之前最近已归档核心指标；原导入内容保留。
-- 预算折线图暂时隐藏，后端月度预算、版本记录和趋势接口保留。
+- 修正第十项核心指标关联为原绩效 `1.2.45 发布《工程机械产业发展报告》数量`，当前目标值5，数量类型；审核人读取该绩效的归口审核人。
+- 原绩效表、任务及其完成值均不修改。核心指标仍独立填报。
+- 如果旧版本已有“就业相关度”填报，保留原始内容、状态和审核日志；历史中标注“旧关联记录”，不参与报告指标完成值、预算展示及导出，也不再继续审批。提交人可重新填报当前正确指标。
+- 仅清理旧关联的待审核通知；结果通知保留。已有其它九项的填报不受影响。
+- 预算折线图继续隐藏，之前更新的其余功能保留。
 
-新迁移仅首次初始化必要配置及可证明的日期，不覆盖后续管理员修改；不生成核心指标历史填报。各迁移核对结果保存在本次备份目录的 `*-check.log` 中。
+脚本自动备份整个数据库、程序、前端和材料，再执行增量迁移。迁移会增加填报来源绩效编号字段，保留旧关联依据，释放错误草稿的占位并修正第十项映射。迁移重复执行不覆盖后续填报。
+
+核对结果位于备份目录的 `core-report-mapping-check.log`；`mapping_error`、`missing_source`、`obsolete_todo_notices` 应为0，`retained_old_reports` 表示保留的旧记录数。
 
 ## 数据保护
 
@@ -68,7 +69,7 @@ bash update.sh --update
 本包包含数据迁移，成功后应使用脚本输出的数据库及应用完整回滚命令：
 
 ```bash
-bash /root/biz-backend/shuanggao-update-20261012/update.sh --rollback-database /root/biz-backend/backups/release-实际时间-PID
+bash /root/biz-backend/shuanggao-update-20261014/update.sh --rollback-database /root/biz-backend/backups/release-实际时间-PID
 ```
 
 回滚前脚本会额外保存当时的数据库到 `before-rollback-*.sql.gz`，再恢复更新前数据库、JAR 和前端。不要把回滚命令当作重启命令。
@@ -81,4 +82,4 @@ bash /root/biz-backend/shuanggao-update-20261012/update.sh --rollback-database /
 - `manifest.json`：代码版本、迁移清单和备份摘要。
 - `SHA256SUMS`：全部交付文件的 SHA-256 校验值。
 
-本地验证仅使用随机隔离数据库和合成数据，不连接生产服务器。Windows 环境不能实际验证 Linux `/proc` 进程管理，服务器上的 `--check` 会在更新前完成对应检查。
+本地验证使用随机隔离数据库、合成数据，并在隔离库中演练用户提供的历史备份，不连接生产服务器。Windows 环境不能实际验证 Linux `/proc` 进程管理，服务器上的 `--check` 会在更新前完成对应检查。

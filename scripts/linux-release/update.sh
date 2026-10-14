@@ -348,6 +348,16 @@ for module in leadership-access task-attributes core-indicators; do
 done
 say '领导查阅配置、任务标记日期及核心指标已升级；既有填报与审核历史保留'
 
+applied=$("${MYSQL[@]}" -e "SELECT COUNT(*) FROM sys_release_migration WHERE migration_key='core-indicator-report-mapping-20261014'")
+if [[ "$applied" == 0 ]]; then
+  "${MYSQL[@]}" < "$PACKAGE/sql/2026-10-14-core-indicator-report-mapping.sql" > "$BACKUP/core-report-mapping-migration.log"
+  "${MYSQL[@]}" -e "INSERT INTO sys_release_migration(migration_key,description) VALUES('core-indicator-report-mapping-20261014','第十项核心指标修正为产业发展报告，保留旧关联填报历史')"
+fi
+"${MYSQL[@]}" < "$PACKAGE/sql/2026-10-14-core-indicator-report-mapping-check.sql" > "$BACKUP/core-report-mapping-check.log"
+mapping_diff=$(awk -F'\t' '$1 ~ /^(mapping_error|missing_source|obsolete_todo_notices)$/ && $2!="0" {print $1 "=" $2}' "$BACKUP/core-report-mapping-check.log" | tr '\n' ' ')
+[[ -z "$mapping_diff" ]] || die "核心指标关联核对失败（$mapping_diff），请查看 core-report-mapping-check.log"
+say '第十项核心指标已关联发布产业发展报告；旧就业数据和原绩效保留，不计入当前指标'
+
 # The backend is stopped and the complete database has already been backed up.
 # Retire review requests only; preserve completed-result messages and audit history.
 "${MYSQL[@]}" < "$PACKAGE/sql/backup-stale-notices.sql" > "$BACKUP/restore-notice-flags.sql"

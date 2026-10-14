@@ -15,7 +15,7 @@ import shutil
 import gzip
 
 ROOT=Path(__file__).resolve().parents[2]
-PACKAGE=ROOT.parent/('releases/'+os.environ.get('RELEASE_NAME','shuanggao-update-20261012'))
+PACKAGE=ROOT.parent/('releases/'+os.environ.get('RELEASE_NAME','shuanggao-update-20261014'))
 ONLINE_BACKUP=ROOT/'data/20260920backup.sql'
 MYSQL=Path(os.environ.get('MYSQL_EXE') or shutil.which('mysql') or r'C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe')
 BASH=os.environ.get('BASH_EXE') or next((candidate for candidate in
@@ -93,6 +93,11 @@ def online_backup_migration_rehearsal():
         for module in ['leadership-access','task-attributes','core-indicators']:
             run((PACKAGE/('sql/2026-10-12-'+module+'.sql')).read_bytes())
             run((PACKAGE/('sql/2026-10-12-'+module+'-check.sql')).read_bytes())
+        performances=run('SELECT * FROM biz_performance ORDER BY perf_id')
+        run((PACKAGE/'sql/2026-10-14-core-indicator-report-mapping.sql').read_bytes())
+        mapping_check=run((PACKAGE/'sql/2026-10-14-core-indicator-report-mapping-check.sql').read_bytes())
+        assert b'mapping_error\t0' in mapping_check
+        assert run('SELECT * FROM biz_performance ORDER BY perf_id')==performances
         assert run('SELECT * FROM sys_user ORDER BY user_id')==accounts
         assert run('SELECT COUNT(*) FROM biz_core_report').strip()==b'0'
         assert hashlib.sha256(run('SELECT task_id,current_value FROM biz_level4_task ORDER BY task_id')).hexdigest()==child_values
@@ -346,6 +351,7 @@ exit 17
         assert sql('SELECT COUNT(*) FROM biz_core_report').strip()==b'0'
         assert not (PACKAGE/'restore/20260920backup.sql').exists()
         checks.append('new-migrations-idempotent-ten-mappings-no-fabricated-reports-no-backup-in-package')
+        sql((PACKAGE/'sql/2026-10-14-core-indicator-report-mapping.sql').read_bytes())
         existing_after_structure=snapshot()
         budget_sheet_count=int(sql('SELECT COUNT(*) FROM biz_budget_sheet WHERE is_delete=0').strip() or b'0')
         sql(budget_backfill)
