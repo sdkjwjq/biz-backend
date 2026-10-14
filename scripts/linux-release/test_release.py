@@ -29,8 +29,11 @@ args=['--host=127.0.0.1','--user=root','--default-character-set=utf8mb4']
 checks=[]
 
 def sql(value,db=schema):
-    return subprocess.run([str(MYSQL),*args,'--batch','--skip-column-names',*([db] if db else [])],
-                          input=value.encode('utf-8') if isinstance(value,str) else value,env=env,check=True,capture_output=True).stdout
+    result=subprocess.run([str(MYSQL),*args,'--batch','--skip-column-names',*([db] if db else [])],
+                          input=value.encode('utf-8') if isinstance(value,str) else value,env=env,capture_output=True)
+    if result.returncode:
+        raise RuntimeError(result.stderr.decode('utf-8',errors='replace'))
+    return result.stdout
 
 def check_schema(mode,success=True):
     bash_path='/'+PACKAGE.as_posix()[0].lower()+PACKAGE.as_posix()[2:]
