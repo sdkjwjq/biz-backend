@@ -215,14 +215,45 @@ class CoreIndicatorApiTest {
             Map.of("version",r.path("version").asLong(),"pass",pass,"comment",pass?"Verified":"Return to reporter")));
     }
     @Test void eligibilityUsesLevel3OrLevel4OwnerAndKeepsDraftPrivate() throws Exception {
-        for(long id:List.of(OWNER,OTHER,ADMIN,LEADER,VIEWER)) {
+        for(long id:List.of(OWNER,OTHER,ADMIN,OFFICE,LEADER,VIEWER)) {
             JsonNode caps=ok(request(HttpMethod.GET,"/core-indicators/capabilities",login(id),null));
-            assertEquals(id==OWNER||id==OTHER,caps.path("canFill").asBoolean());
+            assertEquals(id==OWNER||id==OTHER||id==ADMIN||id==OFFICE,caps.path("canFill").asBoolean());
         }
         JsonNode d=draft(login(OWNER),1);
         assertEquals(404,request(HttpMethod.GET,"/core-indicators/reports/"+d.path("reportId").asLong(),login(ADMIN),null).getStatusCode().value());
-        assertEquals(403,request(HttpMethod.POST,"/core-indicators/1/draft",login(ADMIN),Map.of("year",2026,"month",1)).getStatusCode().value());
+        assertEquals(200,request(HttpMethod.POST,"/core-indicators/1/draft",login(ADMIN),Map.of("year",2026,"month",1)).getStatusCode().value());
         assertEquals(401,request(HttpMethod.GET,"/core-indicators",null,null).getStatusCode().value());
+    }
+    @Test void adminAndOfficeCanFillWithoutTaskResponsibilitiesAndStillRequirePrincipalReview() throws Exception {
+        int month=1;
+        for(long actor:List.of(ADMIN,OFFICE)) {
+            String token=login(actor);
+            assertEquals(5,ok(request(HttpMethod.GET,"/core-indicators/capabilities",token,null)).path("fillableYears").size());
+            assertTrue(ok(request(HttpMethod.GET,"/system/access",token,null)).path("canViewCoreIndicators").asBoolean());
+            JsonNode r=submit(token,month++);
+            assertEquals(actor,r.path("submitBy").asLong());
+            assertEquals(LEADER,r.path("currentHandlerId").asLong());
+            assertEquals(403,request(HttpMethod.POST,"/core-indicators/reports/"+r.path("reportId").asLong()+"/audit",token,Map.of("version",0,"pass",true)).getStatusCode().value());
+            r=audit(r,LEADER,true);r=audit(r,ADMIN,true);
+            assertEquals(30,r.path("flowStatus").asInt());
+        }
+        assertEquals(403,request(HttpMethod.POST,"/core-indicators/1/draft",login(VIEWER),Map.of("year",2026,"month",3)).getStatusCode().value());
+    }
+    @Test void adminOrOfficeFillPermissionIsRevokedImmediatelyWithExistingToken() throws Exception {
+        String admin=login(ADMIN),office=login(OFFICE);
+        JsonNode a=draft(admin,1),o=draft(office,2);
+        jdbc.update("UPDATE sys_user SET role='1' WHERE user_id=?",ADMIN);
+        jdbc.update("UPDATE sys_user SET dept_id=920001 WHERE user_id=?",OFFICE);
+        for(var entry:List.of(Map.entry(admin,a),Map.entry(office,o))) {
+            assertFalse(ok(request(HttpMethod.GET,"/core-indicators/capabilities",entry.getKey(),null)).path("canFill").asBoolean());
+            assertEquals(403,request(HttpMethod.PUT,"/core-indicators/reports/"+entry.getValue().path("reportId").asLong(),entry.getKey(),Map.of("version",0,"previousYearValue",0,"actualValue",1)).getStatusCode().value());
+        }
+        jdbc.update("UPDATE sys_user SET dept_id=100 WHERE user_id=?",OFFICE);
+        jdbc.update("UPDATE sys_dept SET status='1' WHERE dept_id=100");
+        assertFalse(ok(request(HttpMethod.GET,"/core-indicators/capabilities",office,null)).path("canFill").asBoolean());
+        jdbc.update("UPDATE sys_dept SET status='0' WHERE dept_id=100");
+        jdbc.update("UPDATE sys_user SET status='0' WHERE user_id=?",OFFICE);
+        assertEquals(403,request(HttpMethod.POST,"/core-indicators/1/draft",office,Map.of("year",2026,"month",3)).getStatusCode().value());
     }
     @Test void workflowUsesPrincipalThenArchiveWithoutChangingPerformance() throws Exception {
         JsonNode r=submit(login(OWNER),1);

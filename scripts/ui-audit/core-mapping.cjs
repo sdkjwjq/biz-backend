@@ -10,15 +10,15 @@ const fs=require('node:fs/promises'),path=require('node:path'),assert=require('n
  const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
  const output=path.resolve(__dirname,'../../target/ui-audit/core-mapping');await fs.mkdir(output,{recursive:true});
  try{
-  await page.goto(state.frontend+'/home/core-indicators');await expect(page.locator('.indicator')).toHaveCount(10);
-  const last=page.locator('.indicator').last();
-  await expect(last.locator('h3')).toHaveText('10. 1.2.45 发布《工程机械产业发展报告》数量');
-  await expect(last).toContainText('项目期满目标值：5');await expect(last).toContainText('尚未归档');
+  await page.goto(state.frontend+'/home/core-indicators');await expect(page.locator('.indicator-table .indicator-row')).toHaveCount(10);
+  const last=page.locator('.indicator-table .indicator-row').last();
+  await expect(last).toContainText('1.2.45');await expect(last.locator('.indicator-name')).toHaveText('发布《工程机械产业发展报告》数量');
+  await expect(last.locator('.el-table__cell').nth(4)).toHaveText('5');await expect(last).toContainText('尚未归档');
   await expect(last).not.toContainText('毕业生就业相关度');
   await last.getByRole('button',{name:'历史记录'}).click();
   const history=page.getByRole('dialog',{name:'核心指标历史记录'});await expect(history).toContainText('毕业生就业相关度');await expect(history.getByText('旧关联记录')).toHaveCount(2);
   await history.getByRole('button',{name:'Close this dialog'}).click();
-  await last.getByRole('button',{name:'填报／继续草稿'}).click();const draft=page.getByRole('dialog',{name:'核心指标填报'});
+  await last.getByRole('button',{name:'填报',exact:true}).click();const draft=page.getByRole('dialog',{name:'核心指标填报'});
   await expect(draft).toContainText('发布《工程机械产业发展报告》数量');await expect(draft.locator('.el-input input').nth(1)).toHaveValue('');
   await draft.locator('.el-input input').nth(0).fill('0');await draft.locator('.el-input input').nth(1).fill('2');
   await draft.getByRole('button',{name:'提交审核',exact:true}).click();await page.getByRole('dialog',{name:'提交确认',exact:true}).getByRole('button',{name:'确认提交',exact:true}).click();

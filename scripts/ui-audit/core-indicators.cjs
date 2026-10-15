@@ -10,14 +10,14 @@ const fs=require('node:fs/promises'),path=require('node:path'),assert=require('n
  const pageFor=async user=>{const context=await browser.newContext({viewport:{width:1500,height:950}});contexts.push(context);await context.addInitScript(t=>localStorage.setItem('token',t),await token(user));const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));return page;};
  try{
   const owner=await pageFor(910001);await owner.goto(state.frontend+'/home/core-indicators');
-  await expect(owner.locator('.indicator')).toHaveCount(10);
-  await owner.getByRole('button',{name:'填报／继续草稿'}).first().click();
+  await expect(owner.locator('.indicator-table .indicator-row')).toHaveCount(10);
+  await owner.getByRole('button',{name:'填报',exact:true}).first().click();
   let dialog=owner.getByRole('dialog',{name:'核心指标填报'});
   await dialog.getByRole('button',{name:'提交审核',exact:true}).click();await expect(owner.getByText('请填写非负完成值，最多16位整数及4位小数')).toBeVisible();
   const inputs=dialog.locator('.el-input input');await inputs.nth(0).fill('0');await inputs.nth(1).fill('125.5');await dialog.locator('textarea').fill('Playwright 核心指标独立填报验证');
   await dialog.getByRole('button',{name:'保存草稿'}).click();await expect(owner.getByText('草稿已保存')).toBeVisible();
   await dialog.getByRole('button',{name:'返回',exact:true}).click();
-  await owner.getByRole('button',{name:'填报／继续草稿'}).first().click();await expect(inputs.nth(1)).toHaveValue('125.5');
+  await owner.getByRole('button',{name:'填报',exact:true}).first().click();await expect(inputs.nth(1)).toHaveValue('125.5');
   await dialog.getByRole('button',{name:'提交审核',exact:true}).click();await owner.getByRole('dialog',{name:'提交确认',exact:true}).getByRole('button',{name:'确认提交',exact:true}).click();
   dialog=owner.getByRole('dialog',{name:'核心指标详情'});await expect(dialog).toContainText('待归口审核');await dialog.getByRole('button',{name:'返回',exact:true}).click();
   const ownerToken=await token(910001);let history=await(await api.get('/api/core-indicators/1/history',{headers:{Authorization:ownerToken}})).json();assert.equal(history.length,1);const id=history[0].reportId;
@@ -27,17 +27,18 @@ const fs=require('node:fs/promises'),path=require('node:path'),assert=require('n
   const admin=await pageFor(110228);await admin.goto(state.frontend+'/home/audit?type=core&subId='+id);
   const archive=admin.getByRole('dialog');await expect(archive).toContainText('125.5');await archive.getByRole('button',{name:'提交并审核下一条',exact:true}).click();await expect(archive).toBeHidden();
   detail=await(await api.get('/api/core-indicators/reports/'+id,{headers:{Authorization:ownerToken}})).json();assert.equal(detail.flowStatus,30);assert.equal(detail.logs.length,3);
-  await owner.reload();await expect(owner.locator('.indicator').first()).toContainText('最近归档完成值：125.5');await expect(owner.locator('.core-page .el-loading-mask')).toBeHidden();await owner.screenshot({path:path.join(output,'archived-core.png'),fullPage:true});
-  await owner.getByRole('button',{name:'填报／继续草稿'}).first().click();
+  await owner.reload();await expect(owner.locator('.indicator-table .indicator-row').first().locator('.archived-value')).toHaveText('125.5');await expect(owner.locator('.core-page .el-loading-mask')).toBeHidden();await owner.screenshot({path:path.join(output,'archived-core.png'),fullPage:true});
+  await owner.getByRole('button',{name:'填报',exact:true}).first().click();
   const editing=owner.getByRole('dialog',{name:'核心指标填报'});await editing.locator('.el-input input').nth(0).fill('0');await editing.locator('.el-input input').nth(1).fill('126');
   await editing.getByRole('button',{name:'返回',exact:true}).click();
   await owner.getByRole('dialog',{name:'离开确认',exact:true}).getByRole('button',{name:'继续填写'}).click();await expect(editing).toBeVisible();
   await editing.getByRole('button',{name:'提交审核',exact:true}).dblclick();
   await owner.getByRole('dialog',{name:'提交确认',exact:true}).getByRole('button',{name:'确认提交',exact:true}).click();
   await owner.getByRole('dialog',{name:'核心指标详情'}).getByRole('button',{name:'返回',exact:true}).click();
-  await owner.locator('.indicator').first().getByRole('button',{name:'撤回',exact:true}).click();
+  await owner.locator('.indicator-table .indicator-row').first().locator('.el-table__expand-icon').click();
+  await owner.locator('.recent-reports').first().getByRole('button',{name:'撤回',exact:true}).click();
   await owner.getByRole('dialog',{name:'撤回确认',exact:true}).getByRole('button',{name:'确认撤回',exact:true}).click();
-  await expect(owner.locator('.indicator').first()).toContainText('已撤回');
+  await expect(owner.locator('.indicator-table .indicator-row').first()).toContainText('已撤回');
   await owner.route('**/api/core-indicators?year=*',async route=>{
    const response=await route.fetch();
    if(route.request().url().includes('year=2026'))await new Promise(resolve=>setTimeout(resolve,700));
@@ -45,11 +46,11 @@ const fs=require('node:fs/promises'),path=require('node:path'),assert=require('n
   });
   await owner.getByRole('button',{name:'刷新',exact:true}).click();
   await owner.locator('.filters .el-select__wrapper').first().click();await owner.getByRole('option',{name:'2025年',exact:true}).click();
-  await expect(owner.locator('.indicator').first()).toContainText('尚未归档');
-  await owner.waitForTimeout(900);await expect(owner.locator('.indicator').first()).not.toContainText('125.5');
+  await expect(owner.locator('.indicator-table .indicator-row').first()).toContainText('尚未归档');
+  await owner.waitForTimeout(900);await expect(owner.locator('.indicator-table .indicator-row').first()).not.toContainText('125.5');
   await owner.unroute('**/api/core-indicators?year=*');
-  await admin.goto(state.frontend+'/home/core-indicators');await expect(admin.locator('.indicator')).toHaveCount(10);await expect(admin.getByRole('button',{name:'填报／继续草稿'})).toHaveCount(0);
+  await admin.goto(state.frontend+'/home/core-indicators');await expect(admin.locator('.indicator-table .indicator-row')).toHaveCount(10);await expect(admin.getByRole('button',{name:'填报',exact:true})).toHaveCount(10);
   const level4=await pageFor(910004);await level4.goto(state.frontend+'/home/work-records');await expect(level4.getByRole('button',{name:/新建/})).toBeVisible();
-  assert.deepEqual(errors,[]);await fs.writeFile(path.join(output,'result.json'),JSON.stringify({passed:true,groups:9,pageErrors:errors,simulated:['Delayed 2026 list response while switching to 2025']},null,2));console.log('Core Playwright passed: draft, validation, real principal/archive, continuous audit, readonly admin, level4 work record, dirty guard, double click/withdrawal, slow response isolation');
+  assert.deepEqual(errors,[]);await fs.writeFile(path.join(output,'result.json'),JSON.stringify({passed:true,groups:9,pageErrors:errors,simulated:['Delayed 2026 list response while switching to 2025']},null,2));console.log('Core Playwright passed: draft, validation, real principal/archive, continuous audit, admin fill permission, level4 work record, dirty guard, double click/withdrawal, slow response isolation');
  }finally{for(const context of contexts)await context.close();await browser.close();await api.dispose();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
