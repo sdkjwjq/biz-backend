@@ -15,7 +15,7 @@ import shutil
 import gzip
 
 ROOT=Path(__file__).resolve().parents[2]
-PACKAGE=ROOT.parent/('releases/'+os.environ.get('RELEASE_NAME','shuanggao-update-20261014'))
+PACKAGE=ROOT.parent/('releases/'+os.environ.get('RELEASE_NAME','shuanggao-update-20261015'))
 ONLINE_BACKUP=ROOT/'data/20260920backup.sql'
 MYSQL=Path(os.environ.get('MYSQL_EXE') or shutil.which('mysql') or r'C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe')
 BASH=os.environ.get('BASH_EXE') or next((candidate for candidate in
@@ -166,6 +166,9 @@ def mixed_line_endings():
 
 def smoke_jar():
     sql("UPDATE sys_user SET password='ReleaseSmoke123',force_password_change=0;")
+    sql("INSERT IGNORE INTO sys_dept(dept_id,dept_name,status,is_delete) VALUES(100,'双高建设办公室','0',0);")
+    sql("INSERT INTO sys_user(user_id,dept_id,user_name,nick_name,password,role,status,is_delete,force_password_change) VALUES(910006,100,'release_office','Release office','ReleaseSmoke123','1','1',0,0);")
+    sql("INSERT INTO biz_performance(perf_id,project_id,perf_code,perf_name,target_value,current_value,data_type,dept_id,leader_id,auditor_id,principal_id,is_delete) SELECT 960000+indicator_id,1,indicator_code,IF(indicator_id=10,'发布《工程机械产业发展报告》数量','Release indicator'),5,0,'1',920001,910001,910003,910002,0 FROM biz_core_indicator;")
     # Pick a local free port; all uploads, logs and credentials stay in a temporary test directory.
     with socket.socket() as listener:
         listener.bind(('127.0.0.1',0)); port=listener.getsockname()[1]
@@ -196,9 +199,16 @@ def smoke_jar():
                 assert call('/biz/tasks/manage/capabilities',token=token)['canCreate'] is True
                 capabilities=call('/work-records/capabilities',token=token)
                 assert isinstance(capabilities,dict) and capabilities.get('code',0)<400
+                for actor in (110228,910006):
+                    selected=call('/system/login',{'user_id':actor,'password':'ReleaseSmoke123'})['token']
+                    assert call('/core-indicators/capabilities',token=selected)['canFill'] is True
+                    assert call('/system/access',token=selected)['canViewCoreIndicators'] is True
+                    draft=call('/core-indicators/1/draft',{'year':2026,'month':1},selected)
+                    assert draft['submitBy']==actor and draft['flowStatus']==0
             finally:
                 process.terminate(); process.wait(timeout=30)
     checks.append('packaged-jar-real-start-external-password-login-and-new-module-apis')
+    checks.append('packaged-jar-admin-and-office-core-fill-capabilities-and-real-drafts')
 
 def restore_roundtrip():
     """Exercise the actual Bash restoration helpers against synthetic rows only."""

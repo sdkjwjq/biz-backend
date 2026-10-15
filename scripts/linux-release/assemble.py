@@ -10,7 +10,7 @@ import tarfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = ROOT.parent / ('releases/' + os.environ.get('RELEASE_NAME', 'shuanggao-update-20261014'))
+OUT = ROOT.parent / ('releases/' + os.environ.get('RELEASE_NAME', 'shuanggao-update-20261015'))
 assert re.fullmatch(r'shuanggao-update-\d{8}(?:-r\d+)?', OUT.name)
 assert OUT.resolve().parent == (ROOT.parent/'releases').resolve()
 MYSQL = shutil.which('mysql') or r'C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe'
@@ -176,6 +176,8 @@ DEALLOCATE PREPARE release_stmt;
     }
     manifest['release_name'] = OUT.name
     manifest['budget_trend_visible'] = False
+    manifest['core_indicators_layout'] = 'table-with-expandable-recent-reports'
+    manifest['core_indicator_fillers'] = ['active-admin', 'active-office-department-100', 'year-task-owner']
     manifest['data_updates'] += ['sql/2026-10-12-'+module+'.sql' for module in ['leadership-access','task-attributes','core-indicators']]
     manifest['data_updates'].append('sql/2026-10-14-core-indicator-report-mapping.sql')
     manifest['one_time_migrations'].append('core-indicator-report-mapping-20261014')
