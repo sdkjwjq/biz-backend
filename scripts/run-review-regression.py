@@ -71,6 +71,8 @@ def main():
             selector = "LeadershipAccessApiTest"
         elif method == "attributes":
             selector = "TaskAttributesApiTest,ReviewBatchRegressionApiTest#directSubmissionAndResubmissionStoreActualValuesThroughApproval+adminFinishRequiresEveryLevel4GoalAndKeepsRealValues"
+        elif method == "admintest":
+            selector = "AdminTestApiTest"
         elif method == "admin":
             selector = "AdminManagementApiTest"
         elif method and method.startswith("admin:"):
@@ -78,7 +80,7 @@ def main():
         elif method:
             selector = "ReviewBatchRegressionApiTest#" + method
         else:
-            selector = "ReviewBatchRegressionApiTest,AdminManagementApiTest,LeadershipAccessApiTest,TaskAttributesApiTest,CoreIndicatorApiTest,BudgetTrendApiTest"
+            selector = "ReviewBatchRegressionApiTest,AdminManagementApiTest,LeadershipAccessApiTest,TaskAttributesApiTest,CoreIndicatorApiTest,BudgetTrendApiTest,AdminTestApiTest"
         print("Running " + selector + " in isolated schema " + database, flush=True)
         result = subprocess.run([shutil.which("mvn.cmd") or executable("mvn"), "-B", "-Dtest=" + selector, "test"],
                                 cwd=root, env=env)
