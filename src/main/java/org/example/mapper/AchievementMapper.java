@@ -19,6 +19,9 @@ import java.util.List;
 @Mapper
 public interface AchievementMapper {
     String REPORT_COLUMNS = "SELECT a.*, "
+            + "CASE WHEN a.audit_status<0 THEN (SELECT l.comment FROM biz_achievement_audit_log l "
+            + "JOIN biz_achievement_submission s ON s.sub_id=l.sub_id WHERE s.ach_id=a.ach_id AND s.is_delete=0 "
+            + "AND l.post_status<0 ORDER BY l.create_time DESC,l.log_id DESC LIMIT 1) ELSE NULL END AS rejectionReason, "
             + "(SELECT MAX(s.submit_time) FROM biz_achievement_submission s WHERE s.ach_id=a.ach_id AND s.is_delete=0) AS submittedTime, "
             + "CASE WHEN a.audit_status=30 THEN (SELECT MAX(l.create_time) FROM biz_achievement_audit_log l "
             + "JOIN biz_achievement_submission s ON s.sub_id=l.sub_id WHERE s.ach_id=a.ach_id AND s.is_delete=0 "
@@ -29,7 +32,7 @@ public interface AchievementMapper {
      * @param achId 成果ID
      * @return 标志性成果对象
      */
-    @Select("SELECT * FROM biz_achievement WHERE ach_id = #{achId} AND is_delete = 0")
+    @Select(REPORT_COLUMNS + "WHERE a.ach_id = #{achId} AND a.is_delete = 0")
     BizAchievement getAchievementById(Long achId);
 
     /**

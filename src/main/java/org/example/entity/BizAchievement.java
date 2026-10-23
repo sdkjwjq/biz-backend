@@ -69,4 +69,5 @@ public class BizAchievement {
     private Date updateTime; // 更新时间
     private Date submittedTime; // 查询字段：最近一次有效提交时间，不回写业务表
     private Date archivedTime; // 查询字段：当前已归档成果的最近归档日志时间
+    private String rejectionReason; // 只读：当前处于驳回状态时最近一次驳回意见
 }
