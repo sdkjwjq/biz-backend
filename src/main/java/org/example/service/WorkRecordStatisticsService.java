@@ -16,10 +16,12 @@ public class WorkRecordStatisticsService {
     public static final ZoneId ZONE = ZoneId.of("Asia/Shanghai");
     private final WorkRecordMapper mapper;
     private final Clock clock;
+    private final WorkRecordScopeService scopes;
 
-    public WorkRecordStatisticsService(WorkRecordMapper mapper, @Qualifier("workRecordClock") Clock clock) {
+    public WorkRecordStatisticsService(WorkRecordMapper mapper, @Qualifier("workRecordClock") Clock clock, WorkRecordScopeService scopes) {
         this.mapper = mapper;
         this.clock = clock;
+        this.scopes = scopes;
     }
 
     public void validatePeriod(int year, int month) {
@@ -31,21 +33,21 @@ public class WorkRecordStatisticsService {
         }
     }
 
-    /** schoolWide=true 时统计全校该年度全部三级任务（双高办/管理员填报口径）。 */
-    public Statistics calculate(Long ownerId, int year, int month, boolean schoolWide) {
+    /** 始终按纪实原填报人的当前一级任务范围计算；管理员代填不改变其范围。 */
+    public Statistics calculate(Long ownerId, int year, int month) {
         validatePeriod(year, month);
         Instant now = clock.instant();
         Instant end = YearMonth.of(year, month).plusMonths(1).atDay(1).atStartOfDay(ZONE).toInstant().minusMillis(1);
         Instant cutoff = now.isBefore(end) ? now : end;
-        List<Task> tasks = schoolWide ? mapper.allLevel3Tasks(year) : mapper.ownedTasks(ownerId, year);
+        WorkRecordScopeService.Scope scope = scopes.resolve(ownerId, year);
+        List<Task> tasks = scope.tasks();
         List<Evidence> evidence = tasks.isEmpty() ? List.of() : mapper.evidence(
                 tasks.stream().map(BizTask::getTaskId).toList(), Date.from(cutoff));
         Map<Long, List<Evidence>> byTask = evidence.stream().collect(Collectors.groupingBy(Evidence::getParentTaskId));
-        Map<Long, BizTask> structure = mapper.structure().stream().collect(Collectors.toMap(BizTask::getTaskId, t -> t));
         Map<Long, ReformTask> reforms = new LinkedHashMap<>();
         List<TaskSummary> details = new ArrayList<>();
         for (Task task : tasks) {
-            BizTask root = reform(task, structure);
+            BizTask root = scope.roots().get(task.getTaskId());
             if (root != null) reforms.putIfAbsent(root.getTaskId(), new ReformTask(root.getTaskId(), root.getTaskCode(), root.getTaskName()));
             details.add(summarize(task, root, byTask.getOrDefault(task.getTaskId(), List.of()), year, month, cutoff));
         }
@@ -54,11 +56,10 @@ public class WorkRecordStatisticsService {
         int unknown = (int) details.stream().filter(TaskSummary::needsVerification).count();
         BigDecimal rate = tasks.isEmpty() ? null : BigDecimal.valueOf(completed).multiply(BigDecimal.valueOf(100))
                 .divide(BigDecimal.valueOf(tasks.size()), 2, RoundingMode.HALF_UP);
-        String notice = schoolWide ? "管理员测试统计：采用生成时的年度任务配置，统计全校该年度有效三级任务，勾选文字填报项目不改变统计范围。"
-                : "采用生成时的年度任务配置；本人三级任务及本人四级目标所属三级任务按三级任务ID去重，勾选文字填报项目不改变统计范围。";
+        String notice = scope.notice() + "采用生成时的年度任务配置，勾选文字填报项目不改变统计范围。";
         if (unknown > 0) notice += "可核实统计：" + unknown + "条任务历史完成时间待核实，未计入完成数量。";
         if (details.stream().anyMatch(row -> row.reformTaskId() == null)) notice += "部分任务缺少有效一级任务目录，请先核实任务配置。";
-        return new Statistics(1, year, month, format(now), format(cutoff), tasks.size(), added, completed, rate,
+        return new Statistics(2, year, month, format(now), format(cutoff), tasks.size(), added, completed, rate,
                 unknown, notice, details, List.copyOf(reforms.values()));
     }
 
@@ -117,16 +118,6 @@ public class WorkRecordStatisticsService {
                 default -> "历史审核情况待核实";
             };
         }).distinct().sorted().collect(Collectors.joining(" / "));
-    }
-
-    private BizTask reform(BizTask task, Map<Long, BizTask> structure) {
-        Set<Long> visited = new HashSet<>();
-        BizTask current = task;
-        while (current != null && visited.add(current.getTaskId())) {
-            if (Integer.valueOf(1).equals(current.getLevel())) return current;
-            current = structure.get(current.getParentId());
-        }
-        return null;
     }
 
     private String format(Instant value) { return value.atZone(ZONE).toOffsetDateTime().toString(); }

@@ -42,15 +42,18 @@ public class AdminManagementService {
     private final SysMapper users;
     private final ObjectMapper json;
     private final LeadershipAccessService leadershipAccess;
+    private final WorkRecordScopeService workRecordScopes;
     private final org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     public AdminManagementService(AdminManagementMapper mapper, SysMapper users, ObjectMapper json,
-                                   LeadershipAccessService leadershipAccess, org.springframework.jdbc.core.JdbcTemplate jdbc) {
+                                   LeadershipAccessService leadershipAccess, org.springframework.jdbc.core.JdbcTemplate jdbc,
+                                   WorkRecordScopeService workRecordScopes) {
         this.mapper = mapper;
         this.users = users;
         this.json = json;
         this.leadershipAccess = leadershipAccess;
         this.jdbc = jdbc;
+        this.workRecordScopes = workRecordScopes;
     }
 
     public void requireAdmin(Long userId) {
@@ -79,7 +82,7 @@ public class AdminManagementService {
         result.put("performanceIssueCount", performanceIssues.size());
         result.put("invalidPendingCount", leadershipAccess.restricted(operatorId) ? scopedPendingCount(operatorId) : mapper.invalidPendingCount());
         result.put("budget", mapper.budgetSummary(year, month));
-        result.put("expectedWorkRecordAuthors", mapper.expectedWorkRecordAuthors(year));
+        result.put("expectedWorkRecordAuthors", workRecordScopes.expectedAuthors(year));
         result.put("submittedWorkRecordAuthors", mapper.submittedWorkRecordAuthors(year, month));
         result.put("taskIssues", taskIssues.stream().limit(100).toList());
         result.put("performanceIssues", performanceIssues.stream().limit(100).toList());

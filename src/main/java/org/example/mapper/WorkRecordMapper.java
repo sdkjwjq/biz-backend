@@ -2,6 +2,7 @@ package org.example.mapper;
 
 import org.apache.ibatis.annotations.*;
 import org.example.entity.BizTask;
+import org.example.entity.BizLevel4Task;
 import org.example.entity.BizWorkRecord;
 import org.example.entity.vo.WorkRecordVO;
 import java.util.Date;
@@ -25,8 +26,17 @@ public interface WorkRecordMapper {
             + "ORDER BY t.task_code,t.task_id")
     List<WorkRecordVO.Task> allLevel3Tasks(@Param("year") int year);
 
-    @Select("SELECT task_id,parent_id,level,task_code,task_name FROM biz_task WHERE COALESCE(is_delete,0)=0")
+    @Select("SELECT task_id,project_id,parent_id,phase,level,task_code,task_name,dept_id FROM biz_task WHERE COALESCE(is_delete,0)=0")
     List<BizTask> structure();
+
+    // 纪实范围专用；不要更改上面的责任人查询，它还供核心指标资格使用。
+    @Select("SELECT t.*,COALESCE(NULLIF(u.nick_name,''),u.user_name,'—') leader_name FROM biz_task t "
+            + "LEFT JOIN sys_user u ON u.user_id=t.leader_id WHERE t.level=3 AND t.phase BETWEEN 2025 AND 2029 "
+            + "AND COALESCE(t.is_delete,0)=0 ORDER BY t.phase,t.task_code,t.task_id")
+    List<WorkRecordVO.Task> scopeTasks();
+
+    @Select("SELECT task_id,parent_id,phase,leader_id,dept_id FROM biz_level4_task WHERE COALESCE(is_delete,0)=0")
+    List<BizLevel4Task> scopeGoals();
 
     // 归档历史可以来自已替换材料对应的软删除审核单；绝不将其当前状态当作历史月份的状态。
     // 四级历史记录只用于识别缺失的三级汇总证据，不单独增加三级任务完成数。

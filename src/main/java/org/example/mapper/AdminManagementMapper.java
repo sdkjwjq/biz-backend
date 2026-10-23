@@ -158,9 +158,6 @@ public interface AdminManagementMapper {
             + "WHERE s.year=#{year} AND s.month=#{month} AND COALESCE(s.is_delete,0)=0 LIMIT 1")
     Map<String, Object> budgetSummary(@Param("year") Integer year, @Param("month") Integer month);
 
-    @Select("SELECT COUNT(*) FROM sys_user u WHERE u.status='1' AND COALESCE(u.is_delete,0)=0 AND EXISTS(SELECT 1 FROM biz_task t WHERE t.level=3 AND t.phase=#{year} AND COALESCE(t.is_delete,0)=0 AND (t.leader_id=u.user_id OR EXISTS(SELECT 1 FROM biz_level4_task c WHERE c.parent_id=t.task_id AND c.leader_id=u.user_id AND COALESCE(c.is_delete,0)=0)))")
-    int expectedWorkRecordAuthors(Integer year);
-
     @Select("SELECT COUNT(DISTINCT owner_id) FROM biz_work_record WHERE record_year=#{year} AND record_month=#{month} "
             + "AND status=1 AND COALESCE(delete_marker,0)=0")
     int submittedWorkRecordAuthors(@Param("year") Integer year, @Param("month") Integer month);
