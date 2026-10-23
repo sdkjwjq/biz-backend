@@ -277,7 +277,7 @@ public class BizService {
         if (user == null || Integer.valueOf(1).equals(user.getIsDelete())) {
             throw new RuntimeException("用户不存在");
         }
-        if ((!"0".equals(user.getRole())&&!(permissions.configured(userId)&&permissions.allowed(userId,"tasks.transfer"))) || !"1".equals(user.getStatus())) {
+        if ((!"0".equals(user.getRole())&&!(permissions.enforced(userId)&&permissions.allowed(userId,"tasks.transfer"))) || !"1".equals(user.getStatus())) {
             throw new RuntimeException("仅限管理员访问");
         }
     }
@@ -298,7 +298,7 @@ public class BizService {
             if (sysUser == null) {
                 throw new RuntimeException("用户不存在");
             }
-            if ((!"0".equals(sysUser.getRole()) && !(permissions.configured(userId)&&permissions.allowed(userId,"tasks.finish"))) || !"1".equals(sysUser.getStatus())
+            if ((!"0".equals(sysUser.getRole()) && !(permissions.enforced(userId)&&permissions.allowed(userId,"tasks.finish"))) || !"1".equals(sysUser.getStatus())
                     || Integer.valueOf(1).equals(sysUser.getIsDelete())) {
                 throw new RuntimeException("仅限管理员访问");
             }
@@ -679,7 +679,7 @@ public class BizService {
                 throw new RuntimeException("用户不存在");
 
             // 最小权限校验：管理员/任务负责人/归口负责人可查看；或本人提交过该任务审批单也可查看
-            if ("0".equals(me.getRole()) || (permissions.configured(userId)&&permissions.canRead(userId,"tasks",taskId,null)) || leadershipAccess.canReadTask(userId, taskId)
+            if ("0".equals(me.getRole()) || (permissions.enforced(userId)&&permissions.canRead(userId,"tasks",taskId,null)) || leadershipAccess.canReadTask(userId, taskId)
                     || (task.getLeaderId() != null && task.getLeaderId().equals(userId))
                     || (task.getAuditorId() != null && task.getAuditorId().equals(userId))
                     || (task.getPrincipalId() != null && task.getPrincipalId().equals(userId))) {

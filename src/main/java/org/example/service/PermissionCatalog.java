@@ -32,13 +32,14 @@ public final class PermissionCatalog {
         role("OFFICE","双高办",List.of("core.read","core.fill","budget.read","budget.fill","budget.materials","budget.export","budget.versions"),all("core","budget"),true);
         role("FINANCE","财务",List.of("budget.read","budget.fill","budget.materials","budget.export","budget.versions"),all("budget"),true);
         role("BUDGET_VIEWER_INTERNAL","负责人预算查阅",List.of("budget.read","budget.materials","budget.export","budget.versions"),all("budget"),true);
-        role("ACHIEVEMENT_REPORTER","成果报送",List.of("achievements.read","achievements.materials","achievements.fill","achievements.history","achievements.delete"),business("achievements"),true);
+        role("ACHIEVEMENT_REPORTER","成果报送",List.of("achievements.read","achievements.materials","achievements.fill","achievements.history","achievements.delete","achievements.export"),all("achievements"),true);
         role("ACHIEVEMENT_REVIEWER","成果审核",List.of("achievements.read","achievements.materials","achievements.audit","achievements.history","audit.read"),all("achievements"),true);
         role("RECORD_VIEWER","纪实查阅",List.of("records.read","records.export"),all("records"),true);
         role("RECORD_REPORTER","纪实填报资格",List.of("records.read","records.fill"),all("records"),true);
-        role("CORE_REPORTER","核心指标填报资格",List.of("core.read","core.fill"),all("core"),true);
+        role("CORE_REPORTER","核心指标填报资格",List.of("core.read","core.fill","core.history","core.withdraw"),all("core"),true);
+        role("RECORD_OWNER","本人既有纪实",List.of("records.read"),Map.of("records",Map.of("mode","OWN")),true);
         role("CORE_REVIEWER","核心指标审核职责",List.of("core.read","core.audit","core.history","audit.read"),all("core"),true);
-        role("EXPERT","专家",List.of("tasks.read","tasks.materials","tasks.history","expert.read","expert.write"),all("tasks"),false);
+        role("EXPERT","专家",List.of("tasks.read","tasks.materials","tasks.history","expert.read","expert.write"),Map.of("tasks",Map.of("mode","ALL","years",List.of(2025,2026,2027,2028,2029))),false);
         role("ARCHIVER","双高办归档职责",List.of("tasks.read","tasks.materials","tasks.history","tasks.archive","performance.read","performance.materials","performance.history","performance.archive","core.read","core.history","core.archive","audit.read"),all("tasks","performance","core"),true);
         role("ADMIN","管理员",new ArrayList<>(ACTIONS.keySet()),all("tasks","performance","achievements","core","records","budget"),false);
     }

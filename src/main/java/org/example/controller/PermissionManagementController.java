@@ -7,6 +7,9 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController @RequestMapping("/admin/permissions")
 public class PermissionManagementController {
+    @org.springframework.beans.factory.annotation.Autowired private PermissionDutyService duties;
+    @GetMapping("/duties/preview")public Object dutyPreview(@RequestParam String domain,@RequestParam Long id){return duties.preview(access.actor(),domain,id);}
+    @PostMapping("/duties/transfer")public Object dutyTransfer(@RequestBody PermissionDutyService.Change body){return duties.save(access.actor(),body);}
     private final PermissionManagementService management;private final PermissionService access;
     public PermissionManagementController(PermissionManagementService management,PermissionService access){this.management=management;this.access=access;}
     @GetMapping("/catalog")public Object catalog(){return management.catalog(access.actor());}

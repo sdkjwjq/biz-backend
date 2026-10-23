@@ -60,7 +60,7 @@ public class PerformanceRelationService {
     private record RemoveTarget(Long relationId, BizTask task) { }
 
     public boolean canManageRelation(Long userId) {
-        if(userId!=null&&permissions.configured(userId))return permissions.allowed(userId,"performance.relations");
+        if(userId!=null&&permissions.enforced(userId))return permissions.allowed(userId,"performance.relations");
         SysUser user = userId == null ? null : sysMapper.getUserById(userId);
         return user != null && !Integer.valueOf(1).equals(user.getIsDelete())
                 && "1".equals(user.getStatus()) && "0".equals(user.getRole());
@@ -73,7 +73,7 @@ public class PerformanceRelationService {
         requireAutoPerformance(performance);
         BizPerformanceYear yearRow = yearRow(perfId, year);
         List<PerformanceRelationCandidateVO> rows = relationMapper.getCandidates(perfId, yearRow.getYearId(), year);
-        if(permissions.configured(userId))rows=rows.stream().filter(r->permissions.canRead(userId,"tasks",r.getTaskId(),year)).toList();
+        if(permissions.enforced(userId))rows=rows.stream().filter(r->permissions.canRead(userId,"tasks",r.getTaskId(),year)).toList();
         for (PerformanceRelationCandidateVO row : rows) {
             row.setSkipReason(skipReason(row, year));
         }
@@ -103,7 +103,7 @@ public class PerformanceRelationService {
         Map<String, Object> result = new LinkedHashMap<>();
         for (Map<String, Object> row : relationMapper.countRelationByYear(year)) {
             Object id = row.get("perfId");
-            if(id!=null&&permissions.configured(userId)&&!permissions.canRead(userId,"performance",((Number)id).longValue(),year))continue;
+            if(id!=null&&permissions.enforced(userId)&&!permissions.canRead(userId,"performance",((Number)id).longValue(),year))continue;
             Object count = row.get("relationCount");
             if (id != null) {
                 result.put(String.valueOf(id), count == null ? 0 : count);

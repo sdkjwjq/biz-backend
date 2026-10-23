@@ -23,8 +23,10 @@ public class PermissionRequestGuard {
             Long file=path.startsWith("/system/download/")?last(path):jdbc.queryForList("SELECT file_id FROM sys_file WHERE (file_path=? OR file_url=?) AND COALESCE(is_delete,0)=0",Long.class,path,path).stream().findFirst().orElse(null);
             if(file==null||!access.canFile(actor,file))deny("材料不存在或不在授权范围内");return;
         }
-        if(!state.configured()||state.admin())return; // 未调整的历史账号继续使用原业务入口规则。
+        if(!access.enforced(actor)||state.admin())return; // 未部署权限结构时兼容旧入口；已迁移账号全部执行统一校验。
+        if(path.equals("/biz/tasks/manage/update"))access.requireAdmin(actor); // 历史全字段接口不可用作委派移交入口。
         String action=action(path,get);
+        if(path.equals("/manage/transfer/logs")&&"PERFORMANCE".equalsIgnoreCase(request.getParameter("targetType")))action="performance.transfer";
         if(action!=null) {
             if(action.equals("upload")){if(state.permissions().stream().noneMatch(p->p.endsWith(".fill")))deny("没有材料上传权限");}
             else if(action.endsWith(".pending")){String domain=action.substring(0,action.indexOf('.'));if(!access.allowed(actor,domain+".audit")&&!access.allowed(actor,domain+".archive"))deny("没有待办审核权限");}
@@ -33,6 +35,9 @@ public class PermissionRequestGuard {
         else if(path.equals("/system/allUsers")||path.startsWith("/system/dept/")) {if(state.permissions().stream().noneMatch(p->p.endsWith(".read")))deny("没有业务查阅权限");}
         else deny("此接口未在当前账号的功能权限中开放");
         Map<String,String> variables=variables(request);Integer year=integer(request.getParameter("year"));if(year==null&&body!=null&&body.hasNonNull("year"))year=body.get("year").asInt();
+        if(path.startsWith("/dashboard/dept/")&&variables.containsKey("deptId")){Long department=number(variables.get("deptId"));if(access.visibleTasks(actor,null).stream().noneMatch(t->Objects.equals(t.getDeptId(),department)))deny("部门不在授权范围内");}
+        if(path.equals("/system/alert")&&body!=null&&body.hasNonNull("source_id"))scope(actor,"tasks",value(body,"source_id"),null);
+        if(path.startsWith("/system/upload/")){Long object=number(variables.get("task_id"));if(object==null||!(access.allowed(actor,"tasks.fill")&&access.canRead(actor,"tasks",object,null)||access.allowed(actor,"performance.fill")&&access.canRead(actor,"performance",object,null)))deny("上传对象不存在或没有填报权限");}
         if(year==null)year=integer(variables.get("year"));
         if(path.startsWith("/biz/")) {
             Long task=number(variables.get("taskId"));
@@ -102,7 +107,7 @@ public class PermissionRequestGuard {
         if(p.endsWith("/manage/options"))return "tasks.create";
         return domain+(get?".read":".fill");
     }
-    public void scope(Long actor,String domain,Long id,Integer year){boolean ok=domain.equals("performance")&&year==null?access.visiblePerformances(actor,null).stream().anyMatch(p->Objects.equals(p.getPerfId(),id)):access.canRead(actor,domain,id,year);if(!ok)deny("对象不存在或不在授权范围内");}
+    public void scope(Long actor,String domain,Long id,Integer year){boolean ok=domain.equals("performance")&&year==null?access.visiblePerformances(actor,null).stream().anyMatch(p->Objects.equals(p.getPerfId(),id)):access.canRead(actor,domain,id,year);if(!ok)throw new AdminManagementException(domain.equals("records")?404:403,"对象不存在或不在授权范围内");}
     @SuppressWarnings("unchecked")private Map<String,String> variables(HttpServletRequest r){Object v=r.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);return v instanceof Map?(Map<String,String>)v:Map.of();}
     private Long linked(String sql,Long id){if(id==null)return null;return jdbc.queryForList(sql,Long.class,id).stream().findFirst().orElse(null);}
     private Long last(String path){return number(path.substring(path.lastIndexOf('/')+1));}

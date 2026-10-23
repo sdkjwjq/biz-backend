@@ -29,7 +29,7 @@ public class LeadershipReadInterceptor implements HandlerInterceptor {
         if ("OPTIONS".equals(request.getMethod())) return true;
         Long userId = JWTUtil.getUserIdFromToken(request.getHeader("Authorization"));
         if (userId == null) return true;
-        if (permissions.configured(userId)) return true;
+        if (permissions.enforced(userId)) return true;
         var scope = access.scope(userId);
         if (!scope.leader() && scope.version() == 0) return true;
         if (scope.leader() && !access.isLeader(userId)) return deny(response, "账号已停用或不存在");

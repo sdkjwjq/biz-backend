@@ -57,7 +57,7 @@ public class AdminOverviewService {
         // 各模块独立失败，绝不以零代替异常；重试可只请求一个模块。
         for(String key:module==null?MODULES:List.of(module)) {
             try {
-                if(permissions.configured(actor)&&!permissions.allowed(actor,key+".read")){sections.put(key,map("status","forbidden","message","未获准查阅此模块"));continue;}
+                if(permissions.enforced(actor)&&!permissions.allowed(actor,key+".read")){sections.put(key,map("status","forbidden","message","未获准查阅此模块"));continue;}
                 Data d=data(key,year,month,actor);
                 sections.put(key,map("status","ok","title",d.title,"period",d.period,"note",d.note,"metrics",d.metrics,"extra",d.extra));
             } catch(Exception error) {
@@ -107,7 +107,7 @@ public class AdminOverviewService {
             "total",total,"page",safePage,"pageSize",pageSize,"rows",rows.subList(start,Math.min(start+pageSize,rows.size())),"extra",d.extra);
     }
     private Data data(String module,int year,int month,Long actor) {
-        if(permissions.configured(actor)){permissions.require(actor,module+".read");if(module.equals("budget")&&!permissions.budgetScope(actor,year))throw new AdminManagementException(403,"预算年度不在授权范围内");}
+        if(permissions.enforced(actor)){permissions.require(actor,module+".read");if(module.equals("budget")&&!permissions.budgetScope(actor,year))throw new AdminManagementException(403,"预算年度不在授权范围内");}
         Names n=names();
         return switch(module) {
             case "tasks"->tasks(year,actor,n);case "performance"->performances(year,actor,n);case "core"->core(year,month,actor);
@@ -149,7 +149,7 @@ public class AdminOverviewService {
         List<Map<String,Object>> rows=new ArrayList<>();
         for(var p:values) {
             if(Integer.valueOf(1).equals(p.getIsDelete())||p.getAncestors()==null||Arrays.stream(p.getAncestors().split(",")).filter(s->!s.isBlank()).count()<3)continue;
-            if(permissions.configured(actor)){if(!permissions.canRead(actor,"performance",p.getPerfId(),year))continue;}else if(access.restricted(actor)&&!access.scope(actor).contains(p.getDeptId()))continue;
+            if(permissions.enforced(actor)){if(!permissions.canRead(actor,"performance",p.getPerfId(),year))continue;}else if(access.restricted(actor)&&!access.scope(actor).contains(p.getDeptId()))continue;
             String state=p.getTargetValue()==null||p.getTargetValue().signum()<=0||p.getCurrentValue()==null?"数据待核实":p.getCurrentValue().compareTo(p.getTargetValue())>=0?"数值达标":"未达标";
             Map<String,Object> r=base(p.getPerfId(),p.getPerfCode(),p.getPerfName(),p.getDeptId(),n);
             String code=str(p.getPerfCode()),category=Arrays.stream(p.getAncestors().split(",")).filter(s->!s.isBlank()).toList().get(2).trim();
@@ -170,7 +170,7 @@ public class AdminOverviewService {
         Map<String,List<Map<String,Object>>> distinct=mappings.stream().collect(Collectors.groupingBy(m->str(m.get("id")),LinkedHashMap::new,Collectors.toList()));
         List<Map<String,Object>> rows=new ArrayList<>();long invalid=0;
         for(var group:distinct.values()) {
-            var m=group.get(0);if(permissions.configured(actor)&&!permissions.canRead(actor,"core",((Number)m.get("id")).longValue(),year))continue;String id=str(m.get("id"));var e=effective.get(id);
+            var m=group.get(0);if(permissions.enforced(actor)&&!permissions.canRead(actor,"core",((Number)m.get("id")).longValue(),year))continue;String id=str(m.get("id"));var e=effective.get(id);
             boolean valid=group.size()==1&&m.get("perf_id")!=null&&(!id.equals("10")||"发布《工程机械产业发展报告》数量".equals(m.get("perf_name")));
             if(!valid)invalid++;
             Object target=e==null?m.get("target_value"):e.get("target_value"),value=e==null?null:e.get("actual_value");
@@ -188,7 +188,7 @@ public class AdminOverviewService {
     private Data achievements(int year,Names n,Long actor) {
         List<Map<String,Object>> rows=new ArrayList<>();long missing=0;
         for(var a:achievements.listAllAchievements()) {
-            if(permissions.configured(actor)&&!permissions.canRead(actor,"achievements",a.getAchId(),year))continue;
+            if(permissions.enforced(actor)&&!permissions.canRead(actor,"achievements",a.getAchId(),year))continue;
             if(a.getGotTime()==null){missing++;continue;}
             if(a.getGotTime().toInstant().atZone(ZoneId.of("Asia/Shanghai")).getYear()!=year)continue;
             String state=a.getAuditStatus()==null?"状态待核实":a.getAuditStatus()==30?"已归档":a.getAuditStatus()<0?"已驳回":a.getAuditStatus()==10?"待审核":"状态待核实";
@@ -223,8 +223,8 @@ public class AdminOverviewService {
             map("missing",sheet==null,"dataMonth",sheet==null?null:month,"importTime",sheet==null?null:sheet.getImportTime(),"warning",sheet==null?"尚未导入":point.get("cumulative")==null?"预算字段缺失，支出待核实":""));
     }
     private Data records(int year,int month,Names n,Long actor) {
-        List<SysUser> eligible=scopes.eligibleAuthors(year).stream().filter(u->!permissions.configured(actor)||permissions.canRecordOwner(actor,u.getUserId(),u.getDeptId(),year)).toList();
-        List<Map<String,Object>> submitted=jdbc.queryForList("SELECT record_id,owner_id,owner_name,submit_time FROM biz_work_record WHERE record_year=? AND record_month=? AND status=1 AND delete_marker=0 ORDER BY owner_id,record_id",year,month).stream().filter(r->!permissions.configured(actor)||permissions.canRead(actor,"records",((Number)r.get("record_id")).longValue(),year)).toList();
+        List<SysUser> eligible=scopes.eligibleAuthors(year).stream().filter(u->!permissions.enforced(actor)||permissions.canRecordOwner(actor,u.getUserId(),u.getDeptId(),year)).toList();
+        List<Map<String,Object>> submitted=jdbc.queryForList("SELECT record_id,owner_id,owner_name,submit_time FROM biz_work_record WHERE record_year=? AND record_month=? AND status=1 AND delete_marker=0 ORDER BY owner_id,record_id",year,month).stream().filter(r->!permissions.enforced(actor)||permissions.canRead(actor,"records",((Number)r.get("record_id")).longValue(),year)).toList();
         Map<String,Map<String,Object>> byOwner=new LinkedHashMap<>();submitted.forEach(r->byOwner.put(str(r.get("owner_id")),r));
         Set<String> ids=eligible.stream().map(u->str(u.getUserId())).collect(Collectors.toSet());List<Map<String,Object>> rows=new ArrayList<>();
         for(SysUser u:eligible) {

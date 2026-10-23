@@ -252,9 +252,7 @@ class ReviewBatchRegressionApiTest {
             assertEquals(0, decimal(secondDetail.path("budget").path("sources").get(0).path("available"))
                     .compareTo(new BigDecimal("222.50")));
 
-            JsonNode denied = body(request(HttpMethod.GET, "/budget/versions?year=2029&month=11", user, null));
-            assertEquals(500, denied.path("code").asInt());
-            assertTrue(denied.path("message").asText().contains("仅管理员"));
+            assertEquals(HttpStatus.FORBIDDEN, request(HttpMethod.GET, "/budget/versions?year=2029&month=11", user, null).getStatusCode());
             JsonNode missingReason = body(request(HttpMethod.POST, "/budget/versions/" + firstVersion + "/restore",
                     admin, Map.of("remark", "  ")));
             assertEquals(500, missingReason.path("code").asInt());
@@ -306,15 +304,15 @@ class ReviewBatchRegressionApiTest {
                 long version=versions.get(0).path("versionId").asLong();
                 assertEquals(USER,jdbc.queryForObject("SELECT created_by FROM biz_budget_import_version WHERE version_id=?",Long.class,version));
                 assertTrue(body(request(HttpMethod.GET,"/budget/versions/"+version,token,null)).has("budget"));
-                assertEquals(500,body(request(HttpMethod.POST,"/budget/lock?year=2026&month=9&locked=false",token,null)).path("code").asInt());
+                assertEquals(HttpStatus.FORBIDDEN,request(HttpMethod.POST,"/budget/lock?year=2026&month=9&locked=false",token,null).getStatusCode());
             }
             int versions=jdbc.queryForObject("SELECT COUNT(*) FROM biz_budget_import_version",Integer.class);
             jdbc.update("UPDATE sys_dept SET status='1' WHERE dept_id=100");
             assertFalse(body(request(HttpMethod.GET,"/system/access",token,null)).path("canFillBudget").asBoolean());
-            assertEquals(500,body(uploadBudget(token,2026,9,file)).path("code").asInt());
+            assertEquals(HttpStatus.FORBIDDEN,uploadBudget(token,2026,9,file).getStatusCode());
             jdbc.update("UPDATE sys_user SET dept_id=920001 WHERE user_id=?",USER);
             assertFalse(body(request(HttpMethod.GET,"/system/access",token,null)).path("canFillBudget").asBoolean());
-            assertEquals(500,body(uploadBudget(token,2026,9,file)).path("code").asInt());
+            assertEquals(HttpStatus.FORBIDDEN,uploadBudget(token,2026,9,file).getStatusCode());
             assertEquals(versions,jdbc.queryForObject("SELECT COUNT(*) FROM biz_budget_import_version",Integer.class));
         } finally { Files.deleteIfExists(file); }
     }
@@ -897,7 +895,7 @@ class ReviewBatchRegressionApiTest {
         if (response.getStatusCode() == HttpStatus.FORBIDDEN) {
             JsonNode error = json.readTree(response.getBody());
             assertEquals(403, error.path("code").asInt());
-            assertEquals("仅限管理员操作", error.path("message").asText());
+            assertFalse(error.path("message").asText().isBlank());
             return;
         }
         JsonNode error = body(response);
@@ -1494,7 +1492,7 @@ class ReviewBatchRegressionApiTest {
             long subId = submitPerformance(2026, "3", user);
             if (status == 20) assertSuccess(reviewPerformance(subId, true, auditor), "已通过专业群审核");
             Map<String, List<Map<String, Object>>> before = performanceFlowState();
-            assertEquals(500, body(reviewPerformance(subId, false, login(LEADER))).path("code").asInt());
+            if (status == 20) assertEquals(HttpStatus.FORBIDDEN, reviewPerformance(subId, false, login(LEADER)).getStatusCode()); else assertEquals(500, body(reviewPerformance(subId, false, login(LEADER))).path("code").asInt());
             assertEquals(before, performanceFlowState());
             assertSuccess(reviewPerformance(subId, false, status == 10 ? auditor : login(ADMIN)), "已退回");
             assertEquals(-status, jdbc.queryForObject("SELECT flow_status FROM biz_performance_submission WHERE sub_id=?", Integer.class, subId));
@@ -1859,7 +1857,7 @@ class ReviewBatchRegressionApiTest {
         jdbc.update("UPDATE sys_user SET dept_id=920002 WHERE user_id=1910002");
         // 现有规则允许成果上传账号浏览全校成果，新增报表不擅自收窄范围。
         assertEquals(1, body(request(HttpMethod.GET, "/achievement/", login(1910002L), null)).size());
-        assertEquals(500, body(request(HttpMethod.GET, "/achievement/", login(USER), null)).path("code").asInt());
+        assertEquals(HttpStatus.FORBIDDEN, request(HttpMethod.GET, "/achievement/", login(USER), null).getStatusCode());
         jdbc.update("DELETE FROM biz_achievement_audit_log WHERE sub_id=?", subId);
         jdbc.update("DELETE FROM biz_achievement_submission WHERE sub_id=?", subId);
         row = body(request(HttpMethod.GET, "/achievement/", admin, null)).get(0);
@@ -1891,7 +1889,7 @@ class ReviewBatchRegressionApiTest {
         String path = "/scheduled/update_task_status";
         assertEquals(HttpStatus.UNAUTHORIZED, request(HttpMethod.POST, path, null, null).getStatusCode());
         for (long id : new long[]{USER, LEADER}) {
-            assertEquals(500, body(request(HttpMethod.POST, path, login(id), null)).path("code").asInt());
+            assertEquals(HttpStatus.FORBIDDEN, request(HttpMethod.POST, path, login(id), null).getStatusCode());
             assertEquals(before, jdbc.queryForList("SELECT * FROM biz_task ORDER BY task_id"));
         }
         String admin = login(ADMIN);

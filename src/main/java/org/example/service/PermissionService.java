@@ -80,15 +80,17 @@ public class PermissionService {
         if(activeDept&&Objects.equals(u.getDeptId(),100L))result.add("OFFICE");
         if(activeDept&&Objects.equals(u.getDeptId(),104L))result.add("FINANCE");
         if("2".equals(u.getRole()))result.add("BUDGET_VIEWER_INTERNAL"); // 补入下方的只读基础能力。
-        if(!leadershipDepartments(id).isEmpty()||leadershipAll(id))result.add("LEADERSHIP");
+        if(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM sys_leadership_access WHERE user_id=? AND scope IN('ALL','DEPARTMENTS'))",Integer.class,id)==1)result.add("LEADERSHIP");
         if(AchievementPermissionUtil.isAchievementUploadAccount(u,department))result.add("ACHIEVEMENT_REPORTER");
         if(AchievementPermissionUtil.isAchievementAuditor(u))result.add("ACHIEVEMENT_REVIEWER");
         if(recordViewers.contains(id))result.add("RECORD_VIEWER");
+        if(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM biz_work_record WHERE owner_id=? AND delete_marker=0)",Integer.class,id)==1)result.add("RECORD_OWNER");
         if(!records.fillableYears(u).isEmpty())result.add("RECORD_REPORTER");
         if(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM biz_task t WHERE t.level=3 AND t.phase BETWEEN 2025 AND 2029 AND COALESCE(t.is_delete,0)=0 AND (t.leader_id=? OR EXISTS(SELECT 1 FROM biz_level4_task c WHERE c.parent_id=t.task_id AND c.leader_id=? AND COALESCE(c.is_delete,0)=0)))",Integer.class,id,id)==1)result.add("CORE_REPORTER");
         if(jdbc.queryForObject("SELECT (EXISTS(SELECT 1 FROM biz_performance p JOIN biz_core_indicator c ON BINARY c.indicator_code=BINARY p.perf_code WHERE p.principal_id=? AND COALESCE(p.is_delete,0)=0) OR EXISTS(SELECT 1 FROM biz_core_report r JOIN biz_core_indicator c ON c.indicator_id=r.indicator_id AND BINARY c.indicator_code=BINARY r.performance_code WHERE r.current_handler_id=? AND r.flow_status IN(10,20)))",Integer.class,id,id)==1)result.add("CORE_REVIEWER");
         return result;
     }
+    public boolean enforced(Long id){return id!=null&&installed();}
     public boolean configured(Long id){return id!=null&&state(id).configured();}
     public boolean allowed(Long id,String permission){return id!=null&&state(id).permissions().contains(permission);}
     public void require(Long id,String permission){if(!allowed(id,permission))throw new AdminManagementException(403,"没有"+PermissionCatalog.ACTIONS.getOrDefault(permission,"此操作")+"权限");}
@@ -109,6 +111,7 @@ public class PermissionService {
         List<BizTask> all=tasks.getAllTasks().stream().filter(t->!Integer.valueOf(1).equals(t.getIsDelete())).toList();
         Map<Long,BizTask> byId=all.stream().collect(Collectors.toMap(BizTask::getTaskId,t->t));
         Set<Long> visible=new LinkedHashSet<>();Set<Long> business=tasks.getVisibleTasks(s.userId()).stream().map(BizTask::getTaskId).collect(Collectors.toSet());
+        business.addAll(jdbc.queryForList("SELECT DISTINCT parent_id FROM biz_level4_task WHERE leader_id=? AND COALESCE(is_delete,0)=0",Long.class,s.userId()));
         List<Map<String,Object>> rules=scopeRules(s,"tasks");
         for(var task:all)if(Integer.valueOf(3).equals(task.getLevel())&&(year==null||Objects.equals(year,task.getPhase()))) {
             for(var rule:rules) {
@@ -176,16 +179,19 @@ public class PermissionService {
         return all.stream().filter(p->ids.contains(p.getPerfId())).map(p->{BizPerformance copy=new BizPerformance();BeanUtils.copyProperties(p,copy);if(parents.contains(copy.getPerfId())||year==null&&scopeRules(s,"performance").stream().allMatch(r->!ids(r.get("years")).isEmpty())){copy.setCurrentValue(null);copy.setTargetValue(null);}return copy;}).toList();
     }
     public boolean budgetScope(Long actor,Integer year){State s=state(actor);return s.permissions().contains("budget.read")&&scopeRules(s,"budget").stream().anyMatch(r->yearMatches(r,year)&&"ALL".equals(r.get("mode")));}
+    public boolean fullTaskScope(Long actor){State s=state(actor);return s.admin()||s.permissions().contains("tasks.read")&&scopeRules(s,"tasks").stream().anyMatch(r->ids(r.get("years")).isEmpty()&&("ALL".equals(r.get("mode"))||"LEADERSHIP".equals(r.get("mode"))&&leadershipAll(actor)));}
     public boolean canFile(Long actor,Long fileId){State s=state(actor);if(s.admin())return true;
         var linkedTasks=jdbc.queryForList("SELECT DISTINCT task_id FROM biz_material_submission WHERE file_id=?",Long.class,fileId);
         for(Long task:linkedTasks)if(s.permissions().contains("tasks.materials")&&canTask(s,task))return true;
         var linkedAchievements=jdbc.queryForList("SELECT ach_id FROM biz_achievement WHERE file_id=?",Long.class,fileId);
+        var linkedPerformance=jdbc.queryForList("SELECT perf_id,year FROM biz_performance_submission WHERE file_id=?",fileId);
+        for(var item:linkedPerformance)if(s.permissions().contains("performance.materials")&&canRead(s,"performance",number(item.get("perf_id")),(int)number(item.get("year"))))return true;
         for(Long ach:linkedAchievements)if(s.permissions().contains("achievements.materials")&&canRead(s,"achievements",ach,null))return true;
         var linkedBudgets=jdbc.queryForList("SELECT year FROM biz_budget_sheet WHERE file_id=? UNION SELECT year FROM biz_budget_import_version WHERE file_id=?",Integer.class,fileId,fileId);
         for(Integer year:linkedBudgets)if(s.permissions().contains("budget.materials")&&budgetScope(actor,year))return true;
-        return linkedTasks.isEmpty()&&linkedAchievements.isEmpty()&&linkedBudgets.isEmpty()&&jdbc.queryForObject("SELECT COUNT(*) FROM sys_file WHERE file_id=? AND upload_by=? AND COALESCE(is_delete,0)=0",Integer.class,fileId,actor)>0&&s.permissions().stream().anyMatch(p->p.endsWith(".materials"));
+        return linkedTasks.isEmpty()&&linkedAchievements.isEmpty()&&linkedBudgets.isEmpty()&&linkedPerformance.isEmpty()&&jdbc.queryForObject("SELECT COUNT(*) FROM sys_file WHERE file_id=? AND upload_by=? AND COALESCE(is_delete,0)=0",Integer.class,fileId,actor)>0&&s.permissions().stream().anyMatch(p->p.endsWith(".materials"));
     }
-    public Map<String,Object> description(Long actor){State s=state(actor);Map<String,Object> result=new LinkedHashMap<>();result.put("permissions",s.permissions());result.put("permissionVersion",s.revision());result.put("permissionConfigured",s.configured());result.put("permissionRoles",s.roles());Map<String,Object> ranges=new LinkedHashMap<>();for(String module:List.of("tasks","performance","achievements","core","records","budget"))ranges.put(module,scopeRules(s,module));result.put("dataScopes",ranges);return result;}
+    public Map<String,Object> description(Long actor){State s=state(actor);Map<String,Object> result=new LinkedHashMap<>();result.put("permissions",s.permissions());result.put("permissionVersion",s.revision());result.put("permissionConfigured",s.configured());result.put("permissionEnforced",installed());result.put("permissionRoles",s.roles());Map<String,Object> ranges=new LinkedHashMap<>();for(String module:List.of("tasks","performance","achievements","core","records","budget"))ranges.put(module,scopeRules(s,module));result.put("dataScopes",ranges);return result;}
     public boolean leadershipAll(Long id){return jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM sys_leadership_access WHERE user_id=? AND scope='ALL')",Integer.class,id)==1;}
     public Set<Long> leadershipDepartments(Long id){return new HashSet<>(jdbc.queryForList("SELECT d.dept_id FROM sys_leadership_department d JOIN sys_leadership_access a ON a.user_id=d.user_id AND a.scope='DEPARTMENTS' WHERE d.user_id=?",Long.class,id));}
     private boolean under(BizTask task,Set<Long> roots,Map<Long,BizTask> byId){Set<Long> seen=new HashSet<>();for(BizTask p=task;p!=null&&seen.add(p.getTaskId());p=byId.get(p.getParentId()))if(roots.contains(p.getTaskId()))return true;return false;}

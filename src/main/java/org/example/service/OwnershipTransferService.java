@@ -60,7 +60,7 @@ public class OwnershipTransferService {
                           Integer level, Long deptId, Long leaderId, Long principalId) { }
 
     public boolean canTransfer(Long userId) {
-        if(userId!=null&&permissions.configured(userId))return permissions.allowed(userId,"tasks.transfer")||permissions.allowed(userId,"performance.transfer");
+        if(userId!=null&&permissions.enforced(userId))return permissions.allowed(userId,"tasks.transfer")||permissions.allowed(userId,"performance.transfer");
         SysUser user = userId == null ? null : sysMapper.getUserById(userId);
         return user != null && !Integer.valueOf(1).equals(user.getIsDelete())
                 && "1".equals(user.getStatus()) && "0".equals(user.getRole());

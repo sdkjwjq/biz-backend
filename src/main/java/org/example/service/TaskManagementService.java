@@ -20,7 +20,7 @@ public class TaskManagementService {
     @Autowired private AdminManagementService adminManagementService;
 
     public boolean canManage(Long userId) {
-        if(userId!=null&&permissions.configured(userId))return permissions.allowed(userId,"tasks.create")||permissions.allowed(userId,"tasks.transfer");
+        if(userId!=null&&permissions.enforced(userId))return permissions.allowed(userId,"tasks.create")||permissions.allowed(userId,"tasks.transfer");
         SysUser user = userId == null ? null : sysMapper.getUserById(userId);
         return user != null && !Integer.valueOf(1).equals(user.getIsDelete())
                 && "1".equals(user.getStatus()) && "0".equals(user.getRole());
@@ -74,7 +74,7 @@ public class TaskManagementService {
         task.setCurrentValue(BigDecimal.ZERO); task.setProgress(0); task.setStatus("0"); task.setWeight(BigDecimal.ONE);
         task.setIsDelete(0); task.setCreateTime(new Date()); task.setUpdateTime(new Date());
         bizMapper.addTask(task);
-        if(permissions.configured(userId)&&!permissions.canRead(userId,"tasks",task.getTaskId(),task.getPhase()))throw new AdminManagementException(403,"新任务不在您的授权范围内");
+        if(permissions.enforced(userId)&&!permissions.canRead(userId,"tasks",task.getTaskId(),task.getPhase()))throw new AdminManagementException(403,"新任务不在您的授权范围内");
         permissionManagement.requireHandler(task.getAuditorId(),"tasks",task.getTaskId(),task.getPhase(),10);
         permissionManagement.requireHandler(task.getPrincipalId(),"tasks",task.getTaskId(),task.getPhase(),20);
         adminManagementService.recordOperation("TASK", "CREATE", "TASK", String.valueOf(task.getTaskId()),

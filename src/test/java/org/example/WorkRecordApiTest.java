@@ -281,20 +281,20 @@ class WorkRecordApiTest {
         String owner=login(OWNER),other=login(OTHER),admin=login(ADMIN),viewer=login(VIEWER);
         long id=create(owner,1).path("record").path("recordId").asLong();
         for (String token: List.of(other,admin,viewer)) {
-            assertEquals(404,request(HttpMethod.GET,"/work-records/"+id,token,null).getStatusCode().value());
-            assertEquals(0,ok(request(HttpMethod.GET,"/work-records",token,null)).path("total").asInt());
-            assertEquals(404,request(HttpMethod.POST,"/work-records/"+id+"/statistics/refresh",token,Map.of("version",0)).getStatusCode().value());
+            assertEquals(token.equals(other)?403:404,request(HttpMethod.GET,"/work-records/"+id,token,null).getStatusCode().value());
+            if(token.equals(other))assertEquals(403,request(HttpMethod.GET,"/work-records",token,null).getStatusCode().value());else assertEquals(0,ok(request(HttpMethod.GET,"/work-records",token,null)).path("total").asInt());
+            assertEquals(token.equals(admin)?404:403,request(HttpMethod.POST,"/work-records/"+id+"/statistics/refresh",token,Map.of("version",0)).getStatusCode().value());
         }
         // 模拟已有提交记录，单独验证读取及资格撤销约束；真实提交另有闭环用例。
         jdbc.update("UPDATE biz_work_record SET status=1,submit_time=NOW() WHERE record_id=?",id);
-        assertEquals(404,request(HttpMethod.GET,"/work-records/"+id,other,null).getStatusCode().value());
+        assertEquals(403,request(HttpMethod.GET,"/work-records/"+id,other,null).getStatusCode().value());
         task(900011,OTHER,2026,10,"1");
         for (String token: List.of(other,admin,viewer)) assertFalse(ok(request(HttpMethod.GET,"/work-records/"+id,token,null)).path("editable").asBoolean());
         JsonNode snapshot=ok(request(HttpMethod.GET,"/work-records/"+id,owner,null)).path("statistics");
         jdbc.update("UPDATE biz_task SET leader_id=? WHERE leader_id=?",OTHER,OWNER);
         jdbc.update("UPDATE sys_user SET dept_id=920002 WHERE user_id=?",OWNER);
         assertEquals(snapshot,ok(request(HttpMethod.GET,"/work-records/"+id,owner,null)).path("statistics"));
-        assertEquals(409,request(HttpMethod.POST,"/work-records/"+id+"/statistics/refresh",owner,Map.of("version",0)).getStatusCode().value());
+        assertEquals(403,request(HttpMethod.POST,"/work-records/"+id+"/statistics/refresh",owner,Map.of("version",0)).getStatusCode().value());
         assertFalse(ok(request(HttpMethod.GET,"/work-records/capabilities",owner,null)).path("canViewAll").asBoolean());
         assertTrue(ok(request(HttpMethod.GET,"/work-records/capabilities",owner,null)).path("canViewOwnHistory").asBoolean());
     }
@@ -464,7 +464,7 @@ class WorkRecordApiTest {
         String token=login(OWNER); long id=create(token,1).path("record").path("recordId").asLong();
         for(String action:List.of("save","submit")) {
             assertEquals(401,request(HttpMethod.POST,"/work-records/"+id+"/"+action,null,narrative(0,"Valid")).getStatusCode().value());
-            for(long user:List.of(ADMIN,OTHER,VIEWER)) assertEquals(404,request(HttpMethod.POST,"/work-records/"+id+"/"+action,login(user),narrative(0,"Valid")).getStatusCode().value());
+            for(long user:List.of(ADMIN,OTHER,VIEWER)) assertEquals(user==ADMIN?404:403,request(HttpMethod.POST,"/work-records/"+id+"/"+action,login(user),narrative(0,"Valid")).getStatusCode().value());
         }
         assertEquals(0,ok(request(HttpMethod.GET,"/work-records/authors",login(ADMIN),null)).size());
         jdbc.update("UPDATE biz_task SET leader_id=? WHERE leader_id=?",OTHER,OWNER);

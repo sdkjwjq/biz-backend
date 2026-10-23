@@ -241,7 +241,7 @@ class AdminOverviewApiTest {
         assertEquals(403,request(HttpMethod.GET,"/admin/overview/summary?year=2026&month=4",ordinary,null).getStatusCode().value());
         assertEquals(1,value(summary(leader,4),"tasks","total").asInt());
         assertEquals(403,request(HttpMethod.GET,"/admin/users",leader,null).getStatusCode().value());
-        assertEquals(405,request(HttpMethod.POST,"/admin/overview/summary",leader,Map.of()).getStatusCode().value());
+        assertEquals(403,request(HttpMethod.POST,"/admin/overview/summary",leader,Map.of()).getStatusCode().value());
         jdbc.update("DELETE FROM sys_leadership_department WHERE user_id=?",VIEWER);
         assertEquals(0,value(summary(leader,4),"tasks","total").asInt());
         assertEquals(0,analysis(leader,"tasks.total","department").path("total").asInt());
