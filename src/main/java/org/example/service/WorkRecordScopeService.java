@@ -50,10 +50,15 @@ public class WorkRecordScopeService {
 
     /** 概览统计复用相同资格；管理员测试开关不改变全校应填人数。 */
     public int expectedAuthors(int year) {
+        return eligibleAuthors(year).size();
+    }
+
+    /** 返回同一资格集合供概览计算分子、分母；调用者只可输出必要的人员信息。 */
+    public List<SysUser> eligibleAuthors(int year) {
         Catalog catalog = catalog();
         Map<Long, SysDept> departments = new HashMap<>();
-        return (int) users.getAllUsers().stream().filter(this::active)
-                .filter(owner -> !resolve(owner, year, catalog, departments, false).tasks().isEmpty()).count();
+        return users.getAllUsers().stream().filter(this::active)
+                .filter(owner -> !resolve(owner, year, catalog, departments, false).tasks().isEmpty()).toList();
     }
 
     private Scope resolve(SysUser owner, int year, Catalog catalog, Map<Long, SysDept> departments) {

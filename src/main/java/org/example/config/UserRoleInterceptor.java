@@ -38,7 +38,8 @@ public class UserRoleInterceptor implements HandlerInterceptor {
         Long userId = JWTUtil.getUserIdFromToken(token);
         SysUser current = userId == null ? null : sysMapper.getUserById(userId);
         String path = request.getRequestURI().substring(request.getContextPath().length()).replaceAll("/+$", "");
-        if ("GET".equals(request.getMethod()) && "/admin/overview".equals(path) && access.isLeader(userId)) return true;
+        if ("GET".equals(request.getMethod()) && java.util.Set.of("/admin/overview", "/admin/overview/summary",
+                "/admin/overview/analysis").contains(path) && access.isLeader(userId)) return true;
 
         // 管理接口每次读取数据库中的当前状态，停用或降级立即生效。
         if (current == null || !ALLOWED_ROLE.equals(current.getRole()) || !"1".equals(current.getStatus())
