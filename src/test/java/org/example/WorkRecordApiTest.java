@@ -88,11 +88,12 @@ class WorkRecordApiTest {
             }
             return null;
         });
-        jdbc.update("INSERT INTO sys_dept(dept_id,dept_name,is_delete) VALUES(920001,'Synthetic department',0),(100,'“双高”建设办公室',0)");
+        jdbc.update("INSERT INTO sys_dept(dept_id,dept_name,is_delete) VALUES(920001,'Synthetic department',0),(920002,'Unassigned department',0),(100,'“双高”建设办公室',0)");
         for (long id : List.of(ADMIN, OWNER, OTHER, LEADER, VIEWER)) {
             jdbc.update("INSERT INTO sys_user(user_id,dept_id,user_name,nick_name,password,role,status,is_delete) VALUES(?,920001,?,?,?,?, '1',0)",
                     id,"user"+id,"Reporter "+id,PASSWORD,id==ADMIN ? "0" : id==LEADER ? "2" : "1");
         }
+        jdbc.update("UPDATE sys_user SET dept_id=920002 WHERE user_id<>?",OWNER);
         jdbc.update("INSERT INTO sys_user(user_id,dept_id,user_name,nick_name,password,role,status,is_delete) VALUES(?,100,?,?,?,?,'1',0)",
                 OFFICE,"user"+OFFICE,"Reporter "+OFFICE,PASSWORD,"1");
         jdbc.update("INSERT INTO biz_project(project_id,project_name,leader_id) VALUES(1,'Synthetic work record project',?)", OWNER);
@@ -156,8 +157,8 @@ class WorkRecordApiTest {
             assertEquals(403,request(HttpMethod.POST,"/work-records",login(user),Map.of("year",2026,"month",1)).getStatusCode().value());
         }
         jdbc.update("INSERT INTO biz_level4_task(task_id,parent_id,task_name,leader_id,dept_id,is_delete) VALUES(950001,900010,'First goal',?,920001,0),(950002,900010,'Second goal',?,920001,0)",OFFICE,OFFICE);
-        assertEquals(1,preview(login(OFFICE),1).path("totalTasks").asInt());
-        assertEquals(1,preview(login(OWNER),1).path("totalTasks").asInt());
+        assertEquals(2,preview(login(OFFICE),1).path("totalTasks").asInt());
+        assertEquals(2,preview(login(OWNER),1).path("totalTasks").asInt());
         JsonNode created=create(login(OFFICE),1);
         long id=created.path("record").path("recordId").asLong();
         ok(request(HttpMethod.POST,"/work-records/"+id+"/submit",login(OFFICE),narrative(0,"Responsible goals")));
@@ -179,7 +180,7 @@ class WorkRecordApiTest {
         assertEquals(403,request(HttpMethod.POST,"/work-records",token,Map.of("year",2025,"month",1)).getStatusCode().value());
     }
 
-    @Test void statisticsUseOwnedAnnualTasksAndFirstQualifyingArchive() throws Exception {
+    @Test void statisticsUseSchoolAnnualTasksAndFirstQualifyingArchive() throws Exception {
         task(900011,OWNER,2026,10,"1"); task(900012,OWNER,2026,10,"3");
         task(900013,OTHER,2026,10,"1"); task(900014,OWNER,2025,10,"1"); task(900015,OWNER,2026,10,"1");
         jdbc.update("UPDATE biz_task SET is_delete=1 WHERE task_id=900015");
@@ -190,8 +191,8 @@ class WorkRecordApiTest {
         submission(910013,900011,10,"2026-01-28 01:00:00","2026-02-01 00:00:00");
         log(910011,40,"2026-02-15 00:00:00");
         JsonNode jan=preview(login(OWNER),1),feb=preview(login(OWNER),2);
-        assertEquals(3,jan.path("totalTasks").asInt()); assertEquals(1,jan.path("newCompleted").asInt());
-        assertEquals(1,jan.path("cumulativeCompleted").asInt()); assertEquals(33.33,jan.path("completionRate").asDouble());
+        assertEquals(4,jan.path("totalTasks").asInt()); assertEquals(1,jan.path("newCompleted").asInt());
+        assertEquals(1,jan.path("cumulativeCompleted").asInt()); assertEquals(25,jan.path("completionRate").asDouble());
         assertEquals(1,jan.path("unverifiedTasks").asInt());
         assertEquals(1,feb.path("newCompleted").asInt()); assertEquals(2,feb.path("cumulativeCompleted").asInt());
         assertEquals(1,jan.path("reformTasks").size()); assertEquals(900000,jan.path("reformTasks").get(0).path("taskId").asLong());
@@ -291,6 +292,7 @@ class WorkRecordApiTest {
         for (String token: List.of(other,admin,viewer)) assertFalse(ok(request(HttpMethod.GET,"/work-records/"+id,token,null)).path("editable").asBoolean());
         JsonNode snapshot=ok(request(HttpMethod.GET,"/work-records/"+id,owner,null)).path("statistics");
         jdbc.update("UPDATE biz_task SET leader_id=? WHERE leader_id=?",OTHER,OWNER);
+        jdbc.update("UPDATE sys_user SET dept_id=920002 WHERE user_id=?",OWNER);
         assertEquals(snapshot,ok(request(HttpMethod.GET,"/work-records/"+id,owner,null)).path("statistics"));
         assertEquals(409,request(HttpMethod.POST,"/work-records/"+id+"/statistics/refresh",owner,Map.of("version",0)).getStatusCode().value());
         assertFalse(ok(request(HttpMethod.GET,"/work-records/capabilities",owner,null)).path("canViewAll").asBoolean());
@@ -314,6 +316,7 @@ class WorkRecordApiTest {
             assertEquals(snapshot,jdbc.queryForObject("SELECT statistics_json FROM biz_work_record_snapshot WHERE record_id=?",String.class,id));
         } finally { jdbc.execute("DROP TRIGGER fail_work_snapshot"); }
         jdbc.update("UPDATE biz_task SET leader_id=? WHERE leader_id=?",OTHER,OWNER);
+        jdbc.update("UPDATE sys_user SET dept_id=920002 WHERE user_id=?",OWNER);
         assertEquals(403,request(HttpMethod.POST,"/work-records/"+id+"/statistics/refresh",token,Map.of("version",1)).getStatusCode().value());
         assertFalse(ok(request(HttpMethod.GET,"/work-records/"+id,token,null)).path("editable").asBoolean());
     }
@@ -353,7 +356,8 @@ class WorkRecordApiTest {
 
     @Test void wordUsesFrozenSnapshotRemovesExamplesAndPreservesFiveSections() throws Exception {
         jdbc.update("INSERT INTO biz_task(task_id,project_id,parent_id,phase,task_code,task_name,level,auditor_id,principal_id,dept_id,is_delete) VALUES(900100,1,0,2026,'SG02','Empty reform omitted',1,?,910003,920001,0)",OWNER);
-        task(900101,OWNER,2026,10,"1"); jdbc.update("UPDATE biz_task SET parent_id=900100 WHERE task_id=900101");
+        jdbc.update("INSERT INTO biz_task(task_id,project_id,parent_id,phase,task_code,task_name,level,principal_id,dept_id,is_delete) VALUES(900102,1,900100,2026,'SG0201','Second reform directory',2,910003,920001,0)");
+        task(900101,OWNER,2026,10,"1"); jdbc.update("UPDATE biz_task SET parent_id=900102 WHERE task_id=900101");
         String token=login(OWNER),admin=login(ADMIN); long id=create(token,1).path("record").path("recordId").asLong();
         ok(request(HttpMethod.POST,"/work-records/"+id+"/submit",token,Map.of("version",0,"entries",List.of(
                 Map.of("reformTaskId",900000,"keyProgress","Saved <XML> & text\n第二行"),Map.of("reformTaskId",900100,"keyProgress","\u00a0")))));
@@ -387,7 +391,7 @@ class WorkRecordApiTest {
         assertEquals(200,response.getStatusCode().value()); String text=wordText(response.getBody());
         assertTrue(text.indexOf(longText)<text.indexOf("JAN_OTHER")); assertTrue(text.indexOf("JAN_OTHER")<text.indexOf("FEB_OWNER"));
         try(var doc=new org.apache.poi.xwpf.usermodel.XWPFDocument(new java.io.ByteArrayInputStream(response.getBody()))) {
-            assertEquals(6,doc.getTables().size()); assertEquals(52,doc.getTables().get(0).getNumberOfRows());
+            assertEquals(6,doc.getTables().size()); assertEquals(53,doc.getTables().get(0).getNumberOfRows());
             for(var table:doc.getTables()) {
                 assertTrue(table.getRow(0).isRepeatHeader());
                 for(var row:table.getRows()) for(var cell:row.getTableCells()) for(var paragraph:cell.getParagraphs()) for(var run:paragraph.getRuns()) {
@@ -464,6 +468,7 @@ class WorkRecordApiTest {
         }
         assertEquals(0,ok(request(HttpMethod.GET,"/work-records/authors",login(ADMIN),null)).size());
         jdbc.update("UPDATE biz_task SET leader_id=? WHERE leader_id=?",OTHER,OWNER);
+        jdbc.update("UPDATE sys_user SET dept_id=920002 WHERE user_id=?",OWNER);
         for(String action:List.of("save","submit")) assertEquals(403,request(HttpMethod.POST,"/work-records/"+id+"/"+action,token,narrative(0,"Valid")).getStatusCode().value());
         assertTrue(ok(request(HttpMethod.GET,"/work-records/capabilities",token,null)).path("canViewOwnRecords").asBoolean());
         assertFalse(ok(request(HttpMethod.GET,"/work-records/"+id,token,null)).path("editable").asBoolean());
@@ -593,6 +598,131 @@ class WorkRecordApiTest {
             assertEquals(before,jdbc.queryForMap("SELECT * FROM biz_work_record WHERE record_id=?",id));
             assertEquals(200,request(HttpMethod.GET,"/work-records/"+id,admin,null).getStatusCode().value());
         } finally {jdbc.execute("DROP TRIGGER fail_work_delete");}
+    }
+
+    private void scopeFixture() {
+        jdbc.update("INSERT INTO sys_dept(dept_id,dept_name,status,is_delete) VALUES(920003,'Third department','0',0)");
+        task(900011,OWNER,2026,10,"1");
+        jdbc.update("UPDATE biz_task SET dept_id=920002 WHERE task_id=900011");
+        for (long root : List.of(900100L,900200L,900300L)) {
+            jdbc.update("INSERT INTO biz_task(task_id,project_id,parent_id,phase,task_code,task_name,level,principal_id,dept_id,is_delete) VALUES(?,1,0,2025,?,?,1,910003,920003,0),(?,1,?,2029,?,?,2,910003,920003,0)",
+                    root,"R"+root,"Reform "+root,root+1,root,"D"+root,"Directory "+root);
+            task(root+10,OWNER,2026,10,"1");
+            jdbc.update("UPDATE biz_task SET parent_id=?,dept_id=? WHERE task_id=?",root+1,root==900300L?920003:920001,root+10);
+        }
+        task(900111,OWNER,2026,10,"1");
+        jdbc.update("UPDATE biz_task SET parent_id=900101,dept_id=920003 WHERE task_id=900111");
+        jdbc.update("INSERT INTO biz_level4_task(task_id,parent_id,task_name,leader_id,dept_id,is_delete) VALUES(950001,900110,'Department-only goal',?,920002,0),(950002,900110,'Duplicate department goal',?,920002,0)",OWNER,OWNER);
+    }
+
+    private Set<Long> taskIds(JsonNode stats) {
+        Set<Long> ids=new LinkedHashSet<>(); stats.path("tasks").forEach(task -> ids.add(task.path("taskId").asLong())); return ids;
+    }
+
+    @Test void professionalScopeIncludesAllReformsAndLevel4ResponsibilityWinsOverDepartment() throws Exception {
+        scopeFixture();
+        assertEquals(6,preview(login(OWNER),1).path("totalTasks").asInt());
+        assertEquals(4,preview(login(OWNER),1).path("reformTasks").size());
+        jdbc.update("UPDATE biz_level4_task SET leader_id=? WHERE task_id=950001",OFFICE);
+        JsonNode stats=preview(login(OFFICE),1);
+        assertEquals(6,stats.path("totalTasks").asInt());
+        assertTrue(stats.path("notice").asText().startsWith("专业群统计"));
+        jdbc.update("UPDATE biz_task SET leader_id=? WHERE task_id=900310",OTHER);
+        assertEquals(6,preview(login(OTHER),1).path("totalTasks").asInt());
+    }
+
+    @Test void departmentScopeExpandsSiblingsAndActualLevel4ParentsWithoutChangingCoreEligibility() throws Exception {
+        scopeFixture(); String token=login(OTHER);
+        JsonNode stats=preview(token,1);
+        assertEquals(Set.of(900010L,900011L,900110L,900111L),taskIds(stats));
+        assertEquals(2,stats.path("reformTasks").size());
+        assertEquals(2,stats.path("schemaVersion").asInt());
+        assertFalse(ok(request(HttpMethod.GET,"/core-indicators/capabilities",token,null)).path("canFill").asBoolean());
+        assertEquals(List.of(2026),json.convertValue(ok(request(HttpMethod.GET,"/work-records/capabilities",token,null)).path("fillableYears"),List.class));
+        task(900012,OWNER,2025,10,"1"); jdbc.update("UPDATE biz_task SET dept_id=920002 WHERE task_id=900012");
+        assertEquals(4,preview(token,1).path("totalTasks").asInt());
+        assertEquals(1,ok(request(HttpMethod.GET,"/work-records/statistics?year=2025&month=1",token,null)).path("totalTasks").asInt());
+    }
+
+    @Test void departmentScopeRejectsOtherReformsAndDoesNotUseFirstLevelDepartment() throws Exception {
+        scopeFixture(); String token=login(OTHER);
+        jdbc.update("UPDATE biz_task SET dept_id=920002 WHERE task_id=900200");
+        assertEquals(4,preview(token,1).path("totalTasks").asInt());
+        JsonNode draft=create(token,1);long id=draft.path("record").path("recordId").asLong();
+        ok(request(HttpMethod.POST,"/work-records/"+id+"/save",token,Map.of("version",0,"entries",List.of(Map.of("reformTaskId",900100,"keyProgress","Allowed sibling reform")))));
+        assertEquals(400,request(HttpMethod.POST,"/work-records/"+id+"/submit",token,Map.of("version",1,"entries",List.of(Map.of("reformTaskId",900200,"keyProgress","Forbidden")))).getStatusCode().value());
+        assertEquals(1,jdbc.queryForObject("SELECT version FROM biz_work_record WHERE record_id=?",Integer.class,id));
+        assertEquals(0,jdbc.queryForObject("SELECT status FROM biz_work_record WHERE record_id=?",Integer.class,id));
+    }
+
+    @Test void secondLevelDepartmentIncludesWholeRootWithoutGivingItsLeaderProfessionalScope() throws Exception {
+        scopeFixture();
+        jdbc.update("UPDATE biz_level4_task SET is_delete=1 WHERE dept_id=920002");
+        jdbc.update("UPDATE biz_task SET dept_id=920002,leader_id=? WHERE task_id=900101",OTHER);
+        JsonNode stats=preview(login(OTHER),1);
+        assertEquals(Set.of(900010L,900011L,900110L,900111L),taskIds(stats));
+        assertTrue(stats.path("notice").asText().startsWith("归口部门统计"));
+        jdbc.update("UPDATE biz_task SET is_delete=1 WHERE task_id=900110 OR task_id=900111");
+        assertEquals(Set.of(900010L,900011L),taskIds(preview(login(OTHER),1)));
+    }
+
+    @Test void deletedCrossProjectAndBrokenDirectoriesAndCrossYearGoalsAreExcluded() throws Exception {
+        scopeFixture(); String owner=login(OWNER),department=login(OTHER);
+        jdbc.update("INSERT INTO biz_level4_task(task_id,parent_id,phase,task_name,dept_id,is_delete) VALUES(950003,900210,2025,'Wrong-year goal',920002,0),(950004,900310,2026,'Deleted goal',920002,1)");
+        assertEquals(4,preview(department,1).path("totalTasks").asInt());
+        jdbc.update("UPDATE biz_task SET is_delete=1 WHERE task_id=900101");
+        assertEquals(4,preview(owner,1).path("totalTasks").asInt());
+        assertEquals(2,preview(department,1).path("totalTasks").asInt());
+        jdbc.update("UPDATE biz_task SET is_delete=0,parent_id=900010 WHERE task_id=900101");
+        assertEquals(4,preview(owner,1).path("totalTasks").asInt());
+        jdbc.update("INSERT INTO biz_project(project_id,project_name,leader_id) VALUES(2,'Other synthetic project',?)",OWNER);
+        jdbc.update("UPDATE biz_task SET parent_id=900100,project_id=2 WHERE task_id=900101");
+        assertEquals(4,preview(owner,1).path("totalTasks").asInt());
+        jdbc.update("UPDATE biz_task SET project_id=1 WHERE task_id=900101");
+        jdbc.update("UPDATE biz_task SET parent_id=900101 WHERE task_id=900100");
+        assertEquals(4,preview(owner,1).path("totalTasks").asInt());
+        jdbc.update("UPDATE biz_task SET parent_id=0,is_delete=1 WHERE task_id=900100");
+        assertEquals(4,preview(owner,1).path("totalTasks").asInt());
+    }
+
+    @Test void departmentChangesAndDisabledAccountsImmediatelyRecheckScopeWithExistingToken() throws Exception {
+        scopeFixture(); String token=login(OTHER);
+        assertEquals(4,preview(token,1).path("totalTasks").asInt());
+        jdbc.update("UPDATE sys_user SET dept_id=920003 WHERE user_id=?",OTHER);
+        assertEquals(Set.of(900110L,900111L,900210L,900310L),taskIds(preview(token,1))); // 二级目录归口也命中。
+        jdbc.update("UPDATE sys_dept SET status='1' WHERE dept_id=920003");
+        assertFalse(ok(request(HttpMethod.GET,"/work-records/capabilities",token,null)).path("canCreate").asBoolean());
+        assertEquals(403,request(HttpMethod.POST,"/work-records",token,Map.of("year",2026,"month",1)).getStatusCode().value());
+        jdbc.update("UPDATE sys_user SET status='0' WHERE user_id=?",OTHER);
+        assertEquals(401,request(HttpMethod.GET,"/work-records/capabilities",token,null).getStatusCode().value());
+    }
+
+    @Test void overviewExpectedAuthorsReusesScopeAndCountsEveryEligibleNormalDepartmentAccountOnce() throws Exception {
+        scopeFixture(); String admin=login(ADMIN);
+        assertEquals(5,ok(request(HttpMethod.GET,"/admin/overview?year=2026&month=1",admin,null)).path("expectedWorkRecordAuthors").asInt());
+        jdbc.update("UPDATE biz_level4_task SET leader_id=? WHERE task_id=950001",OFFICE);
+        assertEquals(6,ok(request(HttpMethod.GET,"/admin/overview?year=2026&month=1",admin,null)).path("expectedWorkRecordAuthors").asInt());
+        jdbc.update("UPDATE sys_user SET status='0' WHERE user_id=?",OTHER);
+        jdbc.update("UPDATE sys_user SET is_delete=1 WHERE user_id=?",VIEWER);
+        assertEquals(4,ok(request(HttpMethod.GET,"/admin/overview?year=2026&month=1",admin,null)).path("expectedWorkRecordAuthors").asInt());
+        jdbc.update("UPDATE sys_dept SET status='1' WHERE dept_id=920002");
+        assertEquals(2,ok(request(HttpMethod.GET,"/admin/overview?year=2026&month=1",admin,null)).path("expectedWorkRecordAuthors").asInt());
+        assertEquals(0,ok(request(HttpMethod.GET,"/admin/overview?year=2025&month=1",admin,null)).path("expectedWorkRecordAuthors").asInt());
+    }
+
+    @Test void submittedLegacySnapshotAndExportStayFrozenAfterQualificationAndTasksChange() throws Exception {
+        scopeFixture(); String owner=login(OWNER),admin=login(ADMIN);
+        long id=create(owner,1).path("record").path("recordId").asLong();
+        JsonNode submitted=ok(request(HttpMethod.POST,"/work-records/"+id+"/submit",owner,narrative(0,"Frozen narrative")));
+        var legacy=(com.fasterxml.jackson.databind.node.ObjectNode)submitted.path("statistics").deepCopy();
+        legacy.put("schemaVersion",1); legacy.put("notice","历史冻结口径：只统计原本人任务"); legacy.put("totalTasks",1);
+        jdbc.update("UPDATE biz_work_record_snapshot SET statistics_json=? WHERE record_id=?",json.writeValueAsString(legacy),id);
+        String before=jdbc.queryForObject("SELECT statistics_json FROM biz_work_record_snapshot WHERE record_id=?",String.class,id);
+        String wordBefore=wordText(export(admin,Map.of("ids",List.of(id))).getBody());
+        jdbc.update("UPDATE biz_task SET is_delete=1");jdbc.update("UPDATE biz_level4_task SET is_delete=1");
+        assertEquals(legacy,ok(request(HttpMethod.GET,"/work-records/"+id,owner,null)).path("statistics"));
+        assertEquals(wordBefore,wordText(export(admin,Map.of("ids",List.of(id))).getBody()));
+        assertEquals(before,jdbc.queryForObject("SELECT statistics_json FROM biz_work_record_snapshot WHERE record_id=?",String.class,id));
     }
 
     @Test void listFiltersPaginationAndNoBusinessWritesFromStatistics() throws Exception {

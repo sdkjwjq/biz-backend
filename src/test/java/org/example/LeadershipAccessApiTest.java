@@ -126,7 +126,10 @@ class LeadershipAccessApiTest {
         assertEquals(2,body(get("/admin/users/990003/leadership",admin)).path("version").asInt());
         assertEquals(3,jdbc.queryForObject("SELECT COUNT(*) FROM sys_admin_operation_log WHERE action='LEADERSHIP_ACCESS'",Integer.class));
     }
-    @Test void workRecordsRemainReadOnlyAndDepartmentTrendsNeverUseSchoolHistory() throws Exception {
+    @Test void leadershipAloneDoesNotGrantWorkRecordFillingAndDepartmentTrendsNeverUseSchoolHistory() throws Exception {
+        assertTrue(body(get("/work-records/capabilities",department)).path("canCreate").asBoolean(),"所属归口部门有任务时，可按部门身份填报");
+        jdbc.update("INSERT INTO sys_dept(dept_id,dept_name,status,is_delete) VALUES(991003,'无任务部门','0',0)");
+        jdbc.update("UPDATE sys_user SET dept_id=991003 WHERE user_id=990003");
         JsonNode capabilities=body(get("/work-records/capabilities",department));
         assertTrue(capabilities.path("canViewAll").asBoolean()); assertTrue(capabilities.path("canExport").asBoolean()); assertFalse(capabilities.path("canCreate").asBoolean());
         assertEquals(403,request(HttpMethod.POST,"/work-records",department,Map.of("year",2026,"month",1)).getStatusCode().value());

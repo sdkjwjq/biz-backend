@@ -243,7 +243,7 @@ class AdminTestApiTest {
     }
     @Test void delegatedWorkRecordKeepsOwnerScopeNameAndSubmittedImmutability() throws Exception {
         String admin=login(ADMIN),owner=login(OWNER);
-        failed(request(HttpMethod.POST,"/work-records",admin,Map.of("year",2026,"month",1)));
+        assertTrue(success(request(HttpMethod.GET,"/work-records/capabilities",admin,null)).path("canCreate").asBoolean()); // 正常管理员也可按所属归口部门填报。
         JsonNode record=success(request(HttpMethod.POST,"/work-records",owner,Map.of("year",2026,"month",1)));
         long id=record.path("record").path("recordId").asLong();
         assertEquals(404,request(HttpMethod.GET,"/work-records/"+id,admin,null).getStatusCode().value());
@@ -257,6 +257,28 @@ class AdminTestApiTest {
         assertEquals(409,testing(HttpMethod.POST,"/work-records/"+id+"/save",admin,Map.of("version",1,"entries",List.of())).getStatusCode().value());
         assertEquals(1,count("sys_admin_operation_log"));
         assertTrue(success(testing(HttpMethod.POST,"/work-records",admin,Map.of("year",2026,"month",1))).path("statistics").path("notice").asText().startsWith("管理员测试统计"));
+    }
+    @Test void delegatedDepartmentWorkRecordKeepsOriginalDepartmentScopeDuringAdminTest() throws Exception {
+        jdbc.update("INSERT INTO sys_dept(dept_id,dept_name,status,is_delete) VALUES(920002,'Other department','0',0)");
+        jdbc.update("INSERT INTO biz_task(task_id,project_id,parent_id,phase,task_code,task_name,level,leader_id,principal_id,dept_id,target_value,current_value,data_type,status,is_delete) VALUES(900100,1,0,2026,'R2','Other reform',1,?,910003,920002,10,0,'1','1',0),(900101,1,900100,2026,'D2','Other directory',2,?,910003,920002,10,0,'1','1',0),(900110,1,900101,2026,'T2','Other task',3,?,910003,920002,10,0,'1','1',0)",OWNER,OWNER,OWNER);
+        String admin=login(ADMIN),department=login(VIEWER);
+        JsonNode draft=success(request(HttpMethod.POST,"/work-records",department,Map.of("year",2026,"month",1)));
+        assertEquals(1,draft.path("statistics").path("totalTasks").asInt());
+        long id=draft.path("record").path("recordId").asLong();String path="/work-records/"+id;
+        assertEquals(400,testing(HttpMethod.POST,path+"/submit",admin,Map.of("version",0,"entries",List.of(Map.of("reformTaskId",900100,"keyProgress","Outside original department")))).getStatusCode().value());
+        assertEquals(0,jdbc.queryForObject("SELECT version FROM biz_work_record WHERE record_id=?",Integer.class,id));
+        JsonNode saved=success(testing(HttpMethod.POST,path+"/submit",admin,Map.of("version",0,"entries",List.of(Map.of("reformTaskId",900000,"keyProgress","Delegated department report")))));
+        assertEquals(VIEWER,saved.path("record").path("ownerId").asLong());
+        assertEquals(1,saved.path("statistics").path("totalTasks").asInt());
+        assertTrue(saved.path("statistics").path("notice").asText().startsWith("归口部门统计"));
+        assertEquals(ADMIN,jdbc.queryForObject("SELECT operator_id FROM sys_admin_operation_log WHERE module='ADMIN_TEST' ORDER BY log_id DESC LIMIT 1",Long.class));
+        JsonNode otherDraft=success(request(HttpMethod.POST,"/work-records",department,Map.of("year",2026,"month",2)));
+        long draftId=otherDraft.path("record").path("recordId").asLong();
+        String snapshot=jdbc.queryForObject("SELECT statistics_json FROM biz_work_record_snapshot WHERE record_id=?",String.class,draftId);
+        jdbc.update("UPDATE sys_user SET status='0' WHERE user_id=?",VIEWER);
+        assertEquals(401,testing(HttpMethod.POST,"/work-records/"+draftId+"/statistics/refresh",admin,Map.of("version",0)).getStatusCode().value());
+        assertEquals(snapshot,jdbc.queryForObject("SELECT statistics_json FROM biz_work_record_snapshot WHERE record_id=?",String.class,draftId));
+        assertEquals(0,jdbc.queryForObject("SELECT version FROM biz_work_record WHERE record_id=?",Integer.class,draftId));
     }
     @Test void delegatedCoreDraftAndReviewUseActualOperatorAndKeepStages() throws Exception {
         String owner=login(OWNER),admin=login(ADMIN);

@@ -115,8 +115,12 @@ const fs = require('node:fs/promises'), path = require('node:path'), assert = re
     await page.getByRole('button', { name: '退出管理员测试', exact: true }).click();
     await page.getByRole('dialog', { name: '退出管理员测试', exact: true }).getByRole('button', { name: '确认退出', exact: true }).click();
     await expect(page.getByRole('button', { name: '管理员测试', exact: true })).toBeVisible(); await expect(page.locator('.admin-test-banner')).toHaveCount(0);
-    await page.goto(state.frontend + '/home/work-records'); await expect(page.getByRole('button', { name: '新建纪实', exact: true })).toHaveCount(0);
+    await page.goto(state.frontend + '/home/works?taskId=930002');
+    await expect(page.getByRole('dialog', { name: '任务详情与反馈' }).getByRole('button', { name: '提交反馈', exact: true })).toBeDisabled();
+    await page.getByRole('dialog', { name: '任务详情与反馈' }).getByRole('button', { name: /close/i }).click();
     done('exit-clears-mode-and-restores-original-capabilities');
+    // 离开任务深链接，避免重新启用后的刷新按 taskId 再打开抽屉，遮挡退出登录入口。
+    await page.goto(state.frontend + '/home/works');
     await page.getByRole('button', { name: '管理员测试', exact: true }).click();
     dialog = page.getByRole('dialog', { name: '启用管理员测试', exact: true });
     await dialog.locator('textarea').fill('验证退出登录清理测试状态'); await dialog.getByRole('button', { name: '确认启用并刷新' }).click();
