@@ -182,9 +182,10 @@ public class AdminManagementService {
         body.setUserId(userId);
         validateUser(body, false);
         requireReason(body.getReason());
-        requireActiveDept(body.getDeptId());
         SysUser before = mapper.userForUpdate(userId);
         if (before == null) notFound("用户不存在");
+        if(body.getDeptId()!=null)requireActiveDept(body.getDeptId());
+        else if(before.getDeptId()!=null||!permissions.policy(userId).roles().contains("EXPERT"))bad("请选择正常状态的部门");
         checkVersion(before.getUpdateTime(), body.getExpectedUpdateTime());
         if (mapper.duplicateUserName(trim(body.getUserName()), userId) > 0) bad("账号名称已存在");
         if ("0".equals(before.getRole()) && "1".equals(before.getStatus()) && !"0".equals(body.getRole())
@@ -373,7 +374,7 @@ public class AdminManagementService {
         String nickName = trim(body.getNickName());
         if (userName.isEmpty() || userName.length() > 100) bad("账号名称不能为空且不能超过100字");
         if (nickName.isEmpty() || nickName.length() > 100) bad("姓名不能为空且不能超过100字");
-        if (body.getDeptId() == null) bad("请选择部门");
+        if (creating && body.getDeptId() == null) bad("请选择部门");
         if (!("0".equals(body.getRole()) || "1".equals(body.getRole()) || "2".equals(body.getRole()))) bad("账号角色不正确");
         String email = trim(body.getEmail());
         if (email.length() > 50 || (!email.isEmpty() && (!email.contains("@") || email.startsWith("@") || email.endsWith("@")))) {

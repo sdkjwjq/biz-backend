@@ -140,7 +140,8 @@ public class WorkRecordService {
             snapshot = json.readValue(saved, Statistics.class);
         } catch (JsonProcessingException e) { throw new IllegalStateException("Invalid work record snapshot", e); }
         boolean editable = (userId.equals(record.getOwnerId()) || AdminTestContext.enabled(userId)) && Integer.valueOf(0).equals(record.getStatus())
-                && fillableYears(user(userId)).contains(record.getRecordYear());
+                && fillableYears(user(userId)).contains(record.getRecordYear())
+                && (!permissions.configured(userId)||permissions.allowed(userId,"records.fill"));
         return new Detail(record, snapshot, editable, records.entries(record.getRecordId()));
     }
 

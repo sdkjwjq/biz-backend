@@ -96,4 +96,12 @@ class PermissionApiTest {
         jdbc.update("INSERT INTO rel_task_performance(task_id,perf_id,year_id) VALUES(3,11,21),(4,12,22),(5,11,23)");
         var counts=body(get("/manage/performance-relation/counts?year=2026",expert));assertEquals(1,counts.size());assertEquals(1,counts.path("11").asInt());assertEquals(0,body(get("/manage/performance-relation/counts?year=2025",expert)).size());
     }
+    @Test void externalExpertProfileCanBeEditedWithoutAssigningSchoolDepartment()throws Exception{
+        assertEquals(200,call(HttpMethod.POST,"/admin/permissions/experts",admin,Map.of("userId",90909,"nickName","合成外部专家")).getStatusCode().value());
+        var row=body(get("/admin/users?keyword=90909",admin)).path("items").get(0);Map<String,Object> update=new LinkedHashMap<>();update.put("deptId",null);update.put("userName",row.get("userName").asText());update.put("nickName","修订后的合成专家");update.put("email","expert@example.invalid");update.put("role","1");update.put("expectedUpdateTime",row.get("updateTime").asText());update.put("reason","隔离维护专家资料");var result=call(HttpMethod.PUT,"/admin/users/90909",admin,update);assertEquals(200,result.getStatusCode().value(),result.getBody());assertNull(jdbc.queryForObject("SELECT dept_id FROM sys_user WHERE user_id=90909",Long.class));assertEquals("CUSTOM",jdbc.queryForObject("SELECT access_mode FROM sys_user_permission WHERE user_id=90909",String.class));
+    }
+    @Test void fillCapabilitiesAndDraftEditabilityFollowEffectivePermissions()throws Exception{
+        var created=body(call(HttpMethod.POST,"/work-records",owner,Map.of("year",2026,"month",9)));long record=created.path("record").path("recordId").asLong();assertTrue(record>0,created.toString());
+        configure(90101,List.of("EXPERT","RECORD_VIEWER"),Map.of(),Map.of());assertFalse(body(get("/core-indicators/capabilities",owner)).path("canFill").asBoolean());assertFalse(body(get("/work-records/capabilities",owner)).path("canCreate").asBoolean());assertFalse(body(get("/work-records/"+record,owner)).path("editable").asBoolean());
+    }
 }
