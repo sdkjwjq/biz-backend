@@ -11,6 +11,7 @@ import org.example.entity.vo.AchievementAuditVO;
 import org.example.mapper.AchievementMapper;
 import org.example.mapper.SysMapper;
 import org.example.utils.AchievementPermissionUtil;
+import org.example.utils.AdminTestContext;
 import org.example.utils.BusinessLogUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -139,7 +140,14 @@ public class AchievementService {
         validateAchievement(achievement);
         Date now = new Date();
         achievement.setCreateBy(createBy);
-        achievement.setDeptId(user.getDeptId());
+        if (AdminTestContext.enabled(createBy) && achievement.getDeptId() != null) {
+            SysDept target = sysMapper.getDeptById(achievement.getDeptId());
+            if (!AchievementPermissionUtil.isActiveDept(target) || "1".equals(target.getStatus())) {
+                throw new RuntimeException("报送部门不存在或已停用，请重新选择");
+            }
+        } else {
+            achievement.setDeptId(user.getDeptId());
+        }
         achievement.setAuditStatus(10);
         achievement.setCurrentHandlerId(ADMIN_ID);
         achievement.setIsDelete(0); // 默认未删除
@@ -172,6 +180,7 @@ public class AchievementService {
                     "achName", achievement.getAchName(),
                     "subId", submission.getSubId(),
                     "nextHandlerId", ADMIN_ID);
+            AdminTestContext.record(createBy, "ACHIEVEMENT", achId, achievement.getAchName(), "新增并提交");
             return achId;
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -416,6 +425,7 @@ public class AchievementService {
 
     private void createAchievementAuditLog(Long subId, Long operatorId, String actionType,
                                            Integer preStatus, Integer postStatus, String comment) {
+        AdminTestContext.record(operatorId, "ACHIEVEMENT_AUDIT", subId, "成果审核单 " + subId, actionType);
         BizAchievementAuditLog log = new BizAchievementAuditLog();
         log.setSubId(subId);
         log.setOperatorId(operatorId);

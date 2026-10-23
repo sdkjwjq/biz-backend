@@ -73,7 +73,7 @@ public interface WorkRecordMapper {
     int advanceVersion(@Param("id") Long id, @Param("ownerId") Long ownerId,
                        @Param("version") long version, @Param("time") Date time);
 
-    String VISIBLE = " WHERE delete_marker=0 AND (owner_id=#{userId} OR (status=1 AND #{viewAll}=true)) "
+    String VISIBLE = " WHERE delete_marker=0 AND (owner_id=#{userId} OR #{adminTest}=true OR (status=1 AND #{viewAll}=true)) "
             + "<if test='year != null'>AND record_year=#{year} </if>"
             + "<if test='month != null'>AND record_month=#{month} </if>"
             + "<if test='ownerId != null'>AND owner_id=#{ownerId} </if>"
@@ -81,13 +81,13 @@ public interface WorkRecordMapper {
 
     @Select("<script>SELECT * FROM biz_work_record" + VISIBLE
             + "ORDER BY record_year DESC,record_month DESC,owner_id,record_id LIMIT #{limit} OFFSET #{offset}</script>")
-    List<BizWorkRecord> list(@Param("userId") Long userId, @Param("viewAll") boolean viewAll,
+    List<BizWorkRecord> list(@Param("userId") Long userId, @Param("viewAll") boolean viewAll, @Param("adminTest") boolean adminTest,
                             @Param("year") Integer year, @Param("month") Integer month,
                             @Param("ownerId") Long ownerId, @Param("status") Integer status,
                             @Param("limit") int limit, @Param("offset") long offset);
 
     @Select("<script>SELECT COUNT(*) FROM biz_work_record" + VISIBLE + "</script>")
-    long count(@Param("userId") Long userId, @Param("viewAll") boolean viewAll,
+    long count(@Param("userId") Long userId, @Param("viewAll") boolean viewAll, @Param("adminTest") boolean adminTest,
                @Param("year") Integer year, @Param("month") Integer month,
                @Param("ownerId") Long ownerId, @Param("status") Integer status);
 
@@ -98,8 +98,8 @@ public interface WorkRecordMapper {
     long ownRecords(Long userId);
 
     @Select("SELECT owner_id,MAX(owner_name) owner_name FROM biz_work_record "
-            + "WHERE delete_marker=0 AND (owner_id=#{userId} OR (status=1 AND #{viewAll}=true)) GROUP BY owner_id ORDER BY owner_id")
-    List<WorkRecordVO.Author> authors(@Param("userId") Long userId, @Param("viewAll") boolean viewAll);
+            + "WHERE delete_marker=0 AND (owner_id=#{userId} OR #{adminTest}=true OR (status=1 AND #{viewAll}=true)) GROUP BY owner_id ORDER BY owner_id")
+    List<WorkRecordVO.Author> authors(@Param("userId") Long userId, @Param("viewAll") boolean viewAll, @Param("adminTest") boolean adminTest);
 
     @Select("SELECT record_id,reform_task_id,reform_task_name,sort_order,key_progress,stage_results,typical_practices "
             + "FROM biz_work_record_entry WHERE record_id=#{id} ORDER BY sort_order,entry_id")

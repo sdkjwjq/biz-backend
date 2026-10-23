@@ -1,5 +1,7 @@
 package org.example.service;
 
+import org.example.utils.AdminTestContext;
+
 import org.example.entity.BizPerformance;
 import org.example.entity.BizPerformanceAuditLog;
 import org.example.entity.BizPerformanceAuditSnapshot;
@@ -710,7 +712,7 @@ public class PerformanceService {
     }
 
     public Object getTodoPerformanceAudits(Long userId) {
-        return toPerformanceAuditVOs(performanceMapper.getTodoPerformanceSubmissions(userId));
+        return toPerformanceAuditVOs(AdminTestContext.enabled(userId) ? performanceMapper.getAllPendingPerformanceSubmissions() : performanceMapper.getTodoPerformanceSubmissions(userId));
     }
 
     public Object getPerformanceAuditRecords(Long userId) {
@@ -782,6 +784,7 @@ public class PerformanceService {
 
     private void createPerformanceAuditLog(Long subId, Long operatorId, String actionType,
                                            Integer preStatus, Integer postStatus, String comment) {
+        AdminTestContext.record(operatorId, "PERFORMANCE_AUDIT", subId, "绩效审核单 " + subId, actionType);
         BizPerformanceAuditLog log = new BizPerformanceAuditLog();
         log.setSubId(subId);
         log.setOperatorId(operatorId);

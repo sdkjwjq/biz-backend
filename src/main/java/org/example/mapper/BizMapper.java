@@ -349,6 +349,9 @@ void updateLevel4Task(BizLevel4Task task);
             "ORDER BY submit_time DESC, sub_id DESC")
     List<BizMaterialSubmission> getTodoAudits(@Param("userId") Long userId);
 
+    @Select("SELECT s.* FROM biz_material_submission s JOIN biz_task t ON t.task_id=s.task_id AND COALESCE(t.is_delete,0)=0 WHERE s.is_delete=0 AND s.flow_status IN(10,20,30) AND s.current_handler_id IS NOT NULL ORDER BY s.submit_time DESC,s.sub_id DESC")
+    List<BizMaterialSubmission> getAdminTestPendingAudits();
+
     /**
      * 按 task_id 获取该任务全部审批单（用于任务详情抽屉展示完整流程）
      * @param taskId 任务ID

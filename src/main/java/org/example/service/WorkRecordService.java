@@ -1,5 +1,7 @@
 package org.example.service;
 
+import org.example.utils.AdminTestContext;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -48,11 +50,11 @@ public class WorkRecordService {
     }
 
     private boolean privilegedFiller(SysUser user) {
-        return false; // 填报与统计仅按实际三级、四级责任关系，不因角色扩大范围。
+        return AdminTestContext.enabled(user.getUserId()); // 仅管理员本人测试使用全校范围，代填他人仍使用原负责人范围。
     }
 
     private List<Integer> fillableYears(SysUser user) {
-        return records.fillableYears(user.getUserId());
+        return privilegedFiller(user) ? List.of(2025, 2026, 2027, 2028, 2029) : records.fillableYears(user.getUserId());
     }
 
     public Capabilities capabilities(Long userId) {
@@ -110,6 +112,7 @@ public class WorkRecordService {
         // 唯一键并发命中时使用已存在记录，不覆盖另一个窗口的正文、版本和快照。
         if (records.lockSnapshot(stored.getRecordId()) == null) saveSnapshot(stored, statistics.calculate(userId, year, month, privilegedFiller(owner)));
         BusinessLogUtil.info("工作纪实新建", "userId", userId, "recordId", stored.getRecordId());
+        AdminTestContext.record(userId, "WORK_RECORD", stored.getRecordId(), stored.getRecordYear() + "年" + stored.getRecordMonth() + "月工作纪实（" + stored.getOwnerName() + "）", "新建草稿");
         return buildDetail(userId, stored, records.lockSnapshot(stored.getRecordId()));
     }
 
@@ -118,7 +121,7 @@ public class WorkRecordService {
         user(userId);
         BizWorkRecord record = records.byId(id);
         if (record == null || !(userId.equals(record.getOwnerId())
-                || (Integer.valueOf(1).equals(record.getStatus()) && capabilities(userId).canViewAll()))) {
+                || AdminTestContext.enabled(userId) || (Integer.valueOf(1).equals(record.getStatus()) && capabilities(userId).canViewAll()))) {
             throw new WorkRecordException(404, "纪实不存在或无权访问");
         }
         return buildDetail(userId, record);
@@ -134,7 +137,7 @@ public class WorkRecordService {
             if (saved == null) throw new IllegalStateException("Missing work record snapshot");
             snapshot = json.readValue(saved, Statistics.class);
         } catch (JsonProcessingException e) { throw new IllegalStateException("Invalid work record snapshot", e); }
-        boolean editable = userId.equals(record.getOwnerId()) && Integer.valueOf(0).equals(record.getStatus())
+        boolean editable = (userId.equals(record.getOwnerId()) || AdminTestContext.enabled(userId)) && Integer.valueOf(0).equals(record.getStatus())
                 && fillableYears(user(userId)).contains(record.getRecordYear());
         return new Detail(record, snapshot, editable, records.entries(record.getRecordId()));
     }
@@ -143,12 +146,12 @@ public class WorkRecordService {
     public Detail refresh(Long userId, Long id, long version) {
         SysUser filler = user(userId);
         BizWorkRecord record = records.lock(id);
-        if (record == null || !userId.equals(record.getOwnerId())) throw new WorkRecordException(404, "纪实不存在或无权访问");
+        if (record == null || (!userId.equals(record.getOwnerId()) && !AdminTestContext.enabled(userId))) throw new WorkRecordException(404, "纪实不存在或无权访问");
         if (!Integer.valueOf(0).equals(record.getStatus())) throw new WorkRecordException(409, "已提交纪实不可修改");
         requireFiller(filler, record.getRecordYear());
         if (version != record.getVersion()) throw new WorkRecordException(409, "纪实已在其它窗口更新，请刷新后重试");
-        Statistics result = statistics.calculate(userId, record.getRecordYear(), record.getRecordMonth(), privilegedFiller(filler));
-        if (records.advanceVersion(id, userId, version, Date.from(clock.instant())) != 1) throw new WorkRecordException(409, "纪实版本已变更，请刷新后重试");
+        Statistics result = statistics.calculate(record.getOwnerId(), record.getRecordYear(), record.getRecordMonth(), privilegedFiller(user(record.getOwnerId())));
+        if (records.advanceVersion(id, record.getOwnerId(), version, Date.from(clock.instant())) != 1) throw new WorkRecordException(409, "纪实版本已变更，请刷新后重试");
         saveSnapshot(record, result);
         BusinessLogUtil.info("工作纪实刷新统计", "userId", userId, "recordId", id, "version", version + 1);
         return buildDetail(userId, records.lock(id));
@@ -160,7 +163,7 @@ public class WorkRecordService {
     }
 
     public List<Author> authors(Long userId) {
-        return records.authors(userId, capabilities(userId).canViewAll());
+        return records.authors(userId, capabilities(userId).canViewAll(), AdminTestContext.enabled(userId));
     }
 
     /** 一次核验全部所选记录；任何记录无效都拒绝整批，禁止静默跳过。 */
@@ -185,12 +188,13 @@ public class WorkRecordService {
     public Detail save(Long userId, Long id, JsonNode body, boolean submit) {
         SysUser owner = user(userId);
         BizWorkRecord record = records.lock(id);
-        if (record == null || !userId.equals(record.getOwnerId())) throw new WorkRecordException(404, "纪实不存在或无权访问");
+        if (record == null || (!userId.equals(record.getOwnerId()) && !AdminTestContext.enabled(userId))) throw new WorkRecordException(404, "纪实不存在或无权访问");
         if (!Integer.valueOf(0).equals(record.getStatus())) throw new WorkRecordException(409, "已提交纪实不可修改");
         requireFiller(owner, record.getRecordYear());
         long version = version(body);
         if (version != record.getVersion()) throw new WorkRecordException(409, "纪实已在其它窗口更新，请重新加载后再操作；当前未保存内容仍保留");
-        Statistics current = statistics.calculate(userId, record.getRecordYear(), record.getRecordMonth(), privilegedFiller(owner));
+        owner = user(record.getOwnerId());
+        Statistics current = statistics.calculate(record.getOwnerId(), record.getRecordYear(), record.getRecordMonth(), privilegedFiller(owner));
         Map<Long, ReformTask> allowed = current.reformTasks().stream().collect(Collectors.toMap(ReformTask::taskId, value -> value));
         JsonNode items = body.get("entries");
         if (items == null || !items.isArray()) throw new WorkRecordException(400, "请提供改革任务填报项目");
@@ -224,6 +228,7 @@ public class WorkRecordService {
         for (Entry entry : entries) records.insertEntry(entry);
         if (submit) saveSnapshot(record, current);
         BusinessLogUtil.info(submit ? "工作纪实提交" : "工作纪实保存草稿", "userId", userId, "recordId", id, "version", version+1);
+        AdminTestContext.record(userId, "WORK_RECORD", id, record.getRecordYear() + "年" + record.getRecordMonth() + "月工作纪实（" + record.getOwnerName() + "）", submit ? "提交" : "保存草稿");
         return buildDetail(userId, records.lock(id));
     }
 
@@ -254,8 +259,8 @@ public class WorkRecordService {
         if ((year != null && (year < 2025 || year > 2029)) || (month != null && (month < 1 || month > 12))
                 || (status != null && status != 0 && status != 1) || (ownerId != null && ownerId <= 0)
                 || page < 1 || pageSize < 1 || pageSize > 100) throw new WorkRecordException(400, "列表筛选或分页参数不正确");
-        long total = records.count(userId, access.canViewAll(), year, month, ownerId, status);
-        List<BizWorkRecord> rows = records.list(userId, access.canViewAll(), year, month, ownerId, status,
+        long total = records.count(userId, access.canViewAll(), AdminTestContext.enabled(userId), year, month, ownerId, status);
+        List<BizWorkRecord> rows = records.list(userId, access.canViewAll(), AdminTestContext.enabled(userId), year, month, ownerId, status,
                 pageSize, (long) (page - 1) * pageSize);
         return new Page(total, page, pageSize, rows);
     }

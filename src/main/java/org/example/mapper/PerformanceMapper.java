@@ -130,6 +130,9 @@ public interface PerformanceMapper {
             "ORDER BY submit_time DESC")
     List<BizPerformanceSubmission> getTodoPerformanceSubmissions(@Param("userId") Long userId);
 
+    @Select("SELECT s.* FROM biz_performance_submission s JOIN biz_performance p ON p.perf_id=s.perf_id AND COALESCE(p.is_delete,0)=0 WHERE s.is_delete=0 AND s.flow_status IN(10,20) ORDER BY s.submit_time DESC")
+    List<BizPerformanceSubmission> getAllPendingPerformanceSubmissions();
+
     @Select("SELECT * FROM biz_performance_submission " +
             "WHERE (submit_by = #{userId} OR current_handler_id = #{userId}) AND is_delete = 0 " +
             "AND (flow_status = 30 OR flow_status < 0) ORDER BY submit_time DESC")
