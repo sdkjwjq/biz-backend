@@ -14,7 +14,8 @@ public interface TokenBlacklistMapper {
      * 添加Token到黑名单
      * @param tokenBlacklist Token黑名单实体
      */
-    @Insert("INSERT INTO token_blacklist(token, expiry_time) VALUES(#{token}, #{expiryTime})")
+    // JWTs can exceed the legacy varchar limit; persist a fixed 64-character digest.
+    @Insert("INSERT INTO token_blacklist(token, expiry_time) VALUES(SHA2(#{token},256), #{expiryTime})")
     void addToBlacklist(TokenBlacklist tokenBlacklist);
 
     /**
@@ -22,7 +23,8 @@ public interface TokenBlacklistMapper {
      * @param token Token字符串
      * @return Token黑名单实体
      */
-    @Select("SELECT * FROM token_blacklist WHERE token = #{token}")
+    // Keep accepting unexpired plaintext entries written by previous application versions.
+    @Select("SELECT * FROM token_blacklist WHERE token = #{token} OR token = SHA2(#{token},256) LIMIT 1")
     TokenBlacklist findByToken(String token);
 
     /**
