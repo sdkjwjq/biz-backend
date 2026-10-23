@@ -292,6 +292,53 @@ class ReviewBatchRegressionApiTest {
         }
     }
 
+    @Test
+    void financeAndOfficeCanImportBudgetWithoutAdministratorRole() throws Exception {
+        jdbc.update("INSERT INTO sys_dept(dept_id,dept_name,status,is_delete) VALUES(104,'Synthetic finance','0',0),(100,'Synthetic office','0',0)");
+        String token=login(USER); Path file=budgetWorkbook("finance",123.45);
+        try {
+            for(long dept:List.of(104L,100L)) {
+                jdbc.update("UPDATE sys_user SET dept_id=? WHERE user_id=?",dept,USER);
+                JsonNode access=body(request(HttpMethod.GET,"/system/access",token,null));
+                assertTrue(access.path("canViewBudget").asBoolean());assertTrue(access.path("canFillBudget").asBoolean());assertFalse(access.path("isAdmin").asBoolean());
+                assertTrue(body(uploadBudget(token,2026,9,file)).has("sheet"));
+                JsonNode versions=body(request(HttpMethod.GET,"/budget/versions?year=2026&month=9",token,null));assertTrue(versions.isArray());
+                long version=versions.get(0).path("versionId").asLong();
+                assertEquals(USER,jdbc.queryForObject("SELECT created_by FROM biz_budget_import_version WHERE version_id=?",Long.class,version));
+                assertTrue(body(request(HttpMethod.GET,"/budget/versions/"+version,token,null)).has("budget"));
+                assertEquals(500,body(request(HttpMethod.POST,"/budget/lock?year=2026&month=9&locked=false",token,null)).path("code").asInt());
+            }
+            int versions=jdbc.queryForObject("SELECT COUNT(*) FROM biz_budget_import_version",Integer.class);
+            jdbc.update("UPDATE sys_dept SET status='1' WHERE dept_id=100");
+            assertFalse(body(request(HttpMethod.GET,"/system/access",token,null)).path("canFillBudget").asBoolean());
+            assertEquals(500,body(uploadBudget(token,2026,9,file)).path("code").asInt());
+            jdbc.update("UPDATE sys_user SET dept_id=920001 WHERE user_id=?",USER);
+            assertFalse(body(request(HttpMethod.GET,"/system/access",token,null)).path("canFillBudget").asBoolean());
+            assertEquals(500,body(uploadBudget(token,2026,9,file)).path("code").asInt());
+            assertEquals(versions,jdbc.queryForObject("SELECT COUNT(*) FROM biz_budget_import_version",Integer.class));
+        } finally { Files.deleteIfExists(file); }
+    }
+
+    @Test
+    void rejectedAchievementsStayInListWithLatestReasonAndOtherStatusesIgnoreOldReason() throws Exception {
+        jdbc.update("UPDATE sys_user SET user_id=1910001 WHERE user_id=?",USER);
+        String uploader=login(1910001),admin=login(ADMIN);
+        assertSuccess(request(HttpMethod.POST,"/achievement/add",uploader,achievementQuantityPayload()),"添加成功");
+        long id=jdbc.queryForObject("SELECT MAX(ach_id) FROM biz_achievement",Long.class),sub=jdbc.queryForObject("SELECT MAX(sub_id) FROM biz_achievement_submission",Long.class);
+        assertSuccess(request(HttpMethod.POST,"/achievement/audit",admin,Map.of("sub_id",sub,"is_pass",false,"content","请补充上级发文依据")),"已退回");
+        for(String token:List.of(admin,uploader)) {
+            JsonNode list=body(request(HttpMethod.GET,"/achievement/",token,null));
+            JsonNode row=java.util.stream.StreamSupport.stream(list.spliterator(),false).filter(item->item.path("achId").asLong()==id).findFirst().orElseThrow();
+            assertEquals(-10,row.path("auditStatus").asInt());assertEquals("请补充上级发文依据",row.path("rejectionReason").asText());
+        }
+        assertSuccess(request(HttpMethod.POST,"/achievement/update/"+id,uploader,achievementQuantityPayload()),"修改成功");
+        assertEquals("请补充上级发文依据",body(request(HttpMethod.GET,"/achievement/"+id,uploader,null)).path("rejectionReason").asText(),"修改资料不改变原审核状态与驳回原因");
+        // 只读投影边界夹具：非驳回状态不返回历史驳回意见，不改变现有重提流程。
+        jdbc.update("UPDATE biz_achievement SET audit_status=30 WHERE ach_id=?",id);
+        assertTrue(body(request(HttpMethod.GET,"/achievement/"+id,uploader,null)).path("rejectionReason").isNull());
+        assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM biz_achievement_audit_log WHERE post_status<0",Integer.class));
+    }
+
     private ResponseEntity<String> uploadBudget(String token, int year, int month, Path file) {
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
         body.add("year", String.valueOf(year));

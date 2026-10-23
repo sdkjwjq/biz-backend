@@ -25,7 +25,7 @@ SPEC.loader.exec_module(RUNNER)
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--fixture", choices=["base", "business", "review", "navigation", "convenience", "convenience2", "continuous", "customer", "work-records", "task-stats", "ownership-transfer", "ownership-transfer-scale", "performance-relation", "level4-equal-weight", "responsibility-filters", "leadership", "core", "budgettrends", "admintest", "work-record-scope"], default="base")
+    parser.add_argument("--fixture", choices=["base", "business", "review", "navigation", "convenience", "convenience2", "continuous", "customer", "work-records", "task-stats", "ownership-transfer", "ownership-transfer-scale", "performance-relation", "level4-equal-weight", "responsibility-filters", "leadership", "core", "budgettrends", "admintest", "work-record-scope", "presentation"], default="base")
     parser.add_argument("--frontend-port", type=int, default=15173)
     args = parser.parse_args()
     if not 1024 <= args.frontend_port <= 65535:
@@ -71,13 +71,17 @@ def main():
         sql("UPDATE sys_user SET force_password_change=0", schema)
         if args.fixture == "work-record-scope":
             sql((ROOT / "scripts/ui-audit/fixture-work-record-scope.sql").read_text(encoding="utf-8"), schema)
-        if args.fixture in ("core", "budgettrends", "admintest"):
+        if args.fixture in ("core", "budgettrends", "admintest", "presentation"):
             sql((ROOT / "scripts/ui-audit/fixture-core.sql").read_text(encoding="utf-8"), schema)
         if args.fixture == "admintest":
             sql("UPDATE biz_level4_task SET target_value=10,current_value=0,data_type='1',progress=0;", schema)
             sql("INSERT INTO sys_user(user_id,dept_id,user_name,nick_name,password,role,status,is_delete,force_password_change) VALUES(990009,920001,'test_admin','测试管理员','review-fixture-password','0','1',0,0);", schema)
         if args.fixture == "budgettrends":
             sql((ROOT / "scripts/ui-audit/fixture-budget-trends.sql").read_text(encoding="utf-8"), schema)
+        if args.fixture == "presentation":
+            sql((ROOT / "scripts/ui-audit/fixture-budget-trends.sql").read_text(encoding="utf-8"), schema)
+            sql((ROOT / "scripts/ui-audit/fixture-presentation.sql").read_text(encoding="utf-8"), schema)
+            sql((ROOT / "data/migrations/2026-10-23-leadership-schoolwide.sql").read_text(encoding="utf-8"), schema)
         if args.fixture == "leadership":
             sql((ROOT / "scripts/ui-audit/fixture-leadership.sql").read_text(encoding="utf-8"), schema)
         if args.fixture == "work-records":

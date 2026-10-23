@@ -64,6 +64,37 @@ class LeadershipAccessApiTest {
         assertEquals(200, request(HttpMethod.PUT,"/admin/users/990002/leadership",admin,change("ALL",0,List.of())).getStatusCode().value());
         assertEquals(200, request(HttpMethod.PUT,"/admin/users/990003/leadership",admin,change("DEPARTMENTS",0,List.of(991001))).getStatusCode().value());
     }
+    private void leadershipMigration(String suffix) {
+        jdbc.execute((ConnectionCallback<Void>) connection -> {
+            try { org.springframework.jdbc.datasource.init.ScriptUtils.executeSqlScript(connection,new org.springframework.core.io.FileSystemResource("data/migrations/2026-10-23-leadership-schoolwide"+suffix+".sql")); }
+            catch(RuntimeException failure) { try(Statement statement=connection.createStatement()){statement.execute("ROLLBACK");} throw failure; }
+            return null;
+        });
+    }
+    @Test void schoolwideMigrationIncludesConfirmedLeaderAndIsIdempotentAndReversible() throws Exception {
+        jdbc.execute("DROP TABLE IF EXISTS bak_20261023_leadership_department");jdbc.execute("DROP TABLE IF EXISTS bak_20261023_leadership");
+        jdbc.update("INSERT INTO sys_user(user_id,dept_id,user_name,nick_name,password,role,status,is_delete,force_password_change) VALUES(111651,991001,'synthetic-zeng','Synthetic leader','LeaderTest123','2','1',0,0)");
+        String former=login(111651);assertEquals(0,body(get("/biz/tasks",former)).size());
+        leadershipMigration("");
+        assertTrue(body(get("/system/access",former)).path("isLeader").asBoolean());
+        assertEquals(4,body(get("/biz/tasks",former)).size());assertEquals(2,body(get("/performance",former)).size());
+        assertEquals(4,body(get("/biz/tasks",department)).size());
+        assertTrue(body(get("/admin/overview?year=2026&month=9",former)).path("readOnly").asBoolean());
+        assertEquals(403,get("/admin/users",former).getStatusCode().value());
+        assertFalse(body(get("/system/access",login(990004))).path("isLeader").asBoolean());
+        leadershipMigration("");assertEquals(2,jdbc.queryForObject("SELECT version FROM sys_leadership_access WHERE user_id=990003",Integer.class));
+        leadershipMigration("-rollback");
+        assertEquals(3,body(get("/biz/tasks",department)).size());assertFalse(body(get("/system/access",former)).path("isLeader").asBoolean());
+        assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM sys_leadership_department WHERE user_id=990003",Integer.class));
+    }
+    @Test void schoolwideMigrationDoesNotRepeatOverLaterAdministratorConfiguration() throws Exception {
+        jdbc.execute("DROP TABLE IF EXISTS bak_20261023_leadership_department");jdbc.execute("DROP TABLE IF EXISTS bak_20261023_leadership");
+        leadershipMigration("");
+        assertEquals(200,request(HttpMethod.PUT,"/admin/users/990003/leadership",admin,change("DEPARTMENTS",2,List.of(991002))).getStatusCode().value());
+        leadershipMigration("");assertEquals("DEPARTMENTS",body(get("/system/access",department)).path("leadershipScope").asText());
+        assertThrows(RuntimeException.class,()->leadershipMigration("-rollback"));
+        assertEquals(3,jdbc.queryForObject("SELECT version FROM sys_leadership_access WHERE user_id=990003",Integer.class));
+    }
     @Test void scopesApplyToListsDetailsAndStatistics() throws Exception {
         assertEquals(4, body(get("/biz/tasks",school)).size());
         JsonNode tasks=body(get("/biz/tasks",department)); assertEquals(3,tasks.size());
