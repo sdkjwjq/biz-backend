@@ -24,11 +24,16 @@ INSERT IGNORE INTO sys_user_permission(user_id,access_mode,permissions_json,scop
  SELECT user_id,'LEGACY','{}','{}' FROM sys_user WHERE COALESCE(is_delete,0)=0;
 CREATE TABLE IF NOT EXISTS biz_expert_review (
  review_id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY, expert_id bigint NOT NULL, task_id bigint NOT NULL,
- review_year int NOT NULL, task_level int NOT NULL, draft_text text NOT NULL,
+ review_year int NOT NULL, task_level int NOT NULL, draft_text text NOT NULL, draft_scope_json longtext DEFAULT NULL,
  current_revision_id bigint DEFAULT NULL, version bigint NOT NULL DEFAULT 0,
  create_time datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3), update_time datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
  UNIQUE KEY uk_expert_task(expert_id,task_id), KEY(task_id,review_year)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- 已在本地先行验证过首版结构时，仅补充草稿范围字段，不改写旧正文。
+SET @expert_draft_scope_ddl=IF(EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='biz_expert_review' AND column_name='draft_scope_json'),'SELECT 1','ALTER TABLE biz_expert_review ADD COLUMN draft_scope_json longtext DEFAULT NULL');
+PREPARE expert_draft_scope_statement FROM @expert_draft_scope_ddl;
+EXECUTE expert_draft_scope_statement;
+DEALLOCATE PREPARE expert_draft_scope_statement;
 CREATE TABLE IF NOT EXISTS biz_expert_review_revision (
  revision_id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY, review_id bigint NOT NULL, revision_no bigint NOT NULL,
  expert_id bigint NOT NULL, expert_name varchar(100) NOT NULL, task_id bigint NOT NULL,

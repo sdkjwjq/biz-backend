@@ -13,6 +13,11 @@ BEGIN
  IF NOT EXISTS(SELECT 1 FROM sys_permission_revision WHERE revision_id=1) THEN
   SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Permission revision lock missing';
  END IF;
+ IF NOT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='biz_expert_review' AND column_name='draft_scope_json')
+ OR EXISTS(SELECT 1 FROM biz_expert_review WHERE draft_scope_json IS NOT NULL AND NOT JSON_VALID(draft_scope_json))
+ OR EXISTS(SELECT 1 FROM biz_expert_review_revision WHERE NOT JSON_VALID(scope_json)) THEN
+  SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Expert review scope data missing or invalid';
+ END IF;
 END$$
 CALL check_permissions_20261024()$$
 DROP PROCEDURE check_permissions_20261024$$

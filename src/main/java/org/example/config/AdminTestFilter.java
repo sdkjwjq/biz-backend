@@ -51,7 +51,7 @@ public class AdminTestFilter extends OncePerRequestFilter {
             throws IOException, ServletException {
         String path = request.getRequestURI().substring(request.getContextPath().length());
         if (!"1".equals(request.getHeader("X-Admin-Test")) || "OPTIONS".equals(request.getMethod())
-                || !path.matches("/(system|biz|achievement|dashboard|performance|budget|scheduled|work-records|manage|admin|core-indicators)(/.*)?")
+                || !path.matches("/(system|biz|achievement|dashboard|performance|budget|scheduled|work-records|manage|admin|core-indicators|expert-reviews)(/.*)?")
                 || path.matches("/system/(login|password.*|logout)/?") || path.startsWith("/admin/permissions/")) {
             chain.doFilter(request, response); return;
         }
