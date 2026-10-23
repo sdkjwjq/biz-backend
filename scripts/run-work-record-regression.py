@@ -55,6 +55,7 @@ def main():
             "VALUES(999999,999999,'migration fixture',2026,1,'preserve me',NOW(),NOW())", schema)
         sql(deletion, schema)
         sql((ROOT / "scripts/work-records/002_work_record_delete_rollback.sql").read_bytes(), schema)
+        sql((ROOT / "data/migrations/2026-10-24-permissions-expert-reviews.sql").read_bytes(), schema)
         sql(deletion, schema)
         sql(deletion, schema)
         def scalar(statement):

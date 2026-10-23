@@ -37,6 +37,7 @@ import java.util.Objects;
 
 @Service
 public class AdminManagementService {
+    @org.springframework.beans.factory.annotation.Autowired private PermissionService permissions;
     private static final ZoneId ZONE = ZoneId.of("Asia/Shanghai");
     private final AdminManagementMapper mapper;
     private final SysMapper users;
@@ -65,11 +66,14 @@ public class AdminManagementService {
     }
 
     public Map<String, Object> overview(Integer year, Integer month, Long operatorId) {
-        if (!leadershipAccess.isLeader(operatorId)) requireAdmin(operatorId);
+        if (!leadershipAccess.isLeader(operatorId)&&!permissions.allowed(operatorId,"overview.read")) requireAdmin(operatorId);
         validateYearMonth(year, month);
         List<Map<String, Object>> taskIssues = mapper.taskIssues(year);
         List<Map<String, Object>> performanceIssues = mapper.performanceIssues(year);
-        if (leadershipAccess.restricted(operatorId)) {
+        if (permissions.configured(operatorId)) {
+            taskIssues=taskIssues.stream().filter(r->permissions.canRead(operatorId,"tasks",number(r.get("taskId")),year)).toList();
+            performanceIssues=performanceIssues.stream().filter(r->permissions.canRead(operatorId,"performance",number(r.get("perfId")),year)).toList();
+        } else if (leadershipAccess.restricted(operatorId)) {
             taskIssues = taskIssues.stream().filter(row -> leadershipAccess.canReadDepartment(operatorId, number(row.get("deptId")))).toList();
             performanceIssues = performanceIssues.stream().filter(row -> leadershipAccess.canReadDepartment(operatorId, number(row.get("deptId")))).toList();
         }
@@ -81,9 +85,9 @@ public class AdminManagementService {
         result.put("taskIssueCount", taskIssues.size());
         result.put("performanceIssueCount", performanceIssues.size());
         result.put("invalidPendingCount", leadershipAccess.restricted(operatorId) ? scopedPendingCount(operatorId) : mapper.invalidPendingCount());
-        result.put("budget", mapper.budgetSummary(year, month));
-        result.put("expectedWorkRecordAuthors", workRecordScopes.expectedAuthors(year));
-        result.put("submittedWorkRecordAuthors", mapper.submittedWorkRecordAuthors(year, month));
+        result.put("budget", !permissions.configured(operatorId)||permissions.budgetScope(operatorId,year)?mapper.budgetSummary(year, month):null);
+        result.put("expectedWorkRecordAuthors", !permissions.configured(operatorId)?workRecordScopes.expectedAuthors(year):workRecordScopes.eligibleAuthors(year).stream().filter(u->permissions.canRecordOwner(operatorId,u.getUserId(),u.getDeptId(),year)).count());
+        result.put("submittedWorkRecordAuthors", !permissions.configured(operatorId)?mapper.submittedWorkRecordAuthors(year, month):jdbc.queryForList("SELECT record_id FROM biz_work_record WHERE status=1 AND delete_marker=0 AND record_year=? AND record_month=?",Long.class,year,month).stream().filter(id->permissions.canRead(operatorId,"records",id,year)).count());
         result.put("taskIssues", taskIssues.stream().limit(100).toList());
         result.put("performanceIssues", performanceIssues.stream().limit(100).toList());
         result.put("readOnly", !leadershipAccess.isAdmin(operatorId));
@@ -93,9 +97,9 @@ public class AdminManagementService {
 
     private int scopedPendingCount(Long userId) {
         // 返回异常所属部门后再限定范围，避免把全校待办数量透露给部门范围账号。
-        String sql = "SELECT t.dept_id deptId FROM biz_material_submission s JOIN biz_task t ON t.task_id=s.task_id LEFT JOIN sys_user u ON u.user_id=s.current_handler_id AND COALESCE(u.is_delete,0)=0 WHERE COALESCE(s.is_delete,0)=0 AND s.flow_status IN (10,20,30) AND (u.user_id IS NULL OR u.status<>'1' OR (s.flow_status=10 AND NOT(s.current_handler_id <=> t.auditor_id)) OR (s.flow_status=20 AND NOT(s.current_handler_id <=> t.principal_id)) OR (s.flow_status=30 AND u.role<>'0')) UNION ALL SELECT p.dept_id deptId FROM biz_performance_submission s JOIN biz_performance p ON p.perf_id=s.perf_id LEFT JOIN sys_user u ON u.user_id=s.current_handler_id AND COALESCE(u.is_delete,0)=0 WHERE COALESCE(s.is_delete,0)=0 AND s.flow_status IN (10,20) AND (u.user_id IS NULL OR u.status<>'1' OR (s.flow_status=10 AND NOT(s.current_handler_id <=> p.auditor_id)) OR (s.flow_status=20 AND u.role<>'0'))";
-        int scoped = (int) jdbc.queryForList(sql).stream().filter(row -> leadershipAccess.canReadDepartment(userId, number(row.get("deptId")))).count();
-        int achievements = jdbc.queryForObject("SELECT COUNT(*) FROM biz_achievement a LEFT JOIN sys_user u ON u.user_id=a.current_handler_id AND COALESCE(u.is_delete,0)=0 WHERE COALESCE(a.is_delete,0)=0 AND a.audit_status=10 AND (u.user_id IS NULL OR u.status<>'1' OR u.role<>'0')", Integer.class);
+        String sql = "SELECT 'tasks' domain,t.task_id objectId,t.phase year,t.dept_id deptId FROM biz_material_submission s JOIN biz_task t ON t.task_id=s.task_id LEFT JOIN sys_user u ON u.user_id=s.current_handler_id AND COALESCE(u.is_delete,0)=0 WHERE COALESCE(s.is_delete,0)=0 AND s.flow_status IN (10,20,30) AND (u.user_id IS NULL OR u.status<>'1' OR (s.flow_status=10 AND NOT(s.current_handler_id <=> t.auditor_id)) OR (s.flow_status=20 AND NOT(s.current_handler_id <=> t.principal_id)) OR (s.flow_status=30 AND u.role<>'0')) UNION ALL SELECT 'performance',p.perf_id,s.year,p.dept_id FROM biz_performance_submission s JOIN biz_performance p ON p.perf_id=s.perf_id LEFT JOIN sys_user u ON u.user_id=s.current_handler_id AND COALESCE(u.is_delete,0)=0 WHERE COALESCE(s.is_delete,0)=0 AND s.flow_status IN (10,20) AND (u.user_id IS NULL OR u.status<>'1' OR (s.flow_status=10 AND NOT(s.current_handler_id <=> p.auditor_id)) OR (s.flow_status=20 AND u.role<>'0'))";
+        int scoped = (int) jdbc.queryForList(sql).stream().filter(row -> permissions.configured(userId)?permissions.canRead(userId,String.valueOf(row.get("domain")),number(row.get("objectId")),row.get("year")==null?null:((Number)row.get("year")).intValue()):leadershipAccess.canReadDepartment(userId, number(row.get("deptId")))).count();
+        int achievements = (int)jdbc.queryForList("SELECT a.ach_id FROM biz_achievement a LEFT JOIN sys_user u ON u.user_id=a.current_handler_id AND COALESCE(u.is_delete,0)=0 WHERE COALESCE(a.is_delete,0)=0 AND a.audit_status=10 AND (u.user_id IS NULL OR u.status<>'1' OR u.role<>'0')", Long.class).stream().filter(id->!permissions.configured(userId)||permissions.canRead(userId,"achievements",id,null)).count();
         return scoped + achievements;
     }
 
@@ -431,7 +435,7 @@ public class AdminManagementService {
     /** 供既有管理流程在同一事务中补充统一审计记录。 */
     public void recordOperation(String module, String action, String type, String id, String name, Long operatorId,
                                 String reason, Object before, Object after) {
-        requireAdmin(operatorId);
+        if(!permissions.admin(operatorId)&&!permissions.configured(operatorId))requireAdmin(operatorId);
         log(module, action, type, id, name, operatorId, reason, before, after);
     }
 

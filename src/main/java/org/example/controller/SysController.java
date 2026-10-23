@@ -35,6 +35,7 @@ public class SysController {
         try{
             return sysService.getAllUsers();
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -52,6 +53,7 @@ public class SysController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(new ErrorVO(e.getMessage(), 400));
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -69,6 +71,7 @@ public class SysController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(new ErrorVO(e.getMessage(), 400));
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -84,6 +87,7 @@ public class SysController {
             sysService.deleteUser(userId);
             return "用户 "+userId+" 删除成功";
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -98,6 +102,7 @@ public class SysController {
         try {
             return sysService.getDeptById(deptId);
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -112,6 +117,7 @@ public class SysController {
         try{
             return sysService.login(sysLoginDTO.getUser_id(), sysLoginDTO.getPassword());
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -132,6 +138,7 @@ public class SysController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(new ErrorVO(e.getMessage(), 400));
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -158,6 +165,7 @@ public class SysController {
                 sysService.logout(token);
                 return new SysLogoutVO("注销成功");
             } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
                 return new ErrorVO(e.getMessage(), 500);
             }
         }
@@ -209,6 +217,7 @@ public class SysController {
             sysService.sendNotice(sysNoticeDTO,userId);
             return "发送成功";
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -219,11 +228,12 @@ public class SysController {
      * @return 通知列表或异常
      */
     @GetMapping("/notice")
-    public List<SysNotice> getNotices(HttpServletRequest request) {
+    public Object getNotices(HttpServletRequest request) {
         try{
             Long userId=JWTUtil.getUserIdFromToken(request.getHeader("Authorization"));
             return sysService.getNotices(userId);
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             throw new RuntimeException(e);
         }
     }
@@ -240,6 +250,7 @@ public class SysController {
             sysService.setRead(noticeId, userId);
             return "已读";
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -258,6 +269,7 @@ public class SysController {
             sysService.sendAlert(sysAlertDTO,userId);
             return "发送成功";
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }

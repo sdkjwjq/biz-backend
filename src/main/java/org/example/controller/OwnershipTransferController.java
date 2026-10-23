@@ -26,6 +26,9 @@ import java.util.Map;
 @RestController
 @RequestMapping("/manage/transfer")
 public class OwnershipTransferController {
+    @org.springframework.web.bind.annotation.ExceptionHandler(org.example.service.AdminManagementException.class)
+    public org.springframework.http.ResponseEntity<org.example.entity.vo.ErrorVO> permissionError(org.example.service.AdminManagementException e){return org.springframework.http.ResponseEntity.status(e.getCode()).body(new org.example.entity.vo.ErrorVO(e.getMessage(),e.getCode()));}
+
     private static final Logger LOG = LoggerFactory.getLogger(OwnershipTransferController.class);
 
     private final OwnershipTransferService transfers;

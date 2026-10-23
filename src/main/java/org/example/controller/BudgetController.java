@@ -46,6 +46,7 @@ public class BudgetController {
         try {
             return budgetService.getBudget(year, month);
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -58,6 +59,7 @@ public class BudgetController {
         try {
             return budgetService.importBudget(year, month, file, currentUserId(request));
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -70,6 +72,7 @@ public class BudgetController {
         try {
             return budgetService.updateLock(year, month, locked, currentUserId(request));
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -82,6 +85,7 @@ public class BudgetController {
             budgetService.exportBudget(year, month, response);
             return null;
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -93,6 +97,7 @@ public class BudgetController {
         try {
             return budgetService.getVersions(year, month, currentUserId(request));
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -103,6 +108,7 @@ public class BudgetController {
         try {
             return budgetService.getVersion(versionId, currentUserId(request));
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -115,6 +121,7 @@ public class BudgetController {
             String remark = body == null ? null : body.get("remark");
             return budgetService.restoreVersion(versionId, remark, currentUserId(request));
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }

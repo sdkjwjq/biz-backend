@@ -70,6 +70,7 @@ public class BizController {
             taskExportService.exportTasks(ids, userId, response);
             return null;
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -99,6 +100,7 @@ public class BizController {
             }
             return visible.stream().filter(task -> selected.contains(task.getTaskId())).toList();
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -113,6 +115,7 @@ public class BizController {
         try{
             return bizService.getTaskById(taskId);
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -136,6 +139,7 @@ public class BizController {
         try{
             return bizService.getForthLevelTasksByParentId(parentId);
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -164,6 +168,7 @@ public class BizController {
         try{
             return bizService.getTasksByDeptId(deptId);
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -190,13 +195,15 @@ public class BizController {
             }
             BizTaskDTO task;
             try { task = taskManagementJson.treeToValue(body, BizTaskDTO.class); }
-            catch (Exception e) { throw new TaskManagementException(400, "任务字段格式不正确或数值超出范围"); }
+            catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError; throw new TaskManagementException(400, "任务字段格式不正确或数值超出范围"); }
             BizTask created = bizService.addTask(task, userId);
             if (returnDetail) return Map.of("taskId", created.getTaskId(), "message", "任务添加成功");
             return "任务"+task.getTaskName()+"添加成功";
         } catch (TaskManagementException e) {
             return ResponseEntity.status(e.getCode()).body(new ErrorVO(e.getMessage(), e.getCode()));
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -213,6 +220,7 @@ public class BizController {
             bizService.updateTask(task, JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
             return "任务"+task.getTaskName()+"更新成功";
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -228,6 +236,7 @@ public class BizController {
         try{
             return bizService.finishTask(taskId, JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -256,6 +265,7 @@ public class BizController {
             }
             return bizService.subFourLevelTasks(bizNewSubDTO, userId);
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -271,6 +281,7 @@ public class BizController {
         try{
             return bizService.getAudit(taskId, JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -285,6 +296,7 @@ public class BizController {
         try {
             return bizService.getTodoAudits(JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -300,6 +312,7 @@ public class BizController {
         try {
             return bizService.getAuditByTaskId(taskId, JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -315,6 +328,7 @@ public class BizController {
         try {
             return bizService.getLastCycleFiles(taskId);
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -330,6 +344,7 @@ public class BizController {
         try {
             return bizService.getAuditLogs(subId, JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -345,6 +360,7 @@ public class BizController {
         try{
             return bizService.audit(bizAuditDTO, JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -360,6 +376,7 @@ public class BizController {
         try{
             return bizService.drawbackSubmit(taskId, JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -375,6 +392,7 @@ public class BizController {
         try{
             return bizService.reSubmitMaterial(bizReSubDTO, JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }

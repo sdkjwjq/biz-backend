@@ -22,6 +22,7 @@ public class PerformanceController {
         try {
             return performanceService.getAllPerformance(currentUserId(request));
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -31,6 +32,7 @@ public class PerformanceController {
         try {
             return performanceService.calcuateAllPerformance();
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -40,6 +42,7 @@ public class PerformanceController {
         try {
             return performanceService.getPerformanceById(perfId, currentUserId(request));
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -54,6 +57,7 @@ public class PerformanceController {
             }
             return performanceService.getTaskByPerfIdForYear(prefId, year, currentUserId(request));
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -63,6 +67,7 @@ public class PerformanceController {
         try {
             return performanceService.getPerformanceByYear(year, currentUserId(request));
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -76,6 +81,7 @@ public class PerformanceController {
         try {
             return performanceService.submitPref(prefId, actualValue, year, currentUserId(request), comment);
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -85,6 +91,7 @@ public class PerformanceController {
         try {
             return performanceService.getTodoPerformanceAudits(currentUserId(request));
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -94,6 +101,7 @@ public class PerformanceController {
         try {
             return performanceService.getPerformanceAuditRecords(currentUserId(request));
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -105,6 +113,7 @@ public class PerformanceController {
         try {
             return performanceService.getPerformanceAuditsByPerfAndYear(perfId, year, currentUserId(request));
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -114,6 +123,7 @@ public class PerformanceController {
         try {
             return performanceService.getPerformanceAuditLogs(subId, currentUserId(request));
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -123,6 +133,7 @@ public class PerformanceController {
         try {
             return performanceService.auditPerformance(auditDTO, currentUserId(request));
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -132,6 +143,7 @@ public class PerformanceController {
         try {
             return performanceService.withdrawPerformanceSubmission(subId, currentUserId(request));
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }

@@ -14,6 +14,7 @@ import java.util.*;
 @RestController
 public class WorkShortcutController {
     @Autowired private SysMapper users;
+    @Autowired private org.example.service.PermissionService permissions;
     @Autowired private BizMapper tasks;
     @Autowired private PerformanceMapper performances;
     @Autowired private WorkShortcutMapper shortcuts;
@@ -24,7 +25,7 @@ public class WorkShortcutController {
         try {
             Long userId = JWTUtil.getUserIdFromToken(request.getHeader("Authorization"));
             SysUser user = users.getUserById(userId);
-            List<BizTask> visible = leadershipAccess.isLeader(userId) ? leadershipAccess.visibleTasks(userId) : "0".equals(user.getRole()) ? tasks.getAllTasks() : tasks.getVisibleTasks(userId);
+            List<BizTask> visible = (permissions.configured(userId)||leadershipAccess.isLeader(userId)) ? leadershipAccess.visibleTasks(userId) : "0".equals(user.getRole()) ? tasks.getAllTasks() : tasks.getVisibleTasks(userId);
             List<Long> ids = visible.stream().filter(t -> !Integer.valueOf(1).equals(t.getIsDelete()) && Integer.valueOf(3).equals(t.getLevel()))
                     .map(BizTask::getTaskId).toList();
             Set<Long> returned = new LinkedHashSet<>(), todo = new LinkedHashSet<>();
@@ -47,13 +48,14 @@ public class WorkShortcutController {
         try {
             Long userId = JWTUtil.getUserIdFromToken(request.getHeader("Authorization"));
             SysUser user = users.getUserById(userId);
-            List<BizPerformance> visible = leadershipAccess.isLeader(userId) ? leadershipAccess.visiblePerformances(userId) : "0".equals(user.getRole()) ? performances.getAllPerformance() : performances.getVisiblePerformance(userId);
+            List<BizPerformance> visible = (permissions.configured(userId)||leadershipAccess.isLeader(userId)) ? leadershipAccess.visiblePerformances(userId) : "0".equals(user.getRole()) ? performances.getAllPerformance() : performances.getVisiblePerformance(userId);
             List<Long> ids = visible.stream().filter(p -> !Integer.valueOf(1).equals(p.getIsDelete()))
                     .filter(p -> p.getPerfCode() == null || !(p.getPerfCode().startsWith("1.1.") || p.getPerfCode().startsWith("1.2.")))
                     .map(BizPerformance::getPerfId).toList();
             List<Map<String, Object>> returned = new ArrayList<>(), todo = new ArrayList<>(), pending = new ArrayList<>();
             for (Map<String, Object> row : ids.isEmpty() ? List.<Map<String, Object>>of() : shortcuts.performanceStates(ids)) {
                 int status = ((Number) row.get("flowStatus")).intValue();
+                if(permissions.configured(userId)&&!permissions.canRead(userId,"performance",((Number)row.get("perfId")).longValue(),((Number)row.get("year")).intValue()))continue;
                 Map<String, Object> key = Map.of("perfId", row.get("perfId"), "year", row.get("year"));
                 if (status < 0) returned.add(key);
                 if (List.of(10, 20).contains(status)) pending.add(row);

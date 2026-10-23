@@ -65,7 +65,7 @@ public class TaskExportService {
             throw new RuntimeException("用户不存在或已停用");
         }
         // 与任务列表同一套可见性口径：管理员取全部，其他用户取本人负责/审核/归口及所辖部门
-        List<BizTask> visible = leadershipAccess.isLeader(userId) ? leadershipAccess.visibleTasks(userId) : "0".equals(me.getRole())
+        List<BizTask> visible = (leadershipAccess.restricted(userId)||leadershipAccess.isLeader(userId)) ? leadershipAccess.visibleTasks(userId) : "0".equals(me.getRole())
                 ? bizMapper.getAllTasks() : bizMapper.getVisibleTasks(userId);
         Map<Long, BizTask> visibleMap = new HashMap<>();
         for (BizTask task : visible) {

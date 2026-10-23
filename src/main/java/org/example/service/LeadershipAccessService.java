@@ -28,6 +28,8 @@ public class LeadershipAccessService {
     private final ObjectMapper json;
     private final BizMapper tasks;
     private final PerformanceMapper performances;
+    @org.springframework.beans.factory.annotation.Autowired private PermissionService permissions;
+    @org.springframework.beans.factory.annotation.Autowired private PermissionManagementService permissionManagement;
 
     public LeadershipAccessService(JdbcTemplate jdbc, SysMapper users, AdminManagementMapper logs, ObjectMapper json,
                                    BizMapper tasks, PerformanceMapper performances) {
@@ -68,6 +70,7 @@ public class LeadershipAccessService {
     }
 
     public boolean canReadDepartment(Long userId, Long deptId) {
+        if (userId != null && permissions.configured(userId)) return permissions.visibleTasks(userId,null).stream().anyMatch(t -> Objects.equals(deptId,t.getDeptId()));
         return isLeader(userId) && scope(userId).contains(deptId);
     }
 
@@ -78,7 +81,7 @@ public class LeadershipAccessService {
     }
 
     public boolean restricted(Long userId) {
-        return !isAdmin(userId) && isLeader(userId) && "DEPARTMENTS".equals(scope(userId).scope());
+        return userId != null && !isAdmin(userId) && (permissions.configured(userId) || isLeader(userId) && "DEPARTMENTS".equals(scope(userId).scope()));
     }
 
     /** 保留目录以便浏览，但目录派生值仅由范围内的三级任务计算。 */
@@ -95,6 +98,7 @@ public class LeadershipAccessService {
     }
 
     private List<BizTask> loadVisibleTasks(Long userId, boolean includeDuties) {
+        if (userId != null && permissions.configured(userId)) return permissions.visibleTasks(userId,null);
         List<BizTask> all = tasks.getAllTasks().stream().filter(t -> !Integer.valueOf(1).equals(t.getIsDelete())).toList();
         if (!restricted(userId)) return all;
         Scope scope = scope(userId);
@@ -139,11 +143,13 @@ public class LeadershipAccessService {
     }
 
     public boolean canReadTask(Long userId, Long taskId) {
+        if(permissions.configured(userId))return permissions.canRead(userId,"tasks",taskId,null);
         return isLeader(userId) && visibleTasks(userId).stream().anyMatch(t -> Objects.equals(t.getTaskId(), taskId));
     }
 
     public boolean canAccessTask(Long userId, Long taskId) {
         if (isAdmin(userId)) return true;
+        if (permissions.configured(userId)) return permissions.canRead(userId,"tasks",taskId,null);
         if (isLeader(userId)) return canReadTask(userId, taskId);
         if (tasks.getVisibleTasks(userId).stream().anyMatch(t -> !Integer.valueOf(1).equals(t.getIsDelete()) && Objects.equals(t.getTaskId(), taskId))) return true;
         return jdbc.queryForObject("SELECT COUNT(*) FROM biz_material_submission WHERE task_id=? AND submit_by=? AND COALESCE(is_delete,0)=0", Integer.class, taskId, userId) > 0;
@@ -161,6 +167,7 @@ public class LeadershipAccessService {
     }
 
     private List<BizPerformance> loadVisiblePerformances(Long userId) {
+        if (userId != null && permissions.configured(userId)) return permissions.visiblePerformances(userId,null);
         List<BizPerformance> all = performances.getAllPerformance().stream().filter(p -> !Integer.valueOf(1).equals(p.getIsDelete())).toList();
         if (!restricted(userId)) return all;
         Scope scope = scope(userId);
@@ -182,10 +189,12 @@ public class LeadershipAccessService {
     }
 
     public boolean canReadPerformance(Long userId, Long perfId) {
+        if(permissions.configured(userId))return canAccessPerformance(userId,perfId);
         return isLeader(userId) && visiblePerformances(userId).stream().anyMatch(p -> Objects.equals(p.getPerfId(), perfId));
     }
 
     public boolean canAccessPerformance(Long userId, Long perfId) {
+        if (permissions.configured(userId)) return permissions.visiblePerformances(userId,null).stream().anyMatch(p->Objects.equals(p.getPerfId(),perfId));
         return isAdmin(userId) || (isLeader(userId) ? canReadPerformance(userId, perfId)
                 : performances.getVisiblePerformance(userId).stream().anyMatch(p -> Objects.equals(p.getPerfId(), perfId)));
     }
@@ -202,6 +211,7 @@ public class LeadershipAccessService {
 
     /** 组织编号已与现有部门数据核对：100双高建设办公室，104财务处。 */
     public boolean canFillBudget(Long userId) {
+        if (userId != null && permissions.configured(userId)) return permissions.allowed(userId,"budget.fill");
         return isAdmin(userId) || isDoubleHighOffice(userId) || isActiveDepartmentMember(userId, 104L);
     }
 
@@ -257,6 +267,16 @@ public class LeadershipAccessService {
         result.put("canViewAchievement", scope.leader() || AchievementPermissionUtil.canViewAchievement(user,
                 user.getDeptId() == null ? null : users.getDeptById(user.getDeptId())));
         result.put("canViewAuditCenter", !scope.leader() || duties || coreDuties || AchievementPermissionUtil.isAchievementAuditor(user));
+        result.putAll(permissions.description(userId));
+        result.put("canViewExpertReviews",permissions.allowed(userId,"expert.read"));
+        if (permissions.configured(userId)) {
+            result.put("canViewOverview",permissions.allowed(userId,"overview.read"));
+            result.put("canViewBudget",permissions.allowed(userId,"budget.read"));
+            result.put("canFillBudget",permissions.allowed(userId,"budget.fill"));
+            result.put("canViewAchievement",permissions.allowed(userId,"achievements.read"));
+            result.put("canViewCoreIndicators",permissions.allowed(userId,"core.read"));
+            result.put("canViewAuditCenter",permissions.allowed(userId,"audit.read") && (duties || coreDuties || AchievementPermissionUtil.isAchievementAuditor(user)));
+        }
         return result;
     }
 
@@ -268,9 +288,11 @@ public class LeadershipAccessService {
 
     public record Change(String scope, List<Long> departmentIds, Long version, String reason) {}
 
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class,isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public Scope save(Long targetId, Change body, Long operatorId) throws Exception {
         requireAdmin(operatorId);
+        permissions.lockChange();
+        var pendingBefore=permissionManagement.pendingSnapshot();
         // 与账号启停共用账号行锁，避免为已被删除的账号保存配置。
         if (logs.userForUpdate(targetId) == null) throw new AdminManagementException(404, "账号不存在");
         if (body == null || !Set.of("NONE", "ALL", "DEPARTMENTS").contains(Objects.toString(body.scope(), ""))
@@ -293,6 +315,8 @@ public class LeadershipAccessService {
         jdbc.update("DELETE FROM sys_leadership_department WHERE user_id=?", targetId);
         for (Long id : departments) jdbc.update("INSERT INTO sys_leadership_department(user_id,dept_id) VALUES(?,?)", targetId, id);
         Scope after = loadScope(targetId, true);
+        permissionManagement.validateChangedPending(pendingBefore);
+        permissions.advance();
         AdminOperationLog log = new AdminOperationLog();
         log.setModule("USER"); log.setAction("LEADERSHIP_ACCESS"); log.setTargetType("USER");
         log.setTargetId(String.valueOf(targetId)); log.setTargetName(requireUser(targetId).getNickName());

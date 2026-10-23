@@ -28,6 +28,7 @@ public class BizService {
 
     /** 管理员ID */
     private Long ADMIN_ID = 110228L;
+    @Autowired private PermissionService permissions;
 
     @Autowired
     private BizMapper bizMapper;
@@ -166,7 +167,7 @@ public class BizService {
      */
     public List<BizTaskVo> getTasksByUserRole(Long userId) {
         try {
-            if (leadershipAccess.isLeader(userId)) return taskListToTaskVoList(leadershipAccess.visibleTasks(userId));
+            if (leadershipAccess.restricted(userId) || leadershipAccess.isLeader(userId)) return taskListToTaskVoList(leadershipAccess.visibleTasks(userId));
             SysUser sysUser = sysMapper.getUserById(userId);
             if (sysUser == null) {
                 throw new RuntimeException("用户不存在");
@@ -276,7 +277,7 @@ public class BizService {
         if (user == null || Integer.valueOf(1).equals(user.getIsDelete())) {
             throw new RuntimeException("用户不存在");
         }
-        if (!"0".equals(user.getRole()) || !"1".equals(user.getStatus())) {
+        if ((!"0".equals(user.getRole())&&!(permissions.configured(userId)&&permissions.allowed(userId,"tasks.transfer"))) || !"1".equals(user.getStatus())) {
             throw new RuntimeException("仅限管理员访问");
         }
     }
@@ -297,7 +298,7 @@ public class BizService {
             if (sysUser == null) {
                 throw new RuntimeException("用户不存在");
             }
-            if (!"0".equals(sysUser.getRole()) || !"1".equals(sysUser.getStatus())
+            if ((!"0".equals(sysUser.getRole()) && !(permissions.configured(userId)&&permissions.allowed(userId,"tasks.finish"))) || !"1".equals(sysUser.getStatus())
                     || Integer.valueOf(1).equals(sysUser.getIsDelete())) {
                 throw new RuntimeException("仅限管理员访问");
             }
@@ -678,7 +679,7 @@ public class BizService {
                 throw new RuntimeException("用户不存在");
 
             // 最小权限校验：管理员/任务负责人/归口负责人可查看；或本人提交过该任务审批单也可查看
-            if ("0".equals(me.getRole()) || leadershipAccess.canReadTask(userId, taskId)
+            if ("0".equals(me.getRole()) || (permissions.configured(userId)&&permissions.canRead(userId,"tasks",taskId,null)) || leadershipAccess.canReadTask(userId, taskId)
                     || (task.getLeaderId() != null && task.getLeaderId().equals(userId))
                     || (task.getAuditorId() != null && task.getAuditorId().equals(userId))
                     || (task.getPrincipalId() != null && task.getPrincipalId().equals(userId))) {
@@ -1785,9 +1786,11 @@ public class BizService {
         taskVo.setLevel(task.getLevel());
         taskVo.setComment(task.getComment());
         taskVo.setDeptId(task.getDeptId());
-        taskVo.setDeptName(sysMapper.getDeptById(task.getDeptId()).getDeptName());
+        var department=task.getDeptId()==null?null:sysMapper.getDeptById(task.getDeptId());
+        taskVo.setDeptName(department==null?"":department.getDeptName());
         taskVo.setPrincipalId(task.getPrincipalId());
-        taskVo.setPrincipalName(sysMapper.getUserById(task.getPrincipalId()).getUserName());
+        var principal=task.getPrincipalId()==null?null:sysMapper.getUserById(task.getPrincipalId());
+        taskVo.setPrincipalName(principal==null?"":principal.getUserName());
         // 避免空指针错误
         if(task.getAuditorId()!=null){
             taskVo.setAuditorId(task.getAuditorId());
@@ -1797,7 +1800,8 @@ public class BizService {
             taskVo.setAuditorName("无");
         }
         taskVo.setLeaderId(task.getLeaderId());
-        taskVo.setLeaderName(sysMapper.getUserById(task.getLeaderId()).getUserName());
+        var leader=task.getLeaderId()==null?null:sysMapper.getUserById(task.getLeaderId());
+        taskVo.setLeaderName(leader==null?"":leader.getUserName());
         taskVo.setExpTarget(task.getExpTarget());
         taskVo.setExpLevel(task.getExpLevel());
         taskVo.setExpEffect(task.getExpEffect());

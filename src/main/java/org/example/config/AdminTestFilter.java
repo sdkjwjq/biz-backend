@@ -37,12 +37,13 @@ public class AdminTestFilter extends OncePerRequestFilter {
     private final AdminManagementMapper operations;
     private final ObjectMapper json;
     private final TransactionTemplate transaction;
+    @org.springframework.beans.factory.annotation.Autowired private org.example.service.PermissionService permissions;
 
     public AdminTestFilter(SysMapper users, TokenBlacklistMapper blacklist, AdminManagementMapper operations,
                            ObjectMapper json, org.springframework.transaction.PlatformTransactionManager manager) {
         this.users = users; this.blacklist = blacklist; this.operations = operations;
         this.json = json; this.transaction = new TransactionTemplate(manager);
-        this.transaction.setIsolationLevel(org.springframework.transaction.TransactionDefinition.ISOLATION_REPEATABLE_READ);
+        this.transaction.setIsolationLevel(org.springframework.transaction.TransactionDefinition.ISOLATION_READ_COMMITTED);
     }
 
     @Override
@@ -51,7 +52,7 @@ public class AdminTestFilter extends OncePerRequestFilter {
         String path = request.getRequestURI().substring(request.getContextPath().length());
         if (!"1".equals(request.getHeader("X-Admin-Test")) || "OPTIONS".equals(request.getMethod())
                 || !path.matches("/(system|biz|achievement|dashboard|performance|budget|scheduled|work-records|manage|admin|core-indicators)(/.*)?")
-                || path.matches("/system/(login|password.*|logout)/?")) {
+                || path.matches("/system/(login|password.*|logout)/?") || path.startsWith("/admin/permissions/")) {
             chain.doFilter(request, response); return;
         }
         Long actor;
@@ -78,8 +79,11 @@ public class AdminTestFilter extends OncePerRequestFilter {
             ContentCachingResponseWrapper buffered = new ContentCachingResponseWrapper(response);
             ContentCachingRequestWrapper traced = new ContentCachingRequestWrapper(request, 65536);
             try {
-                transaction.executeWithoutResult(status -> {
+                TransactionTemplate currentTransaction=new TransactionTemplate(transaction.getTransactionManager(),transaction);
+                if(path.startsWith("/work-records"))currentTransaction.setIsolationLevel(org.springframework.transaction.TransactionDefinition.ISOLATION_REPEATABLE_READ);
+                currentTransaction.executeWithoutResult(status -> {
                     try {
+                        if(path.matches("/(admin/(users|departments)|system/users)(/.*)?"))permissions.lockChange();else permissions.lockOperation();
                         chain.doFilter(traced, buffered);
                         if (failed(buffered)) { status.setRollbackOnly(); return; }
                         AdminOperationLog log = new AdminOperationLog();

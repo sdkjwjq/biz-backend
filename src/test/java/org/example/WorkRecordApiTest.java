@@ -694,7 +694,7 @@ class WorkRecordApiTest {
         assertFalse(ok(request(HttpMethod.GET,"/work-records/capabilities",token,null)).path("canCreate").asBoolean());
         assertEquals(403,request(HttpMethod.POST,"/work-records",token,Map.of("year",2026,"month",1)).getStatusCode().value());
         jdbc.update("UPDATE sys_user SET status='0' WHERE user_id=?",OTHER);
-        assertEquals(401,request(HttpMethod.GET,"/work-records/capabilities",token,null).getStatusCode().value());
+        assertEquals(403,request(HttpMethod.GET,"/work-records/capabilities",token,null).getStatusCode().value()); // 统一权限入口立即拒绝已停用账号。
     }
 
     @Test void overviewExpectedAuthorsReusesScopeAndCountsEveryEligibleNormalDepartmentAccountOnce() throws Exception {

@@ -13,6 +13,7 @@ import java.util.Map;
 @Service
 public class TaskAttributesService {
     private final BizMapper tasks;
+    @org.springframework.beans.factory.annotation.Autowired private PermissionService permissions;
     private final JdbcTemplate jdbc;
     private final LeadershipAccessService access;
     private final AdminManagementService logs;
@@ -29,7 +30,7 @@ public class TaskAttributesService {
     }
     @Transactional(rollbackFor=Exception.class)
     public BizTask save(Long id, Change input, Long operator) {
-        if (!access.isAdmin(operator)) throw new TaskManagementException(403,"仅管理员可修改任务管理属性");
+        if (!access.isAdmin(operator)&&!(permissions.configured(operator)&&permissions.allowed(operator,"tasks.attributes"))) throw new TaskManagementException(403,"仅管理员可修改任务管理属性");
         if (input==null || input.priority()==null || input.difficult()==null || input.version()==null || input.version()<0
                 || input.plannedCompletionDate()==null || input.plannedCompletionDate().getYear()<1000 || input.plannedCompletionDate().getYear()>9999
                 || input.reason()==null || input.reason().isBlank() || input.reason().length()>200)

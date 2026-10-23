@@ -10,6 +10,15 @@ import java.util.List;
 
 @Mapper
 public interface WorkRecordMapper {
+    String SCOPED=" WHERE delete_marker=0 AND record_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach> "
+            +"<if test='year != null'>AND record_year=#{year} </if><if test='month != null'>AND record_month=#{month} </if>"
+            +"<if test='ownerId != null'>AND owner_id=#{ownerId} </if><if test='status != null'>AND status=#{status} </if>";
+    @Select("<script>SELECT * FROM biz_work_record"+SCOPED+"ORDER BY record_year DESC,record_month DESC,owner_id,record_id LIMIT #{limit} OFFSET #{offset}</script>")
+    List<BizWorkRecord> scopedList(@Param("ids")List<Long> ids,@Param("year")Integer year,@Param("month")Integer month,@Param("ownerId")Long ownerId,@Param("status")Integer status,@Param("limit")int limit,@Param("offset")long offset);
+    @Select("<script>SELECT COUNT(*) FROM biz_work_record"+SCOPED+"</script>")
+    long scopedCount(@Param("ids")List<Long> ids,@Param("year")Integer year,@Param("month")Integer month,@Param("ownerId")Long ownerId,@Param("status")Integer status);
+    @Select("<script>SELECT owner_id,MAX(owner_name) owner_name FROM biz_work_record WHERE record_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach> GROUP BY owner_id ORDER BY owner_id</script>")
+    List<WorkRecordVO.Author> scopedAuthors(@Param("ids")List<Long> ids);
     @Select("SELECT DISTINCT t.phase FROM biz_task t WHERE t.level=3 AND COALESCE(t.is_delete,0)=0 AND t.phase BETWEEN 2025 AND 2029 "
             + "AND (t.leader_id=#{userId} OR EXISTS(SELECT 1 FROM biz_level4_task c WHERE c.parent_id=t.task_id AND c.leader_id=#{userId} AND COALESCE(c.is_delete,0)=0)) ORDER BY t.phase")
     List<Integer> fillableYears(Long userId);

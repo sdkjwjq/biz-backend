@@ -60,10 +60,15 @@ def main():
         subprocess.run([mysql, *connection, database], input=(root / 'data/migrations/2026-10-12-task-attributes.sql').read_bytes(), env=env, check=True)
         subprocess.run([mysql, *connection, database], input=(root / 'data/migrations/2026-10-12-core-indicators.sql').read_bytes(), env=env, check=True)
         subprocess.run([mysql, *connection, database], input=(root / 'data/migrations/2026-10-14-core-indicator-report-mapping.sql').read_bytes(), env=env, check=True)
+        subprocess.run([mysql, *connection, database], input=(root / 'data/migrations/2026-10-24-permissions-expert-reviews.sql').read_bytes(), env=env, check=True)
         env["SHUANGGAO_TEST_DB_USER"] = user
         env["SHUANGGAO_TEST_JDBC_URL"] = ("jdbc:mysql://127.0.0.1:3306/" + database
                                          + "?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai")
-        if method == "overview":
+        if method == "permissions":
+            selector = "PermissionApiTest"
+        elif method == "permissionsintegration":
+            selector = "PermissionApiTest,AdminManagementApiTest,AdminOverviewApiTest"
+        elif method == "overview":
             selector = "AdminOverviewApiTest"
         elif method == "budgettrends":
             selector = "BudgetTrendApiTest,ReviewBatchRegressionApiTest#budgetImportsCreateVersionsAndRestoreWithoutOverwritingHistory"
@@ -82,11 +87,18 @@ def main():
         elif method:
             selector = "ReviewBatchRegressionApiTest#" + method
         else:
-            selector = "ReviewBatchRegressionApiTest,AdminManagementApiTest,LeadershipAccessApiTest,TaskAttributesApiTest,CoreIndicatorApiTest,BudgetTrendApiTest,AdminTestApiTest,AdminOverviewApiTest"
+            selector = "ReviewBatchRegressionApiTest,AdminManagementApiTest,LeadershipAccessApiTest,TaskAttributesApiTest,CoreIndicatorApiTest,BudgetTrendApiTest,AdminTestApiTest,AdminOverviewApiTest,PermissionApiTest"
         print("Running " + selector + " in isolated schema " + database, flush=True)
         result = subprocess.run([shutil.which("mvn.cmd") or executable("mvn"), "-B", "-Dtest=" + selector, "test"],
                                 cwd=root, env=env)
         if result.returncode == 0:
+            subprocess.run([mysql, *connection, database], input=(root / 'data/migrations/2026-10-24-permissions-expert-reviews.sql').read_bytes(), env=env, check=True)
+            subprocess.run([mysql, *connection, database], input=(root / 'data/migrations/2026-10-24-permissions-expert-reviews-check.sql').read_bytes(), env=env, check=True)
+            subprocess.run([mysql, *connection, database], input=b"INSERT INTO sys_user_permission(user_id,access_mode,permissions_json,scopes_json,version) VALUES(999998,'CUSTOM','{}','{}',1) ON DUPLICATE KEY UPDATE version=version+1;", env=env, check=True)
+            permissions_rollback = subprocess.run([mysql, *connection, database], input=(root / 'data/migrations/2026-10-24-permissions-expert-reviews-rollback.sql').read_bytes(), env=env, capture_output=True)
+            if permissions_rollback.returncode == 0 or b'Permission configuration or expert history exists' not in permissions_rollback.stderr:
+                raise RuntimeError("Permission rollback must retain authorization and expert history")
+            print("Permission migration checked; rollback correctly retained configuration", flush=True)
             subprocess.run([mysql, *connection, database], input=(root / 'data/migrations/2026-10-12-core-indicators.sql').read_bytes(), env=env, check=True)
             subprocess.run([mysql, *connection, database], input=b"INSERT INTO biz_core_report(indicator_id,record_year,record_month,indicator_name,submit_by) VALUES(1,2026,1,'Rollback guard fixture',110228);", env=env, check=True)
             core_rollback = subprocess.run([mysql, *connection, database], input=(root / 'data/migrations/2026-10-12-core-indicators-rollback.sql').read_bytes(), env=env, capture_output=True)

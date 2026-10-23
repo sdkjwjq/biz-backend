@@ -30,6 +30,7 @@ public class WorkRecordService {
     private final Set<Long> viewers;
     private final LeadershipAccessService leadershipAccess;
     private final WorkRecordScopeService scopes;
+    @org.springframework.beans.factory.annotation.Autowired private PermissionService permissions;
 
     public WorkRecordService(WorkRecordMapper records, SysMapper users, WorkRecordStatisticsService statistics,
                              ObjectMapper json, @Qualifier("workRecordClock") Clock clock,
@@ -59,6 +60,7 @@ public class WorkRecordService {
     public Capabilities capabilities(Long userId) {
         SysUser user = user(userId);
         List<Integer> years = fillableYears(user);
+        if (permissions.configured(userId)) {boolean fill=permissions.allowed(userId,"records.fill"),read=permissions.allowed(userId,"records.read");return new Capabilities(fill&&!years.isEmpty(),read,permissions.allowed(userId,"records.export"),read&&records.ownSubmitted(userId)>0,fill?years:List.of(),read&&records.ownRecords(userId)>0,permissions.allowed(userId,"records.delete"));}
         boolean export = "0".equals(user.getRole()) || viewers.contains(userId) || leadershipAccess.isLeader(userId);
         return new Capabilities(!years.isEmpty(), export || !years.isEmpty(), export,
                 records.ownSubmitted(userId) > 0, years, records.ownRecords(userId) > 0, "0".equals(user.getRole()));
@@ -67,7 +69,7 @@ public class WorkRecordService {
     /** 仅删除已提交纪实；正文、条目及冻结快照保留。 */
     @Transactional
     public Map<String, String> delete(Long userId, Long id, JsonNode body) {
-        if (!"0".equals(user(userId).getRole())) throw new WorkRecordException(403, "仅管理员可以删除工作纪实");
+        if (!"0".equals(user(userId).getRole())&&!(permissions.configured(userId)&&permissions.allowed(userId,"records.delete"))) throw new WorkRecordException(403, "没有删除工作纪实权限");
         long expectedVersion = version(body);
         String reason = text(body, "reason").strip();
         if (reason.codePoints().noneMatch(cp -> !Character.isWhitespace(cp) && !Character.isSpaceChar(cp))) throw new WorkRecordException(400, "请填写删除原因");
@@ -123,6 +125,7 @@ public class WorkRecordService {
                 || AdminTestContext.enabled(userId) || (Integer.valueOf(1).equals(record.getStatus()) && capabilities(userId).canViewAll()))) {
             throw new WorkRecordException(404, "纪实不存在或无权访问");
         }
+        if(permissions.configured(userId)&&!permissions.canRead(userId,"records",id,record.getRecordYear()))throw new WorkRecordException(404,"纪实不存在或无权访问");
         return buildDetail(userId, record);
     }
 
@@ -163,6 +166,7 @@ public class WorkRecordService {
     }
 
     public List<Author> authors(Long userId) {
+        if(permissions.configured(userId)){List<Long> allowed=permissions.recordIds(userId);if(allowed.isEmpty())return List.of();return records.scopedAuthors(allowed);}
         return records.authors(userId, capabilities(userId).canViewAll(), AdminTestContext.enabled(userId));
     }
 
@@ -259,6 +263,7 @@ public class WorkRecordService {
         if ((year != null && (year < 2025 || year > 2029)) || (month != null && (month < 1 || month > 12))
                 || (status != null && status != 0 && status != 1) || (ownerId != null && ownerId <= 0)
                 || page < 1 || pageSize < 1 || pageSize > 100) throw new WorkRecordException(400, "列表筛选或分页参数不正确");
+        if(permissions.configured(userId)){List<Long> allowed=permissions.recordIds(userId);if(allowed.isEmpty())return new Page(0,page,pageSize,List.of());long total=records.scopedCount(allowed,year,month,ownerId,status);return new Page(total,page,pageSize,records.scopedList(allowed,year,month,ownerId,status,pageSize,(long)(page-1)*pageSize));}
         long total = records.count(userId, access.canViewAll(), AdminTestContext.enabled(userId), year, month, ownerId, status);
         List<BizWorkRecord> rows = records.list(userId, access.canViewAll(), AdminTestContext.enabled(userId), year, month, ownerId, status,
                 pageSize, (long) (page - 1) * pageSize);

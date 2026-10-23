@@ -13,6 +13,7 @@ import java.util.function.Predicate;
 @Service
 public class LeadershipDashboardService {
     private final LeadershipAccessService access;
+    @org.springframework.beans.factory.annotation.Autowired private PermissionService permissions;
     private final SysMapper users;
     private final org.springframework.jdbc.core.JdbcTemplate jdbc;
     public LeadershipDashboardService(LeadershipAccessService access, SysMapper users, org.springframework.jdbc.core.JdbcTemplate jdbc) { this.access = access; this.users = users; this.jdbc = jdbc; }
@@ -22,6 +23,7 @@ public class LeadershipDashboardService {
         jdbc.update("INSERT IGNORE INTO biz_department_trend(dept_id,record_date,total_tasks,completed_tasks,progress_sum) SELECT dept_id,CURDATE(),COUNT(*),SUM(status='3'),SUM(LEAST(100,GREATEST(0,COALESCE(progress,0)))) FROM biz_task WHERE level=3 AND phase=YEAR(CURDATE()) AND COALESCE(is_delete,0)=0 AND dept_id IS NOT NULL GROUP BY dept_id");
     }
     public List<BizTrendData> trends(Integer year) {
+        if(permissions.configured(access.currentUserId()))return List.of(); // 没有与任意自定义范围匹配的历史快照，不能返回全校历史。
         int selectedYear = year == null ? LocalDate.now().getYear() : year;
         List<Long> ids = access.scope(access.currentUserId()).departmentIds();
         if (ids.isEmpty()) return List.of();

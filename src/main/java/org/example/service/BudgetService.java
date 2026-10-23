@@ -58,6 +58,7 @@ public class BudgetService {
     private CoreIndicatorService coreIndicators;
     @Autowired
     private LeadershipAccessService budgetAccess;
+    @Autowired private PermissionService permissions;
 
     private final DataFormatter formatter = new DataFormatter(Locale.CHINA);
 
@@ -138,7 +139,7 @@ public class BudgetService {
     }
 
     public List<BudgetVersionVO> getVersions(Integer year, Integer month, Long userId) {
-        validateEditor(userId);
+        if(permissions.configured(userId))permissions.require(userId,"budget.versions");else validateEditor(userId);
         validateYearMonth(year, month);
         List<BudgetVersionVO> versions = budgetMapper.getVersions(year, month);
         for (int index = 0; index < versions.size(); index++) {
@@ -148,7 +149,7 @@ public class BudgetService {
     }
 
     public BudgetVersionDetailVO getVersion(Long versionId, Long userId) {
-        validateEditor(userId);
+        if(permissions.configured(userId))permissions.require(userId,"budget.versions");else validateEditor(userId);
         BizBudgetImportVersion version = requireVersion(versionId);
         BudgetVersionVO metadata = budgetMapper.getVersionVO(versionId);
         metadata.setCurrent(isLatest(version));
@@ -157,7 +158,7 @@ public class BudgetService {
 
     @Transactional
     public BudgetSheetVO restoreVersion(Long versionId, String remark, Long userId) {
-        validateAdmin(userId);
+        if(permissions.configured(userId))permissions.require(userId,"budget.restore");else validateAdmin(userId);
         String reason = normalizeRestoreRemark(remark);
         BizBudgetImportVersion source = requireVersion(versionId);
         BizBudgetSheet sheet = budgetMapper.getSheetForUpdate(source.getYear(), source.getMonth());
@@ -198,7 +199,7 @@ public class BudgetService {
     }
 
     public BudgetSheetVO updateLock(Integer year, Integer month, Boolean locked, Long userId) {
-        validateAdmin(userId);
+        if(permissions.configured(userId))permissions.require(userId,"budget.lock");else validateAdmin(userId);
         validateYearMonth(year, month);
         BizBudgetSheet sheet = budgetMapper.getSheet(year, month);
         if (sheet == null) {

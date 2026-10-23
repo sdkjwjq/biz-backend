@@ -32,6 +32,8 @@ import java.util.UUID;
  */
 @Service
 public class OwnershipTransferService {
+    @Autowired private PermissionService permissions;
+    @Autowired private PermissionManagementService permissionManagement;
 
     private static final String TYPE_TASK = "TASK";
     private static final String TYPE_PERFORMANCE = "PERFORMANCE";
@@ -58,6 +60,7 @@ public class OwnershipTransferService {
                           Integer level, Long deptId, Long leaderId, Long principalId) { }
 
     public boolean canTransfer(Long userId) {
+        if(userId!=null&&permissions.configured(userId))return permissions.allowed(userId,"tasks.transfer")||permissions.allowed(userId,"performance.transfer");
         SysUser user = userId == null ? null : sysMapper.getUserById(userId);
         return user != null && !Integer.valueOf(1).equals(user.getIsDelete())
                 && "1".equals(user.getStatus()) && "0".equals(user.getRole());
@@ -141,6 +144,8 @@ public class OwnershipTransferService {
                 ownershipMapper.updatePerformanceOwnership(target.id(), prepared.deptId(), prepared.leaderId(),
                         prepared.principalId(), now);
             }
+            if(task){BizTask changed=bizMapper.getTaskById(target.id());permissionManagement.requireHandler(changed.getAuditorId(),"tasks",target.id(),changed.getPhase(),10);permissionManagement.requireHandler(changed.getPrincipalId(),"tasks",target.id(),changed.getPhase(),20);}
+            else{permissionManagement.requireHandler(prepared.principalId(),"performance",target.id(),null,10);}
             BizOwnershipChangeLog log = new BizOwnershipChangeLog();
             log.setTargetType(type);
             log.setTargetId(target.id());

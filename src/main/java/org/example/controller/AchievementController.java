@@ -47,6 +47,7 @@ public class AchievementController {
         try {
             return achievementService.getAchievementById(achId);
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -61,6 +62,7 @@ public class AchievementController {
             List<BizAchievement> achievementList = achievementService.listAllAchievements(currentUserId(request));
             return achievementList;
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -76,6 +78,7 @@ public class AchievementController {
             Long achId = achievementService.addAchievement(achievement, JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
             return "标志性成果「" + achievement.getAchName() + "」添加成功，成果ID：" + achId;
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -91,6 +94,7 @@ public class AchievementController {
             achievementService.updateAchievement(id, achievement, currentUserId(request));
             return "标志性成果「" + achievement.getAchName() + "」修改成功";
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -108,6 +112,7 @@ public class AchievementController {
             achievementService.deleteAchievement(achId, currentUserId(request));
             return "标志性成果「" + achievement.getAchName() + "」删除成功";
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -117,6 +122,7 @@ public class AchievementController {
         try {
             return achievementService.getTodoAchievementAudits(currentUserId(request));
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -126,6 +132,7 @@ public class AchievementController {
         try {
             return achievementService.getAchievementAuditRecords(currentUserId(request));
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -135,6 +142,7 @@ public class AchievementController {
         try {
             return achievementService.getAchievementAuditsByAchId(achId, currentUserId(request));
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -144,6 +152,7 @@ public class AchievementController {
         try {
             return achievementService.getAchievementAuditLogs(subId, currentUserId(request));
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }
@@ -153,6 +162,7 @@ public class AchievementController {
         try {
             return achievementService.auditAchievement(auditDTO, currentUserId(request));
         } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
         }
     }

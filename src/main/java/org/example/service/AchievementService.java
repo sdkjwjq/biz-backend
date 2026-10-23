@@ -40,6 +40,7 @@ public class AchievementService {
     private SysMapper sysMapper;
     @Autowired
     private LeadershipAccessService leadershipAccess;
+    @Autowired private PermissionService permissions;
 
     private SysUser getActiveUser(Long userId) {
         if (userId == null) {
@@ -69,7 +70,7 @@ public class AchievementService {
 
     private boolean canViewAchievement(Long userId) {
         SysUser user = getActiveUser(userId);
-        return leadershipAccess.isLeader(userId) || AchievementPermissionUtil.canViewAchievement(user, getActiveDept(user));
+        return (permissions.configured(userId) && permissions.allowed(userId,"achievements.read")) || leadershipAccess.isLeader(userId) || AchievementPermissionUtil.canViewAchievement(user, getActiveDept(user));
     }
 
     private boolean canAuditAchievement(Long userId) {
@@ -109,6 +110,7 @@ public class AchievementService {
 
     public List<BizAchievement> listAllAchievements(Long userId) {
         try {
+            if (permissions.configured(userId)) return achievementMapper.listAllAchievements().stream().filter(a -> permissions.canRead(userId,"achievements",a.getAchId(),null)).toList();
             SysUser user = getActiveUser(userId);
             SysDept dept = getActiveDept(user);
             if (!leadershipAccess.isLeader(userId) && !AchievementPermissionUtil.canViewAchievement(user, dept)) {
@@ -381,7 +383,7 @@ public class AchievementService {
         }
         SysUser user = getActiveUser(userId);
         SysDept dept = getActiveDept(user);
-        boolean canSee = leadershipAccess.isLeader(userId) || AchievementPermissionUtil.isAchievementAuditor(user)
+        boolean canSee = (permissions.configured(userId) && permissions.canRead(userId,"achievements",achId,null)) || leadershipAccess.isLeader(userId) || AchievementPermissionUtil.isAchievementAuditor(user)
                 || (AchievementPermissionUtil.isAchievementUploadAccount(user, dept)
                 && Objects.equals(achievement.getDeptId(), user.getDeptId()));
         if (!canSee) {
@@ -398,7 +400,7 @@ public class AchievementService {
         SysUser user = getActiveUser(userId);
         SysDept dept = getActiveDept(user);
         BizAchievement achievement = achievementMapper.getAchievementById(submission.getAchId());
-        boolean canSee = leadershipAccess.isLeader(userId) || AchievementPermissionUtil.isAchievementAuditor(user)
+        boolean canSee = (permissions.configured(userId) && permissions.canRead(userId,"achievements",submission.getAchId(),null)) || leadershipAccess.isLeader(userId) || AchievementPermissionUtil.isAchievementAuditor(user)
                 || (achievement != null
                 && AchievementPermissionUtil.isAchievementUploadAccount(user, dept)
                 && Objects.equals(achievement.getDeptId(), user.getDeptId())

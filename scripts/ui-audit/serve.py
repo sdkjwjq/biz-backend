@@ -25,7 +25,7 @@ SPEC.loader.exec_module(RUNNER)
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--fixture", choices=["base", "business", "review", "navigation", "convenience", "convenience2", "continuous", "customer", "work-records", "task-stats", "ownership-transfer", "ownership-transfer-scale", "performance-relation", "level4-equal-weight", "responsibility-filters", "leadership", "core", "budgettrends", "admintest", "work-record-scope", "presentation", "overview"], default="base")
+    parser.add_argument("--fixture", choices=["base", "business", "review", "navigation", "convenience", "convenience2", "continuous", "customer", "work-records", "task-stats", "ownership-transfer", "ownership-transfer-scale", "performance-relation", "level4-equal-weight", "responsibility-filters", "leadership", "core", "budgettrends", "admintest", "work-record-scope", "presentation", "overview", "permissions"], default="base")
     parser.add_argument("--frontend-port", type=int, default=15173)
     args = parser.parse_args()
     if not 1024 <= args.frontend_port <= 65535:
@@ -67,8 +67,14 @@ def main():
         sql((ROOT / "data/migrations/2026-10-12-task-attributes.sql").read_text(encoding="utf-8"), schema)
         sql((ROOT / "data/migrations/2026-10-12-core-indicators.sql").read_text(encoding="utf-8"), schema)
         sql((ROOT / "data/migrations/2026-10-14-core-indicator-report-mapping.sql").read_text(encoding="utf-8"), schema)
+        sql((ROOT / "data/migrations/2026-10-24-permissions-expert-reviews.sql").read_text(encoding="utf-8"), schema)
         sql((ROOT / "scripts/ui-audit/fixture.sql").read_text(encoding="utf-8"), schema)
         sql("UPDATE sys_user SET force_password_change=0", schema)
+        if args.fixture == "permissions":
+            sql((ROOT / "scripts/ui-audit/fixture-permissions.sql").read_text(encoding="utf-8"), schema)
+            (WORK / "uploads").mkdir(exist_ok=True)
+            for name in ("permission-file-a.pdf", "permission-file-b.pdf"):
+                (WORK / "uploads" / name).write_bytes(b"%PDF-1.4\nSynthetic isolated authorization fixture\n%%EOF")
         if args.fixture == "work-record-scope":
             sql((ROOT / "scripts/ui-audit/fixture-work-record-scope.sql").read_text(encoding="utf-8"), schema)
         if args.fixture in ("core", "budgettrends", "admintest", "presentation", "overview"):

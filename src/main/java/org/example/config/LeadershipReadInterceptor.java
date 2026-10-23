@@ -19,6 +19,7 @@ public class LeadershipReadInterceptor implements HandlerInterceptor {
     private final LeadershipAccessService access;
     private final JdbcTemplate jdbc;
     private final ObjectMapper json;
+    @org.springframework.beans.factory.annotation.Autowired private org.example.service.PermissionService permissions;
     public LeadershipReadInterceptor(LeadershipAccessService access, JdbcTemplate jdbc, ObjectMapper json) {
         this.access = access; this.jdbc = jdbc; this.json = json;
     }
@@ -28,6 +29,7 @@ public class LeadershipReadInterceptor implements HandlerInterceptor {
         if ("OPTIONS".equals(request.getMethod())) return true;
         Long userId = JWTUtil.getUserIdFromToken(request.getHeader("Authorization"));
         if (userId == null) return true;
+        if (permissions.configured(userId)) return true;
         var scope = access.scope(userId);
         if (!scope.leader() && scope.version() == 0) return true;
         if (scope.leader() && !access.isLeader(userId)) return deny(response, "账号已停用或不存在");

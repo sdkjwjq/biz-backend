@@ -63,6 +63,7 @@ public class JwtInterceptor implements HandlerInterceptor {
                 sendError(response, 401, "Invalid Token");
                 return false;
             }
+            if(!"1".equals(user.getStatus())){sendError(response,403,"账号已停用");return false;}
             String path = request.getRequestURI().substring(request.getContextPath().length());
             while (path.endsWith("/") && path.length() > 1) path = path.substring(0, path.length() - 1);
             boolean passwordEndpoint = ("GET".equals(request.getMethod()) && "/system/password/status".equals(path))
