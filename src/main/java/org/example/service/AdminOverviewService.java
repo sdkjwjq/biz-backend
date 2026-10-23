@@ -83,7 +83,7 @@ public class AdminOverviewService {
         if(module.equals("budget")&&dim.equals("trend")) chart=trend(year,month);
         else if(module.equals("budget")&&dim.equals("structure")) chart=structure(rows);
         else if(module.equals("core")) chart=rows.stream().map(r->map("key",str(r.get("id")),"name",r.get("name"),"value",r.get("ratio"))).toList();
-        else chart=groups(rows,dim,module.equals("achievements")&&key.equals("awards")?"quantity":module.equals("budget")?"value":null);
+        else chart=groups(rows,dim,module.equals("achievements")&&key.equals("awards")?"quantity":module.equals("budget")?key.equals("annualPlan")?"target":key.equals("executionRate")?"ratio":"value":null);
         if(module.equals("records")&&dim.equals("department")) for(var group:chart) {
             List<Map<String,Object>> members=rows.stream().filter(r->Objects.equals(group.get("key"),r.get("departmentKey"))).toList();
             group.put("submitted",members.stream().filter(r->Boolean.TRUE.equals(r.get("submitted"))).count());
@@ -101,6 +101,7 @@ public class AdminOverviewService {
         int start=(safePage-1)*pageSize;
         return map("module",module,"metric",metric,"label",selected.get("label"),"value",selected.get("value"),"unit",selected.get("unit"),
             "period",d.period,"note",d.note,"dimension",dim,"dimensions",DIMENSIONS.get(module),"chart",chart,"groupable",groupable,
+            "chartUnit",module.equals("budget")&&dim.equals("reform")&&key.equals("executionRate")?"%":module.equals("budget")?"万元":module.equals("core")?"%":"数量",
             "total",total,"page",safePage,"pageSize",pageSize,"rows",rows.subList(start,Math.min(start+pageSize,rows.size())),"extra",d.extra);
     }
     private Data data(String module,int year,int month,Long actor) {
@@ -149,7 +150,7 @@ public class AdminOverviewService {
             String state=p.getTargetValue()==null||p.getTargetValue().signum()<=0||p.getCurrentValue()==null?"数据待核实":p.getCurrentValue().compareTo(p.getTargetValue())>=0?"数值达标":"未达标";
             Map<String,Object> r=base(p.getPerfId(),p.getPerfCode(),p.getPerfName(),p.getDeptId(),n);
             String code=str(p.getPerfCode()),category=Arrays.stream(p.getAncestors().split(",")).filter(s->!s.isBlank()).toList().get(2).trim();
-            String categoryName=Map.of("1.1","数量指标","1.2","质量指标","1.3","时效指标","2.1","社会效益指标","2.2","经济效益指标","3.1","满意度指标").getOrDefault(category,category);
+            String categoryName=Map.of("1.1","数量指标","1.2","质量指标","1.3","时效指标","2.1","社会效益指标","2.2","可持续影响指标","3.1","服务对象满意度指标").getOrDefault(category,category);
             r.putAll(map("kind","performance","statusKey",state,"status",state,"target",p.getTargetValue(),"value",p.getCurrentValue(),"categoryKey",category,"category",categoryName,
                 "mode",code.startsWith("1.1.")||code.startsWith("1.2.")?"自动":"手动","owner",n.users.getOrDefault(str(p.getLeaderId()),"未配置")));rows.add(r);
         }
@@ -213,7 +214,7 @@ public class AdminOverviewService {
                 rows.add(map("id",t.getTaskIndex(),"name",t.getTaskName(),"reformKey",str(t.getTaskIndex()),"reform",t.getTaskName(),"kind","budget","target",t.getAmount(),"value",expense,"ratio",ratio(expense,t.getAmount()),"goods",t.getGoods(),"capital",t.getCapital(),"other",t.getOther()));
             }
         }
-        return new Data("预算执行","所选月份","金额单位：万元。只读所选年月当前有效版本；累计支出为商品和服务、资本性及其他支出之和。缺月留空、不跨月相减，负增长可能为财务调账。",List.of(
+        return new Data("预算执行","所选月份","金额单位：万元。只读所选年月当前有效版本；年度预算安排按资金来源汇总，改革任务对比使用各任务分项预算。累计支出为商品和服务、资本性及其他支出之和。缺月留空、不跨月相减，负增长可能为财务调账。",List.of(
             metric("annualPlan","年度预算安排",annual,"万元"),metric("expense","累计支出",point.get("cumulative"),"万元"),metric("executionRate","执行率",point.get("executionRate"),"%")),rows,
             map("missing",sheet==null,"dataMonth",sheet==null?null:month,"importTime",sheet==null?null:sheet.getImportTime(),"warning",sheet==null?"尚未导入":point.get("cumulative")==null?"预算字段缺失，支出待核实":""));
     }

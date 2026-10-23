@@ -213,6 +213,8 @@ class AdminOverviewApiTest {
         JsonNode s=summary(login(ADMIN),4);assertEquals(2,value(s,"achievements","total").asInt());assertEquals(3,value(s,"achievements","awards").asInt());
         assertEquals(1,s.path("modules").path("achievements").path("extra").path("missingDates").asInt());
         JsonNode a=analysis(login(ADMIN),"achievements.awards","category");assertEquals(1,a.path("total").asInt());assertEquals(3,a.path("chart").get(0).path("value").asInt());
+        jdbc.update("DELETE FROM biz_achievement WHERE got_time IS NULL");
+        jdbc.execute("ALTER TABLE biz_achievement MODIFY got_time datetime NOT NULL");
     }
     @Test void recordDenominatorIntersectionAndDraftPrivacy() throws Exception {
         jdbc.update("INSERT INTO biz_work_record(owner_id,owner_name,record_year,record_month,status,problems,create_time,update_time,submit_time) VALUES(?,'Current',2026,4,1,'submitted',NOW(),NOW(),NOW()),(999999,'Former',2026,4,1,'historical',NOW(),NOW(),NOW()),(?,'Draft',2026,4,0,'SECRET-DRAFT',NOW(),NOW(),NULL)",OWNER,OTHER);
