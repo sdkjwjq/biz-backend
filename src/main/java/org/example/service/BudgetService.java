@@ -56,6 +56,8 @@ public class BudgetService {
     private ObjectMapper objectMapper;
     @Autowired
     private CoreIndicatorService coreIndicators;
+    @Autowired
+    private LeadershipAccessService budgetAccess;
 
     private final DataFormatter formatter = new DataFormatter(Locale.CHINA);
 
@@ -86,7 +88,7 @@ public class BudgetService {
 
     @Transactional
     public BudgetSheetVO importBudget(Integer year, Integer month, MultipartFile file, Long userId) {
-        validateAdmin(userId);
+        validateEditor(userId);
         validateYearMonth(year, month);
         validateExcel(file);
 
@@ -136,7 +138,7 @@ public class BudgetService {
     }
 
     public List<BudgetVersionVO> getVersions(Integer year, Integer month, Long userId) {
-        validateAdmin(userId);
+        validateEditor(userId);
         validateYearMonth(year, month);
         List<BudgetVersionVO> versions = budgetMapper.getVersions(year, month);
         for (int index = 0; index < versions.size(); index++) {
@@ -146,7 +148,7 @@ public class BudgetService {
     }
 
     public BudgetVersionDetailVO getVersion(Long versionId, Long userId) {
-        validateAdmin(userId);
+        validateEditor(userId);
         BizBudgetImportVersion version = requireVersion(versionId);
         BudgetVersionVO metadata = budgetMapper.getVersionVO(versionId);
         metadata.setCurrent(isLatest(version));
@@ -359,6 +361,10 @@ public class BudgetService {
         if (value == null) return null;
         String normalized = value.trim();
         return normalized.length() <= max ? normalized : normalized.substring(0, max);
+    }
+
+    private void validateEditor(Long userId) {
+        if (!budgetAccess.canFillBudget(userId)) throw new TaskManagementException(403, "仅管理员、双高办及财务处正常账号可以填报预算");
     }
 
     private void validateAdmin(Long userId) {

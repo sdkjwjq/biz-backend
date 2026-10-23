@@ -358,6 +358,19 @@ mapping_diff=$(awk -F'\t' '$1 ~ /^(mapping_error|missing_source|obsolete_todo_no
 [[ -z "$mapping_diff" ]] || die "核心指标关联核对失败（$mapping_diff），请查看 core-report-mapping-check.log"
 say '第十项核心指标已关联发布产业发展报告；旧就业数据和原绩效保留，不计入当前指标'
 
+# Only configured school leaders and the explicitly confirmed accounts are expanded.
+applied=$("${MYSQL[@]}" -e "SELECT COUNT(*) FROM sys_release_migration WHERE migration_key='leadership-schoolwide-20261023'")
+if [[ "$applied" == 0 ]]; then
+  "${MYSQL[@]}" < "$PACKAGE/sql/2026-10-23-leadership-schoolwide.sql" > "$BACKUP/leadership-schoolwide-migration.log"
+  scope_diff=$("${MYSQL[@]}" -e "SELECT COUNT(*) FROM bak_20261023_leadership b LEFT JOIN sys_leadership_access a ON a.user_id=b.user_id WHERE b.applied_version IS NOT NULL AND (a.user_id IS NULL OR a.scope<>'ALL' OR a.version<>b.applied_version)")
+  [[ "$scope_diff" == 0 ]] || die '校级领导全校查阅配置核对失败，请查看迁移日志'
+  "${MYSQL[@]}" -e "INSERT INTO sys_release_migration(migration_key,description) VALUES('leadership-schoolwide-20261023','暂时向已配置校级领导及确认账号开放全校只读查阅，保留原范围备份')"
+  say '校级领导暂按全校查阅，已补充曾院长账号；普通部门负责人权限不变'
+else
+  say '校级领导全校查阅迁移已执行过，本次保留管理员后续配置'
+fi
+"${MYSQL[@]}" < "$PACKAGE/sql/2026-10-23-leadership-schoolwide-check.sql" > "$BACKUP/leadership-schoolwide-check.log"
+
 # The backend is stopped and the complete database has already been backed up.
 # Retire review requests only; preserve completed-result messages and audit history.
 "${MYSQL[@]}" < "$PACKAGE/sql/backup-stale-notices.sql" > "$BACKUP/restore-notice-flags.sql"

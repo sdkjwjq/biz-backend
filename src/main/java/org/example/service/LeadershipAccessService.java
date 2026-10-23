@@ -197,8 +197,17 @@ public class LeadershipAccessService {
 
     /** 双高建设办公室沿用现有组织编号100，仅有效部门的正常账号具有填报资格。 */
     public boolean isDoubleHighOffice(Long userId) {
+        return isActiveDepartmentMember(userId, 100L);
+    }
+
+    /** 组织编号已与现有部门数据核对：100双高建设办公室，104财务处。 */
+    public boolean canFillBudget(Long userId) {
+        return isAdmin(userId) || isDoubleHighOffice(userId) || isActiveDepartmentMember(userId, 104L);
+    }
+
+    private boolean isActiveDepartmentMember(Long userId, Long departmentId) {
         SysUser user = currentUser(userId);
-        if (!active(user) || !Long.valueOf(100L).equals(user.getDeptId())) return false;
+        if (!active(user) || !departmentId.equals(user.getDeptId())) return false;
         var dept = users.getDeptById(user.getDeptId());
         return dept != null && !Integer.valueOf(1).equals(dept.getIsDelete()) && !"1".equals(dept.getStatus());
     }
@@ -243,7 +252,8 @@ public class LeadershipAccessService {
         result.put("leadershipScope", scope.scope());
         result.put("departmentIds", scope.departmentIds());
         result.put("canViewOverview", admin || scope.leader());
-        result.put("canViewBudget", admin || scope.leader() || "2".equals(user.getRole()));
+        result.put("canViewBudget", canFillBudget(userId) || scope.leader() || "2".equals(user.getRole()));
+        result.put("canFillBudget", canFillBudget(userId));
         result.put("canViewAchievement", scope.leader() || AchievementPermissionUtil.canViewAchievement(user,
                 user.getDeptId() == null ? null : users.getDeptById(user.getDeptId())));
         result.put("canViewAuditCenter", !scope.leader() || duties || coreDuties || AchievementPermissionUtil.isAchievementAuditor(user));

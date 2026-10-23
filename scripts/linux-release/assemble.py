@@ -102,6 +102,9 @@ DEALLOCATE PREPARE release_stmt;
     for suffix in ['', '-check', '-rollback']:
         source = ROOT / ('data/migrations/2026-10-14-core-indicator-report-mapping'+suffix+'.sql')
         (OUT/'sql'/source.name).write_text(source.read_text(encoding='utf-8'),encoding='utf-8',newline='\n')
+    for suffix in ['', '-check', '-rollback']:
+        source = ROOT / ('data/migrations/2026-10-23-leadership-schoolwide'+suffix+'.sql')
+        (OUT/'sql'/source.name).write_text(source.read_text(encoding='utf-8'),encoding='utf-8',newline='\n')
     budget_version_migration = (ROOT/'data/migrations/2026-09-26-budget-import-version.sql').read_text(encoding='utf-8')
     backfill_marker = '-- 为升级前已有的当前预算建立只读初始版本。脚本重复执行不会重复写入。'
     assert budget_version_migration.count(backfill_marker) == 1
@@ -181,6 +184,10 @@ DEALLOCATE PREPARE release_stmt;
     manifest['data_updates'] += ['sql/2026-10-12-'+module+'.sql' for module in ['leadership-access','task-attributes','core-indicators']]
     manifest['data_updates'].append('sql/2026-10-14-core-indicator-report-mapping.sql')
     manifest['one_time_migrations'].append('core-indicator-report-mapping-20261014')
+    manifest['data_updates'].append('sql/2026-10-23-leadership-schoolwide.sql')
+    manifest['one_time_migrations'].append('leadership-schoolwide-20261023')
+    manifest['data_update_backup_tables'] += ['bak_20261023_leadership','bak_20261023_leadership_department']
+    manifest['budget_fillers'] = ['active-admin','active-office-department-100','active-finance-department-104']
     (OUT/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
     files=sorted(p for p in OUT.rglob('*') if p.is_file() and p.name!='SHA256SUMS')
     (OUT/'SHA256SUMS').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.relative_to(OUT).as_posix()+'\n' for p in files),encoding='ascii',newline='\n')
