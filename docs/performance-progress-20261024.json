@@ -13,8 +13,8 @@
     "frontend_build": "passed"
   },
   "pending": [
-    "账号数据库筛选分页",
-    "独立字段与远程选项接口",
+    "账号派生角色及活动职责筛选的数据库分页",
+    "大量人员候选的远程分页查询",
     "其余业务模块数据库查询优化",
     "全系统并发和5倍规模基准",
     "看板聚合与索引分析"
@@ -51,5 +51,14 @@
     },
     "compatibility": "Serialized results compared to existing per-indicator history/effective queries, including ordering and frozen target values",
     "limits": "No measured production latency or concurrency claim; undated all-year list retains legacy path; metadata mapping queries not yet batched"
+  },
+  "workRecordProjection": {
+    "implementation": "Resolve visibility once and load ordered records once; removes repeated page counts and capability checks from advanced-filter projection",
+    "verification": {
+      "work_record_tests": 35,
+      "result": "passed",
+      "compatibility": "Ordered legacy page concatenation equals new projection for owner, other user, administrator and viewer; isolated database only"
+    },
+    "remaining": "Full authorized projection remains; SQL predicate pagination and workload benchmarks are not yet implemented"
   }
 }

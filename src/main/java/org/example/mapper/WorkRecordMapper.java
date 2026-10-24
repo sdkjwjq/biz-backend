@@ -15,6 +15,8 @@ public interface WorkRecordMapper {
             +"<if test='ownerId != null'>AND owner_id=#{ownerId} </if><if test='status != null'>AND status=#{status} </if>";
     @Select("<script>SELECT * FROM biz_work_record"+SCOPED+"ORDER BY record_year DESC,record_month DESC,owner_id,record_id LIMIT #{limit} OFFSET #{offset}</script>")
     List<BizWorkRecord> scopedList(@Param("ids")List<Long> ids,@Param("year")Integer year,@Param("month")Integer month,@Param("ownerId")Long ownerId,@Param("status")Integer status,@Param("limit")int limit,@Param("offset")long offset);
+    @Select("<script>SELECT * FROM biz_work_record"+SCOPED+"ORDER BY record_year DESC,record_month DESC,owner_id,record_id</script>")
+    List<BizWorkRecord> scopedFilterRows(@Param("ids") List<Long> ids, @Param("year") Integer year, @Param("month") Integer month, @Param("ownerId") Long ownerId, @Param("status") Integer status);
     @Select("<script>SELECT COUNT(*) FROM biz_work_record"+SCOPED+"</script>")
     long scopedCount(@Param("ids")List<Long> ids,@Param("year")Integer year,@Param("month")Integer month,@Param("ownerId")Long ownerId,@Param("status")Integer status);
     @Select("<script>SELECT owner_id,MAX(owner_name) owner_name FROM biz_work_record WHERE record_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach> GROUP BY owner_id ORDER BY owner_id</script>")
@@ -105,6 +107,10 @@ public interface WorkRecordMapper {
                             @Param("ownerId") Long ownerId, @Param("status") Integer status,
                             @Param("limit") int limit, @Param("offset") long offset);
 
+    @Select("<script>SELECT * FROM biz_work_record" + VISIBLE
+            + "ORDER BY record_year DESC,record_month DESC,owner_id,record_id</script>")
+    List<BizWorkRecord> filterRows(@Param("userId") Long userId, @Param("viewAll") boolean viewAll,
+                                  @Param("adminTest") boolean adminTest, @Param("year") Integer year, @Param("month") Integer month, @Param("ownerId") Long ownerId, @Param("status") Integer status);
     @Select("<script>SELECT COUNT(*) FROM biz_work_record" + VISIBLE + "</script>")
     long count(@Param("userId") Long userId, @Param("viewAll") boolean viewAll, @Param("adminTest") boolean adminTest,
                @Param("year") Integer year, @Param("month") Integer month,

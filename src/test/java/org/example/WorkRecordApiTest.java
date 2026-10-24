@@ -42,6 +42,7 @@ class WorkRecordApiTest {
     @Autowired private TestRestTemplate http;
     @Autowired private JdbcTemplate jdbc;
     @Autowired private ObjectMapper json;
+    @Autowired private org.example.service.WorkRecordService recordService;
     @LocalServerPort private int port;
     @MockBean(name="workRecordClock") private Clock clock;
 
@@ -735,6 +736,16 @@ class WorkRecordApiTest {
         assertEquals(1,ok(request(HttpMethod.GET,"/work-records?month=1&ownerId="+OWNER,token,null)).path("total").asInt());
         assertEquals(0,ok(request(HttpMethod.GET,"/work-records?status=1",token,null)).path("total").asInt());
         assertEquals(400,request(HttpMethod.GET,"/work-records?pageSize=101",token,null).getStatusCode().value());
+        for (long actor : List.of(OWNER, OTHER, ADMIN, VIEWER)) {
+            var expected = new ArrayList<org.example.entity.BizWorkRecord>();
+            var first = recordService.list(actor,null,null,null,null,1,1);
+            expected.addAll(first.records());
+            for (int page=2; page<=first.total(); page++)
+                expected.addAll(recordService.list(actor,null,null,null,null,page,1).records());
+            assertEquals(json.readTree(json.writeValueAsString(expected)),
+                    json.readTree(json.writeValueAsString(recordService.filterRows(actor,null))),
+                    "Filter projection must preserve ordered visibility for actor " + actor);
+        }
         List<Map<String,Object>> before=jdbc.queryForList("SELECT * FROM biz_task ORDER BY task_id");
         preview(token,1); preview(token,9);
         assertEquals(before,jdbc.queryForList("SELECT * FROM biz_task ORDER BY task_id"));

@@ -258,6 +258,19 @@ public class WorkRecordService {
         return content;
     }
 
+    /** Compatibility projection for advanced filters: resolve visibility once, without repeated page counts. */
+    @Transactional(readOnly=true, isolation=Isolation.REPEATABLE_READ)
+    public List<BizWorkRecord> filterRows(Long userId, Integer year) {
+        Capabilities access = capabilities(userId);
+        if (year != null && (year < 2025 || year > 2029))
+            throw new WorkRecordException(400, "列表筛选参数不正确");
+        if (permissions.enforced(userId)) {
+            List<Long> allowed = permissions.recordIds(userId);
+            return allowed.isEmpty() ? List.of() : records.scopedFilterRows(allowed, year, null, null, null);
+        }
+        return records.filterRows(userId, access.canViewAll(), AdminTestContext.enabled(userId), year, null, null, null);
+    }
+
     @Transactional(readOnly=true, isolation=Isolation.REPEATABLE_READ)
     public Page list(Long userId, Integer year, Integer month, Long ownerId, Integer status, int page, int pageSize) {
         Capabilities access = capabilities(userId);
