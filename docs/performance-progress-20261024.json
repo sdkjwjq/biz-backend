@@ -1,0 +1,23 @@
+{
+  "status": "partial",
+  "scope": "账号列表批量授权及当前请求内复用；查询请求合并；慢请求加载状态回归",
+  "measurements": {
+    "users": 55,
+    "baseline_ms": 101,
+    "optimized_ms": 13,
+    "method": "同一隔离数据库内逐账号角色与授权预览，对比批量预读；单次服务逻辑测量，非整页P95或生产环境基准"
+  },
+  "verification": {
+    "backend_tests": 61,
+    "browser_checks": 29,
+    "frontend_build": "passed"
+  },
+  "pending": [
+    "账号数据库筛选分页",
+    "独立字段与远程选项接口",
+    "其余业务模块数据库查询优化",
+    "全系统并发和5倍规模基准",
+    "看板聚合与索引分析"
+  ],
+  "production_changes": false
+}

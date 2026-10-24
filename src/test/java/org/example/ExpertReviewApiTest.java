@@ -38,6 +38,22 @@ class ExpertReviewApiTest {
  JsonNode detail(long task,String actor)throws Exception{return body(get("/expert-reviews/tasks/"+task+"?year=2026",actor));}
  Map<String,Object> input(long task,String text,JsonNode detail){return new LinkedHashMap<>(Map.of("taskId",task,"year",2026,"version",detail.path("version").asLong(),"text",text,"scopeToken",detail.path("scopeToken").asText()));}
  JsonNode submit(long task,String text,String actor)throws Exception{return body(call(HttpMethod.POST,"/expert-reviews/submit",actor,input(task,text,detail(task,actor)),false));}
+ @Autowired org.example.service.PermissionService permissionService;
+ @Autowired org.example.mapper.SysMapper accountMapper;
+ @Test void batchAccountPermissionsMatchUnbatchedEvaluation()throws Exception{
+  for(int i=0;i<50;i++)jdbc.update("INSERT INTO sys_user(user_id,dept_id,user_name,nick_name,password,role,status,is_delete) VALUES(?,991001,?,?,'synthetic','1','1',0)",980000+i,"perf-"+i,"Performance fixture "+i);
+  var accounts=accountMapper.getAllUsers();var before=new LinkedHashMap<Long,Object>();var after=new LinkedHashMap<Long,Object>();long baseline,optimized;
+  try{
+   var request=new org.springframework.mock.web.MockHttpServletRequest("GET","/list-filters/admin-users");request.addHeader("Authorization",admin);
+   org.springframework.web.context.request.RequestContextHolder.setRequestAttributes(new org.springframework.web.context.request.ServletRequestAttributes(request));
+   long start=System.nanoTime();for(var user:accounts)before.put(user.getUserId(),List.of(permissionService.assignedRoleCodes(user),permissionService.policy(user.getUserId())));baseline=System.nanoTime()-start;
+   var next=new org.springframework.mock.web.MockHttpServletRequest("GET","/list-filters/admin-users");next.addHeader("Authorization",admin);
+   org.springframework.web.context.request.RequestContextHolder.setRequestAttributes(new org.springframework.web.context.request.ServletRequestAttributes(next));
+   start=System.nanoTime();permissionService.prepareAccountList(accounts);for(var user:accounts)after.put(user.getUserId(),List.of(permissionService.assignedRoleCodes(user),permissionService.policy(user.getUserId())));optimized=System.nanoTime()-start;
+   assertEquals(before,after);
+   System.out.println("ACCOUNT_BATCH_BASELINE users="+accounts.size()+" baseline_ms="+baseline/1_000_000+" optimized_ms="+optimized/1_000_000);
+  }finally{org.springframework.web.context.request.RequestContextHolder.resetRequestAttributes();}
+ }
  @Test void taskFilterExportRechecksAuthorizationAndExportsOnlyMatchingLeaves()throws Exception{
   jdbc.update("UPDATE sys_user_permission SET permissions_json='{\"tasks.export\":true}' WHERE user_id=90103");
   var response=http.exchange("http://127.0.0.1:"+port+"/api/list-filters/tasks/export?f.year=2026",HttpMethod.GET,new HttpEntity<>(null,headers(a,false)),byte[].class);assertEquals(200,response.getStatusCode().value());

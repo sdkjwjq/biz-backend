@@ -50,6 +50,24 @@ public class PermissionService {
         var r=rows.get(0);return new Policy(str(r.get("access_mode")),read(r.get("permissions_json"),new TypeReference<Map<String,Boolean>>(){}),read(r.get("scopes_json"),new TypeReference<Map<String,Object>>(){}),
                 jdbc.queryForList("SELECT role_code FROM sys_user_permission_role WHERE user_id=? ORDER BY role_code",String.class,id),number(r.get("version")));
     }
+    /** Batch read only for administrator list requests; never reused by mutations. */
+    public void prepareAccountList(Collection<SysUser> accounts){
+        if(!(RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes a)||!"GET".equals(a.getRequest().getMethod()))return;
+        requireAdmin(actor());
+        if(!installed())return;
+        Map<Long,List<String>> assignments=new HashMap<>();
+        for(var row:jdbc.queryForList("SELECT user_id,role_code FROM sys_user_permission_role ORDER BY user_id,role_code"))
+            assignments.computeIfAbsent(number(row.get("user_id")),k->new ArrayList<>()).add(str(row.get("role_code")));
+        Set<Long> requested=accounts.stream().map(SysUser::getUserId).collect(Collectors.toSet());
+        Map<Long,Policy> policies=new HashMap<>();
+        for(var row:jdbc.queryForList("SELECT user_id,access_mode,permissions_json,scopes_json,version FROM sys_user_permission")){
+            long id=number(row.get("user_id"));if(!requested.contains(id))continue;policies.put(id,new Policy(str(row.get("access_mode")),read(row.get("permissions_json"),new TypeReference<Map<String,Boolean>>(){}),read(row.get("scopes_json"),new TypeReference<Map<String,Object>>(){}),assignments.getOrDefault(id,List.of()),number(row.get("version"))));
+        }
+        a.getRequest().setAttribute(PermissionService.class.getName()+":coreReporters",new HashSet<>(jdbc.queryForList("SELECT t.leader_id FROM biz_task t WHERE t.level=3 AND t.phase BETWEEN 2025 AND 2029 AND COALESCE(t.is_delete,0)=0 UNION SELECT c.leader_id FROM biz_level4_task c JOIN biz_task t ON t.task_id=c.parent_id WHERE t.level=3 AND t.phase BETWEEN 2025 AND 2029 AND COALESCE(t.is_delete,0)=0 AND COALESCE(c.is_delete,0)=0",Long.class)));
+        a.getRequest().setAttribute(PermissionService.class.getName()+":coreReviewers",new HashSet<>(jdbc.queryForList("SELECT p.principal_id FROM biz_performance p JOIN biz_core_indicator c ON BINARY c.indicator_code=BINARY p.perf_code WHERE COALESCE(p.is_delete,0)=0 UNION SELECT r.current_handler_id FROM biz_core_report r JOIN biz_core_indicator c ON c.indicator_id=r.indicator_id AND BINARY c.indicator_code=BINARY r.performance_code WHERE r.flow_status IN(10,20)",Long.class)));
+        for(var account:accounts)a.getRequest().setAttribute(PermissionService.class.getName()+":policy:"+account.getUserId(),policies.getOrDefault(account.getUserId(),new Policy("LEGACY",Map.of(),Map.of(),List.of(),0)));
+    }
+    public SysDept department(Long id){return id==null?null:cached("department:"+id,()->Optional.ofNullable(users.getDeptById(id))).orElse(null);}
     public List<PermissionCatalog.Role> roles(){return cached("roleDefinitions",this::loadRoles);}
     private List<PermissionCatalog.Role> loadRoles(){
         Map<String,PermissionCatalog.Role> result=new LinkedHashMap<>(PermissionCatalog.BUILTINS);
@@ -84,7 +102,7 @@ public class PermissionService {
         Long id=u.getUserId();Set<String> result=new LinkedHashSet<>();result.add("2".equals(u.getRole())?"RESPONSIBLE":"USER");
         if("0".equals(u.getRole())){result.add("ADMIN");return result;}
         if(Objects.equals(id,110228L))result.add("ARCHIVER");
-        var department=u.getDeptId()==null?null:users.getDeptById(u.getDeptId());
+        var department=department(u.getDeptId());
         boolean activeDept=department!=null&&!Integer.valueOf(1).equals(department.getIsDelete())&&!"1".equals(department.getStatus());
         if(activeDept&&Objects.equals(u.getDeptId(),100L))result.add("OFFICE");
         if(activeDept&&Objects.equals(u.getDeptId(),104L))result.add("FINANCE");
@@ -95,9 +113,13 @@ public class PermissionService {
         if(recordViewers.contains(id))result.add("RECORD_VIEWER");
         if(cached("recordOwnerIds",()->new HashSet<>(jdbc.queryForList("SELECT DISTINCT owner_id FROM biz_work_record WHERE delete_marker=0",Long.class))).contains(id))result.add("RECORD_OWNER");
         if(!records.fillableYears(u).isEmpty())result.add("RECORD_REPORTER");
-        if(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM biz_task t WHERE t.level=3 AND t.phase BETWEEN 2025 AND 2029 AND COALESCE(t.is_delete,0)=0 AND (t.leader_id=? OR EXISTS(SELECT 1 FROM biz_level4_task c WHERE c.parent_id=t.task_id AND c.leader_id=? AND COALESCE(c.is_delete,0)=0)))",Integer.class,id,id)==1)result.add("CORE_REPORTER");
-        if(jdbc.queryForObject("SELECT (EXISTS(SELECT 1 FROM biz_performance p JOIN biz_core_indicator c ON BINARY c.indicator_code=BINARY p.perf_code WHERE p.principal_id=? AND COALESCE(p.is_delete,0)=0) OR EXISTS(SELECT 1 FROM biz_core_report r JOIN biz_core_indicator c ON c.indicator_id=r.indicator_id AND BINARY c.indicator_code=BINARY r.performance_code WHERE r.current_handler_id=? AND r.flow_status IN(10,20)))",Integer.class,id,id)==1)result.add("CORE_REVIEWER");
+        if(accountMembership("coreReporters",id,()->jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM biz_task t WHERE t.level=3 AND t.phase BETWEEN 2025 AND 2029 AND COALESCE(t.is_delete,0)=0 AND (t.leader_id=? OR EXISTS(SELECT 1 FROM biz_level4_task c WHERE c.parent_id=t.task_id AND c.leader_id=? AND COALESCE(c.is_delete,0)=0)))",Integer.class,id,id)==1))result.add("CORE_REPORTER");
+        if(accountMembership("coreReviewers",id,()->jdbc.queryForObject("SELECT (EXISTS(SELECT 1 FROM biz_performance p JOIN biz_core_indicator c ON BINARY c.indicator_code=BINARY p.perf_code WHERE p.principal_id=? AND COALESCE(p.is_delete,0)=0) OR EXISTS(SELECT 1 FROM biz_core_report r JOIN biz_core_indicator c ON c.indicator_id=r.indicator_id AND BINARY c.indicator_code=BINARY r.performance_code WHERE r.current_handler_id=? AND r.flow_status IN(10,20)))",Integer.class,id,id)==1))result.add("CORE_REVIEWER");
         return result;
+    }
+    private boolean accountMembership(String key,Long id,Supplier<Boolean> fallback){
+        if(RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes a && "GET".equals(a.getRequest().getMethod()) && a.getRequest().getAttribute(PermissionService.class.getName()+":"+key) instanceof Set<?> values)return values.contains(id);
+        return fallback.get();
     }
     public boolean enforced(Long id){return id!=null&&installed();}
     public boolean configured(Long id){return id!=null&&state(id).configured();}

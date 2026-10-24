@@ -16,6 +16,14 @@ const fs=require('node:fs/promises'),path=require('node:path'),assert=require('n
    if(domain==='notices'||domain==='admin-operations'){assert.equal(r.status(),400);continue;}
    assert.equal(r.status(),200,domain+': '+await r.text());const body=await r.json();assert.ok(body.fields.length>=4);assert.equal(new Set(body.ids).size,body.total);checks.push(domain+'-real-api');
   }
+  let accountRequests=0,releaseAccount;const gate=new Promise(resolve=>{releaseAccount=resolve});
+  await page.route('**/api/list-filters/admin-users?**',async route=>{accountRequests++;await gate;await route.continue()});
+  await page.goto(state.frontend+'/home/admin/accounts');
+  await expect(page.getByText('正在加载账号…',{exact:true})).toBeVisible();
+  await expect(page.locator('.pager')).toHaveCount(0);
+  await expect(page.getByText('No Data',{exact:true})).toHaveCount(0);
+  releaseAccount();await expect(page.locator('.pager')).toBeVisible();
+  assert.equal(accountRequests,1);await page.unroute('**/api/list-filters/admin-users?**');checks.push('account-first-load-never-shows-false-empty-result');
   await page.goto(state.frontend+'/home/works');const bar=page.locator('.query-filter-bar').first();await expect(bar.locator('.basic-fields > .query-field')).toHaveCount(4);
   const keyword=bar.getByRole('textbox',{name:'任务编号／名称'});await keyword.fill('不存在的筛选名称');await expect(bar.getByText('条件已修改，待查询',{exact:true})).toBeVisible();
   await bar.getByRole('button',{name:'查询',exact:true}).click();await expect(bar.locator('.pending-change')).toHaveCount(0);await expect(page.locator('.el-table__row')).toHaveCount(0);checks.push('draft-query-and-empty-results');

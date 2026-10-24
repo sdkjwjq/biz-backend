@@ -36,12 +36,22 @@ public class WorkRecordScopeService {
 
     public List<Integer> fillableYears(SysUser owner) {
         Catalog catalog = catalog();
-        Map<Long, SysDept> departments = new HashMap<>();
+        Map<Long, SysDept> departments = requestDepartments();
         List<Integer> result = new ArrayList<>();
         for (int year = 2025; year <= 2029; year++) {
             if (AdminTestContext.enabled(owner.getUserId()) || !resolve(owner, year, catalog, departments).tasks().isEmpty()) result.add(year);
         }
         return result;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<Long,SysDept> requestDepartments(){
+        if(org.springframework.web.context.request.RequestContextHolder.getRequestAttributes() instanceof org.springframework.web.context.request.ServletRequestAttributes a && "GET".equals(a.getRequest().getMethod())){
+            String key=WorkRecordScopeService.class.getName()+".departments";
+            Object old=a.getRequest().getAttribute(key);if(old instanceof Map<?,?>)return (Map<Long,SysDept>)old;
+            Map<Long,SysDept> value=new HashMap<>();a.getRequest().setAttribute(key,value);return value;
+        }
+        return new HashMap<>();
     }
 
     public Scope resolve(Long ownerId, int year) {
@@ -56,7 +66,7 @@ public class WorkRecordScopeService {
     /** 返回同一资格集合供概览计算分子、分母；调用者只可输出必要的人员信息。 */
     public List<SysUser> eligibleAuthors(int year) {
         Catalog catalog = catalog();
-        Map<Long, SysDept> departments = new HashMap<>();
+        Map<Long, SysDept> departments = requestDepartments();
         return users.getAllUsers().stream().filter(this::active)
                 .filter(owner -> !resolve(owner, year, catalog, departments, false).tasks().isEmpty()).toList();
     }
