@@ -40,6 +40,17 @@ class ExpertReviewApiTest {
  JsonNode submit(long task,String text,String actor)throws Exception{return body(call(HttpMethod.POST,"/expert-reviews/submit",actor,input(task,text,detail(task,actor)),false));}
  @Autowired org.example.service.PermissionService permissionService;
  @Autowired org.example.mapper.SysMapper accountMapper;
+ @Test void pagedAccountSqlMatchesLegacyFiltersAndKeepsAuthorization()throws Exception{
+  jdbc.update("UPDATE sys_user SET nick_name='MiXeD %_ name',force_password_change=1 WHERE user_id=90101");
+  for(String filter:List.of("","f.status=1","f.status=0","f.deptId=991001&f.deptId=991002","f.deptId=bad","f.keyword=MiXeD","f.keyword=%25_","f.role=0","f.force=yes","f.force=no","f.leadership=NONE","f.roles=EXPERT","f.personal=yes","f.duties=yes")){
+   String url="/list-filters/admin-users?page=2&pageSize=2&"+filter;
+   var legacy=body(get(url,admin));var paged=body(get(url+"&responseMode=page&includeFields=false",admin));
+   assertEquals(legacy.path("total"),paged.path("total"),filter);assertEquals(legacy.path("page"),paged.path("page"),filter);
+   assertEquals(legacy.path("items"),paged.path("items"),filter);assertFalse(paged.has("ids"));
+  }
+  assertEquals(403,get("/list-filters/admin-users?responseMode=page&includeFields=false",owner).getStatusCode().value());
+  for(String invalid:List.of("f.status=9","f.keyword=x&f.keyword=y","f.deptIdFrom=1","f.password=x","pageSize=0"))assertEquals(400,get("/list-filters/admin-users?responseMode=page&includeFields=false&"+invalid,admin).getStatusCode().value());
+ }
  @Test void batchAccountPermissionsMatchUnbatchedEvaluation()throws Exception{
   for(int i=0;i<50;i++)jdbc.update("INSERT INTO sys_user(user_id,dept_id,user_name,nick_name,password,role,status,is_delete) VALUES(?,991001,?,?,'synthetic','1','1',0)",980000+i,"perf-"+i,"Performance fixture "+i);
   var accounts=accountMapper.getAllUsers();var before=new LinkedHashMap<Long,Object>();var after=new LinkedHashMap<Long,Object>();long baseline,optimized;

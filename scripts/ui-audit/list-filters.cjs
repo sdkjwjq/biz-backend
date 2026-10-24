@@ -24,6 +24,11 @@ const fs=require('node:fs/promises'),path=require('node:path'),assert=require('n
   await expect(page.getByText('No Data',{exact:true})).toHaveCount(0);
   releaseAccount();await expect(page.locator('.pager')).toBeVisible();
   assert.equal(accountRequests,1);await page.unroute('**/api/list-filters/admin-users?**');checks.push('account-first-load-never-shows-false-empty-result');
+  const accountBar=page.locator('[aria-label="账号筛选"]');await expect(accountBar.getByRole('button',{name:'查询',exact:true})).not.toHaveClass(/is-loading/);await accountBar.getByRole('textbox',{name:'账号姓名／工号'}).fill('不存在的账号');
+  const accountResponse=page.waitForResponse(r=>r.url().includes('/list-filters/admin-users?')&&r.url().includes('responseMode=page')&&new URL(r.url()).searchParams.get('f.keyword')==='不存在的账号');
+  await accountBar.getByRole('button',{name:'查询',exact:true}).click();const accountBody=await (await accountResponse).json();assert.equal(accountBody.total,0);assert.equal(accountBody.ids,undefined);
+  await expect(page.getByText('无匹配账号',{exact:true})).toBeVisible();await accountBar.getByRole('button',{name:'重置全部',exact:true}).click();await expect(page.locator('.el-table__row').first()).toBeVisible();checks.push('account-server-pagination-empty-and-reset');
+
   await page.goto(state.frontend+'/home/works');const bar=page.locator('.query-filter-bar').first();await expect(bar.locator('.basic-fields > .query-field')).toHaveCount(4);
   const keyword=bar.getByRole('textbox',{name:'任务编号／名称'});await keyword.fill('不存在的筛选名称');await expect(bar.getByText('条件已修改，待查询',{exact:true})).toBeVisible();
   await bar.getByRole('button',{name:'查询',exact:true}).click();await expect(bar.locator('.pending-change')).toHaveCount(0);await expect(page.locator('.el-table__row')).toHaveCount(0);checks.push('draft-query-and-empty-results');

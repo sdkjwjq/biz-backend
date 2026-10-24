@@ -19,5 +19,20 @@
     "全系统并发和5倍规模基准",
     "看板聚合与索引分析"
   ],
-  "production_changes": false
+  "production_changes": false,
+  "accountPagination": {
+    "status": "common scalar filters use SQL pagination after initial metadata load; derived-role filters retain compatible fallback",
+    "filters": [
+      "keyword",
+      "deptId",
+      "status",
+      "role",
+      "force",
+      "leadership"
+    ],
+    "compatibility_tests": 32,
+    "browser_checks": 30,
+    "fix": "watch query parameter content rather than object identity to prevent refresh loops",
+    "remaining": "initial metadata and derived-role query optimization; remote option queries; other business modules and load benchmarks"
+  }
 }

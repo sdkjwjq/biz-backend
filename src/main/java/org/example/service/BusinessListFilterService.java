@@ -30,12 +30,17 @@ public class BusinessListFilterService {
     public record Data(List<Map<String,Object>> rows,List<Field> fields){}
     public Map<String,Object> query(String domain,Long actor,MultiValueMap<String,String> params){
         if(domain.equals("budget"))return budgetQuery(actor,params);
+        if(domain.equals("admin-users")&&!"export".equals(params.getFirst("purpose"))&&"page".equals(params.getFirst("responseMode"))&&"false".equals(params.getFirst("includeFields"))){
+            access.requireAdmin(actor);
+            Set<String> supported=Set.of("f.keyword","f.deptId","f.status","f.role","f.force","f.leadership");
+            if(params.keySet().stream().filter(k->k.startsWith("f.")).allMatch(supported::contains))return accountPage(params);
+        }
         boolean exporting="export".equals(params.getFirst("purpose"));
         if(exporting){if(domain.equals("admin-operations"))access.requireAdmin(actor);else if(domain.equals("achievements"))access.require(actor,"achievements.export");else throw new AdminManagementException(400,"该模块不支持此导出方式");}
         Data data=domain.equals("audits")?auditData(actor,params.getFirst("tab")):data(domain,actor,params.getFirst("f.year"),params.getFirst("f.month"));var query=new ListFilterQuery(params,data.fields());
         var matched=data.rows().stream().filter(row->query.matches(row,data.fields())).filter(row->auditMatches(row,query,data.fields())).toList();
         int page=positive(params.getFirst("page"),1),size=Math.min(100,positive(params.getFirst("pageSize"),10));int safe=Math.min(page,Math.max(1,(matched.size()+size-1)/size));
-        Map<String,Object> result=new LinkedHashMap<>();result.put("ids",matched.stream().map(r->r.get("id")).toList());result.put("total",matched.size());result.put("fields",data.fields());result.put("page",safe);result.put("pageSize",size);
+        Map<String,Object> result=new LinkedHashMap<>();if(!"page".equals(params.getFirst("responseMode")))result.put("ids",matched.stream().map(r->r.get("id")).toList());result.put("total",matched.size());result.put("fields",data.fields());result.put("page",safe);result.put("pageSize",size);
         result.put("items",(exporting?matched:matched.subList((safe-1)*size,Math.min(safe*size,matched.size()))).stream().map(r->r.getOrDefault("item",Map.of())).toList());return result;
     }
     @SuppressWarnings("unchecked")
@@ -128,6 +133,32 @@ public class BusinessListFilterService {
         select(f,"hasExpense","有无支出",false,"yes","有支出","no","无支出","unknown","待核实");plain(f,"ratio","年度预算执行率（%）","number",false,"执行情况");
         var query=new ListFilterQuery(params,f);var taskFields=f.stream().filter(x->!Set.of("source","expense").contains(x.key())).toList();
         var result=new LinkedHashMap<String,Object>();result.put("fields",f);result.put("ids",rows.stream().filter(r->query.matches(r,taskFields)).map(r->r.get("task")).toList());result.put("budget",sheet);result.put("imported",sheet.getSheet().getSheetId()!=null);return result;
+    }
+    /** Common account searches are paginated by MySQL; derived-role predicates retain the compatible evaluator. */
+    private Map<String,Object> accountPage(MultiValueMap<String,String> params){
+        List<Field> fields=new ArrayList<>();plain(fields,"keyword","姓名／工号","text",true,"基础");
+        multi(fields,"deptId","部门",true,List.of(),Map.of());
+        select(fields,"status","状态",true,"1","正常","0","停用");select(fields,"role","身份",false,"0","管理员","1","普通用户","2","负责人");
+        select(fields,"force","强制改密",false,"yes","是","no","否");select(fields,"leadership","领导查阅",false,"ALL","全校","DEPARTMENTS","部门","NONE","无");
+        new ListFilterQuery(params,fields);
+        StringBuilder where=new StringBuilder(" WHERE COALESCE(u.is_delete,0)=0");List<Object> args=new ArrayList<>();
+        for(String key:List.of("status","role","force","leadership")){
+            String value=params.getFirst("f."+key);if(value==null||value.isBlank())continue;
+            String expression=switch(key){case "force"->"CASE WHEN COALESCE(u.force_password_change,0)=1 THEN 'yes' ELSE 'no' END";case "leadership"->"COALESCE(l.scope,'NONE')";default->"u."+key;};
+            where.append(" AND ").append(expression).append("=?");args.add(value);
+        }
+        var departments=params.getOrDefault("f.deptId",List.of()).stream().filter(v->v!=null&&!v.isBlank()).distinct().toList();
+        if(!departments.isEmpty()){where.append(" AND COALESCE(CAST(u.dept_id AS CHAR),'missing') IN (").append(String.join(",",Collections.nCopies(departments.size(),"?"))).append(")");args.addAll(departments);}
+        String keyword=params.getFirst("f.keyword");if(keyword!=null&&!keyword.isBlank()){
+            where.append(" AND LOCATE(LOWER(?),LOWER(CONCAT(u.user_id,' ',COALESCE(u.user_name,''),' ',COALESCE(u.nick_name,''))) COLLATE utf8mb4_bin)>0");args.add(keyword.trim());
+        }
+        String from=" FROM sys_user u LEFT JOIN sys_dept d ON d.dept_id=u.dept_id LEFT JOIN sys_leadership_access l ON l.user_id=u.user_id";
+        int total=jdbc.queryForObject("SELECT COUNT(*)"+from+where,Integer.class,args.toArray());
+        int size=Math.min(100,positive(params.getFirst("pageSize"),10)),page=Math.min(positive(params.getFirst("page"),1),Math.max(1,(total+size-1)/size));
+        var pageArgs=new ArrayList<>(args);pageArgs.add(size);pageArgs.add((page-1)*size);
+        var items=jdbc.queryForList("SELECT u.user_id userId,u.dept_id deptId,u.user_name userName,u.nick_name nickName,u.email,u.role,u.status,u.force_password_change forcePasswordChange,u.create_time createTime,u.update_time updateTime,d.dept_name deptName"+from+where+" ORDER BY u.user_id LIMIT ? OFFSET ?",pageArgs.toArray());
+        for(var item:items){item.values().removeIf(Objects::isNull);var account=users.getUserById(id(item.get("userId")));var department=access.department(account.getDeptId());item.put("canViewAchievement",org.example.utils.AchievementPermissionUtil.canViewAchievement(account,department));item.put("canUploadAchievement",org.example.utils.AchievementPermissionUtil.canUploadAchievement(account,department));}
+        Map<String,Object> result=new LinkedHashMap<>();result.put("items",items);result.put("total",total);result.put("page",page);result.put("pageSize",size);return result;
     }
     private Data userData(){
         var rows=new ArrayList<Map<String,Object>>();Map<Long,SysUser> accounts=users.getAllUsers().stream().collect(Collectors.toMap(SysUser::getUserId,u->u));Map<String,String> roles=new LinkedHashMap<>(),departments=new LinkedHashMap<>();access.roles().forEach(r->roles.put(r.code(),r.name()));administration.departments().forEach(d->departments.put(str(d.get("deptId")),str(d.get("deptName"))));
