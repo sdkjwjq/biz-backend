@@ -89,5 +89,21 @@
     },
     "benchmark": "performance-work-records-20261024.json",
     "limits": "Only common paged record filters measured with synthetic records; complex filtering, other modules, SQL counts and full-system acceptance still pending"
+  },
+  "auditListBatchReads": {
+    "implementation": "Task audit list batches referenced files and active fourth-level goals in groups of 500 IDs. Shared projection preserves output fields, ordering and progress calculations. Audit filter department labels use a lightweight name-only query instead of department impact statistics.",
+    "verification": {
+      "unit_tests": 1,
+      "mapper_calls_for_20_audits": {
+        "old": 40,
+        "new": 2
+      },
+      "full_isolated_regression_tests": 182,
+      "final_targeted_regression_tests": 35,
+      "browser_checks": 34,
+      "browser": "Chrome (Edge headless launch exited before page checks)",
+      "backend_package": "passed"
+    },
+    "limits": "Mapper call count is scoped to file/goal enrichment, not all endpoint SQL. Other audit query projections, global history aggregation, message pagination and module P95 remain pending."
   }
 }

@@ -159,6 +159,10 @@ public interface SysMapper {
     @Select("SELECT * FROM sys_file WHERE file_id = #{fileId}")
     public SysFile getFileById(Long fileId);
 
+    @Select("<script>SELECT * FROM sys_file WHERE file_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach></script>")
+    List<SysFile> getFilesByIds(@Param("ids") List<Long> ids);
+
+
     /**
      * 发送通知（带返回通知ID）
      * @param notice 通知实体

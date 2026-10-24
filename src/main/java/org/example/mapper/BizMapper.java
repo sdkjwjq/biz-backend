@@ -141,6 +141,10 @@ public interface BizMapper {
     @Select("SELECT * FROM biz_level4_task WHERE parent_id = #{parentId} AND (is_delete IS NULL OR is_delete = 0) ORDER BY task_id")
     List<BizLevel4Task> getForthLevelTasksByParentId(Long parentId);
 
+    @Select("<script>SELECT * FROM biz_level4_task WHERE parent_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach> AND (is_delete IS NULL OR is_delete = 0) ORDER BY task_id</script>")
+    List<BizLevel4Task> getForthLevelTasksByParentIds(@Param("ids") List<Long> ids);
+
+
     @Select("SELECT * FROM biz_level4_task WHERE parent_id = #{parentId} AND (is_delete IS NULL OR is_delete = 0) ORDER BY task_id FOR UPDATE")
     List<BizLevel4Task> getActiveLevel4TasksByParentIdForUpdate(Long parentId);
 

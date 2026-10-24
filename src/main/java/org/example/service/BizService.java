@@ -1875,11 +1875,15 @@ public class BizService {
      * @return 审批视图对象
      */
     public BizAuditVO auditToAuditVo(BizMaterialSubmission audit){
+        return auditToAuditVo(audit,sysMapper.getFileById(audit.getFileId()),bizMapper.getForthLevelTasksByParentId(audit.getTaskId()));
+    }
+
+    private BizAuditVO auditToAuditVo(BizMaterialSubmission audit,SysFile file,List<BizLevel4Task> level4Tasks){
         BizAuditVO bizAuditVO = new BizAuditVO();
         bizAuditVO.setSubId(audit.getSubId());
         bizAuditVO.setTaskId(audit.getTaskId());
         bizAuditVO.setFileId(audit.getFileId());
-        bizAuditVO.setFilename(sysMapper.getFileById(audit.getFileId()).getFileName());
+        bizAuditVO.setFilename(file.getFileName());
         bizAuditVO.setReportedValue(audit.getReportedValue());
         bizAuditVO.setDataType(audit.getDataType());
         bizAuditVO.setSubmitBy(audit.getSubmitBy());
@@ -1891,7 +1895,6 @@ public class BizService {
         bizAuditVO.setCurrentHandlerId(audit.getCurrentHandlerId());
         bizAuditVO.setIsDelete(audit.getIsDelete());
 //        获取三级任务的子任务列表
-        List<BizLevel4Task> level4Tasks = bizMapper.getForthLevelTasksByParentId(audit.getTaskId());
         decorateLevel4Progress(level4Tasks);
         List<BizSubForthDTO> subForthDTOs = new ArrayList();
         for (BizLevel4Task level4Task : level4Tasks) {
@@ -1917,8 +1920,18 @@ public class BizService {
      */
     public List<BizAuditVO> auditListToAuditVoList(List<BizMaterialSubmission> audits){
         List<BizAuditVO> auditVos = new ArrayList<>();
+        if (audits.isEmpty()) return auditVos;
+        List<Long> fileIds=audits.stream().map(BizMaterialSubmission::getFileId).filter(Objects::nonNull).distinct().toList();
+        List<Long> taskIds=audits.stream().map(BizMaterialSubmission::getTaskId).filter(Objects::nonNull).distinct().toList();
+        Map<Long,SysFile> files=new HashMap<>();
+        Map<Long,List<BizLevel4Task>> goals=new HashMap<>();
+        for(int start=0;start<fileIds.size();start+=500)
+            for(var file:sysMapper.getFilesByIds(fileIds.subList(start,Math.min(start+500,fileIds.size()))))files.put(file.getFileId(),file);
+        for(int start=0;start<taskIds.size();start+=500)
+            for(var goal:bizMapper.getForthLevelTasksByParentIds(taskIds.subList(start,Math.min(start+500,taskIds.size()))))
+                goals.computeIfAbsent(goal.getParentId(),id->new ArrayList<>()).add(goal);
         for (BizMaterialSubmission audit : audits) {
-            auditVos.add(auditToAuditVo(audit));
+            auditVos.add(auditToAuditVo(audit,files.get(audit.getFileId()),goals.getOrDefault(audit.getTaskId(),List.of())));
         }
         return auditVos;
     }

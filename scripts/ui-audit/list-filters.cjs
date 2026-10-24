@@ -7,7 +7,7 @@ const fs=require('node:fs/promises'),path=require('node:path'),assert=require('n
  const out=path.resolve(__dirname,'../../target/ui-audit/list-filters');await fs.mkdir(out,{recursive:true});
  const api=await request.newContext({baseURL:state.frontend});
  const login=await api.post('/api/system/login',{data:{user_id:110228,password:'review-fixture-password'}}),token=(await login.json()).token;assert.ok(token);
- const checks=[],errors=[];const browser=await chromium.launch({channel:'msedge',headless:true}),context=await browser.newContext({viewport:{width:1536,height:864}});
+ const checks=[],errors=[];const browser=await chromium.launch({channel:process.env.UI_AUDIT_BROWSER_CHANNEL||'msedge',headless:true}),context=await browser.newContext({viewport:{width:1536,height:864}});
  await context.addInitScript(t=>localStorage.setItem('token',t),token);const page=await context.newPage();page.setDefaultTimeout(20000);page.on('pageerror',e=>errors.push(e.message));
  try{
   for(const domain of ['tasks','performance','achievements','core','records','notices','supervision','budget-versions','admin-operations']){

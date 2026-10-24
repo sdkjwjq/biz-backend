@@ -95,6 +95,24 @@ class ExpertReviewApiTest {
   var filtered=body(get("/list-filters/budget?f.year=2026&f.month=10&f.expense=goods&f.expense=capital&f.ratioFrom=50&f.ratioTo=50",admin));assertEquals(1,filtered.path("ids").size());assertEquals(1,filtered.path("ids").get(0).asInt());assertEquals(2,filtered.path("budget").path("tasks").size());
   assertTrue(filtered.path("imported").asBoolean());assertFalse(body(get("/list-filters/budget?f.year=2026&f.month=9",admin)).path("imported").asBoolean());assertEquals(403,get("/list-filters/budget",a).getStatusCode().value());assertEquals(400,get("/list-filters/budget?f.month=13",admin).getStatusCode().value());
  }
+ @Autowired org.example.mapper.AdminManagementMapper auditDepartments;
+ @Test void lightweightAuditDepartmentNamesMatchManagementProjection(){
+  jdbc.update("INSERT INTO sys_dept(dept_id,dept_name,status,is_delete) VALUES(991003,'Deleted fixture','0',1),(991004,'Disabled fixture','1',0)");
+  var expected=auditDepartments.departments().stream().map(d->Map.of("deptId",d.get("deptId"),"deptName",d.get("deptName"))).toList();
+  assertEquals(expected,auditDepartments.departmentNames());
+ }
+ @Autowired org.example.service.BizService auditProjection;
+ @Test void batchAuditProjectionMatchesSingleRecordQueries()throws Exception{
+  jdbc.update("INSERT INTO sys_file(file_id,file_name,file_path,file_url,file_suffix,upload_by,is_delete) VALUES(41,'retained.pdf','/target/retained','/uploads/retained','pdf',90101,1)");
+  jdbc.update("INSERT INTO biz_level4_task(task_id,parent_id,phase,task_name,leader_id,dept_id,data_type,target_value,current_value,progress,status,is_delete) VALUES(101,3,2026,'First',90101,991001,'0',10,15,100,'1',0),(102,3,2026,'Second',90101,991001,'0',10,5,50,'1',NULL),(103,3,2026,'Deleted',90101,991001,'0',10,9,90,'1',1)");
+  var source=new ArrayList<org.example.entity.BizMaterialSubmission>();
+  for(int i=0;i<20;i++){var item=new org.example.entity.BizMaterialSubmission();item.setSubId((long)i);item.setFileId(41L);item.setTaskId(i%2==0?3L:4L);source.add(item);}
+  var original=source.stream().map(auditProjection::auditToAuditVo).toList();
+  var batched=auditProjection.auditListToAuditVoList(source);
+  assertEquals(json.valueToTree(original),json.valueToTree(batched));
+  assertEquals(2,batched.get(0).getSub_list().size());assertEquals(101L,batched.get(0).getSub_list().get(0).getTask_id());
+  assertTrue(batched.get(1).getSub_list().isEmpty());
+ }
  @Test void auditFiltersRespectCurrentHandlerAndCannotExposeOtherModules()throws Exception{
   jdbc.update("INSERT INTO sys_file(file_id,file_name,file_path,file_url,file_suffix,upload_by,is_delete) VALUES(41,'testA.pdf','/target/testA','/uploads/testA','pdf',90101,0),(42,'testB.pdf','/target/testB','/uploads/testB','pdf',90101,0)");
   jdbc.update("INSERT INTO biz_material_submission(sub_id,task_id,file_id,reported_value,submit_by,submit_dept_id,manage_dept_id,file_suffix,flow_status,current_handler_id,is_delete,submit_time) VALUES(31,3,41,1,90101,991001,991001,'pdf',10,90102,0,'2026-10-01'),(32,4,42,9,90101,991002,991002,'pdf',10,90104,0,'2026-10-02')");

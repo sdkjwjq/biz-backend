@@ -39,6 +39,10 @@ public interface AdminManagementMapper {
             + "FROM sys_dept d LEFT JOIN sys_user u ON u.user_id=d.leader_id WHERE COALESCE(d.is_delete,0)=0 ORDER BY d.dept_id")
     List<Map<String, Object>> departments();
 
+    @Select("SELECT dept_id deptId,dept_name deptName FROM sys_dept WHERE COALESCE(is_delete,0)=0 ORDER BY dept_id")
+    List<Map<String, Object>> departmentNames();
+
+
     @Select("SELECT COUNT(*) FROM sys_user WHERE role='0' AND status='1' AND COALESCE(is_delete,0)=0")
     int activeAdminCount();
 

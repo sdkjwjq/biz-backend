@@ -81,7 +81,7 @@ public class BusinessListFilterService {
         boolean todo=!"done".equals(tab);var state=access.state(actor);var permissions=state.permissions();
         List<Map<String,Object>> rows=new ArrayList<>();Map<String,String> persons=new HashMap<>(),departments=new HashMap<>();Map<Long,SysUser> people=new HashMap<>();
         for(var u:users.getAllUsers()){people.put(u.getUserId(),u);persons.put(str(u.getUserId()),u.getNickName());}
-        for(var d:administration.departments())departments.put(str(d.get("deptId")),str(d.get("deptName")));
+        for(var d:administration.departmentNames())departments.put(str(d.get("deptId")),str(d.get("deptName")));
         Map<Long,Map<String,Object>> taskRows=new HashMap<>();
         if(permissions.contains("tasks.read"))for(var t:tasks(actor))taskRows.put(id(t.get("id")),t);
         boolean any=false;
