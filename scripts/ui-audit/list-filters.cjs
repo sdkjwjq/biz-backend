@@ -62,6 +62,9 @@ const fs=require('node:fs/promises'),path=require('node:path'),assert=require('n
   await page.route('**/api/list-filters/records?**',route=>route.fulfill({status:500,contentType:'application/json',body:JSON.stringify({code:500,message:'模拟纪实查询失败'})}));await recordBar.getByRole('button',{name:'查询',exact:true}).click();await expect(recordBar.locator('.el-alert')).toContainText('更新失败');await expect(page.locator('.el-table__row')).toHaveCount(retainedRows);await page.unroute('**/api/list-filters/records?**');checks.push('record-failed-refresh-retains-existing-rows');
 
   await page.goto(state.frontend+'/home/admin/accounts');await page.getByRole('tab',{name:'部门管理',exact:true}).click();await expect(page.locator('[aria-label="部门筛选"] .basic-fields > .query-field')).toHaveCount(3);checks.push('department-basic-and-advanced-controls');
+  const rolesLoaded=page.waitForResponse(r=>r.url().includes('/list-filters/admin-roles?'));
+  await page.goto(state.frontend+'/home/admin/permissions');assert.equal((await rolesLoaded).status(),200);
+  await expect(page.locator('[aria-label="角色筛选"] .basic-fields > .query-field')).toHaveCount(4);checks.push('role-permission-basic-filters-load');
   await page.goto(state.frontend+'/home/works/budget');await page.getByRole('button',{name:/版本记录|历史版本/}).click();await expect(page.locator('[aria-label="预算版本筛选"] .basic-fields > .query-field')).toHaveCount(4);checks.push('budget-version-basic-controls');
   await page.goto(state.frontend+'/home/admin/operations');await expect(page.locator('[aria-label="操作记录筛选"] .basic-fields > .query-field')).toHaveCount(4);checks.push('operation-log-basic-controls');
   await page.goto(state.frontend+'/home/audit');

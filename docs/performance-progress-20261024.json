@@ -128,5 +128,24 @@
       "performance_evidence": "performance-budget-versions-20261024.json"
     },
     "limits": "Full authorized version metadata is still loaded before advanced filtering and pagination. Synthetic single-query timing does not establish endpoint or full-system P95. No schema or business-data changes."
+  },
+  "roleAssignmentBatchReads": {
+    "implementation": "Role filters reuse bulk account policy preparation. Policy and assigned-role SQL reads are bounded to requested account IDs in chunks of 500 instead of reading all account policies for every page. Empty input skips enrichment; GET-request-local cache only.",
+    "verification": {
+      "isolated_api_tests": 38,
+      "unit_tests": 1,
+      "browser_checks": 36,
+      "backend_package": "passed",
+      "boundary": "501 distinct IDs plus duplicate produce two batches/four policy-assignment SQL reads; no list preloading in POST requests",
+      "compatibility": "Legacy role membership matches for disabled accounts, deleted accounts, disabled templates and changes using the same token."
+    },
+    "measurement": {
+      "users": 55,
+      "legacy_ms": 103,
+      "batch_ms": 13,
+      "scope": "Single isolated service projection comparison; not endpoint P95 or full-system benchmark."
+    },
+    "limits": "Role listing still evaluates all non-deleted accounts for assignment status; global responsibility sets remain. Other list pagination and full-system load acceptance pending.",
+    "rollback": "Revert this backend change and rebuild the prior backend when authorized; no schema migration or business-data changes."
   }
 }

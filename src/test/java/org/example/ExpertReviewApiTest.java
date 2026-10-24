@@ -84,6 +84,22 @@ class ExpertReviewApiTest {
   var assigned=body(get("/list-filters/admin-roles?f.assigned=yes&f.keyword=EXPERT",admin));assertEquals(1,assigned.path("total").asInt());
   jdbc.update("UPDATE sys_user SET status='0' WHERE user_id=90103");assertEquals(1,body(get("/list-filters/admin-users?f.roles=EXPERT&f.status=0",admin)).path("total").asInt());
  }
+ @Test void batchedRoleAssignmentsMatchLegacyIncludingDisabledAccounts()throws Exception{
+  for(String code:List.of("ONLY_DISABLED","ONLY_DELETED"))jdbc.update("INSERT INTO sys_permission_role(role_code,role_name,permissions_json,scopes_json,enabled) VALUES(?,?,'[]','{}',0)",code,code);
+  jdbc.update("INSERT INTO sys_user_permission_role VALUES(90103,'ONLY_DISABLED'),(90104,'ONLY_DELETED')");
+  jdbc.update("UPDATE sys_user SET status='0' WHERE user_id=90103");
+  jdbc.update("UPDATE sys_user SET is_delete=1 WHERE user_id=90104");
+  Set<String> expected=new HashSet<>();
+  for(var user:accountMapper.getAllUsers())if(!Integer.valueOf(1).equals(user.getIsDelete()))expected.addAll(permissionService.assignedRoleCodes(user));
+  Set<String> defined=new HashSet<>();permissionService.roles().forEach(r->defined.add(r.code()));expected.retainAll(defined);
+  var response=body(get("/list-filters/admin-roles?f.assigned=yes",admin));Set<String> actual=new HashSet<>();response.path("ids").forEach(r->actual.add(r.asText()));
+  assertEquals(expected,actual);assertTrue(actual.contains("ONLY_DISABLED"));assertFalse(actual.contains("ONLY_DELETED"));
+  assertEquals(1,body(get("/list-filters/admin-roles?f.assigned=yes&f.enabled=no&f.keyword=ONLY_DISABLED",admin)).path("total").asInt());
+  jdbc.update("DELETE FROM sys_user_permission_role WHERE user_id=90103 AND role_code='ONLY_DISABLED'");
+  assertEquals(0,body(get("/list-filters/admin-roles?f.assigned=yes&f.keyword=ONLY_DISABLED",admin)).path("total").asInt());
+  assertEquals(1,body(get("/list-filters/admin-roles?f.assigned=no&f.keyword=ONLY_DISABLED",admin)).path("total").asInt());
+  assertEquals(403,get("/list-filters/admin-roles",owner).getStatusCode().value());
+ }
  @Test void overviewFiltersApplyToBothChartAndDetail()throws Exception{
   var data=body(get("/admin/overview/analysis?year=2026&month=10&metric=tasks.total&f.department=合成部门甲",admin));assertEquals(1,data.path("total").asInt());assertEquals(1,data.path("rows").size());assertEquals(1,data.path("chart").get(0).path("value").asInt());
   assertEquals(400,get("/admin/overview/analysis?year=2026&month=10&metric=tasks.total&f.notAllowed=1",admin).getStatusCode().value());

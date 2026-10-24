@@ -192,7 +192,7 @@ public class BusinessListFilterService {
         return Map.of("fields",accountFields(rows,roles,departments));
     }
     private Data roleData(){
-        var rows=new ArrayList<Map<String,Object>>();Set<String> assigned=new HashSet<>();for(var account:users.getAllUsers())if(!Integer.valueOf(1).equals(account.getIsDelete()))assigned.addAll(access.assignedRoleCodes(account));
+        var rows=new ArrayList<Map<String,Object>>();var accounts=users.getAllUsers().stream().filter(u->!Integer.valueOf(1).equals(u.getIsDelete())).toList();access.prepareAccountList(accounts);Set<String> assigned=new HashSet<>();for(var account:accounts)assigned.addAll(access.assignedRoleCodes(account));
         for(var role:access.roles()){var r=row(role);r.put("id",role.code());r.put("keyword",role.name()+" "+role.code());r.put("enabled",flag(role.enabled()));r.put("builtin",flag(role.builtin()));r.put("assigned",flag(assigned.contains(role.code())));r.put("modules",role.permissions().stream().map(p->p.split("\\.")[0]).distinct().toList());List<String> modes=new ArrayList<>();for(var scope:role.scopes().values())if(scope instanceof Map<?,?> m)modes.add(str(m.get("mode")));r.put("scopeTypes",modes);rows.add(r);}
         List<Field> f=new ArrayList<>();plain(f,"keyword","角色名称","text",true,"基础");select(f,"enabled","启停状态",true,"yes","启用","no","停用");select(f,"builtin","模板来源",true,"yes","内置","no","自定义");select(f,"assigned","已分配人员",true,"yes","是","no","否");multi(f,"permissions","包含功能权限",false,rows,PermissionCatalog.ACTIONS);multi(f,"modules","业务模块",false,rows,PermissionCatalog.MODULES);multi(f,"scopeTypes","数据范围类型",false,rows,Map.of("ALL","全校","OWN","本人","NONE","无","CUSTOM","自定义"));return new Data(rows,f);
     }

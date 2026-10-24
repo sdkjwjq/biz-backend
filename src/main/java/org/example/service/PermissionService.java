@@ -55,13 +55,19 @@ public class PermissionService {
         if(!(RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes a)||!"GET".equals(a.getRequest().getMethod()))return;
         requireAdmin(actor());
         if(!installed())return;
+        List<Long> requested=accounts.stream().map(SysUser::getUserId).filter(Objects::nonNull).distinct().toList();
+        if(requested.isEmpty())return;
         Map<Long,List<String>> assignments=new HashMap<>();
-        for(var row:jdbc.queryForList("SELECT user_id,role_code FROM sys_user_permission_role ORDER BY user_id,role_code"))
-            assignments.computeIfAbsent(number(row.get("user_id")),k->new ArrayList<>()).add(str(row.get("role_code")));
-        Set<Long> requested=accounts.stream().map(SysUser::getUserId).collect(Collectors.toSet());
         Map<Long,Policy> policies=new HashMap<>();
-        for(var row:jdbc.queryForList("SELECT user_id,access_mode,permissions_json,scopes_json,version FROM sys_user_permission")){
-            long id=number(row.get("user_id"));if(!requested.contains(id))continue;policies.put(id,new Policy(str(row.get("access_mode")),read(row.get("permissions_json"),new TypeReference<Map<String,Boolean>>(){}),read(row.get("scopes_json"),new TypeReference<Map<String,Object>>(){}),assignments.getOrDefault(id,List.of()),number(row.get("version"))));
+        // Bound reads to this page/preview; retain role ordering and default LEGACY policy.
+        for(int start=0;start<requested.size();start+=500){
+            var batch=requested.subList(start,Math.min(start+500,requested.size()));
+            String markers=String.join(",",Collections.nCopies(batch.size(),"?"));
+            for(var row:jdbc.queryForList("SELECT user_id,role_code FROM sys_user_permission_role WHERE user_id IN ("+markers+") ORDER BY user_id,role_code",batch.toArray()))
+                assignments.computeIfAbsent(number(row.get("user_id")),k->new ArrayList<>()).add(str(row.get("role_code")));
+            for(var row:jdbc.queryForList("SELECT user_id,access_mode,permissions_json,scopes_json,version FROM sys_user_permission WHERE user_id IN ("+markers+")",batch.toArray())){
+                long id=number(row.get("user_id"));policies.put(id,new Policy(str(row.get("access_mode")),read(row.get("permissions_json"),new TypeReference<Map<String,Boolean>>(){}),read(row.get("scopes_json"),new TypeReference<Map<String,Object>>(){}),assignments.getOrDefault(id,List.of()),number(row.get("version"))));
+            }
         }
         a.getRequest().setAttribute(PermissionService.class.getName()+":coreReporters",new HashSet<>(jdbc.queryForList("SELECT t.leader_id FROM biz_task t WHERE t.level=3 AND t.phase BETWEEN 2025 AND 2029 AND COALESCE(t.is_delete,0)=0 UNION SELECT c.leader_id FROM biz_level4_task c JOIN biz_task t ON t.task_id=c.parent_id WHERE t.level=3 AND t.phase BETWEEN 2025 AND 2029 AND COALESCE(t.is_delete,0)=0 AND COALESCE(c.is_delete,0)=0",Long.class)));
         a.getRequest().setAttribute(PermissionService.class.getName()+":coreReviewers",new HashSet<>(jdbc.queryForList("SELECT p.principal_id FROM biz_performance p JOIN biz_core_indicator c ON BINARY c.indicator_code=BINARY p.perf_code WHERE COALESCE(p.is_delete,0)=0 UNION SELECT r.current_handler_id FROM biz_core_report r JOIN biz_core_indicator c ON c.indicator_id=r.indicator_id AND BINARY c.indicator_code=BINARY r.performance_code WHERE r.flow_status IN(10,20)",Long.class)));
