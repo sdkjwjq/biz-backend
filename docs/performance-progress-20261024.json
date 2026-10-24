@@ -34,5 +34,12 @@
     "browser_checks": 30,
     "fix": "watch query parameter content rather than object identity to prevent refresh loops",
     "remaining": "initial metadata and derived-role query optimization; remote option queries; other business modules and load benchmarks"
+  },
+  "accountFirstLoad": {
+    "implementation": "First list request uses SQL pagination; independent admin-only filter-options endpoint; four immediate basic fields; aborted options preserve selected values; options failure can retry",
+    "backend_tests": 33,
+    "browser_checks": 31,
+    "frontend_build": "passed",
+    "remaining": "Derived role and activity predicates still use compatible full projection; large-scale concurrency benchmarks not completed"
   }
 }

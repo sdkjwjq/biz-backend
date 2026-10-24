@@ -14,6 +14,7 @@ public class ListFilterController {
   Long actor=access.actor();access.require(actor,"tasks.export");var result=filters.query("tasks",actor,params);
   var ids=((java.util.List<?>)result.get("ids")).stream().map(v->Long.valueOf(v.toString())).toList();if(ids.isEmpty())throw new AdminManagementException(400,"当前筛选没有可导出的任务");taskExport.exportTasks(ids,actor,response);
  }
+ @GetMapping("/admin-users/filter-options")public Object accountOptions(){return filters.accountOptions(access.actor());}
  @GetMapping("/{domain}")public Object query(@PathVariable String domain,@RequestParam MultiValueMap<String,String> params){return filters.query(domain,access.actor(),params);}
  @ExceptionHandler(AdminManagementException.class)public ResponseEntity<ErrorVO> error(AdminManagementException e){return ResponseEntity.status(e.getCode()).body(new ErrorVO(e.getMessage(),e.getCode()));}
 }

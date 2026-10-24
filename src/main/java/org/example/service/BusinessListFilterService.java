@@ -172,7 +172,18 @@ public class BusinessListFilterService {
             r.put("duties",flag(extraDuties.contains(id)));
             var dept=access.department(user.getDeptId());item.put("canViewAchievement",org.example.utils.AchievementPermissionUtil.canViewAchievement(user,dept));item.put("canUploadAchievement",org.example.utils.AchievementPermissionUtil.canUploadAchievement(user,dept));r.put("item",item);rows.add(r);
         }
-        List<Field> f=new ArrayList<>();plain(f,"keyword","姓名／工号","text",true,"基础");multi(f,"deptId","部门",true,rows,departments);multi(f,"roles","角色模板",true,rows,roles);select(f,"status","启停状态",true,"1","正常","0","停用");select(f,"role","原账号身份",false,"0","管理员","1","普通用户","2","负责人");select(f,"leadership","领导查阅配置",false,"ALL","全校","DEPARTMENTS","指定部门","NONE","未配置");select(f,"expert","专家身份",false,"yes","是","no","否");select(f,"force","强制改密",false,"yes","是","no","否");select(f,"personal","个人功能／范围授权",false,"yes","有","no","无");select(f,"duties","活动职责",false,"yes","有","no","无");return new Data(rows,f);
+        return new Data(rows,accountFields(rows,roles,departments));
+    }
+    private List<Field> accountFields(List<Map<String,Object>> rows,Map<String,String> roles,Map<String,String> departments){
+        List<Field> f=new ArrayList<>();plain(f,"keyword","姓名／工号","text",true,"基础");multi(f,"deptId","部门",true,rows,departments);multi(f,"roles","角色模板",true,rows,roles);select(f,"status","启停状态",true,"1","正常","0","停用");select(f,"role","原账号身份",false,"0","管理员","1","普通用户","2","负责人");select(f,"leadership","领导查阅配置",false,"ALL","全校","DEPARTMENTS","指定部门","NONE","未配置");select(f,"expert","专家身份",false,"yes","是","no","否");select(f,"force","强制改密",false,"yes","是","no","否");select(f,"personal","个人功能／范围授权",false,"yes","有","no","无");select(f,"duties","活动职责",false,"yes","有","no","无");return f;
+    }
+    public Map<String,Object> accountOptions(Long actor){
+        access.requireAdmin(actor);
+        var accounts=users.getAllUsers().stream().filter(u->!Integer.valueOf(1).equals(u.getIsDelete())).toList();access.prepareAccountList(accounts);
+        Map<String,String> roles=new LinkedHashMap<>(),departments=new LinkedHashMap<>();access.roles().forEach(r->roles.put(r.code(),r.name()));
+        for(var department:jdbc.queryForList("SELECT dept_id,dept_name FROM sys_dept WHERE COALESCE(is_delete,0)=0"))departments.put(str(department.get("dept_id")),str(department.get("dept_name")));
+        List<Map<String,Object>> rows=new ArrayList<>();for(var account:accounts){Map<String,Object> row=new HashMap<>();row.put("deptId",account.getDeptId());row.put("roles",access.assignedRoleCodes(account));rows.add(row);}
+        return Map.of("fields",accountFields(rows,roles,departments));
     }
     private Data roleData(){
         var rows=new ArrayList<Map<String,Object>>();Set<String> assigned=new HashSet<>();for(var account:users.getAllUsers())if(!Integer.valueOf(1).equals(account.getIsDelete()))assigned.addAll(access.assignedRoleCodes(account));

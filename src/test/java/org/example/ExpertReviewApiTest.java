@@ -40,6 +40,11 @@ class ExpertReviewApiTest {
  JsonNode submit(long task,String text,String actor)throws Exception{return body(call(HttpMethod.POST,"/expert-reviews/submit",actor,input(task,text,detail(task,actor)),false));}
  @Autowired org.example.service.PermissionService permissionService;
  @Autowired org.example.mapper.SysMapper accountMapper;
+ @Test void accountOptionEndpointMatchesExistingFieldsAndProtectsAccess()throws Exception{
+  var legacy=body(get("/list-filters/admin-users",admin));var options=body(get("/list-filters/admin-users/filter-options",admin));
+  assertEquals(legacy.path("fields"),options.path("fields"));assertEquals(1,options.size());
+  assertEquals(403,get("/list-filters/admin-users/filter-options",owner).getStatusCode().value());
+ }
  @Test void pagedAccountSqlMatchesLegacyFiltersAndKeepsAuthorization()throws Exception{
   jdbc.update("UPDATE sys_user SET nick_name='MiXeD %_ name',force_password_change=1 WHERE user_id=90101");
   for(String filter:List.of("","f.status=1","f.status=0","f.deptId=991001&f.deptId=991002","f.deptId=bad","f.keyword=MiXeD","f.keyword=%25_","f.role=0","f.force=yes","f.force=no","f.leadership=NONE","f.roles=EXPERT","f.personal=yes","f.duties=yes")){

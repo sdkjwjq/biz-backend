@@ -16,13 +16,15 @@ const fs=require('node:fs/promises'),path=require('node:path'),assert=require('n
    if(domain==='notices'||domain==='admin-operations'){assert.equal(r.status(),400);continue;}
    assert.equal(r.status(),200,domain+': '+await r.text());const body=await r.json();assert.ok(body.fields.length>=4);assert.equal(new Set(body.ids).size,body.total);checks.push(domain+'-real-api');
   }
+  let releaseOptions;const optionsGate=new Promise(resolve=>{releaseOptions=resolve});
+  await page.route('**/api/list-filters/admin-users/filter-options',async route=>{await optionsGate;await route.continue()});
   let accountRequests=0,releaseAccount;const gate=new Promise(resolve=>{releaseAccount=resolve});
   await page.route('**/api/list-filters/admin-users?**',async route=>{accountRequests++;await gate;await route.continue()});
   await page.goto(state.frontend+'/home/admin/accounts');
   await expect(page.getByText('正在加载账号…',{exact:true})).toBeVisible();
   await expect(page.locator('.pager')).toHaveCount(0);
   await expect(page.getByText('No Data',{exact:true})).toHaveCount(0);
-  releaseAccount();await expect(page.locator('.pager')).toBeVisible();
+  releaseAccount();await expect(page.locator('.pager')).toBeVisible();await expect(page.locator('[aria-label="账号筛选"] .basic-fields > .query-field')).toHaveCount(4);releaseOptions();await page.unroute('**/api/list-filters/admin-users/filter-options');checks.push('account-data-does-not-wait-for-options');
   assert.equal(accountRequests,1);await page.unroute('**/api/list-filters/admin-users?**');checks.push('account-first-load-never-shows-false-empty-result');
   const accountBar=page.locator('[aria-label="账号筛选"]');await expect(accountBar.getByRole('button',{name:'查询',exact:true})).not.toHaveClass(/is-loading/);await accountBar.getByRole('textbox',{name:'账号姓名／工号'}).fill('不存在的账号');
   const accountResponse=page.waitForResponse(r=>r.url().includes('/list-filters/admin-users?')&&r.url().includes('responseMode=page')&&new URL(r.url()).searchParams.get('f.keyword')==='不存在的账号');
