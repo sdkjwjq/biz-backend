@@ -1,0 +1,34 @@
+{
+  "date": "2026-10-24",
+  "title": "全系统基础筛选与高级筛选交付核对",
+  "scope": "基础条件、分组高级条件、草稿与已应用条件分离、条件标签、重置、账号隔离记忆、权限内查询、分页前过滤及请求竞态保护",
+  "frontendCommits": ["a8a715e", "393db79", "9d9fcbf", "3395fba"],
+  "backendCommit": "d442d17",
+  "verification": [
+    {"name": "后端隔离回归", "passed": 177, "log": "target/list-filter-final-regression.log"},
+    {"name": "最新专家与筛选专项（包含于回归，勿累计为独立用例总数）", "passed": 30, "log": "target/list-filter-export-tests.log"},
+    {"name": "工作纪实隔离回归", "passed": 35, "log": "target/list-filter-work-record-tests.log"},
+    {"name": "Playwright 筛选与布局", "passed": 28, "errors": 0, "report": "target/ui-audit/list-filters/report.json"},
+    {"name": "Playwright 专家抽屉业务回归", "passed": 13, "errors": 0, "report": "target/ui-audit/expert-drawer/report.json"},
+    {"name": "前端 ESLint", "result": "通过", "log": "target/list-filter-frontend-lint.log"},
+    {"name": "前端正式构建", "result": "通过；保留现有大分块警告", "log": "target/list-filter-frontend-build.log"},
+    {"name": "后端打包", "result": "通过", "log": "target/list-filter-backend-package.log"}
+  ],
+  "screenshots": ["target/ui-audit/list-filters/task-filters-1536.png", "target/ui-audit/list-filters/tasks-960.png"],
+  "boundaries": [
+    "成果专业群审核缺少可靠结构化证据时返回不可判定，不推测历史审核过程。",
+    "预算条件调整展示范围，分母及整表导入恢复不变；导出按钮明确标为整表导出，未实现按显示条件裁剪预算工作簿。",
+    "共用 /list-filters 查询接口承接新增条件，原列表接口保持兼容；不宣称所有旧接口均独立支持新增条件。",
+    "综合看板分析过滤后的图表及明细使用同一集合；原始指标数字明确标为筛选前统计。",
+    "真实接口及浏览器测试使用隔离数据库和合成数据；用户原有本地调试服务未重启。",
+    "没有新增数据库迁移，没有修改业务数据，没有制作服务器更新包或部署线上。"
+  ],
+  "preservedExistingChanges": [
+    "biz/src/components/ExpertReviewEditor.vue",
+    "biz/vite.config.js",
+    "biz-backend/src/test/java/org/example/AchievementFlowApiTest.java",
+    "biz-backend/src/test/java/org/example/AuditFlowApiTest.java",
+    "biz-backend/data/20260920backup.sql"
+  ],
+  "rollback": "本次仅代码变更；如需回退，按相反顺序 revert 本次功能提交，保留上述原有改动。无需数据库回滚。"
+}

@@ -38,6 +38,100 @@ class ExpertReviewApiTest {
  JsonNode detail(long task,String actor)throws Exception{return body(get("/expert-reviews/tasks/"+task+"?year=2026",actor));}
  Map<String,Object> input(long task,String text,JsonNode detail){return new LinkedHashMap<>(Map.of("taskId",task,"year",2026,"version",detail.path("version").asLong(),"text",text,"scopeToken",detail.path("scopeToken").asText()));}
  JsonNode submit(long task,String text,String actor)throws Exception{return body(call(HttpMethod.POST,"/expert-reviews/submit",actor,input(task,text,detail(task,actor)),false));}
+ @Test void taskFilterExportRechecksAuthorizationAndExportsOnlyMatchingLeaves()throws Exception{
+  jdbc.update("UPDATE sys_user_permission SET permissions_json='{\"tasks.export\":true}' WHERE user_id=90103");
+  var response=http.exchange("http://127.0.0.1:"+port+"/api/list-filters/tasks/export?f.year=2026",HttpMethod.GET,new HttpEntity<>(null,headers(a,false)),byte[].class);assertEquals(200,response.getStatusCode().value());
+  try(var book=new org.apache.poi.xssf.usermodel.XSSFWorkbook(new java.io.ByteArrayInputStream(response.getBody()))){assertEquals(1,book.getSheetAt(0).getLastRowNum());assertEquals("EXPERT3",book.getSheetAt(0).getRow(1).getCell(2).getStringCellValue());}
+  assertEquals(400,get("/list-filters/tasks/export?f.deptId=991002",a).getStatusCode().value());
+  jdbc.update("UPDATE sys_user_permission SET permissions_json='{\"tasks.export\":false}' WHERE user_id=90103");assertEquals(403,get("/list-filters/tasks/export",a).getStatusCode().value());
+ }
+ @Test void administrativeFiltersArePrivateAndRespectRoleAssignments()throws Exception{
+  for(String domain:List.of("admin-users","admin-roles"))assertEquals(403,get("/list-filters/"+domain,a).getStatusCode().value());
+  var experts=body(get("/list-filters/admin-users?f.roles=EXPERT",admin));assertEquals(2,experts.path("total").asInt());assertFalse(experts.toString().contains("ExpertTest123"));assertFalse(experts.toString().contains("password"));
+  assertEquals(2,body(get("/list-filters/admin-users?f.expert=yes&f.role=1",admin)).path("total").asInt());
+  var assigned=body(get("/list-filters/admin-roles?f.assigned=yes&f.keyword=EXPERT",admin));assertEquals(1,assigned.path("total").asInt());
+  jdbc.update("UPDATE sys_user SET status='0' WHERE user_id=90103");assertEquals(1,body(get("/list-filters/admin-users?f.roles=EXPERT&f.status=0",admin)).path("total").asInt());
+ }
+ @Test void overviewFiltersApplyToBothChartAndDetail()throws Exception{
+  var data=body(get("/admin/overview/analysis?year=2026&month=10&metric=tasks.total&f.department=合成部门甲",admin));assertEquals(1,data.path("total").asInt());assertEquals(1,data.path("rows").size());assertEquals(1,data.path("chart").get(0).path("value").asInt());
+  assertEquals(400,get("/admin/overview/analysis?year=2026&month=10&metric=tasks.total&f.notAllowed=1",admin).getStatusCode().value());
+ }
+ @Test void budgetFiltersUseWholeExpenseAndOriginalDenominator()throws Exception{
+  jdbc.update("INSERT INTO biz_budget_sheet(sheet_id,year,month,locked,is_delete) VALUES(1,2026,10,1,0)");
+  jdbc.update("INSERT INTO biz_budget_source_item(sheet_id,source_key,source_name,display_order,annual_plan) VALUES(1,'school','学校资金',1,100)");
+  jdbc.update("INSERT INTO biz_budget_task_item(sheet_id,task_index,task_name,amount,goods,capital,other) VALUES(1,1,'改革任务一',100,20,30,0),(1,2,'改革任务二',0,0,0,0)");
+  var filtered=body(get("/list-filters/budget?f.year=2026&f.month=10&f.expense=goods&f.expense=capital&f.ratioFrom=50&f.ratioTo=50",admin));assertEquals(1,filtered.path("ids").size());assertEquals(1,filtered.path("ids").get(0).asInt());assertEquals(2,filtered.path("budget").path("tasks").size());
+  assertTrue(filtered.path("imported").asBoolean());assertFalse(body(get("/list-filters/budget?f.year=2026&f.month=9",admin)).path("imported").asBoolean());assertEquals(403,get("/list-filters/budget",a).getStatusCode().value());assertEquals(400,get("/list-filters/budget?f.month=13",admin).getStatusCode().value());
+ }
+ @Test void auditFiltersRespectCurrentHandlerAndCannotExposeOtherModules()throws Exception{
+  jdbc.update("INSERT INTO sys_file(file_id,file_name,file_path,file_url,file_suffix,upload_by,is_delete) VALUES(41,'testA.pdf','/target/testA','/uploads/testA','pdf',90101,0),(42,'testB.pdf','/target/testB','/uploads/testB','pdf',90101,0)");
+  jdbc.update("INSERT INTO biz_material_submission(sub_id,task_id,file_id,reported_value,submit_by,submit_dept_id,manage_dept_id,file_suffix,flow_status,current_handler_id,is_delete,submit_time) VALUES(31,3,41,1,90101,991001,991001,'pdf',10,90102,0,'2026-10-01'),(32,4,42,9,90101,991002,991002,'pdf',10,90104,0,'2026-10-02')");
+  var reviewer=login(90102);var filtered=body(get("/list-filters/audits?tab=todo&f.type=task&f.submitBy=90101",reviewer));assertEquals(1,filtered.path("total").asInt());assertEquals("task:31",filtered.path("ids").get(0).asText());assertEquals(403,get("/list-filters/audits?tab=todo",a).getStatusCode().value());
+  jdbc.update("UPDATE biz_material_submission SET current_handler_id=90104 WHERE sub_id=31");assertEquals(0,body(get("/list-filters/audits?tab=todo",reviewer)).path("total").asInt());
+ }
+ @Test void listFiltersCombineScopeYearMultiSelectAndProgressBeforeCounting()throws Exception{
+  var allowed=body(get("/list-filters/tasks?f.year=2026&f.deptId=991001&f.deptId=991002&f.progressFrom=10&f.progressTo=10",a));assertEquals(1,allowed.path("total").asInt());assertEquals(3,allowed.path("ids").get(0).asInt());
+  assertEquals(0,body(get("/list-filters/tasks?f.year=2026&f.deptId=991002",a)).path("total").asInt());
+  assertEquals(2,body(get("/list-filters/tasks?f.year=2026&f.deptId=991001&f.deptId=991002",b)).path("total").asInt());assertFalse(allowed.path("fields").toString().contains("合成部门乙"));
+ }
+ @Test void listFiltersRejectInvalidRangesEnumsAndUnknownFields()throws Exception{
+  for(String query:List.of("f.progressFrom=50&f.progressTo=10","f.progressFrom=nope","f.status=9","f.plannedCompletionDateFrom=2026-02-30","f.password=anything","f.year=2031","f.statusFrom=1","f.status=1&f.status=2","f.plannedCompletionDateFrom=missing","f.plannedCompletionDate=missing&f.plannedCompletionDateFrom=2026-01-01"))assertEquals(400,get("/list-filters/tasks?"+query,admin).getStatusCode().value(),query);
+ }
+ @Test void listFiltersDoNotTreatMissingDatesAsZero()throws Exception{
+  jdbc.update("UPDATE biz_task SET planned_completion_date='2026-10-24',is_priority=1,is_difficult=1 WHERE task_id=3");
+  assertEquals(1,body(get("/list-filters/tasks?f.year=2026&f.kind=priority&f.plannedCompletionDateFrom=2026-10-24&f.plannedCompletionDateTo=2026-10-24",admin)).path("total").asInt());
+  assertEquals(1,body(get("/list-filters/tasks?f.year=2026&f.plannedCompletionDate=missing",admin)).path("total").asInt());
+  assertEquals(0,body(get("/list-filters/tasks?f.year=2026&f.actualCompletionDateFrom=2020-01-01",admin)).path("total").asInt());
+ }
+ @Test void expertAdvancedFiltersRunBeforePaginationWithoutChangingReviewScope()throws Exception{
+  jdbc.update("UPDATE biz_task SET progress=80,is_priority=1 WHERE task_id=3");
+  var result=body(get("/expert-reviews?year=2026&f.progressFrom=80&pageSize=1",b));assertEquals(2,result.path("total").asInt());assertEquals(1,result.path("items").size());assertEquals(1,result.path("items").get(0).path("matchedTaskCount").asInt());
+  assertEquals(3,body(get("/expert-reviews?year=2026&f.progressFrom=80&f.level=3",b)).path("items").get(0).path("taskId").asInt());assertEquals(2,detail(1,b).path("scope").path("tasks").size());
+ }
+ @Test void listFiltersRespectRevocationAndDoNotGrantOtherModules()throws Exception{
+  assertEquals(403,get("/list-filters/achievements",a).getStatusCode().value());jdbc.update("UPDATE sys_user_permission SET permissions_json='{\"tasks.read\":false}',version=version+1 WHERE user_id=90103");assertEquals(403,get("/list-filters/tasks",a).getStatusCode().value());
+ }
+ @Test void departmentFiltersRemainAdminOnlyAndUseRealRelationships()throws Exception{
+  assertEquals(403,get("/list-filters/admin-departments",a).getStatusCode().value());
+  assertEquals(2,body(get("/list-filters/admin-departments?f.missingLeader=yes",admin)).path("total").asInt());
+  assertEquals(1,body(get("/list-filters/admin-departments?f.hasUsers=yes&f.hasBusiness=yes",admin)).path("total").asInt());
+ }
+ @Test void budgetVersionFiltersKeepCurrentPerMonthBeforePaging()throws Exception{
+  for(int n=1;n<=3;n++)jdbc.update("INSERT INTO biz_budget_import_version(version_id,sheet_id,year,month,version_no,operation_type,snapshot_json,created_by,is_delete) VALUES(?,?,2026,?,?,?,'{}',110228,0)",n,n==3?2:1,n==3?9:10,n==3?1:n,n==2?"RESTORE":"IMPORT");
+  assertEquals(403,get("/list-filters/budget-versions",a).getStatusCode().value());
+  var all=body(get("/list-filters/budget-versions?f.effective=yes&pageSize=1",admin));assertEquals(2,all.path("total").asInt());assertEquals(1,all.path("items").size());assertTrue(all.path("items").get(0).path("current").asBoolean());
+  assertEquals(1,body(get("/list-filters/budget-versions?f.month=10&f.effective=no",admin)).path("total").asInt());
+ }
+ @Test void noticeFiltersUseCurrentBusinessAndNeverOtherRecipients()throws Exception{
+  jdbc.update("INSERT INTO biz_core_indicator VALUES(1,'1.1.5',1)");jdbc.update("INSERT INTO biz_core_report(report_id,indicator_id,record_year,record_month,indicator_name,performance_code,submit_by,flow_status,submit_time) VALUES(1,1,2026,10,'合成指标','1.1.5',90101,10,NOW())");
+  jdbc.update("INSERT INTO sys_notice(notice_id,from_user_id,to_user_id,type,title,content,source_type,source_id,is_read,is_delete,create_time) VALUES(1,90101,110228,'1','相同标题','合成','4',1,'0',0,NOW()),(2,90101,90102,'1','相同标题','合成','4',1,'0',0,NOW()),(3,90101,110228,'1','相同标题','合成','4',999,'0',0,NOW())");
+  assertEquals(1,body(get("/list-filters/notices?f.pending=yes",admin)).path("total").asInt());
+  jdbc.update("UPDATE biz_core_report SET flow_status=30 WHERE report_id=1");assertEquals(0,body(get("/list-filters/notices?f.pending=yes",admin)).path("total").asInt());assertEquals(1,body(get("/list-filters/notices?f.pending=no",admin)).path("total").asInt());assertEquals(1,body(get("/list-filters/notices?f.pending=unknown",admin)).path("total").asInt());
+ }
+ @Test void operationFiltersAndExportUseTheSameRowsAcrossPages()throws Exception{
+  for(int n=1;n<=3;n++)jdbc.update("INSERT INTO sys_admin_operation_log(module,action,target_type,target_id,target_name,batch_id,operator_id,reason,create_time) VALUES(?,'UPDATE','USER',?,'合成对象',?,110228,'合成原因',NOW())",n==3?"TASK":"USER",String.valueOf(n),n==1?"batch-a":"batch-b");
+  assertEquals(403,get("/list-filters/admin-operations",a).getStatusCode().value());
+  var selected=body(get("/list-filters/admin-operations?f.module=USER&pageSize=1",admin));assertEquals(2,selected.path("total").asInt());assertEquals(1,selected.path("items").size());
+  assertEquals(1,body(get("/list-filters/admin-operations?f.module=USER&f.batchId=batch-a",admin)).path("total").asInt());
+  var exported=http.exchange("http://127.0.0.1:"+port+"/api/admin/operations/export?f.module=USER",HttpMethod.POST,new HttpEntity<>(Map.of(),headers(admin,false)),byte[].class);assertEquals(200,exported.getStatusCode().value());try(var book=org.apache.poi.ss.usermodel.WorkbookFactory.create(new java.io.ByteArrayInputStream(exported.getBody()))){assertEquals(3,book.getSheetAt(0).getPhysicalNumberOfRows());}
+ }
+ @Test void performanceFiltersUseAnnualRatiosAndKeepAuditSeparate()throws Exception{
+  jdbc.update("INSERT INTO biz_performance(perf_id,project_id,perf_code,perf_name,target_value,data_type,dept_id,leader_id,principal_id,auditor_id,is_delete) VALUES(101,1,'2.1.1','合成数量指标',100,'1',991001,90101,90102,90102,0),(102,1,'2.1.2','合成百分比指标',90,'2',991001,90101,90102,90102,0),(103,1,'2.1.3','合成缺失指标',10,'1',991001,90101,90102,90102,0)");
+  jdbc.update("INSERT INTO biz_performance_year(year_id,perf_id,year,target_value,actual_value,is_delete) VALUES(101,101,2026,10,5,0),(102,102,2026,80,40,0),(103,103,2026,0,NULL,0),(104,101,2025,1,2,0)");
+  assertEquals(2,body(get("/list-filters/performance?f.year=2026&f.ratioFrom=50&f.ratioTo=50",admin)).path("total").asInt());
+  assertEquals(0,body(get("/list-filters/performance?f.year=2026&f.attainment=met",admin)).path("total").asInt());
+  assertEquals(1,body(get("/list-filters/performance?f.year=2025&f.attainment=met&f.auditStatus=none",admin)).path("total").asInt());
+  assertEquals(1,body(get("/list-filters/performance?f.year=2026&f.attainment=unknown",admin)).path("total").asInt());
+ }
+ @Test void formalFiltersUseLatestSubmittedOpinionAndKeepDraftsPrivate()throws Exception{
+  submit(3,"old-keyword",a);submit(3,"new-keyword",a);submit(1,"partial-range",a);
+  body(call(HttpMethod.POST,"/expert-reviews/draft",a,input(3,"private-draft-keyword",detail(3,a)),false));
+  assertEquals(403,get("/expert-reviews/admin?filterMode=advanced",a).getStatusCode().value());
+  assertEquals(0,body(get("/expert-reviews/admin?filterMode=advanced&f.text=old-keyword",admin)).path("total").asInt());
+  assertEquals(0,body(get("/expert-reviews/admin?filterMode=advanced&f.text=private-draft-keyword",admin)).path("total").asInt());
+  assertEquals(1,body(get("/expert-reviews/admin?filterMode=advanced&f.text=new-keyword&f.expertId=90103&f.level=3",admin)).path("total").asInt());
+  assertEquals(1,body(get("/expert-reviews/admin?filterMode=advanced&f.range=partial",admin)).path("total").asInt());
+ }
  @Test void onlyOwnStatusAndDraftAreReturnedAndAdminListNeverReturnsDrafts()throws Exception{
   body(call(HttpMethod.POST,"/expert-reviews/draft",b,input(3,"另一专家的私密草稿",detail(3,b)),false));assertFalse(body(get("/expert-reviews?year=2026",a)).toString().contains("私密草稿"));assertEquals("unreviewed",body(get("/expert-reviews?year=2026",a)).path("items").get(0).path("reviewStatus").asText());assertEquals(0,body(get("/expert-reviews/admin",admin)).path("total").asInt());assertEquals(403,get("/expert-reviews/tasks/3?year=2026&expertId=90104",a).getStatusCode().value());assertEquals(403,get("/expert-reviews/admin",a).getStatusCode().value());assertEquals(403,get("/expert-reviews?year=2026",owner).getStatusCode().value());
  }
