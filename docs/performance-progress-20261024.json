@@ -225,5 +225,21 @@
     "compatibility": "Deleted/current pending states, normal vs admin handling, current core mappings, unread recipients, stale notices, permission revocation and object/year scope match the original visible list. Invalid task file references preserve read-failure behavior.",
     "limits": "Count endpoints remain separate requests. Normal-user object/year scope evaluation still uses existing permission reads. Only unread-count latency was benchmarked here; short synthetic batches are not full-system or multi-account acceptance.",
     "rollback": "Restore matching previous frontend/backend artifacts; no database migration. Deploy backend with optional count mode before the frontend that uses it."
+  },
+  "overviewTaskAggregation": {
+    "implementation": "Administrator task summary aggregates effective third-level yearly task counts and progress in SQL; shared metric packaging keeps labels, empty/null values, rounding, overlapping flags and original year-end overdue semantics. Non-admin scopes and analysis detail queries retain existing logic. Name maps load lazily and are reused only within one GET request.",
+    "frontend_fix": "Core initial list reads with identical parameters share the active first-load promise. Initial history/detail links wait for the current load to finish; post-initial refreshes retain fresh reads after mutations.",
+    "verification": {
+      "overview_regressions": 11,
+      "query_unit_tests": 2,
+      "overview_browser_checks": 12,
+      "list_browser_checks": 38,
+      "frontend_static_check": "passed",
+      "frontend_build": "passed",
+      "backend_package": "passed"
+    },
+    "evidence": "performance-overview-task-20261025.json",
+    "limits": "Other overview modules still materialize their business projections, non-admin task summaries retain scoped tree queries, and full-system P95/load acceptance remain pending.",
+    "rollback": "Restore matching previous frontend and backend artifacts when authorized; no schema migration or business-data changes."
   }
 }

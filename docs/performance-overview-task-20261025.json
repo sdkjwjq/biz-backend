@@ -1,0 +1,59 @@
+{
+  "date": "2026-10-25",
+  "scope": "Administrator task summary data phase only; disposable synthetic database, 120 and 600 additional tasks plus one existing task. Common authorization state initialized before timing, one warm-up discarded, median of five sequential samples. No HTTP, rendering, concurrent-user or full-system P95 claim.",
+  "measurements": [
+    {
+      "equalMetrics": true,
+      "legacy_median_us": 33286,
+      "aggregate_median_us": 2529,
+      "syntheticTasks": 120,
+      "existingTasks": 1
+    },
+    {
+      "equalMetrics": true,
+      "legacy_median_us": 64503,
+      "aggregate_median_us": 3666,
+      "syntheticTasks": 600,
+      "existingTasks": 1
+    }
+  ],
+  "verification": {
+    "overview_regressions": 11,
+    "query_unit_tests": 2,
+    "overview_browser_checks": 12,
+    "list_browser_checks": 38,
+    "frontend_static_check": "passed",
+    "frontend_build": "passed",
+    "backend_package": "passed"
+  },
+  "browser": {
+    "checks": [
+      "six-modules-and-all-summary-numbers-match-real-API",
+      "pagination-real-chart-click-group-intersection-and-existing-task-detail",
+      "core-cutoff-excludes-future-and-obsolete-results-and-opens-history",
+      "achievement-rejection-reason-and-existing-detail-link",
+      "budget-missing-null-gaps-adjustments-three-trend-views-original-chart-hidden",
+      "work-record-current-eligibility-draft-privacy-and-frozen-record-link",
+      "leader-readonly-maintenance-current-scope-old-token-and-ordinary-user-denial",
+      "slow-old-year-response-cannot-replace-current-year",
+      "injected-module-failure-is-not-zero-and-independent-retry-recovers",
+      "injected-analysis-failure-retry-and-close-cancels-old-response",
+      "narrow-screen-page-table-scroll-and-accessible-drawer-footer",
+      "zero-records-and-zero-denominators-show-empty-data-without-false-percentage"
+    ],
+    "errors": [],
+    "fixtures": "random isolated synthetic database",
+    "simulated": [
+      "delayed year response",
+      "module failure",
+      "analysis failure",
+      "closed analysis response"
+    ]
+  },
+  "core_initial_load_race": {
+    "delayed_list_requests": 1,
+    "history_opened_after_current_load": true,
+    "evidence": "overview-dashboard.cjs gates initial core response until filter metadata completes, asserts one list request, then opens linked history"
+  },
+  "production_changes": false
+}

@@ -40,6 +40,15 @@ public class AdminOverviewService {
                         List<Map<String,Object>> rows,Map<String,Object> extra) { }
     private record Names(Map<String,String> departments,Map<String,String> users) { }
     private Names names() {
+        if(org.springframework.web.context.request.RequestContextHolder.getRequestAttributes() instanceof org.springframework.web.context.request.ServletRequestAttributes a
+                && "GET".equals(a.getRequest().getMethod())){
+            String key=AdminOverviewService.class.getName()+".names";
+            if(a.getRequest().getAttribute(key) instanceof Names cached)return cached;
+            Names result=loadNames();a.getRequest().setAttribute(key,result);return result;
+        }
+        return loadNames();
+    }
+    private Names loadNames() {
         Map<String,String> departments=new HashMap<>(),users=new HashMap<>();
         jdbc.queryForList("SELECT dept_id,dept_name FROM sys_dept").forEach(r->departments.put(str(r.get("dept_id")),str(r.get("dept_name"))));
         jdbc.queryForList("SELECT user_id,COALESCE(NULLIF(nick_name,''),user_name) name FROM sys_user").forEach(r->users.put(str(r.get("user_id")),str(r.get("name"))));
@@ -58,7 +67,7 @@ public class AdminOverviewService {
         for(String key:module==null?MODULES:List.of(module)) {
             try {
                 if(permissions.enforced(actor)&&!permissions.allowed(actor,key+".read")){sections.put(key,map("status","forbidden","message","未获准查阅此模块"));continue;}
-                Data d=data(key,year,month,actor);
+                Data d=key.equals("tasks")&&access.isAdmin(actor)?taskSummary(year):data(key,year,month,actor);
                 sections.put(key,map("status","ok","title",d.title,"period",d.period,"note",d.note,"metrics",d.metrics,"extra",d.extra));
             } catch(Exception error) {
                 org.slf4j.LoggerFactory.getLogger(getClass()).error("Overview module failed: {}",key,error);
@@ -118,10 +127,9 @@ public class AdminOverviewService {
     }
     private Data data(String module,int year,int month,Long actor) {
         if(permissions.enforced(actor)){permissions.require(actor,module+".read");if(module.equals("budget")&&!permissions.budgetScope(actor,year))throw new AdminManagementException(403,"预算年度不在授权范围内");}
-        Names n=names();
         return switch(module) {
-            case "tasks"->tasks(year,actor,n);case "performance"->performances(year,actor,n);case "core"->core(year,month,actor);
-            case "achievements"->achievements(year,n,actor);case "budget"->budget(year,month);case "records"->records(year,month,n,actor);
+            case "tasks"->tasks(year,actor,names());case "performance"->performances(year,actor,names());case "core"->core(year,month,actor);
+            case "achievements"->achievements(year,names(),actor);case "budget"->budget(year,month);case "records"->records(year,month,names(),actor);
             default->throw new AdminManagementException(400,"未知统计模块");
         };
     }
@@ -139,12 +147,35 @@ public class AdminOverviewService {
             while(root!=null&&!Integer.valueOf(1).equals(root.getLevel())&&seen.add(root.getTaskId())) root=index.get(root.getParentId());
             r.put("reformKey",root==null?"unknown":str(root.getTaskId()));r.put("reform",root==null?"目录待核实":root.getTaskName());rows.add(r);
         }
+        Map<String,Long> counts=new LinkedHashMap<>();
+        for(String key:List.of("total","completed","reviewing","priority","difficult","overdue"))counts.put(key,count(rows,"tasks",key));
+        boolean valid=rows.stream().allMatch(r->r.get("progress")!=null);
+        BigDecimal average=rows.isEmpty()||!valid?null:rows.stream().map(r->decimal(r.get("progress"))).reduce(BigDecimal.ZERO,BigDecimal::add).divide(BigDecimal.valueOf(rows.size()),2,RoundingMode.HALF_UP);
+        return taskData(counts,average,rows);
+    }
+    /** Summary-only aggregation; administrator scope is fixed to all effective tasks. */
+    private Data taskSummary(int year) {
+        var counts=jdbc.queryForMap("SELECT COUNT(*) total,"
+                +"COALESCE(SUM(CASE WHEN BINARY status=BINARY '3' THEN 1 ELSE 0 END),0) completed,"
+                +"COALESCE(SUM(CASE WHEN BINARY status=BINARY '2' THEN 1 ELSE 0 END),0) reviewing,"
+                +"COALESCE(SUM(CASE WHEN is_priority<>0 THEN 1 ELSE 0 END),0) priority,"
+                +"COALESCE(SUM(CASE WHEN is_difficult<>0 THEN 1 ELSE 0 END),0) difficult,"
+                +"COUNT(progress) progressCount,SUM(progress) progressSum "
+                +"FROM biz_task WHERE level=3 AND phase=? AND (is_delete IS NULL OR is_delete<>1)",year);
+        Map<String,Long> values=new LinkedHashMap<>();
+        for(String key:List.of("total","completed","reviewing","priority","difficult"))values.put(key,((Number)counts.get(key)).longValue());
+        long total=values.get("total");
+        values.put("overdue",LocalDate.now(ZoneId.of("Asia/Shanghai")).isAfter(LocalDate.of(year,12,31))?total-values.get("completed"):0L);
+        BigDecimal average=total==0||((Number)counts.get("progressCount")).longValue()!=total?null
+                :decimal(counts.get("progressSum")).divide(BigDecimal.valueOf(total),2,RoundingMode.HALF_UP);
+        return taskData(values,average,List.of());
+    }
+    private Data taskData(Map<String,Long> counts,BigDecimal average,List<Map<String,Object>> rows) {
         List<Map<String,Object>> metrics=new ArrayList<>();
         for(String key:List.of("total","completed","reviewing","priority","difficult","overdue"))
-            metrics.add(metric(key,switch(key){case "total"->"总任务";case "completed"->"已完成";case "reviewing"->"审核中";case "priority"->"重点";case "difficult"->"困难";default->"逾期";},count(rows,"tasks",key),"项"));
-        metrics.add(metric("completionRate","完成率",rate(count(rows,"tasks","completed"),rows.size()),"%"));
-        boolean valid=rows.stream().allMatch(r->r.get("progress")!=null);
-        metrics.add(metric("averageProgress","平均推进进度",rows.isEmpty()||!valid?null:rows.stream().map(r->decimal(r.get("progress"))).reduce(BigDecimal.ZERO,BigDecimal::add).divide(BigDecimal.valueOf(rows.size()),2,RoundingMode.HALF_UP),"%"));
+            metrics.add(metric(key,switch(key){case "total"->"总任务";case "completed"->"已完成";case "reviewing"->"审核中";case "priority"->"重点";case "difficult"->"困难";default->"逾期";},counts.get(key),"项"));
+        metrics.add(metric("completionRate","完成率",rate(counts.get("completed"),counts.get("total")),"%"));
+        metrics.add(metric("averageProgress","平均推进进度",average,"%"));
         return new Data("任务推进","年度当前状态","有效三级任务去重；完成率按完成任务数，平均推进进度按保存的三级进度计算。重点、困难、逾期可能重叠；逾期仍按所属年度年末判断。",metrics,rows,Map.of());
     }
     private Data performances(int year,Long actor,Names n) {

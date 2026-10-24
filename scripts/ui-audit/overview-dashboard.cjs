@@ -6,7 +6,7 @@ const fs = require('node:fs/promises'), path = require('node:path'), assert = re
   const state = JSON.parse(await fs.readFile(path.resolve(__dirname, '../../target/ui-audit/state.json')));
   assert.match(state.schema, /^biz_review_test_[0-9a-f]{32}$/);
   const output = path.resolve(__dirname, '../../target/ui-audit/overview-dashboard'); await fs.mkdir(output, { recursive: true });
-  const api = await request.newContext({ baseURL: state.frontend }), browser = await chromium.launch({ channel: 'msedge', headless: true });
+  const api = await request.newContext({ baseURL: state.frontend }), browser = await chromium.launch({ channel: process.env.UI_AUDIT_BROWSER_CHANNEL || 'msedge', headless: true });
   const checks = [], errors = [], contexts = [], tokens = new Map(); let page;
   const done = name => { checks.push(name); console.log('PASS ' + name); };
   const token = async id => {
@@ -64,8 +64,15 @@ const fs = require('node:fs/promises'), path = require('node:path'), assert = re
     const core = await get('/admin/overview/analysis?year=2026&month=4&metric=core.total');
     assert.equal(core.rows.find(r => r.id === 1).value, 50); assert.equal(core.rows.find(r => r.id === 1).month, 2);
     assert.equal(core.rows.find(r => r.id === 10).value, null);
-    await drawer().getByRole('button', { name: '历史', exact: true }).first().click();
-    await expect(page).toHaveURL(/indicatorId=1/); await expect(page.getByRole('dialog', { name: '核心指标历史记录' })).toBeVisible();
+    let releaseCore;const coreGate=new Promise(resolve=>{releaseCore=resolve});let coreInitialRequests=0;
+    await page.route('**/api/core-indicators?**',async route=>{coreInitialRequests++;const response=await route.fetch();await coreGate;try{await route.fulfill({response});}catch{}});
+    try{
+      const coreFilter=page.waitForResponse(r=>r.url().includes('/list-filters/core?'));
+      await drawer().getByRole('button', { name: '历史', exact: true }).first().click();
+      await expect(page).toHaveURL(/indicatorId=1/);await coreFilter;await page.waitForTimeout(100);
+      assert.equal(coreInitialRequests,1);releaseCore();
+      await expect(page.getByRole('dialog', { name: '核心指标历史记录' })).toBeVisible();
+    }finally{releaseCore();await page.unroute('**/api/core-indicators?**');}
     done('core-cutoff-excludes-future-and-obsolete-results-and-opens-history');
 
     await home(); await open('achievements.rejected');
@@ -123,7 +130,7 @@ const fs = require('node:fs/promises'), path = require('node:path'), assert = re
     let reject = true;
     await page.route('**/api/admin/overview/analysis?**', async route => { if (reject) { reject = false; await route.fulfill({ status: 500, json: { code: 500, message: '模拟分析故障' } }); } else await route.continue(); });
     await page.locator('[data-metric="tasks.total"]').click(); await expect(drawer()).toContainText('模拟分析故障');
-    await drawer().getByRole('button', { name: '重试分析' }).click(); await expect(drawer().locator('.analysis-table')).toBeVisible(); await close();
+    await drawer().locator('[aria-label="统计分析筛选"]').getByRole('button', { name: '查询', exact: true }).click(); await expect(drawer().locator('.analysis-table')).toBeVisible(); await close();
     await page.unroute('**/api/admin/overview/analysis?**');
     let release; const gate = new Promise(r => { release = r; });
     await page.route('**/api/admin/overview/analysis?**', async route => { const response = await route.fetch(); await gate; try { await route.fulfill({ response }); } catch {} });

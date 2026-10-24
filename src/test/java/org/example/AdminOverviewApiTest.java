@@ -46,6 +46,8 @@ class AdminOverviewApiTest {
     @MockBean(name="workRecordClock") private Clock clock;
     @Autowired private org.example.service.CoreIndicatorService core;
     @Autowired private org.example.service.BudgetService budgets;
+    @Autowired private org.example.service.AdminOverviewService overview;
+    @Autowired private org.example.service.PermissionService overviewPermissions;
 
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
@@ -177,6 +179,58 @@ class AdminOverviewApiTest {
     private JsonNode value(JsonNode summary,String module,String key) {
         for(JsonNode m:summary.path("modules").path(module).path("metrics"))if(key.equals(m.path("key").asText()))return m.path("value");
         fail("Missing metric "+module+"."+key+": "+summary);return null;
+    }
+    @Test void aggregatedTaskSummaryMatchesOriginalDetailProjection() throws Exception {
+        task(900011,OWNER,2026,10,"3");task(900012,OWNER,2026,10,"1");
+        task(900013,OWNER,2026,10,"2");task(900014,OWNER,2025,10,"1");task(900015,OWNER,2026,10,"3");
+        jdbc.update("UPDATE biz_task SET progress=99,is_priority=2,is_difficult=1,is_delete=2 WHERE task_id=900011");
+        jdbc.update("UPDATE biz_task SET progress=100 WHERE task_id=900012");
+        jdbc.update("UPDATE biz_task SET progress=NULL WHERE task_id=900013");
+        jdbc.update("UPDATE biz_task SET is_delete=1 WHERE task_id=900015");
+        String token=login(ADMIN);
+        Object serviceTarget=org.springframework.test.util.AopTestUtils.getUltimateTargetObject(overview);
+        for(int pass=0;pass<2;pass++){
+            for(int year:List.of(2025,2026,2029)){
+                Object legacy=org.springframework.test.util.ReflectionTestUtils.invokeMethod(serviceTarget,"data","tasks",year,4,ADMIN);
+                var result=ok(request(HttpMethod.GET,"/admin/overview/summary?year="+year+"&month=4&module=tasks",token,null)).path("modules").path("tasks");
+                assertEquals("ok",result.path("status").asText());
+                for(String key:List.of("title","period","note","metrics","extra")){
+                    Object expected=org.springframework.test.util.ReflectionTestUtils.getField(legacy,key);
+                    assertEquals(json.readTree(json.writeValueAsString(expected)),result.path(key),year+" "+key);
+                }
+            }
+            jdbc.update("UPDATE biz_task SET progress=42,status='9' WHERE task_id=900013");
+            jdbc.update("UPDATE biz_task SET status='3' WHERE task_id=900014");
+        }
+    }
+    @Test void taskSummaryAggregationAtCurrentAndFiveTimesSyntheticScale() throws Exception {
+        Object target=org.springframework.test.util.AopTestUtils.getUltimateTargetObject(overview);
+        String token=login(ADMIN);
+        jdbc.update("UPDATE biz_task SET progress=0 WHERE task_id=900010");
+        for(int size:List.of(120,600)){
+            jdbc.update("DELETE FROM biz_task WHERE task_id BETWEEN 9910000 AND 9910599");
+            List<Object[]> rows=new ArrayList<>();
+            for(int i=0;i<size;i++)rows.add(new Object[]{9910000+i,"BENCH"+i,"Synthetic "+i,i%4,i%101,i%2,i%3==0?1:0});
+            jdbc.batchUpdate("INSERT INTO biz_task(task_id,task_code,task_name,status,progress,is_priority,is_difficult,project_id,parent_id,phase,level,dept_id,leader_id,auditor_id,principal_id,target_value,is_delete) VALUES(?,?,?,?,?,?,?,1,900001,2026,3,920001,910001,910001,910003,10,0)",rows);
+            List<Long> legacyTimes=new ArrayList<>(),aggregateTimes=new ArrayList<>();
+            try{
+                for(int run=0;run<6;run++){
+                    var request=new org.springframework.mock.web.MockHttpServletRequest("GET","/admin/overview/summary");
+                    request.addHeader("Authorization",token);
+                    org.springframework.web.context.request.RequestContextHolder.setRequestAttributes(new org.springframework.web.context.request.ServletRequestAttributes(request));
+                    overviewPermissions.state(ADMIN); // Common request authorization is outside this data-phase timing.
+                    long start=System.nanoTime();
+                    Object legacy=org.springframework.test.util.ReflectionTestUtils.invokeMethod(target,"data","tasks",2026,4,ADMIN);
+                    long middle=System.nanoTime();
+                    Object aggregate=org.springframework.test.util.ReflectionTestUtils.invokeMethod(target,"taskSummary",2026);
+                    long end=System.nanoTime();
+                    assertEquals(org.springframework.test.util.ReflectionTestUtils.getField(legacy,"metrics"),org.springframework.test.util.ReflectionTestUtils.getField(aggregate,"metrics"));
+                    if(run>0){legacyTimes.add((middle-start)/1000);aggregateTimes.add((end-middle)/1000);}
+                }
+            }finally{org.springframework.web.context.request.RequestContextHolder.resetRequestAttributes();}
+            Collections.sort(legacyTimes);Collections.sort(aggregateTimes);
+            System.out.println("OVERVIEW_TASK_DATA_BENCH "+json.writeValueAsString(Map.of("syntheticTasks",size,"existingTasks",1,"legacy_median_us",legacyTimes.get(2),"aggregate_median_us",aggregateTimes.get(2),"equalMetrics",true)));
+        }
     }
     @Test void taskCountsDeduplicateGoalsAndKeepOverlappingFlags() throws Exception {
         task(900011,OWNER,2026,10,"3");task(900012,OWNER,2025,10,"1");
