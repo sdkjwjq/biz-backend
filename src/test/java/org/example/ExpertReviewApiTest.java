@@ -163,6 +163,31 @@ class ExpertReviewApiTest {
   assertEquals(2,body(get("/list-filters/admin-departments?f.missingLeader=yes",admin)).path("total").asInt());
   assertEquals(1,body(get("/list-filters/admin-departments?f.hasUsers=yes&f.hasBusiness=yes",admin)).path("total").asInt());
  }
+ @Autowired org.example.service.BudgetVersionListService budgetVersionRows;
+ @Test void groupedBudgetVersionsMatchLegacyAndRecheckYearScope()throws Exception{
+  int key=100;
+  for(int year:List.of(2025,2026))for(int month:List.of(9,10))for(int version=1;version<=30;version++){
+   jdbc.update("INSERT INTO biz_budget_import_version(version_id,sheet_id,year,month,version_no,operation_type,snapshot_json,created_by,is_delete) VALUES(?,?,?,?,?,?,'{\"privateSnapshot\":true}',?,?)",key++,year*100+month,year,month,version,version%2==0?"RESTORE":"IMPORT",version%3==0?999999:110228,version==30?1:0);
+  }
+  var expected=jdbc.queryForList("SELECT v.version_id versionId,v.sheet_id sheetId,v.year,v.month,v.version_no versionNo,v.operation_type operationType,v.source_version_id sourceVersionId,v.file_id fileId,v.file_name fileName,v.created_by createdBy,u.nick_name createdByName,v.create_time createTime,v.remark,(v.version_no=(SELECT MAX(x.version_no) FROM biz_budget_import_version x WHERE x.year=v.year AND x.month=v.month AND x.is_delete=0)) isCurrent FROM biz_budget_import_version v LEFT JOIN sys_user u ON u.user_id=v.created_by WHERE v.is_delete=0 ORDER BY v.year DESC,v.month DESC,v.version_no DESC");
+  var optimized=budgetVersionRows.rows(110228L);assertEquals(expected.size(),optimized.size());
+  for(int i=0;i<expected.size();i++)for(var field:expected.get(i).entrySet()){
+   Object value=optimized.get(i).get(field.getKey());
+   assertEquals(field.getValue(),value,field.getKey()+" originalType="+(field.getValue()==null?"null":field.getValue().getClass())+" newType="+(value==null?"null":value.getClass()));
+  }
+  assertEquals(116,expected.size());
+  var current=body(get("/list-filters/budget-versions?f.effective=yes&pageSize=1&page=2",admin));
+  assertEquals(4,current.path("total").asInt());assertEquals(29,current.path("items").get(0).path("versionNo").asInt());
+  assertFalse(current.toString().contains("privateSnapshot"));
+  jdbc.update("UPDATE sys_user_permission SET permissions_json='{\"budget.read\":true,\"budget.versions\":true}',scopes_json='{\"budget\":{\"mode\":\"ALL\",\"years\":[2025]}}' WHERE user_id=90103");
+  var limited=body(get("/list-filters/budget-versions?f.effective=yes",a));
+  assertEquals(2,limited.path("total").asInt());for(var item:limited.path("items"))assertEquals(2025,item.path("year").asInt());
+  jdbc.update("UPDATE sys_user_permission SET scopes_json='{\"budget\":{\"mode\":\"ALL\",\"years\":[2026]}}' WHERE user_id=90103");
+  var changed=body(get("/list-filters/budget-versions?f.effective=yes",a));
+  assertEquals(2,changed.path("total").asInt());for(var item:changed.path("items"))assertEquals(2026,item.path("year").asInt());
+  jdbc.update("UPDATE sys_user_permission SET permissions_json='{\"budget.read\":true,\"budget.versions\":false}' WHERE user_id=90103");
+  assertEquals(403,get("/list-filters/budget-versions",a).getStatusCode().value());
+ }
  @Test void budgetVersionFiltersKeepCurrentPerMonthBeforePaging()throws Exception{
   for(int n=1;n<=3;n++)jdbc.update("INSERT INTO biz_budget_import_version(version_id,sheet_id,year,month,version_no,operation_type,snapshot_json,created_by,is_delete) VALUES(?,?,2026,?,?,?,'{}',110228,0)",n,n==3?2:1,n==3?9:10,n==3?1:n,n==2?"RESTORE":"IMPORT");
   assertEquals(403,get("/list-filters/budget-versions",a).getStatusCode().value());

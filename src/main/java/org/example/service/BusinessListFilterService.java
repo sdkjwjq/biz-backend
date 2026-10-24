@@ -29,6 +29,7 @@ public class BusinessListFilterService {
     @org.springframework.beans.factory.annotation.Autowired private BudgetService budget;
     @org.springframework.beans.factory.annotation.Autowired private WorkRecordFilterPageService recordPages;
     @org.springframework.beans.factory.annotation.Autowired private AuditHistoryTimeService auditHistoryTimes;
+    @org.springframework.beans.factory.annotation.Autowired private BudgetVersionListService budgetVersions;
     public record Data(List<Map<String,Object>> rows,List<Field> fields){}
     public Map<String,Object> query(String domain,Long actor,MultiValueMap<String,String> params){
         if(domain.equals("budget"))return budgetQuery(actor,params);
@@ -206,8 +207,7 @@ public class BusinessListFilterService {
         List<Field> f=new ArrayList<>();plain(f,"keyword","名称／编号","text",true,"基础");multi(f,"leaderId","负责人",true,rows,names);select(f,"status","启停状态",true,"0","正常","1","停用");select(f,"missingLeader","缺少负责人",false,"yes","是","no","否");select(f,"hasUsers","有正常账号",false,"yes","是","no","否");select(f,"hasBusiness","有有效任务／绩效",false,"yes","是","no","否");select(f,"mismatch","审核人与部门负责人不一致",false,"yes","是","no","否");return new Data(rows,f);
     }
     private Data versionData(Long actor){
-        var rows=jdbc.queryForList("SELECT v.version_id versionId,v.sheet_id sheetId,v.year,v.month,v.version_no versionNo,v.operation_type operationType,v.source_version_id sourceVersionId,v.file_id fileId,v.file_name fileName,v.created_by createdBy,u.nick_name createdByName,v.create_time createTime,v.remark,(v.version_no=(SELECT MAX(x.version_no) FROM biz_budget_import_version x WHERE x.year=v.year AND x.month=v.month AND x.is_delete=0)) isCurrent FROM biz_budget_import_version v LEFT JOIN sys_user u ON u.user_id=v.created_by WHERE v.is_delete=0 ORDER BY v.year DESC,v.month DESC,v.version_no DESC");
-        rows.removeIf(r->!access.budgetScope(actor,(int)id(r.get("year"))));
+        var rows=budgetVersions.rows(actor);
         Map<String,String> names=new HashMap<>();for(var r:rows){r.put("current",yes(r.get("isCurrent")));var item=new LinkedHashMap<>(r);r.put("item",item);r.put("id",r.get("versionId"));r.put("effective",flag(yes(r.get("isCurrent"))));names.put(str(r.get("createdBy")),str(r.get("createdByName")));}
         List<Field> f=new ArrayList<>();years(f,false);months(f);multi(f,"createdBy","导入人",true,rows,names);plain(f,"createTime","导入时间","date",true,"基础");select(f,"operationType","版本来源",false,"IMPORT","导入","RESTORE","恢复","INITIAL","初始版本");select(f,"effective","当前有效版本",false,"yes","是","no","否");return new Data(rows,f);
     }

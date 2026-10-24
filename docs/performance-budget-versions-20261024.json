@@ -1,0 +1,107 @@
+{
+  "scope": "Synthetic aggregation query only, single client, warmed runs. samples_ms includes MySQL client startup; server_elapsed brackets the full SELECT with server timestamps in one client session, including result delivery and statement overhead but excluding connection startup. Not endpoint P95 or full-system acceptance.",
+  "results": [
+    {
+      "rows": 120,
+      "ordered_results_equal": true,
+      "legacy": {
+        "samples_ms": [
+          92.68,
+          96.89,
+          100.55,
+          92.13,
+          87.29
+        ],
+        "median_ms": 92.68,
+        "server_elapsed_samples_ms": [
+          4.484,
+          2.615,
+          4.033,
+          3.241,
+          2.393
+        ],
+        "server_elapsed_median_ms": 3.241,
+        "explain": [
+          "1\tPRIMARY\tv\tNULL\tindex\tidx_budget_version_period\tidx_budget_version_period\t13\tNULL\t120\t10.00\tUsing where; Backward index scan; Using index",
+          "2\tDEPENDENT SUBQUERY\tx\tNULL\tref\tidx_budget_version_period\tidx_budget_version_period\t9\tbiz_review_test_ad7dbd0194e94d498ecf2440d0d83adf.v.year,biz_review_test_ad7dbd0194e94d498ecf2440d0d83adf.v.month,const\t15\t100.00\tUsing index"
+        ]
+      },
+      "grouped": {
+        "samples_ms": [
+          87.93,
+          85.05,
+          84.89,
+          92.42,
+          90.03
+        ],
+        "median_ms": 87.93,
+        "server_elapsed_samples_ms": [
+          1.399,
+          1.166,
+          1.194,
+          1.335,
+          1.491
+        ],
+        "server_elapsed_median_ms": 1.335,
+        "explain": [
+          "1\tPRIMARY\tv\tNULL\tindex\tNULL\tidx_budget_version_period\t13\tNULL\t120\t10.00\tUsing where; Backward index scan; Using index",
+          "1\tPRIMARY\t<derived2>\tNULL\tref\t<auto_key0>\t<auto_key0>\t8\tbiz_review_test_ad7dbd0194e94d498ecf2440d0d83adf.v.year,biz_review_test_ad7dbd0194e94d498ecf2440d0d83adf.v.month\t2\t100.00\tNULL",
+          "2\tDERIVED\tversions\tNULL\trange\tidx_budget_version_period\tidx_budget_version_period\t9\tNULL\t5\t100.00\tUsing where; Using index for group-by"
+        ]
+      }
+    },
+    {
+      "rows": 600,
+      "ordered_results_equal": true,
+      "legacy": {
+        "samples_ms": [
+          126.29,
+          120.72,
+          126.86,
+          115.23,
+          118.97
+        ],
+        "median_ms": 120.72,
+        "server_elapsed_samples_ms": [
+          32.781,
+          30.271,
+          32.048,
+          30.371,
+          34.794
+        ],
+        "server_elapsed_median_ms": 32.048,
+        "explain": [
+          "1\tPRIMARY\tv\tNULL\trange\tidx_budget_version_period\tidx_budget_version_period\t9\tNULL\t300\t100.00\tUsing where; Using index for skip scan; Using filesort",
+          "2\tDEPENDENT SUBQUERY\tx\tNULL\tref\tidx_budget_version_period\tidx_budget_version_period\t9\tbiz_review_test_ad7dbd0194e94d498ecf2440d0d83adf.v.year,biz_review_test_ad7dbd0194e94d498ecf2440d0d83adf.v.month,const\t75\t100.00\tUsing index"
+        ]
+      },
+      "grouped": {
+        "samples_ms": [
+          86.4,
+          93.22,
+          85.83,
+          83.18,
+          90.93
+        ],
+        "median_ms": 86.4,
+        "server_elapsed_samples_ms": [
+          2.11,
+          3.161,
+          2.163,
+          1.922,
+          2.048
+        ],
+        "server_elapsed_median_ms": 2.11,
+        "explain": [
+          "1\tPRIMARY\tv\tNULL\tindex\tNULL\tidx_budget_version_period\t13\tNULL\t600\t10.00\tUsing where; Using index; Using temporary; Using filesort",
+          "1\tPRIMARY\t<derived2>\tNULL\tALL\tNULL\tNULL\tNULL\tNULL\t5\t100.00\tUsing where; Using join buffer (hash join)",
+          "2\tDERIVED\tversions\tNULL\trange\tidx_budget_version_period\tidx_budget_version_period\t9\tNULL\t5\t100.00\tUsing where; Using index for group-by"
+        ]
+      }
+    }
+  ],
+  "production_changes": false,
+  "compatibility": "37 isolated API tests passed, including ordered field-by-field legacy comparison, deleted versions, missing importer, current-per-month before pagination, year-scope changes and permission revocation with the same token.",
+  "permission_checks": "Unit test: 120 rows across 2 years require 2 year-scope checks per invocation, instead of 120. The next invocation reevaluates both years.",
+  "rollback": "Revert backend commit and rebuild/redeploy the previous backend when authorized. This change adds no database migration and writes no business data."
+}

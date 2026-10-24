@@ -117,5 +117,16 @@
     },
     "index": "Optional task audit sub_id/create_time index with idempotent apply/check/guarded rollback; tested only in disposable synthetic schema, not deployed.",
     "limits": "Source audit lists are still unpaged and other enrichment queries remain. EXPLAIN estimates do not establish endpoint P95; full-system concurrency acceptance remains pending."
+  },
+  "budgetVersionAggregation": {
+    "implementation": "Budget version metadata joins one per-period MAX aggregation instead of a correlated lookup per row; year permissions evaluated once per distinct year within each invocation. Preserves legacy numeric type, fields, order, filters and current-version semantics.",
+    "verification": {
+      "isolated_api_tests": 37,
+      "unit_tests": 1,
+      "browser_checks": 35,
+      "backend_package": "passed",
+      "performance_evidence": "performance-budget-versions-20261024.json"
+    },
+    "limits": "Full authorized version metadata is still loaded before advanced filtering and pagination. Synthetic single-query timing does not establish endpoint or full-system P95. No schema or business-data changes."
   }
 }
