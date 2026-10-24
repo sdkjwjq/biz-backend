@@ -171,36 +171,56 @@ public interface AdminManagementMapper {
     @Options(useGeneratedKeys=true,keyProperty="logId",keyColumn="log_id")
     void insertOperation(AdminOperationLog log);
 
-    @Select("SELECT l.log_id recordId,'ADMIN' recordType,l.module,l.action,l.target_type targetType,l.target_id targetId,"
+    String ADMIN_OPERATION_SQL = "SELECT l.log_id recordId,'ADMIN' recordType,l.module,l.action,l.target_type targetType,l.target_id targetId,"
             + "l.target_name targetName,l.batch_id batchId,l.operator_id operatorId,u.nick_name operatorName,l.reason,"
             + "l.before_json beforeJson,l.after_json afterJson,l.create_time createTime FROM sys_admin_operation_log l "
-            + "LEFT JOIN sys_user u ON u.user_id=l.operator_id")
+            + "LEFT JOIN sys_user u ON u.user_id=l.operator_id";
+    @Select(ADMIN_OPERATION_SQL)
     List<Map<String, Object>> adminOperations();
 
-    @Select("SELECT l.log_id recordId,'OWNERSHIP' recordType,'OWNERSHIP' module,'TRANSFER' action,l.target_type targetType,"
+    @Select(ADMIN_OPERATION_SQL + " WHERE l.log_id=#{id}")
+    Map<String,Object> adminOperation(@Param("id") Long id);
+
+    String OWNERSHIP_OPERATION_SQL = "SELECT l.log_id recordId,'OWNERSHIP' recordType,'OWNERSHIP' module,'TRANSFER' action,l.target_type targetType,"
             + "CAST(l.target_id AS CHAR) targetId,l.target_name targetName,l.batch_id batchId,l.operator_id operatorId,"
             + "u.nick_name operatorName,l.reason,NULL beforeJson,NULL afterJson,l.create_time createTime "
-            + "FROM biz_ownership_change_log l LEFT JOIN sys_user u ON u.user_id=l.operator_id")
+            + "FROM biz_ownership_change_log l LEFT JOIN sys_user u ON u.user_id=l.operator_id";
+    @Select(OWNERSHIP_OPERATION_SQL)
     List<Map<String, Object>> ownershipOperations();
 
-    @Select("SELECT l.log_id recordId,'RELATION' recordType,'PERFORMANCE_RELATION' module,l.action,'PERFORMANCE_RELATION' targetType,"
+    @Select(OWNERSHIP_OPERATION_SQL + " WHERE l.log_id=#{id}")
+    Map<String,Object> ownershipOperation(@Param("id") Long id);
+
+    String RELATION_OPERATION_SQL = "SELECT l.log_id recordId,'RELATION' recordType,'PERFORMANCE_RELATION' module,l.action,'PERFORMANCE_RELATION' targetType,"
             + "CAST(l.perf_id AS CHAR) targetId,l.perf_name targetName,l.batch_id batchId,l.operator_id operatorId,"
             + "u.nick_name operatorName,l.reason,NULL beforeJson,NULL afterJson,l.create_time createTime "
-            + "FROM biz_performance_relation_log l LEFT JOIN sys_user u ON u.user_id=l.operator_id")
+            + "FROM biz_performance_relation_log l LEFT JOIN sys_user u ON u.user_id=l.operator_id";
+    @Select(RELATION_OPERATION_SQL)
     List<Map<String, Object>> relationOperations();
 
-    @Select("SELECT v.version_id recordId,'BUDGET' recordType,'BUDGET' module,v.operation_type action,'BUDGET_SHEET' targetType,"
+    @Select(RELATION_OPERATION_SQL + " WHERE l.log_id=#{id}")
+    Map<String,Object> relationOperation(@Param("id") Long id);
+
+    String BUDGET_OPERATION_SQL = "SELECT v.version_id recordId,'BUDGET' recordType,'BUDGET' module,v.operation_type action,'BUDGET_SHEET' targetType,"
             + "CAST(v.sheet_id AS CHAR) targetId,CONCAT(v.year,'年',v.month,'月预算 V',v.version_no) targetName,NULL batchId,"
             + "v.created_by operatorId,u.nick_name operatorName,v.remark reason,NULL beforeJson,NULL afterJson,v.create_time createTime "
-            + "FROM biz_budget_import_version v LEFT JOIN sys_user u ON u.user_id=v.created_by WHERE COALESCE(v.is_delete,0)=0")
+            + "FROM biz_budget_import_version v LEFT JOIN sys_user u ON u.user_id=v.created_by WHERE COALESCE(v.is_delete,0)=0";
+    @Select(BUDGET_OPERATION_SQL)
     List<Map<String, Object>> budgetOperations();
 
-    @Select("SELECT r.record_id recordId,'WORK_RECORD' recordType,'WORK_RECORD' module,'DELETE' action,'WORK_RECORD' targetType,"
+    @Select(BUDGET_OPERATION_SQL + " AND v.version_id=#{id}")
+    Map<String,Object> budgetOperation(@Param("id") Long id);
+
+    String WORK_RECORD_OPERATION_SQL = "SELECT r.record_id recordId,'WORK_RECORD' recordType,'WORK_RECORD' module,'DELETE' action,'WORK_RECORD' targetType,"
             + "CAST(r.record_id AS CHAR) targetId,CONCAT(r.owner_name,' ',r.record_year,'年',r.record_month,'月工作纪实') targetName,"
             + "NULL batchId,r.deleted_by operatorId,u.nick_name operatorName,r.delete_reason reason,NULL beforeJson,NULL afterJson,"
             + "r.deleted_time createTime FROM biz_work_record r LEFT JOIN sys_user u ON u.user_id=r.deleted_by "
-            + "WHERE COALESCE(r.delete_marker,0)<>0")
+            + "WHERE COALESCE(r.delete_marker,0)<>0";
+    @Select(WORK_RECORD_OPERATION_SQL)
     List<Map<String, Object>> deletedWorkRecordOperations();
+
+    @Select(WORK_RECORD_OPERATION_SQL + " AND r.record_id=#{id}")
+    Map<String,Object> deletedWorkRecordOperation(@Param("id") Long id);
 
     @Select("SELECT r.record_id recordId,r.owner_id ownerId,r.owner_name ownerName,r.record_year recordYear,"
             + "r.record_month recordMonth,r.submit_time submitTime,r.deleted_by deletedBy,u.nick_name deletedByName,"

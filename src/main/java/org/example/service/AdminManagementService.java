@@ -278,9 +278,16 @@ public class AdminManagementService {
 
     public Map<String, Object> operation(String type, Long id, Long operatorId) {
         requireAdmin(operatorId);
-        return allOperations().stream()
-                .filter(row -> type.equalsIgnoreCase(string(row.get("recordType"))) && sameNumber(row.get("recordId"), id))
-                .findFirst().orElseThrow(() -> new AdminManagementException(404, "操作记录不存在"));
+        Map<String,Object> row = switch (type.toUpperCase(Locale.ROOT)) {
+            case "ADMIN" -> mapper.adminOperation(id);
+            case "OWNERSHIP" -> mapper.ownershipOperation(id);
+            case "RELATION" -> mapper.relationOperation(id);
+            case "BUDGET" -> mapper.budgetOperation(id);
+            case "WORK_RECORD" -> mapper.deletedWorkRecordOperation(id);
+            default -> null;
+        };
+        if (row == null) throw new AdminManagementException(404, "操作记录不存在");
+        return row;
     }
 
     public void exportOperations(String module, Long operatorIdFilter, String keyword, String action,

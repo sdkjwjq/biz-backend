@@ -67,6 +67,15 @@ const fs=require('node:fs/promises'),path=require('node:path'),assert=require('n
   await expect(page.locator('[aria-label="角色筛选"] .basic-fields > .query-field')).toHaveCount(4);checks.push('role-permission-basic-filters-load');
   await page.goto(state.frontend+'/home/works/budget');await page.getByRole('button',{name:/版本记录|历史版本/}).click();await expect(page.locator('[aria-label="预算版本筛选"] .basic-fields > .query-field')).toHaveCount(4);checks.push('budget-version-basic-controls');
   await page.goto(state.frontend+'/home/admin/operations');await expect(page.locator('[aria-label="操作记录筛选"] .basic-fields > .query-field')).toHaveCount(4);checks.push('operation-log-basic-controls');
+  const operationBar=page.locator('[aria-label="操作记录筛选"]');
+  await operationBar.getByRole('textbox',{name:'操作记录对象关键词',exact:true}).fill('操作详情测试对象');
+  await operationBar.getByRole('button',{name:'查询',exact:true}).click();
+  const operationButton=page.locator('.el-table__row').filter({hasText:'操作详情测试对象'}).getByRole('button',{name:'详情',exact:true});
+  await expect(operationButton).toBeVisible();
+  const [operationResponse]=await Promise.all([page.waitForResponse(r=>/\/admin\/operations\/[^/]+\/\d+$/.test(new URL(r.url()).pathname)),operationButton.click()]);
+  assert.equal(operationResponse.status(),200);const operationDialog=page.getByRole('dialog',{name:'操作详情'});
+  await expect(operationDialog).toContainText('隔离测试原因');await expect(operationDialog).toContainText('修改前');await expect(operationDialog).toContainText('修改后');
+  await operationDialog.getByRole('button',{name:/Close|关闭/}).click();checks.push('operation-detail-preserves-before-after-values');
   await page.goto(state.frontend+'/home/audit');
   const doneResponse=page.waitForResponse(r=>r.url().includes('/list-filters/audits?')&&new URL(r.url()).searchParams.get('tab')==='done');
   await page.getByText('审批记录',{exact:true}).click();const done=await doneResponse;assert.equal(done.status(),200);assert.ok((await done.json()).fields.some(f=>f.key==='handledTime'));

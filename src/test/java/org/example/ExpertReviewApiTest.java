@@ -216,6 +216,27 @@ class ExpertReviewApiTest {
   assertEquals(1,body(get("/list-filters/notices?f.pending=yes",admin)).path("total").asInt());
   jdbc.update("UPDATE biz_core_report SET flow_status=30 WHERE report_id=1");assertEquals(0,body(get("/list-filters/notices?f.pending=yes",admin)).path("total").asInt());assertEquals(1,body(get("/list-filters/notices?f.pending=no",admin)).path("total").asInt());assertEquals(1,body(get("/list-filters/notices?f.pending=unknown",admin)).path("total").asInt());
  }
+ @Autowired org.example.service.AdminManagementService operationService;
+ @Test void operationDetailsMatchLegacyAcrossAllSources()throws Exception{
+  jdbc.update("INSERT INTO sys_admin_operation_log(log_id,module,action,target_type,target_id,target_name,operator_id,reason,before_json,after_json,create_time) VALUES(1,'USER','UPDATE','USER','90101','Original',110228,'Reason','{\"name\":\"before\"}','{\"name\":\"after\"}',NOW())");
+  jdbc.update("INSERT INTO biz_ownership_change_log(log_id,target_type,target_id,target_name,operator_id,reason,create_time) VALUES(1,'TASK',3,'Transfer',999999,'Reason',NOW())");
+  jdbc.update("INSERT INTO biz_performance_relation_log(log_id,perf_id,perf_name,year,action,task_id,operator_id,reason,create_time) VALUES(1,7,'Relation',2026,'ADD',3,110228,'Reason',NOW())");
+  jdbc.update("INSERT INTO biz_budget_import_version(version_id,sheet_id,year,month,version_no,operation_type,snapshot_json,created_by,is_delete) VALUES(1,1,2026,10,1,'IMPORT','{}',110228,0),(2,1,2026,10,2,'IMPORT','{}',110228,1)");
+  jdbc.update("INSERT INTO biz_work_record(record_id,owner_id,owner_name,record_year,record_month,status,delete_marker,deleted_by,delete_reason,deleted_time,create_time,update_time) VALUES(1,90101,'Owner',2026,10,1,1,110228,'Deleted',NOW(),NOW(),NOW()),(2,90101,'Owner',2026,9,0,0,NULL,NULL,NULL,NOW(),NOW())");
+  var expected=operationService.operationRows(110228L);assertEquals(5,expected.size());
+  for(var row:expected){
+   String type=String.valueOf(row.get("recordType")).toLowerCase(Locale.ROOT);
+   assertEquals(row,operationService.operation(type,1L,110228L),type);
+   assertEquals(json.readTree(json.writeValueAsString(row)),body(get("/admin/operations/"+type+"/1",admin)),type);
+   assertEquals(403,get("/admin/operations/"+type+"/1",owner).getStatusCode().value());
+   assertEquals(404,get("/admin/operations/"+type+"/99999",admin).getStatusCode().value());
+  }
+  assertEquals(404,get("/admin/operations/BUDGET/2",admin).getStatusCode().value());
+  assertEquals(404,get("/admin/operations/WORK_RECORD/2",admin).getStatusCode().value());
+  assertEquals(404,get("/admin/operations/UNKNOWN/1",admin).getStatusCode().value());
+  jdbc.update("UPDATE sys_user SET role='1' WHERE user_id=110228");
+  assertEquals(403,get("/admin/operations/ADMIN/1",admin).getStatusCode().value());
+ }
  @Test void operationFiltersAndExportUseTheSameRowsAcrossPages()throws Exception{
   for(int n=1;n<=3;n++)jdbc.update("INSERT INTO sys_admin_operation_log(module,action,target_type,target_id,target_name,batch_id,operator_id,reason,create_time) VALUES(?,'UPDATE','USER',?,'合成对象',?,110228,'合成原因',NOW())",n==3?"TASK":"USER",String.valueOf(n),n==1?"batch-a":"batch-b");
   assertEquals(403,get("/list-filters/admin-operations",a).getStatusCode().value());

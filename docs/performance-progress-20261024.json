@@ -147,5 +147,22 @@
     },
     "limits": "Role listing still evaluates all non-deleted accounts for assignment status; global responsibility sets remain. Other list pagination and full-system load acceptance pending.",
     "rollback": "Revert this backend change and rebuild the prior backend when authorized; no schema migration or business-data changes."
+  },
+  "operationDetailLookup": {
+    "implementation": "Dispatch operation detail by whitelisted source type and primary ID, using the exact shared list column projection and visibility predicates. Removes five full log-list reads and sorting on each detail request.",
+    "verification": {
+      "isolated_filter_api_tests": 39,
+      "isolated_admin_api_tests": 5,
+      "unit_tests": 1,
+      "browser_checks": 37,
+      "backend_package": "passed",
+      "compatibility": "All five source types compared field-by-field and over HTTP against legacy allOperations output. Same-ID cross-source records, missing users, before/after JSON, deleted budget versions, nondeleted work records, unknown IDs and revoked admin access covered."
+    },
+    "query_scope": {
+      "old": "Five full source-list mapper reads plus sorting",
+      "new": "One primary-ID source mapper read for a valid type; no log-list mapper calls"
+    },
+    "limits": "Operation lists still load full projections and change bodies before pagination; list SQL pagination and end-to-end P95 remain pending.",
+    "rollback": "Restore previous backend artifact when authorized; no migration or business-data changes."
   }
 }

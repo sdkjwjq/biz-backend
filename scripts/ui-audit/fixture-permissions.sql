@@ -12,3 +12,7 @@ VALUES(940001,'permission-file-a.pdf','/uploads/permission-file-a.pdf','/uploads
 INSERT INTO biz_material_submission(sub_id,task_id,file_id,reported_value,submit_by,submit_dept_id,manage_dept_id,file_suffix,flow_status,current_handler_id,is_delete)
 VALUES(970001,930002,940001,1,910001,920001,920001,'pdf',10,910003,0),
 (970002,930102,940002,1,910004,920002,920002,'pdf',10,910003,0);
+
+-- Synthetic detail for the read-only operation history browser regression.
+INSERT INTO sys_admin_operation_log(module,action,target_type,target_id,target_name,operator_id,reason,before_json,after_json,create_time)
+VALUES('USER','UPDATE','USER','110228','操作详情测试对象',110228,'隔离测试原因','{"name":"修改前"}','{"name":"修改后"}',NOW());
