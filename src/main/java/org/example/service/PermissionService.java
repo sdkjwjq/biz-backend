@@ -48,7 +48,8 @@ public class PermissionService {
         var r=rows.get(0);return new Policy(str(r.get("access_mode")),read(r.get("permissions_json"),new TypeReference<Map<String,Boolean>>(){}),read(r.get("scopes_json"),new TypeReference<Map<String,Object>>(){}),
                 jdbc.queryForList("SELECT role_code FROM sys_user_permission_role WHERE user_id=? ORDER BY role_code",String.class,id),number(r.get("version")));
     }
-    public List<PermissionCatalog.Role> roles(){
+    public List<PermissionCatalog.Role> roles(){return cached("roleDefinitions",this::loadRoles);}
+    private List<PermissionCatalog.Role> loadRoles(){
         Map<String,PermissionCatalog.Role> result=new LinkedHashMap<>(PermissionCatalog.BUILTINS);
         if(installed())for(var r:jdbc.queryForList("SELECT * FROM sys_permission_role ORDER BY role_code")){
             String code=str(r.get("role_code"));var base=PermissionCatalog.BUILTINS.get(code);
@@ -71,6 +72,12 @@ public class PermissionService {
         boolean configured=!"LEGACY".equals(policy.mode())||!policy.overrides().isEmpty()||!policy.scopes().isEmpty()||!policy.roles().isEmpty()||codes.stream().map(definitions::get).filter(Objects::nonNull).anyMatch(r->r.version()>0||!r.builtin());
         return new State(id,admin,configured,policy,active,Collections.unmodifiableSet(granted),revision());
     }
+    /** Read-only assignment preview, including disabled accounts/templates; never grants access. */
+    public Set<String> assignedRoleCodes(SysUser account){
+        var configuration=policy(account.getUserId());var codes=new LinkedHashSet<String>();
+        if("LEGACY".equals(configuration.mode()))codes.addAll(automaticRoles(account));
+        codes.addAll(configuration.roles());if("0".equals(account.getRole()))codes.add("ADMIN");return codes;
+    }
     private Set<String> automaticRoles(SysUser u){
         Long id=u.getUserId();Set<String> result=new LinkedHashSet<>();result.add("2".equals(u.getRole())?"RESPONSIBLE":"USER");
         if("0".equals(u.getRole())){result.add("ADMIN");return result;}
@@ -80,11 +87,11 @@ public class PermissionService {
         if(activeDept&&Objects.equals(u.getDeptId(),100L))result.add("OFFICE");
         if(activeDept&&Objects.equals(u.getDeptId(),104L))result.add("FINANCE");
         if("2".equals(u.getRole()))result.add("BUDGET_VIEWER_INTERNAL"); // 补入下方的只读基础能力。
-        if(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM sys_leadership_access WHERE user_id=? AND scope IN('ALL','DEPARTMENTS'))",Integer.class,id)==1)result.add("LEADERSHIP");
+        if(cached("leadershipIds",()->new HashSet<>(jdbc.queryForList("SELECT user_id FROM sys_leadership_access WHERE scope IN('ALL','DEPARTMENTS')",Long.class))).contains(id))result.add("LEADERSHIP");
         if(AchievementPermissionUtil.isAchievementUploadAccount(u,department))result.add("ACHIEVEMENT_REPORTER");
         if(AchievementPermissionUtil.isAchievementAuditor(u))result.add("ACHIEVEMENT_REVIEWER");
         if(recordViewers.contains(id))result.add("RECORD_VIEWER");
-        if(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM biz_work_record WHERE owner_id=? AND delete_marker=0)",Integer.class,id)==1)result.add("RECORD_OWNER");
+        if(cached("recordOwnerIds",()->new HashSet<>(jdbc.queryForList("SELECT DISTINCT owner_id FROM biz_work_record WHERE delete_marker=0",Long.class))).contains(id))result.add("RECORD_OWNER");
         if(!records.fillableYears(u).isEmpty())result.add("RECORD_REPORTER");
         if(jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM biz_task t WHERE t.level=3 AND t.phase BETWEEN 2025 AND 2029 AND COALESCE(t.is_delete,0)=0 AND (t.leader_id=? OR EXISTS(SELECT 1 FROM biz_level4_task c WHERE c.parent_id=t.task_id AND c.leader_id=? AND COALESCE(c.is_delete,0)=0)))",Integer.class,id,id)==1)result.add("CORE_REPORTER");
         if(jdbc.queryForObject("SELECT (EXISTS(SELECT 1 FROM biz_performance p JOIN biz_core_indicator c ON BINARY c.indicator_code=BINARY p.perf_code WHERE p.principal_id=? AND COALESCE(p.is_delete,0)=0) OR EXISTS(SELECT 1 FROM biz_core_report r JOIN biz_core_indicator c ON c.indicator_id=r.indicator_id AND BINARY c.indicator_code=BINARY r.performance_code WHERE r.current_handler_id=? AND r.flow_status IN(10,20)))",Integer.class,id,id)==1)result.add("CORE_REVIEWER");

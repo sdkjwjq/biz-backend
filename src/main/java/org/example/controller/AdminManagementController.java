@@ -114,6 +114,7 @@ public class AdminManagementController {
         return admin.operation(type, id, user(request));
     }
 
+    @org.springframework.beans.factory.annotation.Autowired private org.example.service.BusinessListFilterService listFilters;
     @PostMapping("/operations/export")
     public void exportOperations(@RequestParam(value="module", required=false) String module,
                                  @RequestParam(value="operatorId", required=false) Long operatorId,
@@ -121,8 +122,12 @@ public class AdminManagementController {
                                  @RequestParam(value="action", required=false) String action,
                                  @RequestParam(value="startDate", required=false) String startDate,
                                  @RequestParam(value="endDate", required=false) String endDate,
-                                 HttpServletRequest request, HttpServletResponse response) {
-        admin.exportOperations(module, operatorId, keyword, action, startDate, endDate, response, user(request));
+                                 @RequestParam org.springframework.util.MultiValueMap<String,String> filters, HttpServletRequest request, HttpServletResponse response) {
+        if(filters.keySet().stream().anyMatch(k->k.startsWith("f."))){
+            filters.set("purpose","export");
+            var result=listFilters.query("admin-operations",user(request),filters);
+            admin.writeOperationExport((java.util.List<java.util.Map<String,Object>>)result.get("items"),response,user(request));
+        } else admin.exportOperations(module, operatorId, keyword, action, startDate, endDate, response, user(request));
     }
 
     @GetMapping("/work-records/deleted")

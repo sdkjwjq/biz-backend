@@ -102,6 +102,13 @@ public class WorkRecordScopeService {
     }
 
     private Catalog catalog() {
+        if(org.springframework.web.context.request.RequestContextHolder.getRequestAttributes() instanceof org.springframework.web.context.request.ServletRequestAttributes attributes && "GET".equals(attributes.getRequest().getMethod())) {
+            String key=WorkRecordScopeService.class.getName()+".catalog";Object found=attributes.getRequest().getAttribute(key);
+            if(found instanceof Catalog cached)return cached;Catalog result=loadCatalog();attributes.getRequest().setAttribute(key,result);return result;
+        }
+        return loadCatalog();
+    }
+    private Catalog loadCatalog() {
         Map<Long, BizTask> structure = records.structure().stream().collect(Collectors.toMap(BizTask::getTaskId, task -> task));
         Map<Long, BizTask> roots = new LinkedHashMap<>();
         Map<Long, Long> directoryDepartments = new HashMap<>();

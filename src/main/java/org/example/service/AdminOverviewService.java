@@ -70,6 +70,10 @@ public class AdminOverviewService {
     }
     @Transactional(readOnly=true,isolation=org.springframework.transaction.annotation.Isolation.REPEATABLE_READ)
     public Map<String,Object> analysis(int year,int month,String metric,String dimension,String groupKey,int page,int pageSize,Long actor) {
+        return analysis(year,month,metric,dimension,groupKey,page,pageSize,actor,new org.springframework.util.LinkedMultiValueMap<>());
+    }
+    @Transactional(readOnly=true,isolation=org.springframework.transaction.annotation.Isolation.REPEATABLE_READ)
+    public Map<String,Object> analysis(int year,int month,String metric,String dimension,String groupKey,int page,int pageSize,Long actor,org.springframework.util.MultiValueMap<String,String> filters) {
         authorize(year,month,actor);
         String[] parts=metric.split("\\.",-1);
         if(parts.length!=2||!MODULES.contains(parts[0])||page<1||pageSize<1||pageSize>100)
@@ -81,6 +85,12 @@ public class AdminOverviewService {
         Map<String,Object> selected=d.metrics.stream().filter(m->key.equals(m.get("key"))).findFirst()
                 .orElseThrow(()->new AdminManagementException(400,"未知统计指标"));
         List<Map<String,Object>> rows=d.rows.stream().filter(matches(module,key)).toList();
+        List<ListFilterQuery.Field> fields=new ArrayList<>();
+        for(String field:List.of("department","category","status"))if(rows.stream().anyMatch(r->r.containsKey(field))){
+            var options=rows.stream().filter(r->r.get(field)!=null).map(r->str(r.get(field))).distinct().sorted().map(v->Map.<String,Object>of("value",v,"label",v)).toList();
+            fields.add(new ListFilterQuery.Field(field,field.equals("department")?"部门":field.equals("category")?"类别":"状态","multi",true,"基础",options));
+        }
+        var query=new ListFilterQuery(filters,fields);rows=rows.stream().filter(r->query.matches(r,fields)).toList();
         List<Map<String,Object>> chart;
         if(module.equals("budget")&&dim.equals("trend")) chart=trend(year,month);
         else if(module.equals("budget")&&dim.equals("structure")) chart=structure(rows);
@@ -102,7 +112,7 @@ public class AdminOverviewService {
         int safePage=Math.min(page,Math.max(1,(int)((total+pageSize-1)/pageSize)));
         int start=(safePage-1)*pageSize;
         return map("module",module,"metric",metric,"label",selected.get("label"),"value",selected.get("value"),"unit",selected.get("unit"),
-            "period",d.period,"note",d.note,"dimension",dim,"dimensions",DIMENSIONS.get(module),"chart",chart,"groupable",groupable,
+            "filterApplied",query.active()||(groupKey!=null&&!groupKey.isBlank()),"fields",fields,"period",d.period,"note",d.note,"dimension",dim,"dimensions",DIMENSIONS.get(module),"chart",chart,"groupable",groupable,
             "chartUnit",module.equals("budget")&&dim.equals("reform")&&key.equals("executionRate")?"%":module.equals("budget")?"万元":module.equals("core")?"%":"数量",
             "total",total,"page",safePage,"pageSize",pageSize,"rows",rows.subList(start,Math.min(start+pageSize,rows.size())),"extra",d.extra);
     }

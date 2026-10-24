@@ -286,7 +286,13 @@ public class AdminManagementService {
     public void exportOperations(String module, Long operatorIdFilter, String keyword, String action,
                                  String startDate, String endDate, HttpServletResponse response, Long operatorId) {
         requireAdmin(operatorId);
-        List<Map<String, Object>> rows = filteredOperations(module, operatorIdFilter, keyword, action, startDate, endDate);
+        writeOperationExport(filteredOperations(module, operatorIdFilter, keyword, action, startDate, endDate), response, operatorId);
+    }
+
+    public List<Map<String,Object>> operationRows(Long actor) { requireAdmin(actor); return allOperations(); }
+
+    public void writeOperationExport(List<Map<String,Object>> rows, HttpServletResponse response, Long actor) {
+        requireAdmin(actor);
         try (XSSFWorkbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet("管理员操作记录");
             String[] headers = {"模块", "动作", "对象类型", "对象ID", "对象名称", "操作人ID", "操作人", "原因", "时间"};

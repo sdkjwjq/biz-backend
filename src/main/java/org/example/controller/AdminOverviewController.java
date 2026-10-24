@@ -27,9 +27,9 @@ public class AdminOverviewController {
     public Object analysis(@RequestParam int year, @RequestParam int month, @RequestParam String metric,
                            @RequestParam(required=false) String dimension, @RequestParam(required=false) String groupKey,
                            @RequestParam(defaultValue="1") int page, @RequestParam(defaultValue="10") int pageSize,
-                           HttpServletRequest request) {
+                           @RequestParam org.springframework.util.MultiValueMap<String,String> filters, HttpServletRequest request) {
         return overview.analysis(year, month, metric, dimension, groupKey, page, pageSize,
-                JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
+                JWTUtil.getUserIdFromToken(request.getHeader("Authorization")),filters);
     }
 
     @ExceptionHandler(AdminManagementException.class)
