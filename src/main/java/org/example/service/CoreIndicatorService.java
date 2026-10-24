@@ -43,10 +43,35 @@ public class CoreIndicatorService {
  private Map<String,Object> locked(Long id){Map<String,Object> initial=row(id,false);mapping(number(initial.get("indicatorId")),true);return row(id,true);}
  private void version(Map<String,Object> row,Long version){if(version==null||number(row.get("version"))!=version)throw new TaskManagementException(409,"记录已变更，请重新加载");}
  public Map<String,Object> detail(Long id,Long actor){user(actor);Map<String,Object> row=row(id,false);if(state(row)==0||state(row)==-2){if(number(row.get("submitBy"))!=actor && !AdminTestContext.enabled(actor))throw new TaskManagementException(404,"填报不存在或无权查看");}else if(number(row.get("submitBy"))!=actor && (row.get("principalId")==null || number(row.get("principalId"))!=actor) && !access.isAdmin(actor))readable(actor);Map<String,Object> result=new LinkedHashMap<>(row);result.put("logs",jdbc.queryForList("SELECT l.log_id logId,l.operator_id operatorId,COALESCE(u.nick_name,u.user_name) operatorName,l.action,l.pre_status preStatus,l.post_status postStatus,l.comment,l.create_time createTime FROM biz_core_audit_log l LEFT JOIN sys_user u ON u.user_id=l.operator_id WHERE l.report_id=? ORDER BY l.log_id",id));return result;}
- public List<Map<String,Object>> list(Long actor,Integer year,Integer month){readable(actor);if(year!=null&&(year<2025||year>2029)||month!=null&&(month<1||month>12))throw new TaskManagementException(400,"查询年月不正确");List<Map<String,Object>> result=new ArrayList<>();for(Map<String,Object> m:jdbc.queryForList("SELECT indicator_id indicatorId,indicator_code indicatorCode,sort_order sortOrder FROM biz_core_indicator ORDER BY sort_order")){if(permissions.enforced(actor)&&!permissions.canRead(actor,"core",number(m.get("indicatorId")),year))continue;Map<String,Object> item=new LinkedHashMap<>(m);try{item.putAll(performance(m));}catch(TaskManagementException error){item.put("configurationError",error.getMessage());}
+ public List<Map<String,Object>> list(Long actor,Integer year,Integer month){readable(actor);if(year!=null&&(year<2025||year>2029)||month!=null&&(month<1||month>12))throw new TaskManagementException(400,"查询年月不正确");if(year!=null)return annualList(actor,year,month);List<Map<String,Object>> result=new ArrayList<>();for(Map<String,Object> m:jdbc.queryForList("SELECT indicator_id indicatorId,indicator_code indicatorCode,sort_order sortOrder FROM biz_core_indicator ORDER BY sort_order")){if(permissions.enforced(actor)&&!permissions.canRead(actor,"core",number(m.get("indicatorId")),year))continue;Map<String,Object> item=new LinkedHashMap<>(m);try{item.putAll(performance(m));}catch(TaskManagementException error){item.put("configurationError",error.getMessage());}
    String where="WHERE r.indicator_id=? AND "+CURRENT+" AND r.submit_time IS NOT NULL"+(year==null?"":" AND r.record_year="+year);
    item.put("recentReports",jdbc.queryForList(SELECT+where+" ORDER BY r.submit_time DESC,r.report_id DESC",m.get("indicatorId")).stream().filter(r->!permissions.enforced(actor)||permissions.canRead(actor,"core",number(m.get("indicatorId")),((Number)r.get("year")).intValue())).limit(2).toList());
    List<Map<String,Object>> archived=jdbc.queryForList(SELECT+where+" AND r.flow_status=30 ORDER BY r.record_year DESC,r.record_month DESC,r.archive_time DESC,r.report_id DESC",m.get("indicatorId")).stream().filter(r->!permissions.enforced(actor)||permissions.canRead(actor,"core",number(m.get("indicatorId")),((Number)r.get("year")).intValue())).limit(1).toList();item.put("effectiveResult",year!=null&&month!=null?effective(number(m.get("indicatorId")),year,month):archived.isEmpty()?null:archived.get(0));result.add(item);}return result;}
+ private List<Map<String,Object>> rankedReports(int year,Integer month,boolean archived,int limit){
+  String order=archived?"r.record_month DESC,r.archive_time DESC,r.report_id DESC":"r.submit_time DESC,r.report_id DESC";
+  String ranked="SELECT r.report_id rankedReportId,ROW_NUMBER() OVER(PARTITION BY r.indicator_id ORDER BY "+order+") reportRank FROM biz_core_report r ";
+  String where="WHERE r.record_year=? AND "+CURRENT+(archived?" AND r.flow_status=30":" AND r.submit_time IS NOT NULL");
+  if(archived&&month==null)where+=" AND r.submit_time IS NOT NULL";
+  List<Object> args=new ArrayList<>();args.add(year);if(month!=null){where+=archived?" AND r.record_month<=?":" AND r.record_month=?";args.add(month);}args.add(limit);
+  return jdbc.queryForList(SELECT+"WHERE r.report_id IN (SELECT rankedReportId FROM ("+ranked+where+") ranked WHERE reportRank<=?) ORDER BY r.indicator_id,"+order,args.toArray());
+ }
+ private List<Map<String,Object>> annualList(Long actor,int year,Integer month){
+  Map<Long,List<Map<String,Object>>> recent=new HashMap<>();for(var row:rankedReports(year,null,false,2))recent.computeIfAbsent(number(row.get("indicatorId")),k->new ArrayList<>()).add(row);
+  Map<Long,Map<String,Object>> archived=new HashMap<>();for(var row:rankedReports(year,month,true,1))archived.put(number(row.get("indicatorId")),row);
+  List<Map<String,Object>> result=new ArrayList<>();for(var mapping:jdbc.queryForList("SELECT indicator_id indicatorId,indicator_code indicatorCode,sort_order sortOrder FROM biz_core_indicator ORDER BY sort_order")){
+   long id=number(mapping.get("indicatorId"));if(permissions.enforced(actor)&&!permissions.canRead(actor,"core",id,year))continue;
+   Map<String,Object> item=new LinkedHashMap<>(mapping);try{item.putAll(performance(mapping));}catch(TaskManagementException error){item.put("configurationError",error.getMessage());}
+   item.put("recentReports",recent.getOrDefault(id,List.of()));item.put("effectiveResult",archived.get(id));result.add(item);
+  }return result;
+ }
+ public Map<Long,Map<String,Object>> effectiveResults(Long actor,int year,int month){
+  readable(actor);if(year<2025||year>2029||month<1||month>12)throw new TaskManagementException(400,"查询年月不正确");
+  Map<Long,Map<String,Object>> result=new HashMap<>();for(var row:rankedReports(year,month,true,1)){long id=number(row.get("indicatorId"));if(!permissions.enforced(actor)||permissions.canRead(actor,"core",id,year))result.put(id,row);}return result;
+ }
+ public Map<Long,Map<String,Object>> selectedMonthReports(Long actor,int year,int month){
+  readable(actor);if(year<2025||year>2029||month<1||month>12)throw new TaskManagementException(400,"查询年月不正确");
+  Map<Long,Map<String,Object>> result=new HashMap<>();for(var row:rankedReports(year,month,false,1)){long id=number(row.get("indicatorId"));if(!permissions.enforced(actor)||permissions.canRead(actor,"core",id,year))result.put(id,row);}return result;
+ }
  public List<Map<String,Object>> history(Long indicator,Long actor,Integer year,Integer month){readable(actor);mapping(indicator,false);if(year!=null&&(year<2025||year>2029)||month!=null&&(month<1||month>12))throw new TaskManagementException(400,"查询年月不正确");return jdbc.queryForList(SELECT+"WHERE r.indicator_id=? AND r.submit_time IS NOT NULL"+(year==null?"":" AND r.record_year="+year)+(month==null?"":" AND r.record_month="+month)+" ORDER BY r.submit_time DESC,r.report_id DESC",indicator).stream().filter(r->!permissions.enforced(actor)||permissions.canRead(actor,"core",indicator,((Number)r.get("year")).intValue())).toList();}
  @Transactional(rollbackFor=Exception.class)
  public Map<String,Object> draft(Long indicator,Long actor,int year,int month){

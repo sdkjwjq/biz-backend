@@ -312,6 +312,12 @@ class CoreIndicatorApiTest {
         assertEquals(3,ok(request(HttpMethod.GET,"/core-indicators/1/history",token,null)).size());
         assertEquals(2,((Number)core.effective(1L,2026,2).get("month")).intValue());
         assertNull(core.effective(1L,2025,12));
+        for(int month=1;month<=4;month++){
+            assertEquals(json.readTree(json.writeValueAsString(core.effective(1L,2026,month))),json.readTree(json.writeValueAsString(core.effectiveResults(OWNER,2026,month).get(1L))));
+            var history=core.history(1L,OWNER,2026,month);assertEquals(json.readTree(json.writeValueAsString(history.isEmpty()?null:history.get(0))),json.readTree(json.writeValueAsString(core.selectedMonthReports(OWNER,2026,month).get(1L))));
+        }
+        assertEquals(json.readTree(json.writeValueAsString(core.history(1L,OWNER,2026,null).subList(0,2))),json.readTree(json.writeValueAsString(core.list(OWNER,2026,null).get(0).get("recentReports"))));
+
     }
     @Test void concurrentReportersProduceOnlyOneActiveSubmission() throws Exception {
         String a=login(OWNER),b=login(OTHER);JsonNode da=saved(a,1),db=saved(b,1);

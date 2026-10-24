@@ -41,5 +41,15 @@
     "browser_checks": 31,
     "frontend_build": "passed",
     "remaining": "Derived role and activity predicates still use compatible full projection; large-scale concurrency benchmarks not completed"
+  },
+  "coreIndicatorBatchQueries": {
+    "implementation": "Annual list uses bounded window-selected report IDs; batch selected-month and as-of-month archived reports; unchanged historical query and workflow",
+    "verification": {
+      "core_tests": 13,
+      "filter_expert_tests": 33,
+      "browser_checks": 31
+    },
+    "compatibility": "Serialized results compared to existing per-indicator history/effective queries, including ordering and frozen target values",
+    "limits": "No measured production latency or concurrency claim; undated all-year list retains legacy path; metadata mapping queries not yet batched"
   }
 }
