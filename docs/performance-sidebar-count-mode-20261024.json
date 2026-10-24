@@ -1,0 +1,19 @@
+{
+  "checks": [
+    "badge-matches-current-business-todos",
+    "30-events-coalesce-to-one-four-module-read",
+    "changes-during-slow-read-produce-one-follow-up",
+    "hidden-periodic-and-business-triggers-skip-network",
+    "visible-page-immediately-refreshes-both-counts",
+    "sidebar-uses-count-only-responses"
+  ],
+  "counts": {
+    "/api/biz/audit/todo": 5,
+    "/api/performance/audit/todo": 5,
+    "/api/achievement/audit/todo": 5,
+    "/api/core-indicators/audit/todo": 5,
+    "/api/system/notice": 2
+  },
+  "expectedAuditCount": 3,
+  "errors": []
+}

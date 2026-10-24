@@ -118,9 +118,9 @@ public class AchievementController {
     }
 
     @GetMapping("/audit/todo")
-    public Object getTodoAchievementAudits(HttpServletRequest request) {
+    public Object getTodoAchievementAudits(@org.springframework.web.bind.annotation.RequestParam(defaultValue="false") boolean countOnly, HttpServletRequest request) {
         try {
-            return achievementService.getTodoAchievementAudits(currentUserId(request));
+            return countOnly ? achievementService.countTodoAchievementAudits(currentUserId(request)) : achievementService.getTodoAchievementAudits(currentUserId(request));
         } catch (Exception e) {
             var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);

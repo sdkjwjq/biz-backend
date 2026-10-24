@@ -17,9 +17,15 @@ public final class ReviewNoticeSql {
         }
     }
 
-    public static String visible() {
-        return "SELECT n.* FROM sys_notice n WHERE n.to_user_id = #{userId} "
+    private static String visibleFrom() {
+        return " FROM sys_notice n WHERE n.to_user_id = #{userId} "
                 + "AND COALESCE(n.is_delete, 0) = 0 AND NOT (COALESCE((" + STALE + "), 0))";
+    }
+
+    public static String visible() { return "SELECT n.*" + visibleFrom(); }
+
+    public static String unreadCount() {
+        return "SELECT COUNT(*)" + visibleFrom() + " AND BINARY n.is_read = BINARY '0'";
     }
 
     public static String retireTask() {

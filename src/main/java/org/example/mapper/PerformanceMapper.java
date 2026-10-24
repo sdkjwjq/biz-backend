@@ -130,6 +130,13 @@ public interface PerformanceMapper {
             "ORDER BY submit_time DESC")
     List<BizPerformanceSubmission> getTodoPerformanceSubmissions(@Param("userId") Long userId);
 
+    // JOIN matches getPerformanceAuditVO: orphan submissions are not returned by the list.
+    @Select("SELECT s.perf_id objectId,s.year auditYear,COUNT(*) amount FROM biz_performance_submission s JOIN biz_performance p ON p.perf_id=s.perf_id WHERE s.current_handler_id=#{userId} AND s.is_delete=0 AND s.flow_status IN(10,20) GROUP BY s.perf_id,s.year")
+    List<java.util.Map<String,Object>> todoPerformanceCountGroups(@Param("userId") Long userId);
+
+    @Select("SELECT COUNT(*) FROM biz_performance_submission s JOIN biz_performance p ON p.perf_id=s.perf_id AND COALESCE(p.is_delete,0)=0 WHERE s.is_delete=0 AND s.flow_status IN(10,20)")
+    long countAllPendingPerformanceSubmissions();
+
     @Select("SELECT s.* FROM biz_performance_submission s JOIN biz_performance p ON p.perf_id=s.perf_id AND COALESCE(p.is_delete,0)=0 WHERE s.is_delete=0 AND s.flow_status IN(10,20) ORDER BY s.submit_time DESC")
     List<BizPerformanceSubmission> getAllPendingPerformanceSubmissions();
 

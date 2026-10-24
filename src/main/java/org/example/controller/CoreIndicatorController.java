@@ -30,7 +30,7 @@ public class CoreIndicatorController {
  @PostMapping("/reports/{id}/submit") public Object submit(@PathVariable Long id,@RequestBody Version body,HttpServletRequest request){return core.submit(id,actor(request),body.version());}
  @PostMapping("/reports/{id}/audit") public Object audit(@PathVariable Long id,@RequestBody CoreIndicatorService.Decision body,HttpServletRequest request){return core.audit(id,actor(request),body);}
  @PostMapping("/reports/{id}/withdraw") public Object withdraw(@PathVariable Long id,@RequestBody Version body,HttpServletRequest request){return core.withdraw(id,actor(request),body.version());}
- @GetMapping("/audit/todo") public Object todo(HttpServletRequest request){return core.audits(actor(request),true);}
+ @GetMapping("/audit/todo") public Object todo(@RequestParam(defaultValue="false") boolean countOnly,HttpServletRequest request){return countOnly?core.countTodoAudits(actor(request)):core.audits(actor(request),true);}
  @GetMapping("/audit/records") public Object records(HttpServletRequest request){return core.audits(actor(request),false);}
  @ExceptionHandler(TaskManagementException.class) public ResponseEntity<ErrorVO> business(TaskManagementException error){return ResponseEntity.status(error.getCode()).body(new ErrorVO(error.getMessage(),error.getCode()));}
  @ExceptionHandler({HttpMessageNotReadableException.class,MethodArgumentTypeMismatchException.class}) public ResponseEntity<ErrorVO> invalid(Exception error){return ResponseEntity.badRequest().body(new ErrorVO("请求参数不正确",400));}

@@ -292,9 +292,9 @@ public class BizController {
      * @return 待审批列表或错误信息
      */
     @GetMapping("/audit/todo")
-    public Object getTodoAudits(HttpServletRequest request) {
+    public Object getTodoAudits(@org.springframework.web.bind.annotation.RequestParam(defaultValue="false") boolean countOnly, HttpServletRequest request) {
         try {
-            return bizService.getTodoAudits(JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
+            return countOnly ? bizService.countTodoAudits(JWTUtil.getUserIdFromToken(request.getHeader("Authorization"))) : bizService.getTodoAudits(JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
         } catch (Exception e) {
             var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);

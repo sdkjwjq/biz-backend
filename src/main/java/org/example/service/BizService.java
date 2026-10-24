@@ -22,6 +22,7 @@ import java.util.*;
  */
 @Service
 public class BizService {
+    @org.springframework.beans.factory.annotation.Autowired private AuditCountScopeService auditCountScopes;
 
     private static final BigDecimal ONE_HUNDRED = BigDecimal.valueOf(100);
     private static final int LEVEL4_RATE_SCALE = 8;
@@ -650,6 +651,13 @@ public class BizService {
      * @param userId 用户ID
      * @return 审批视图对象列表
      */
+    public long countTodoAudits(Long userId) {
+        if(userId==null)throw new IllegalArgumentException("userId为空");
+        long count=AdminTestContext.enabled(userId)?bizMapper.countAdminTestPendingAudits():auditCountScopes.visibleCount("tasks",userId,bizMapper.todoAuditCountGroups(userId));
+        if(count<0)throw new RuntimeException("审核材料记录不存在，请联系管理员核实");
+        return count;
+    }
+
     public List<BizAuditVO> getTodoAudits(Long userId) {
         try {
             if (userId == null)

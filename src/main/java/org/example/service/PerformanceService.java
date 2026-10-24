@@ -27,6 +27,7 @@ import java.util.*;
 
 @Service
 public class PerformanceService {
+    @org.springframework.beans.factory.annotation.Autowired private AuditCountScopeService auditCountScopes;
     private static final Long ADMIN_ID = 110228L;
     @org.springframework.beans.factory.annotation.Autowired private PermissionService permissions;
 
@@ -711,6 +712,10 @@ public class PerformanceService {
                 "preStatus", preStatus,
                 "postStatus", 0);
         return "绩效填报已撤回";
+    }
+
+    public long countTodoPerformanceAudits(Long userId) {
+        return AdminTestContext.enabled(userId)?performanceMapper.countAllPendingPerformanceSubmissions():auditCountScopes.visibleCount("performance",userId,performanceMapper.todoPerformanceCountGroups(userId));
     }
 
     public Object getTodoPerformanceAudits(Long userId) {

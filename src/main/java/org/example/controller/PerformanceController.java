@@ -87,9 +87,9 @@ public class PerformanceController {
     }
 
     @GetMapping("/audit/todo")
-    public Object getTodoPerformanceAudits(HttpServletRequest request) {
+    public Object getTodoPerformanceAudits(@org.springframework.web.bind.annotation.RequestParam(defaultValue="false") boolean countOnly, HttpServletRequest request) {
         try {
-            return performanceService.getTodoPerformanceAudits(currentUserId(request));
+            return countOnly ? performanceService.countTodoPerformanceAudits(currentUserId(request)) : performanceService.getTodoPerformanceAudits(currentUserId(request));
         } catch (Exception e) {
             var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);

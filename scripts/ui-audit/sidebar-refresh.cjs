@@ -8,7 +8,7 @@ const fs=require('node:fs/promises'),path=require('node:path'),assert=require('n
  const login=await api.post('/api/system/login',{data:{user_id:110228,password:'review-fixture-password'}}),token=(await login.json()).token;assert.ok(token);
  const auditPaths=['/api/biz/audit/todo','/api/performance/audit/todo','/api/achievement/audit/todo','/api/core-indicators/audit/todo'];
  const noticePath='/api/system/notice',counts=Object.fromEntries([...auditPaths,noticePath].map(p=>[p,0]));
- const checks=[],errors=[];let active=0,gate=null;
+ const checks=[],errors=[],countModes=[];let active=0,gate=null;
  const browser=await chromium.launch({channel:process.env.UI_AUDIT_BROWSER_CHANNEL||'chrome',headless:true});
  const context=await browser.newContext({viewport:{width:1536,height:864}});
  await context.addInitScript(t=>{
@@ -26,7 +26,7 @@ const fs=require('node:fs/promises'),path=require('node:path'),assert=require('n
   const pathname=new URL(route.request().url()).pathname;
   if(!Object.hasOwn(counts,pathname))return route.continue();
   counts[pathname]++;active++;
-  try{if(gate&&auditPaths.includes(pathname))await gate;const response=await route.fetch();await route.fulfill({response});}
+  try{if(gate&&auditPaths.includes(pathname))await gate;const response=await route.fetch();countModes.push(new URL(route.request().url()).searchParams.get('countOnly')==='true'&&typeof(await response.json())==='number');await route.fulfill({response});}
   finally{active--;}
  });
  try{
@@ -68,7 +68,7 @@ const fs=require('node:fs/promises'),path=require('node:path'),assert=require('n
   await expect.poll(()=>auditPaths.every(p=>counts[p]===hiddenStart[p]+1)&&counts[noticePath]===hiddenStart[noticePath]+1&&active===0).toBeTruthy();
   checks.push('visible-page-immediately-refreshes-both-counts');
   if(expectedCount)await expect(badge).toHaveText(String(expectedCount));
-  assert.deepEqual(errors,[]);
+  assert.deepEqual(errors,[]);assert.ok(countModes.length>0&&countModes.every(Boolean));checks.push('sidebar-uses-count-only-responses');
   const out=path.resolve(__dirname,'../../target/ui-audit/sidebar-refresh');await fs.mkdir(out,{recursive:true});
   await page.screenshot({path:path.join(out,'counts.png'),fullPage:true});
   await fs.writeFile(path.join(out,'report.json'),JSON.stringify({checks,counts,expectedAuditCount:expectedCount,errors},null,2));

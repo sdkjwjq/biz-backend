@@ -180,6 +180,9 @@ public interface SysMapper {
     @SelectProvider(type = ReviewNoticeSql.class, method = "visible")
     public List<SysNotice> getNotices(@Param("userId") Long userId);
 
+    @SelectProvider(type = ReviewNoticeSql.class, method = "unreadCount")
+    long countUnreadNotices(@Param("userId") Long userId);
+
     @SelectProvider(type = ReviewNoticeSql.class, method = "retireTask")
     List<Long> staleTaskNotices(@Param("subId") Long subId);
 

@@ -28,6 +28,7 @@ import java.util.Objects;
  */
 @Service
 public class AchievementService {
+    @org.springframework.beans.factory.annotation.Autowired private AuditCountScopeService auditCountScopes;
     private static final Long ADMIN_ID = AchievementPermissionUtil.PRIMARY_AUDITOR_ID;
 
     /**
@@ -360,6 +361,11 @@ public class AchievementService {
                 "postStatus", -10,
                 "nextHandlerId", submission.getSubmitBy());
         return "成果已退回";
+    }
+
+    public long countTodoAchievementAudits(Long userId) {
+        if(!canAuditAchievement(userId))return 0L;
+        return AdminTestContext.enabled(userId)?achievementMapper.countAllTodoAchievementSubmissions():auditCountScopes.visibleCount("achievements",userId,achievementMapper.todoAchievementCountGroups());
     }
 
     public Object getTodoAchievementAudits(Long userId) {

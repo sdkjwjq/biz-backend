@@ -353,6 +353,14 @@ void updateLevel4Task(BizLevel4Task task);
             "ORDER BY submit_time DESC, sub_id DESC")
     List<BizMaterialSubmission> getTodoAudits(@Param("userId") Long userId);
 
+    // Same pending source as getTodoAudits; statuses match the sidebar's original filter.
+    @Select("SELECT s.task_id objectId,CASE WHEN COUNT(*)=COUNT(f.file_id) THEN COALESCE(SUM(s.flow_status IN(10,20,30)),0) ELSE -1 END amount FROM biz_material_submission s LEFT JOIN sys_file f ON f.file_id=s.file_id WHERE s.current_handler_id=#{userId} AND s.is_delete=0 AND s.flow_status>=10 AND s.flow_status<40 GROUP BY s.task_id")
+    List<java.util.Map<String,Object>> todoAuditCountGroups(@Param("userId") Long userId);
+
+    @Select("SELECT CASE WHEN COUNT(*)=COUNT(f.file_id) THEN COUNT(*) ELSE -1 END FROM biz_material_submission s JOIN biz_task t ON t.task_id=s.task_id AND COALESCE(t.is_delete,0)=0 LEFT JOIN sys_file f ON f.file_id=s.file_id WHERE s.is_delete=0 AND s.flow_status IN(10,20,30) AND s.current_handler_id IS NOT NULL")
+    long countAdminTestPendingAudits();
+
+
     @Select("SELECT s.* FROM biz_material_submission s JOIN biz_task t ON t.task_id=s.task_id AND COALESCE(t.is_delete,0)=0 WHERE s.is_delete=0 AND s.flow_status IN(10,20,30) AND s.current_handler_id IS NOT NULL ORDER BY s.submit_time DESC,s.sub_id DESC")
     List<BizMaterialSubmission> getAdminTestPendingAudits();
 

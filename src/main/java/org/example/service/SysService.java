@@ -283,6 +283,8 @@ public class SysService {
      * @param userId 用户ID
      * @return 通知列表
      */
+    public long countUnreadNotices(Long userId) { return sysMapper.countUnreadNotices(userId); }
+
     public List<SysNotice> getNotices(Long userId) {
         try{
             return sysMapper.getNotices(userId);

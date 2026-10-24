@@ -210,6 +210,45 @@ class ExpertReviewApiTest {
   var all=body(get("/list-filters/budget-versions?f.effective=yes&pageSize=1",admin));assertEquals(2,all.path("total").asInt());assertEquals(1,all.path("items").size());assertTrue(all.path("items").get(0).path("current").asBoolean());
   assertEquals(1,body(get("/list-filters/budget-versions?f.month=10&f.effective=no",admin)).path("total").asInt());
  }
+ @Test void countOnlyAuditResponsesMatchOriginalSidebarPredicates()throws Exception{
+  jdbc.update("UPDATE sys_user_permission SET permissions_json='{\"tasks.read\":true,\"tasks.audit\":true,\"performance.read\":true,\"performance.audit\":true,\"achievements.read\":true,\"achievements.audit\":true,\"core.read\":true,\"core.audit\":true}' WHERE user_id=90103");
+  jdbc.update("INSERT INTO sys_file(file_id,file_name,file_path,file_url,file_suffix,upload_by,is_delete) VALUES(41,'retained.pdf','/target/retained','/uploads/retained','pdf',90101,1)");
+  int n=100;for(int status:List.of(10,20,30,40,-10,15))jdbc.update("INSERT INTO biz_material_submission(sub_id,task_id,file_id,reported_value,submit_by,submit_dept_id,manage_dept_id,file_suffix,flow_status,current_handler_id,is_delete) VALUES(?,3,41,1,90101,991001,991001,'pdf',?,?,0)",n++,status,status==20?90102:90103);
+  jdbc.update("INSERT INTO biz_material_submission(sub_id,task_id,file_id,reported_value,submit_by,submit_dept_id,manage_dept_id,file_suffix,flow_status,current_handler_id,is_delete) VALUES(110,3,41,1,90101,991001,991001,'pdf',10,90103,1),(111,3,41,1,90101,991001,991001,'pdf',10,NULL,0)");
+  jdbc.update("INSERT INTO biz_performance(perf_id,project_id,perf_code,perf_name,target_value,data_type,dept_id,leader_id,principal_id,auditor_id,is_delete) VALUES(101,1,'2.1.1','Active',10,'1',991001,90101,90102,90102,0),(102,1,'2.1.2','Deleted',10,'1',991001,90101,90102,90102,1)");
+  jdbc.update("INSERT INTO biz_performance_year(year_id,perf_id,year,target_value,actual_value,is_delete) VALUES(1,101,2026,10,1,0),(2,102,2026,10,1,0)");
+  n=200;for(int status:List.of(10,20,30,-10))jdbc.update("INSERT INTO biz_performance_submission(sub_id,perf_id,year_id,year,actual_value,submit_by,flow_status,current_handler_id,is_delete) VALUES(?,101,1,2026,1,90101,?,90103,0)",n++,status);
+  jdbc.update("INSERT INTO biz_performance_submission(sub_id,perf_id,year_id,year,actual_value,submit_by,flow_status,current_handler_id,is_delete) VALUES(210,102,2,2026,1,90101,10,90103,0),(211,101,1,2026,1,90101,10,90103,1)");
+  jdbc.update("INSERT INTO biz_achievement(ach_id,category,level,ach_name,department,got_time,comment,dept_id,file_id,create_by,is_delete) VALUES(501,1,'国家级','Active','Synthetic','2026-10-01','',991001,41,90101,0),(502,1,'省级','Deleted','Synthetic','2026-10-01','',991001,41,90101,1)");
+  jdbc.update("INSERT INTO biz_achievement_submission(sub_id,ach_id,submit_by,flow_status,current_handler_id,is_delete) VALUES(301,501,90101,10,90102,0),(302,502,90101,10,90103,0),(303,501,90101,30,90103,0),(304,501,90101,10,90103,1)");
+  jdbc.update("INSERT INTO biz_core_indicator VALUES(1,'1.1.5',1)");
+  jdbc.update("INSERT INTO biz_core_report(report_id,indicator_id,record_year,record_month,indicator_name,performance_code,submit_by,flow_status,current_handler_id,submit_time) VALUES(401,1,2026,10,'Core','1.1.5',90101,10,90103,NOW()),(402,1,2026,9,'Core','1.1.5',90101,20,90102,NOW()),(403,1,2026,8,'Core','1.1.5',90101,30,NULL,NOW()),(404,1,2026,7,'Obsolete','old-code',90101,10,90103,NOW())");
+  var paths=List.of("/biz/audit/todo","/performance/audit/todo","/achievement/audit/todo","/core-indicators/audit/todo");
+  for(String actor:List.of(admin,a,b,owner))for(int i=0;i<paths.size();i++){
+   var legacy=get(paths.get(i),actor);var counted=get(paths.get(i)+"?countOnly=true",actor);
+   assertEquals(legacy.getStatusCode(),counted.getStatusCode(),paths.get(i));
+   if(legacy.getStatusCode().value()!=200)continue;
+   var list=body(legacy);assertTrue(list.isArray(),paths.get(i)+" "+list);
+   Set<Integer> statuses=i==0?Set.of(10,20,30):i==2?Set.of(10):Set.of(10,20);long expected=0;
+   for(var item:list)if(statuses.contains((item.hasNonNull("flowStatus")?item.path("flowStatus"):item.path("flow_status")).asInt()))expected++;
+   var count=body(counted);assertTrue(count.isNumber());assertEquals(expected,count.asLong(),paths.get(i)+" original="+list);
+  }
+  jdbc.update("UPDATE sys_user_permission SET permissions_json='{\"tasks.read\":true,\"tasks.audit\":false}' WHERE user_id=90103");
+  assertEquals(403,get("/biz/audit/todo?countOnly=true",a).getStatusCode().value());
+ }
+ @Test void unreadCountOnlyUsesVisibleRecipientNoticesAndCurrentBusiness()throws Exception{
+  jdbc.update("UPDATE sys_user_permission SET permissions_json='{\"messages.read\":true}' WHERE user_id=90103");
+  jdbc.update("INSERT INTO sys_notice(notice_id,from_user_id,to_user_id,type,title,content,source_type,source_id,trigger_event,is_read,is_delete,create_time) VALUES(1,90101,110228,'1','Ordinary','Body','9',0,NULL,'0',0,NOW()),(2,90101,110228,'1','Read','Body','9',0,NULL,'1',0,NOW()),(3,90101,90103,'1','Other recipient','Body','9',0,NULL,'0',0,NOW()),(4,90101,110228,'1','Deleted','Body','9',0,NULL,'0',1,NOW()),(5,90101,110228,'1','任务审核','Body','0',999,'任务审核','0',0,NOW()),(6,90101,110228,'1','Result retained','Body','0',999,'结果通知','0',0,NOW())");
+  for(String actor:List.of(admin,a,owner)){
+   var list=body(get("/system/notice",actor));long expected=0;for(var item:list)if("0".equals(item.path("isRead").asText()))expected++;
+   assertEquals(expected,body(get("/system/notice?countOnly=true",actor)).asLong());
+  }
+  assertEquals(2,body(get("/system/notice?countOnly=true",admin)).asLong());
+  call(HttpMethod.POST,"/system/notice/1",admin,null,false);
+  assertEquals(1,body(get("/system/notice?countOnly=true",admin)).asLong());
+  jdbc.update("UPDATE sys_user_permission SET permissions_json='{\"messages.read\":false}' WHERE user_id=90103");
+  assertEquals(403,get("/system/notice?countOnly=true",a).getStatusCode().value());
+ }
  @Test void noticeFiltersUseCurrentBusinessAndNeverOtherRecipients()throws Exception{
   jdbc.update("INSERT INTO biz_core_indicator VALUES(1,'1.1.5',1)");jdbc.update("INSERT INTO biz_core_report(report_id,indicator_id,record_year,record_month,indicator_name,performance_code,submit_by,flow_status,submit_time) VALUES(1,1,2026,10,'合成指标','1.1.5',90101,10,NOW())");
   jdbc.update("INSERT INTO sys_notice(notice_id,from_user_id,to_user_id,type,title,content,source_type,source_id,is_read,is_delete,create_time) VALUES(1,90101,110228,'1','相同标题','合成','4',1,'0',0,NOW()),(2,90101,90102,'1','相同标题','合成','4',1,'0',0,NOW()),(3,90101,110228,'1','相同标题','合成','4',999,'0',0,NOW())");

@@ -124,6 +124,14 @@ public interface AchievementMapper {
             + "WHERE s.is_delete = 0 AND s.flow_status = 10 ORDER BY s.submit_time DESC")
     List<BizAchievementSubmission> getAllTodoAchievementSubmissions();
 
+    @Select("SELECT COUNT(*) FROM biz_achievement_submission s JOIN biz_achievement a ON a.ach_id=s.ach_id AND a.is_delete=0 WHERE s.is_delete=0 AND s.flow_status=10")
+    long countAllTodoAchievementSubmissions();
+
+    @Select("SELECT s.ach_id objectId,COUNT(*) amount FROM biz_achievement_submission s JOIN biz_achievement a ON a.ach_id=s.ach_id AND a.is_delete=0 WHERE s.is_delete=0 AND s.flow_status=10 GROUP BY s.ach_id")
+    List<java.util.Map<String,Object>> todoAchievementCountGroups();
+
+
+
     @Select("SELECT * FROM biz_achievement_submission WHERE (submit_by = #{userId} OR current_handler_id = #{userId}) " +
             "AND is_delete = 0 AND (flow_status = 30 OR flow_status < 0) ORDER BY submit_time DESC")
     List<BizAchievementSubmission> getAchievementSubmissionRecords(Long userId);

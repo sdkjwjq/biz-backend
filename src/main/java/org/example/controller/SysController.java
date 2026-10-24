@@ -228,10 +228,10 @@ public class SysController {
      * @return 通知列表或异常
      */
     @GetMapping("/notice")
-    public Object getNotices(HttpServletRequest request) {
+    public Object getNotices(@org.springframework.web.bind.annotation.RequestParam(defaultValue="false") boolean countOnly, HttpServletRequest request) {
         try{
             Long userId=JWTUtil.getUserIdFromToken(request.getHeader("Authorization"));
-            return sysService.getNotices(userId);
+            return countOnly ? sysService.countUnreadNotices(userId) : sysService.getNotices(userId);
         } catch (Exception e) {
             var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             throw new RuntimeException(e);

@@ -206,5 +206,24 @@
     },
     "limits": "Counters still fetch original notice and per-domain audit list endpoints. Dedicated SQL counts, error-state improvements and full-system load acceptance remain pending.",
     "rollback": "Restore the previous frontend artifact when authorized; no backend or database migration."
+  },
+  "sidebarSqlCounts": {
+    "implementation": "Optional countOnly=true on original notification and four pending-audit GET endpoints. No parameter retains original lists. Notice count shares visible/stale-notice predicates. Admin audit counts use aggregates; normal-user counts group by object/year and apply the same scope intersection as PermissionResponseAdvice. No audit VO, attachment name/body or fourth-level goal enrichment for counts.",
+    "verification": {
+      "isolated_api_tests": 43,
+      "scope_unit_tests": 2,
+      "sidebar_browser_checks": 6,
+      "list_browser_checks": 38,
+      "frontend_static_check": "passed",
+      "frontend_build": "passed",
+      "backend_package": "passed"
+    },
+    "evidence": [
+      "performance-notice-sql-counts-20261024.json",
+      "performance-sidebar-count-mode-20261024.json"
+    ],
+    "compatibility": "Deleted/current pending states, normal vs admin handling, current core mappings, unread recipients, stale notices, permission revocation and object/year scope match the original visible list. Invalid task file references preserve read-failure behavior.",
+    "limits": "Count endpoints remain separate requests. Normal-user object/year scope evaluation still uses existing permission reads. Only unread-count latency was benchmarked here; short synthetic batches are not full-system or multi-account acceptance.",
+    "rollback": "Restore matching previous frontend/backend artifacts; no database migration. Deploy backend with optional count mode before the frontend that uses it."
   }
 }
