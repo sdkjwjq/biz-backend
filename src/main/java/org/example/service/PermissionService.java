@@ -34,14 +34,16 @@ public class PermissionService {
     public Long actor(){if(!(RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes a))return null;String token=a.getRequest().getHeader("Authorization");if(token==null||token.isBlank())return null;try{return org.example.utils.JWTUtil.getUserIdFromToken(token);}catch(RuntimeException error){return null;}}
     public SysUser user(Long id){SysUser u=id==null?null:users.getUserById(id);if(u==null||!"1".equals(u.getStatus())||Integer.valueOf(1).equals(u.getIsDelete()))throw new AdminManagementException(403,"账号已停用或不存在");return u;}
     public boolean admin(Long id){try{return "0".equals(user(id).getRole());}catch(AdminManagementException e){return false;}}
-    public boolean installed(){Integer count=jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name IN('sys_permission_role','sys_user_permission','sys_user_permission_role','sys_permission_revision')",Integer.class);if(count!=0&&count!=4)throw new AdminManagementException(503,"权限数据结构不完整，请联系管理员完成迁移");return count==4;}
+    public boolean installed(){return cached("installed",this::loadInstalled);}
+    private boolean loadInstalled(){Integer count=jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name IN('sys_permission_role','sys_user_permission','sys_user_permission_role','sys_permission_revision')",Integer.class);if(count!=0&&count!=4)throw new AdminManagementException(503,"权限数据结构不完整，请联系管理员完成迁移");return count==4;}
     public void requireInstalled(){if(!installed())throw new AdminManagementException(503,"请先执行权限与专家评审数据库迁移");}
     public void requireAdmin(Long id){if(!admin(id))throw new AdminManagementException(403,"仅管理员可以管理账号、角色和权限");}
     public long revision(){return installed()?Optional.ofNullable(jdbc.queryForObject("SELECT MAX(version) FROM sys_permission_revision WHERE revision_id=1",Long.class)).orElse(0L):0L;}
     public void lockOperation(){if(installed()&&TransactionSynchronizationManager.isActualTransactionActive())jdbc.queryForList("SELECT revision_id FROM sys_permission_revision WHERE revision_id=1 FOR SHARE");}
     public void lockChange(){requireInstalled();if(jdbc.queryForList("SELECT revision_id FROM sys_permission_revision WHERE revision_id=1 FOR UPDATE").isEmpty())jdbc.update("INSERT INTO sys_permission_revision(revision_id,version) VALUES(1,0)");}
     public void advance(){jdbc.update("UPDATE sys_permission_revision SET version=version+1 WHERE revision_id=1");}
-    public Policy policy(Long id){
+    public Policy policy(Long id){return cached("policy:"+id,()->loadPolicy(id));}
+    private Policy loadPolicy(Long id){
         if(!installed())return new Policy("LEGACY",Map.of(),Map.of(),List.of(),0);
         List<Map<String,Object>> rows=jdbc.queryForList("SELECT * FROM sys_user_permission WHERE user_id=?",id);
         if(rows.isEmpty())return new Policy("LEGACY",Map.of(),Map.of(),List.of(),0);
