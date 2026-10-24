@@ -67,6 +67,11 @@ const fs=require('node:fs/promises'),path=require('node:path'),assert=require('n
   await expect(page.locator('[aria-label="角色筛选"] .basic-fields > .query-field')).toHaveCount(4);checks.push('role-permission-basic-filters-load');
   await page.goto(state.frontend+'/home/works/budget');await page.getByRole('button',{name:/版本记录|历史版本/}).click();await expect(page.locator('[aria-label="预算版本筛选"] .basic-fields > .query-field')).toHaveCount(4);checks.push('budget-version-basic-controls');
   await page.goto(state.frontend+'/home/admin/operations');await expect(page.locator('[aria-label="操作记录筛选"] .basic-fields > .query-field')).toHaveCount(4);checks.push('operation-log-basic-controls');
+  await expect(page.locator('.el-pagination .btn-next')).toBeEnabled();
+  const nextOperationPage=page.waitForResponse(r=>r.url().includes('/list-filters/admin-operations?')&&new URL(r.url()).searchParams.get('page')==='2'&&new URL(r.url()).searchParams.get('responseMode')==='page');
+  await page.locator('.el-pagination .btn-next').click();assert.equal((await nextOperationPage).status(),200);
+  await expect(page.locator('[aria-label="操作记录筛选"] .basic-fields > .query-field')).toHaveCount(4);checks.push('operation-page-response-retains-filter-controls');
+
   const operationBar=page.locator('[aria-label="操作记录筛选"]');
   await operationBar.getByRole('textbox',{name:'操作记录对象关键词',exact:true}).fill('操作详情测试对象');
   await operationBar.getByRole('button',{name:'查询',exact:true}).click();

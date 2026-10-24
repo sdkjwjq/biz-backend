@@ -178,5 +178,20 @@
     "query_tradeoff": "One extra indexed body query for pages containing ADMIN records; no body query for empty or other-source-only pages. Off-page change bodies are not read.",
     "limits": "All summary rows are still materialized for filters and count. Database pagination, large-scale endpoint latency and full-system acceptance remain unfinished.",
     "rollback": "Restore the previous backend when authorized; no schema migration or business-data changes."
+  },
+  "operationSqlPagination": {
+    "implementation": "Optional SQL count and key pagination for exact module/operator/action/object-type and date-range filters. Hydrates only selected records using original per-source projections. Frontend uses it for page navigation after initial metadata load.",
+    "compatibility": "Falls back for text or missing-value filters, out-of-domain date bounds, and duplicate or null matched timestamps to preserve original stable ordering. Legacy calls and exports keep their existing response path.",
+    "verification": {
+      "isolated_api_tests": 41,
+      "unit_tests": 5,
+      "browser_checks": 38,
+      "frontend_static_check": "passed",
+      "frontend_build": "passed",
+      "backend_package": "passed",
+      "benchmark": "performance-operation-sql-pages-20261024.json"
+    },
+    "limits": "Initial field options, text filters and tied-time lists still use the legacy summary projection. Benchmark uses synthetic rows and one administrator session, not full-system acceptance or multi-account load.",
+    "rollback": "Revert frontend and backend commits or restore previous artifacts when authorized; no schema migration or business-data changes."
   }
 }

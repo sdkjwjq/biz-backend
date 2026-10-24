@@ -237,6 +237,25 @@ class ExpertReviewApiTest {
   jdbc.update("UPDATE sys_user SET role='1' WHERE user_id=110228");
   assertEquals(403,get("/admin/operations/ADMIN/1",admin).getStatusCode().value());
  }
+ @Test void sqlOperationPagesMatchLegacyAndFallBackForAmbiguousOrder()throws Exception{
+  for(int n=1;n<=30;n++)jdbc.update("INSERT INTO sys_admin_operation_log(log_id,module,action,target_type,target_id,target_name,operator_id,reason,before_json,create_time) VALUES(?,?,'UPDATE','USER',?,'Object',110228,'Reason','{\"name\":\"before\"}',DATE_ADD('2026-10-24',INTERVAL ? MINUTE))",n,n%2==0?"USER":"TASK",String.valueOf(n),n);
+  jdbc.update("INSERT INTO biz_ownership_change_log(log_id,target_type,target_id,target_name,operator_id,reason,create_time) VALUES(1,'TASK',3,'Transfer',999999,'Reason','2026-10-23')");
+  jdbc.update("INSERT INTO biz_performance_relation_log(log_id,perf_id,perf_name,year,action,task_id,operator_id,reason,create_time) VALUES(1,7,'Relation',2026,'ADD',3,110228,'Reason','2026-10-22')");
+  jdbc.update("INSERT INTO biz_budget_import_version(version_id,sheet_id,year,month,version_no,operation_type,snapshot_json,created_by,is_delete,create_time) VALUES(1,1,2026,10,1,'IMPORT','{}',110228,0,'2026-10-21'),(2,1,2026,10,2,'IMPORT','{}',110228,1,'2026-10-20')");
+  jdbc.update("INSERT INTO biz_work_record(record_id,owner_id,owner_name,record_year,record_month,status,delete_marker,deleted_by,delete_reason,deleted_time,create_time,update_time) VALUES(1,90101,'Owner',2026,10,1,1,110228,'Deleted','2026-10-20',NOW(),NOW())");
+  for(String filter:List.of("","f.module=USER&f.module=OWNERSHIP","f.operatorId=110228","f.module=TASK&f.action=UPDATE&f.targetType=USER","f.createTimeFrom=2026-10-21&f.createTimeTo=2026-10-23","f.createTimeTo=9999-12-31","f.module=user","f.operatorId=nonexistent"))for(int page:List.of(1,5,999)){
+   var old=body(get("/list-filters/admin-operations?page="+page+"&pageSize=7&"+filter,admin));
+   var optimized=body(get("/list-filters/admin-operations?responseMode=page&includeFields=false&page="+page+"&pageSize=7&"+filter,admin));
+   for(String key:List.of("items","total","page","pageSize"))assertEquals(old.path(key),optimized.path(key),filter+" "+key);
+   assertFalse(optimized.has("fields"),filter);assertFalse(optimized.has("ids"));
+  }
+  jdbc.update("UPDATE sys_admin_operation_log SET create_time='2026-10-24' WHERE log_id IN(1,2)");
+  var fallback=body(get("/list-filters/admin-operations?responseMode=page&includeFields=false",admin));
+  assertTrue(fallback.has("fields"));assertEquals(body(get("/list-filters/admin-operations",admin)).path("items"),fallback.path("items"));
+  assertTrue(body(get("/list-filters/admin-operations?responseMode=page&includeFields=false&f.keyword=Object",admin)).has("fields"));
+  assertEquals(403,get("/list-filters/admin-operations?responseMode=page&includeFields=false",owner).getStatusCode().value());
+  assertEquals(400,get("/list-filters/admin-operations?responseMode=page&includeFields=false&f.createTimeFrom=2026-10-25&f.createTimeTo=2026-10-24",admin).getStatusCode().value());
+ }
  @Autowired org.example.service.BusinessListFilterService filterService;
  @Test void operationSummariesPreserveFiltersPagesAndFullPageBodies()throws Exception{
   String payload=json.writeValueAsString(Map.of("text","x".repeat(8192)));

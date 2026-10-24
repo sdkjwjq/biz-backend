@@ -193,6 +193,10 @@ public interface AdminManagementMapper {
             + "CAST(l.target_id AS CHAR) targetId,l.target_name targetName,l.batch_id batchId,l.operator_id operatorId,"
             + "u.nick_name operatorName,l.reason,NULL beforeJson,NULL afterJson,l.create_time createTime "
             + "FROM biz_ownership_change_log l LEFT JOIN sys_user u ON u.user_id=l.operator_id";
+    @Select("<script>" + OWNERSHIP_OPERATION_SQL + " WHERE l.log_id IN "
+            + "<foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach></script>")
+    List<Map<String,Object>> ownershipOperationsByIds(@Param("ids") List<Long> ids);
+
     @Select(OWNERSHIP_OPERATION_SQL)
     List<Map<String, Object>> ownershipOperations();
 
@@ -203,6 +207,10 @@ public interface AdminManagementMapper {
             + "CAST(l.perf_id AS CHAR) targetId,l.perf_name targetName,l.batch_id batchId,l.operator_id operatorId,"
             + "u.nick_name operatorName,l.reason,NULL beforeJson,NULL afterJson,l.create_time createTime "
             + "FROM biz_performance_relation_log l LEFT JOIN sys_user u ON u.user_id=l.operator_id";
+    @Select("<script>" + RELATION_OPERATION_SQL + " WHERE l.log_id IN "
+            + "<foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach></script>")
+    List<Map<String,Object>> relationOperationsByIds(@Param("ids") List<Long> ids);
+
     @Select(RELATION_OPERATION_SQL)
     List<Map<String, Object>> relationOperations();
 
@@ -213,6 +221,10 @@ public interface AdminManagementMapper {
             + "CAST(v.sheet_id AS CHAR) targetId,CONCAT(v.year,'年',v.month,'月预算 V',v.version_no) targetName,NULL batchId,"
             + "v.created_by operatorId,u.nick_name operatorName,v.remark reason,NULL beforeJson,NULL afterJson,v.create_time createTime "
             + "FROM biz_budget_import_version v LEFT JOIN sys_user u ON u.user_id=v.created_by WHERE COALESCE(v.is_delete,0)=0";
+    @Select("<script>" + BUDGET_OPERATION_SQL + " AND v.version_id IN "
+            + "<foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach></script>")
+    List<Map<String,Object>> budgetOperationsByIds(@Param("ids") List<Long> ids);
+
     @Select(BUDGET_OPERATION_SQL)
     List<Map<String, Object>> budgetOperations();
 
@@ -223,7 +235,11 @@ public interface AdminManagementMapper {
             + "CAST(r.record_id AS CHAR) targetId,CONCAT(r.owner_name,' ',r.record_year,'年',r.record_month,'月工作纪实') targetName,"
             + "NULL batchId,r.deleted_by operatorId,u.nick_name operatorName,r.delete_reason reason,NULL beforeJson,NULL afterJson,"
             + "r.deleted_time createTime FROM biz_work_record r LEFT JOIN sys_user u ON u.user_id=r.deleted_by "
-            + "WHERE COALESCE(r.delete_marker,0)<>0";
+            + "WHERE COALESCE(r.delete_marker,0)!=0";
+    @Select("<script>" + WORK_RECORD_OPERATION_SQL + " AND r.record_id IN "
+            + "<foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach></script>")
+    List<Map<String,Object>> deletedWorkRecordOperationsByIds(@Param("ids") List<Long> ids);
+
     @Select(WORK_RECORD_OPERATION_SQL)
     List<Map<String, Object>> deletedWorkRecordOperations();
 

@@ -316,6 +316,29 @@ public class AdminManagementService {
     }
 
 
+    /** Hydrate SQL-selected keys with the original per-source projections. */
+    public List<Map<String,Object>> operationRowsByKeys(List<Map<String,Object>> keys, Long actor) {
+        requireAdmin(actor);
+        Map<String,Map<String,Object>> found=new java.util.HashMap<>();
+        for(String type:List.of("ADMIN","OWNERSHIP","RELATION","BUDGET","WORK_RECORD")){
+            var ids=keys.stream().filter(k->type.equals(k.get("recordType")))
+                    .map(k->((Number)k.get("recordId")).longValue()).distinct().toList();
+            for(int start=0;start<ids.size();start+=500){
+                var batch=ids.subList(start,Math.min(start+500,ids.size()));
+                var rows=switch(type){
+                    case "ADMIN" -> mapper.adminOperationsByIds(batch);
+                    case "OWNERSHIP" -> mapper.ownershipOperationsByIds(batch);
+                    case "RELATION" -> mapper.relationOperationsByIds(batch);
+                    case "BUDGET" -> mapper.budgetOperationsByIds(batch);
+                    default -> mapper.deletedWorkRecordOperationsByIds(batch);
+                };
+                for(var row:rows)found.put(type+":"+row.get("recordId"),row);
+            }
+        }
+        return keys.stream().map(k->found.get(k.get("recordType")+":"+k.get("recordId")))
+                .filter(Objects::nonNull).toList();
+    }
+
     public void writeOperationExport(List<Map<String,Object>> rows, HttpServletResponse response, Long actor) {
         requireAdmin(actor);
         try (XSSFWorkbook workbook = new XSSFWorkbook()) {

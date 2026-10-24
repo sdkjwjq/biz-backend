@@ -30,6 +30,7 @@ public class BusinessListFilterService {
     @org.springframework.beans.factory.annotation.Autowired private WorkRecordFilterPageService recordPages;
     @org.springframework.beans.factory.annotation.Autowired private AuditHistoryTimeService auditHistoryTimes;
     @org.springframework.beans.factory.annotation.Autowired private BudgetVersionListService budgetVersions;
+    @org.springframework.beans.factory.annotation.Autowired private OperationFilterPageService operationPages;
     public record Data(List<Map<String,Object>> rows,List<Field> fields){}
     public Map<String,Object> query(String domain,Long actor,MultiValueMap<String,String> params){
         if(domain.equals("budget"))return budgetQuery(actor,params);
@@ -39,6 +40,9 @@ public class BusinessListFilterService {
             if(params.keySet().stream().filter(k->k.startsWith("f.")).allMatch(supported::contains))return accountPage(params);
         }
         if(domain.equals("records") && recordPages.supports(params)) return recordPages.query(actor,params);
+        if(domain.equals("admin-operations")&&operationPages.supports(params)){
+            var page=operationPages.query(actor,params);if(page!=null)return page;
+        }
         boolean exporting="export".equals(params.getFirst("purpose"));
         if(exporting){if(domain.equals("admin-operations"))access.requireAdmin(actor);else if(domain.equals("achievements"))access.require(actor,"achievements.export");else throw new AdminManagementException(400,"该模块不支持此导出方式");}
         Data data=domain.equals("audits")?auditData(actor,params.getFirst("tab")):domain.equals("admin-operations")?operationData(actor,!exporting):data(domain,actor,params.getFirst("f.year"),params.getFirst("f.month"));var query=new ListFilterQuery(params,data.fields());

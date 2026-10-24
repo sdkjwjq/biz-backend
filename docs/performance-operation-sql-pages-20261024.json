@@ -1,0 +1,108 @@
+{
+  "scope": "Disposable schema; synthetic operation logs; same administrator session; warmed short batches. Not a multi-account, cold-start, long-duration or full-system acceptance benchmark. No SQL-count instrumentation.",
+  "production_changes": false,
+  "results": [
+    {
+      "synthetic_rows": 120,
+      "concurrency": 1,
+      "samples_per_mode": 20,
+      "legacy": {
+        "p50_ms": 34.97,
+        "p95_ms": 55.03,
+        "response_bytes": 6468,
+        "all_results_equal": true
+      },
+      "sql_page": {
+        "p50_ms": 27.79,
+        "p95_ms": 39.48,
+        "response_bytes": 3136,
+        "all_results_equal": true
+      }
+    },
+    {
+      "synthetic_rows": 120,
+      "concurrency": 10,
+      "samples_per_mode": 20,
+      "legacy": {
+        "p50_ms": 57.11,
+        "p95_ms": 74.42,
+        "response_bytes": 6468,
+        "all_results_equal": true
+      },
+      "sql_page": {
+        "p50_ms": 49.84,
+        "p95_ms": 67.46,
+        "response_bytes": 3136,
+        "all_results_equal": true
+      }
+    },
+    {
+      "synthetic_rows": 120,
+      "concurrency": 30,
+      "samples_per_mode": 30,
+      "legacy": {
+        "p50_ms": 121.93,
+        "p95_ms": 191.48,
+        "response_bytes": 6468,
+        "all_results_equal": true
+      },
+      "sql_page": {
+        "p50_ms": 110.15,
+        "p95_ms": 131.57,
+        "response_bytes": 3136,
+        "all_results_equal": true
+      }
+    },
+    {
+      "synthetic_rows": 600,
+      "concurrency": 1,
+      "samples_per_mode": 20,
+      "legacy": {
+        "p50_ms": 27.26,
+        "p95_ms": 33.96,
+        "response_bytes": 15108,
+        "all_results_equal": true
+      },
+      "sql_page": {
+        "p50_ms": 20.54,
+        "p95_ms": 25.27,
+        "response_bytes": 3136,
+        "all_results_equal": true
+      }
+    },
+    {
+      "synthetic_rows": 600,
+      "concurrency": 10,
+      "samples_per_mode": 20,
+      "legacy": {
+        "p50_ms": 55.86,
+        "p95_ms": 95.38,
+        "response_bytes": 15108,
+        "all_results_equal": true
+      },
+      "sql_page": {
+        "p50_ms": 38.94,
+        "p95_ms": 45.74,
+        "response_bytes": 3136,
+        "all_results_equal": true
+      }
+    },
+    {
+      "synthetic_rows": 600,
+      "concurrency": 30,
+      "samples_per_mode": 30,
+      "legacy": {
+        "p50_ms": 145.15,
+        "p95_ms": 170.1,
+        "response_bytes": 15108,
+        "all_results_equal": true
+      },
+      "sql_page": {
+        "p50_ms": 64.0,
+        "p95_ms": 84.36,
+        "response_bytes": 3136,
+        "all_results_equal": true
+      }
+    }
+  ]
+}
