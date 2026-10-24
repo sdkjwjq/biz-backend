@@ -193,5 +193,18 @@
     },
     "limits": "Initial field options, text filters and tied-time lists still use the legacy summary projection. Benchmark uses synthetic rows and one administrator session, not full-system acceptance or multi-account load.",
     "rollback": "Revert frontend and backend commits or restore previous artifacts when authorized; no schema migration or business-data changes."
+  },
+  "sidebarRefreshCoalescing": {
+    "implementation": "Home-scoped refresh queues merge rapid business events, reuse active periodic reads and schedule one follow-up for changes during an in-flight read. Hidden pages skip scheduled reads, returning visibility refreshes both counters, unmount disposes queued work. Keeps 30-second polling and existing count predicates.",
+    "verification": {
+      "queue_unit_tests": 5,
+      "sidebar_browser_checks": 5,
+      "list_browser_checks": 38,
+      "frontend_static_check": "passed",
+      "frontend_build": "passed",
+      "evidence": "performance-sidebar-refresh-20261024.json"
+    },
+    "limits": "Counters still fetch original notice and per-domain audit list endpoints. Dedicated SQL counts, error-state improvements and full-system load acceptance remain pending.",
+    "rollback": "Restore the previous frontend artifact when authorized; no backend or database migration."
   }
 }
