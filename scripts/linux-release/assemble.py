@@ -27,6 +27,7 @@ NEW_SOURCES = [
     'data/migrations/2026-09-28-release-migration.sql',
     'data/migrations/2026-10-12-leadership-access.sql',
     'data/migrations/2026-10-12-core-indicators.sql',
+    'data/migrations/2026-10-24-permissions-expert-reviews.sql',
 ]
 ADDITIONS = {
     ('biz_core_report','performance_code'): 'varchar(30) DEFAULT NULL',
@@ -78,7 +79,7 @@ def main():
             assert name not in added_tables
             added_tables.add(name)
             creates.append(re.sub(r'^CREATE TABLE(?: IF NOT EXISTS)?','CREATE TABLE IF NOT EXISTS',match.group(0)))
-    assert len(added_tables)==23
+    assert len(added_tables)==29
     sql='-- Additive structure only. No historical data repair, account writes or seed records.\n'+ '\n\n'.join(creates)+'\n'
     for (table,column),definition in ADDITIONS.items():
         sql+=f"""
@@ -126,6 +127,9 @@ DEALLOCATE PREPARE release_stmt;
     ]:
         text = (ROOT/source).read_text(encoding='utf-8')
         (OUT/'sql'/destination).write_text(text,encoding='utf-8',newline='\n')
+    for suffix in ['', '-check', '-rollback']:
+        source = ROOT / ('data/migrations/2026-10-24-permissions-expert-reviews'+suffix+'.sql')
+        (OUT/'sql'/source.name).write_text(source.read_text(encoding='utf-8'),encoding='utf-8',newline='\n')
     data_update = ROOT/'data/migrations/2026-09-18-task-auditor-dept-principal-update.sql'
     data_sql = data_update.read_text(encoding='utf-8')
     assert data_sql.startswith('-- 2026-09-18 task update')
@@ -177,6 +181,7 @@ DEALLOCATE PREPARE release_stmt;
                                      'bak_20261014_core_mapping','bak_20261014_core_report_source','bak_20261014_core_notice'],
         'new_tables':sorted(added_tables),'supported_existing_column_additions':['.'.join(key) for key in ADDITIONS],
     }
+    manifest['data_updates'].append('sql/2026-10-24-permissions-expert-reviews.sql')
     manifest['release_name'] = OUT.name
     manifest['budget_trend_visible'] = False
     manifest['core_indicators_layout'] = 'table-with-expandable-recent-reports'

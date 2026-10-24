@@ -1,13 +1,13 @@
-# 双高平台更新包 20261015
+# 双高平台更新包 20261024
 
 适用环境：Java 17、MySQL 8、Bash 4.2+。服务器不需要安装 Python 或 Node。
 
 ## 一键更新
 
-将完整文件夹 `shuanggao-update-20261015` 上传到 `/root/biz-backend/`，不要覆盖旧更新包，然后执行：
+将完整文件夹 `shuanggao-update-20261024` 上传到 `/root/biz-backend/`，不要覆盖旧更新包，然后执行：
 
 ```bash
-cd /root/biz-backend/shuanggao-update-20261015
+cd /root/biz-backend/shuanggao-update-20261024
 chmod -R go-rwx .
 sha256sum -c SHA256SUMS --quiet
 bash update.sh --check
@@ -36,19 +36,15 @@ bash update.sh --update
 
 ## 本次主要内容
 
-- 核心指标改为统一表格，每项一行，集中显示目标值、归档完成值和最近填报状态。行首箭头展开最近两次填报；长名称完整换行，窄屏在表格内横向滚动。
-- 管理员及有效双高建设办公室（部门编号100）账号可填报核心指标；自己的草稿仍由本人编辑，提交仍须经过对应归口审核，不跳过审核阶段。
-- 修正第十项核心指标关联为原绩效 `1.2.45 发布《工程机械产业发展报告》数量`，当前目标值5，数量类型；审核人读取该绩效的归口审核人。
-- 原绩效表、任务及其完成值均不修改。核心指标仍独立填报。
-- 如果旧版本已有“就业相关度”填报，保留原始内容、状态和审核日志；历史中标注“旧关联记录”，不参与报告指标完成值、预算展示及导出，也不再继续审批。提交人可重新填报当前正确指标。
-- 仅清理旧关联的待审核通知；结果通知保留。已有其它九项的填报不受影响。
-- 预算折线图继续隐藏，之前更新的其余功能保留。
+- 统一角色与个人权限管理、专家评审及任务抽屉内评语。
+- 管理概览综合看板、领导查阅及财务预算填报权限。
+- 工作纪实填报范围调整、管理员直接填报和操作留痕。
+- 全系统基础和高级筛选、已选标签、查询状态及权限内导出。
+- 保留核心指标表格布局与正确映射。预算页面折线图继续隐藏，看板内开放。
 
-本次表格和填报权限调整不新增数据库结构。包内兼容保留之前的增量迁移，已执行的迁移自动跳过；因此也可以从10月12日版本直接更新。
+权限和专家评审使用六张新增表；兼容授权以 LEGACY 初始化，已有自定义授权不覆盖。迁移及核对结果写入备份目录 permissions-expert-*.log。筛选本身不修改业务数据。
 
-脚本自动备份整个数据库、程序、前端和材料，再执行尚未完成的增量迁移。迁移会增加填报来源绩效编号字段，保留旧关联依据，释放错误草稿的占位并修正第十项映射。迁移重复执行不覆盖后续填报。
-
-核对结果位于备份目录的 `core-report-mapping-check.log`；`mapping_error`、`missing_source`、`obsolete_todo_notices` 应为0，`retained_old_reports` 表示保留的旧记录数。
+预算仍为整表导出；缺少成果专业群审核证据时显示不可判定。
 
 ## 数据保护
 
@@ -73,7 +69,7 @@ bash update.sh --update
 本包包含数据迁移，成功后应使用脚本输出的数据库及应用完整回滚命令：
 
 ```bash
-bash /root/biz-backend/shuanggao-update-20261015/update.sh --rollback-database /root/biz-backend/backups/release-实际时间-PID
+bash /root/biz-backend/shuanggao-update-20261024/update.sh --rollback-database /root/biz-backend/backups/release-实际时间-PID
 ```
 
 回滚前脚本会额外保存当时的数据库到 `before-rollback-*.sql.gz`，再恢复更新前数据库、JAR 和前端。不要把回滚命令当作重启命令。

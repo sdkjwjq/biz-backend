@@ -384,6 +384,12 @@ exit 17
         check_schema('before'); sql(ddl); check_schema('after')
         checks.append('approved-legacy-missing-columns-added')
         notice_cleanup()
+        sql((PACKAGE/'sql/2026-10-24-permissions-expert-reviews.sql').read_bytes())
+        sql((PACKAGE/'sql/2026-10-24-permissions-expert-reviews-check.sql').read_bytes())
+        permission_state=snapshot()
+        sql((PACKAGE/'sql/2026-10-24-permissions-expert-reviews.sql').read_bytes())
+        assert snapshot()==permission_state
+        checks.append('permission-expert-initialization-is-idempotent')
         smoke_jar()
         restore_roundtrip()
         sql('ALTER TABLE biz_task DROP COLUMN exp_effect;')

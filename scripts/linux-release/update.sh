@@ -371,6 +371,10 @@ else
 fi
 "${MYSQL[@]}" < "$PACKAGE/sql/2026-10-23-leadership-schoolwide-check.sql" > "$BACKUP/leadership-schoolwide-check.log"
 
+"${MYSQL[@]}" < "$PACKAGE/sql/2026-10-24-permissions-expert-reviews.sql" > "$BACKUP/permissions-expert-migration.log"
+"${MYSQL[@]}" < "$PACKAGE/sql/2026-10-24-permissions-expert-reviews-check.sql" > "$BACKUP/permissions-expert-check.log"
+say '权限及专家评审结构已核对，既有授权和评语保留'
+
 # The backend is stopped and the complete database has already been backed up.
 # Retire review requests only; preserve completed-result messages and audit history.
 "${MYSQL[@]}" < "$PACKAGE/sql/backup-stale-notices.sql" > "$BACKUP/restore-notice-flags.sql"
