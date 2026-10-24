@@ -237,6 +237,31 @@ class ExpertReviewApiTest {
   jdbc.update("UPDATE sys_user SET role='1' WHERE user_id=110228");
   assertEquals(403,get("/admin/operations/ADMIN/1",admin).getStatusCode().value());
  }
+ @Autowired org.example.service.BusinessListFilterService filterService;
+ @Test void operationSummariesPreserveFiltersPagesAndFullPageBodies()throws Exception{
+  String payload=json.writeValueAsString(Map.of("text","x".repeat(8192)));
+  for(int n=1;n<=120;n++)jdbc.update("INSERT INTO sys_admin_operation_log(log_id,module,action,target_type,target_id,target_name,batch_id,operator_id,reason,before_json,after_json,create_time) VALUES(?,?,'UPDATE','USER',?,'Synthetic object',?,110228,?, ?,?,'2026-10-24 12:00:00')",n,n%2==0?"USER":"TASK",String.valueOf(n),n%3==0?"batch-a":"batch-b",n%5==0?"Special reason":"Reason",payload,n%4==0?null:payload);
+  var original=filterService.data("admin-operations",110228L,null);
+  var summaries=operationService.operationSummaries(110228L);assertEquals(120,summaries.size());
+  assertTrue(summaries.stream().allMatch(r->r.get("beforeJson")==null&&r.get("afterJson")==null));
+  for(String filter:List.of("","f.module=USER","f.reason=Special","f.batchId=batch-a&f.module=TASK","f.operatorId=110228&f.createTimeFrom=2026-10-24&f.createTimeTo=2026-10-24","f.createTime=missing","f.keyword=nonexistent")){
+   var params=new org.springframework.util.LinkedMultiValueMap<String,String>();
+   if(!filter.isEmpty())for(String pair:filter.split("&")){var kv=pair.split("=",2);params.add(kv[0],kv[1]);}
+   var predicate=new org.example.service.ListFilterQuery(params,original.fields());
+   var expected=original.rows().stream().filter(r->predicate.matches(r,original.fields())).toList();
+   for(int page:List.of(1,2,999)){
+    params.set("page",String.valueOf(page));params.set("pageSize","7");
+    var actual=filterService.query("admin-operations",110228L,params);
+    int safe=Math.min(page,Math.max(1,(expected.size()+6)/7));
+    assertEquals(expected.size(),actual.get("total"),filter);assertEquals(safe,actual.get("page"));
+    assertEquals(original.fields(),actual.get("fields"));
+    assertEquals(expected.stream().map(r->r.get("id")).toList(),actual.get("ids"));
+    assertEquals(expected.subList((safe-1)*7,Math.min(safe*7,expected.size())).stream().map(r->r.get("item")).toList(),actual.get("items"),filter);
+   }
+  }
+  var response=body(get("/list-filters/admin-operations?pageSize=1",admin));
+  assertTrue(response.path("items").get(0).path("beforeJson").asText().contains("xxx"));
+ }
  @Test void operationFiltersAndExportUseTheSameRowsAcrossPages()throws Exception{
   for(int n=1;n<=3;n++)jdbc.update("INSERT INTO sys_admin_operation_log(module,action,target_type,target_id,target_name,batch_id,operator_id,reason,create_time) VALUES(?,'UPDATE','USER',?,'合成对象',?,110228,'合成原因',NOW())",n==3?"TASK":"USER",String.valueOf(n),n==1?"batch-a":"batch-b");
   assertEquals(403,get("/list-filters/admin-operations",a).getStatusCode().value());

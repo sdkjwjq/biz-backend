@@ -6,10 +6,28 @@ import org.example.mapper.*;
 import org.example.service.*;
 import org.junit.jupiter.api.Test;
 import java.util.Map;
+import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class AdminOperationDetailTest {
+    @Test void pageHydrationReadsOnlyVisibleAdminIdsAndPreservesMixedOrder() {
+        var mapper=mock(AdminManagementMapper.class);var users=mock(SysMapper.class);
+        var actor=new SysUser();actor.setRole("0");actor.setStatus("1");actor.setIsDelete(0);
+        when(users.getUserById(1L)).thenReturn(actor);
+        var service=new AdminManagementService(mapper,users,new ObjectMapper(),null,null,null);
+        var first=Map.<String,Object>of("recordType","ADMIN","recordId",7L);
+        var other=Map.<String,Object>of("recordType","OWNERSHIP","recordId",7L);
+        var last=Map.<String,Object>of("recordType","ADMIN","recordId",8L);
+        var firstDetail=Map.<String,Object>of("recordType","ADMIN","recordId",7L,"beforeJson","before");
+        var lastDetail=Map.<String,Object>of("recordType","ADMIN","recordId",8L,"afterJson","after");
+        when(mapper.adminOperationsByIds(List.of(7L,8L))).thenReturn(List.of(lastDetail,firstDetail));
+        assertEquals(List.of(firstDetail,other,lastDetail),service.completeOperationPage(List.of(first,other,last),1L));
+        verify(mapper).adminOperationsByIds(List.of(7L,8L));verifyNoMoreInteractions(mapper);
+        clearInvocations(mapper);
+        assertEquals(List.of(other),service.completeOperationPage(List.of(other),1L));
+        assertTrue(service.completeOperationPage(List.of(),1L).isEmpty());verifyNoInteractions(mapper);
+    }
     @Test void singleDetailDoesNotReadOrSortAnyLogLists() {
         var mapper=mock(AdminManagementMapper.class);var users=mock(SysMapper.class);
         var actor=new SysUser();actor.setRole("0");actor.setStatus("1");actor.setIsDelete(0);

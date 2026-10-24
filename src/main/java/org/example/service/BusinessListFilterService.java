@@ -41,11 +41,16 @@ public class BusinessListFilterService {
         if(domain.equals("records") && recordPages.supports(params)) return recordPages.query(actor,params);
         boolean exporting="export".equals(params.getFirst("purpose"));
         if(exporting){if(domain.equals("admin-operations"))access.requireAdmin(actor);else if(domain.equals("achievements"))access.require(actor,"achievements.export");else throw new AdminManagementException(400,"该模块不支持此导出方式");}
-        Data data=domain.equals("audits")?auditData(actor,params.getFirst("tab")):data(domain,actor,params.getFirst("f.year"),params.getFirst("f.month"));var query=new ListFilterQuery(params,data.fields());
+        Data data=domain.equals("audits")?auditData(actor,params.getFirst("tab")):domain.equals("admin-operations")?operationData(actor,!exporting):data(domain,actor,params.getFirst("f.year"),params.getFirst("f.month"));var query=new ListFilterQuery(params,data.fields());
         var matched=data.rows().stream().filter(row->query.matches(row,data.fields())).filter(row->auditMatches(row,query,data.fields())).toList();
         int page=positive(params.getFirst("page"),1),size=Math.min(100,positive(params.getFirst("pageSize"),10));int safe=Math.min(page,Math.max(1,(matched.size()+size-1)/size));
         Map<String,Object> result=new LinkedHashMap<>();if(!"page".equals(params.getFirst("responseMode")))result.put("ids",matched.stream().map(r->r.get("id")).toList());result.put("total",matched.size());result.put("fields",data.fields());result.put("page",safe);result.put("pageSize",size);
-        result.put("items",(exporting?matched:matched.subList((safe-1)*size,Math.min(safe*size,matched.size()))).stream().map(r->r.getOrDefault("item",Map.of())).toList());return result;
+        var items=(exporting?matched:matched.subList((safe-1)*size,Math.min(safe*size,matched.size()))).stream().map(r->r.getOrDefault("item",Map.of())).toList();
+        if(domain.equals("admin-operations")&&!exporting){
+            var pageRows=items.stream().map(item->(Map<String,Object>)item).toList();
+            result.put("items",management.completeOperationPage(pageRows,actor));
+        }else result.put("items",items);
+        return result;
     }
     @SuppressWarnings("unchecked")
     private boolean auditMatches(Map<String,Object> row,ListFilterQuery query,List<Field> fields){
@@ -60,7 +65,7 @@ public class BusinessListFilterService {
     public Data data(String domain,Long actor,String year,String month){
         if(domain.equals("admin-users")){access.requireAdmin(actor);return userData();}
         if(domain.equals("admin-roles")){access.requireAdmin(actor);return roleData();}
-        if(domain.equals("admin-operations")){access.requireAdmin(actor);return operationData(actor);}
+        if(domain.equals("admin-operations")){access.requireAdmin(actor);return operationData(actor,false);}
         if(domain.equals("admin-departments")){access.requireAdmin(actor);return departmentData();}
         if(domain.equals("budget-versions")){access.require(actor,"budget.versions");return versionData(actor);}
         access.require(actor,switch(domain){case "tasks"->"tasks.read";case "performance"->"performance.read";case "achievements"->"achievements.read";case "core"->"core.read";case "records"->"records.read";case "notices"->"messages.read";case "supervision"->"tasks.read";default->throw new AdminManagementException(400,"不支持的查询模块");});
@@ -196,9 +201,9 @@ public class BusinessListFilterService {
         for(var role:access.roles()){var r=row(role);r.put("id",role.code());r.put("keyword",role.name()+" "+role.code());r.put("enabled",flag(role.enabled()));r.put("builtin",flag(role.builtin()));r.put("assigned",flag(assigned.contains(role.code())));r.put("modules",role.permissions().stream().map(p->p.split("\\.")[0]).distinct().toList());List<String> modes=new ArrayList<>();for(var scope:role.scopes().values())if(scope instanceof Map<?,?> m)modes.add(str(m.get("mode")));r.put("scopeTypes",modes);rows.add(r);}
         List<Field> f=new ArrayList<>();plain(f,"keyword","角色名称","text",true,"基础");select(f,"enabled","启停状态",true,"yes","启用","no","停用");select(f,"builtin","模板来源",true,"yes","内置","no","自定义");select(f,"assigned","已分配人员",true,"yes","是","no","否");multi(f,"permissions","包含功能权限",false,rows,PermissionCatalog.ACTIONS);multi(f,"modules","业务模块",false,rows,PermissionCatalog.MODULES);multi(f,"scopeTypes","数据范围类型",false,rows,Map.of("ALL","全校","OWN","本人","NONE","无","CUSTOM","自定义"));return new Data(rows,f);
     }
-    private Data operationData(Long actor){
+    private Data operationData(Long actor,boolean summaries){
         var rows=new ArrayList<Map<String,Object>>();Map<String,String> names=new HashMap<>();
-        for(var item:management.operationRows(actor)){var r=new LinkedHashMap<String,Object>(item);r.put("id",str(item.get("recordType"))+":"+str(item.get("recordId")));r.put("item",item);r.put("keyword",str(item.get("targetName"))+" "+str(item.get("targetId")));names.put(str(item.get("operatorId")),str(item.get("operatorName")));rows.add(r);}
+        for(var item:(summaries?management.operationSummaries(actor):management.operationRows(actor))){var r=new LinkedHashMap<String,Object>(item);r.put("id",str(item.get("recordType"))+":"+str(item.get("recordId")));r.put("item",item);r.put("keyword",str(item.get("targetName"))+" "+str(item.get("targetId")));names.put(str(item.get("operatorId")),str(item.get("operatorName")));rows.add(r);}
         List<Field> f=new ArrayList<>();multi(f,"module","模块",true,rows,Map.of());multi(f,"operatorId","操作人",true,rows,names);plain(f,"createTime","操作时间","date",true,"基础");plain(f,"keyword","对象关键词","text",true,"基础");multi(f,"action","动作",false,rows,Map.of());multi(f,"targetType","对象类型",false,rows,Map.of());plain(f,"targetId","对象编号","text",false,"操作对象");plain(f,"batchId","批次号","text",false,"操作对象");plain(f,"reason","原因关键词","text",false,"操作说明");return new Data(rows,f);
     }
     private Data departmentData(){

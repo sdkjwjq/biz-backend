@@ -171,10 +171,18 @@ public interface AdminManagementMapper {
     @Options(useGeneratedKeys=true,keyProperty="logId",keyColumn="log_id")
     void insertOperation(AdminOperationLog log);
 
-    String ADMIN_OPERATION_SQL = "SELECT l.log_id recordId,'ADMIN' recordType,l.module,l.action,l.target_type targetType,l.target_id targetId,"
-            + "l.target_name targetName,l.batch_id batchId,l.operator_id operatorId,u.nick_name operatorName,l.reason,"
-            + "l.before_json beforeJson,l.after_json afterJson,l.create_time createTime FROM sys_admin_operation_log l "
-            + "LEFT JOIN sys_user u ON u.user_id=l.operator_id";
+    String ADMIN_OPERATION_BASE = "SELECT l.log_id recordId,'ADMIN' recordType,l.module,l.action,l.target_type targetType,l.target_id targetId,"
+            + "l.target_name targetName,l.batch_id batchId,l.operator_id operatorId,u.nick_name operatorName,l.reason,";
+    String ADMIN_OPERATION_FROM = "l.create_time createTime FROM sys_admin_operation_log l LEFT JOIN sys_user u ON u.user_id=l.operator_id";
+    String ADMIN_OPERATION_SQL = ADMIN_OPERATION_BASE + "l.before_json beforeJson,l.after_json afterJson," + ADMIN_OPERATION_FROM;
+    String ADMIN_OPERATION_SUMMARY_SQL = ADMIN_OPERATION_BASE + "NULL beforeJson,NULL afterJson," + ADMIN_OPERATION_FROM;
+    @Select(ADMIN_OPERATION_SUMMARY_SQL)
+    List<Map<String,Object>> adminOperationSummaries();
+
+    @Select("<script>" + ADMIN_OPERATION_SQL + " WHERE l.log_id IN "
+            + "<foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach></script>")
+    List<Map<String,Object>> adminOperationsByIds(@Param("ids") List<Long> ids);
+
     @Select(ADMIN_OPERATION_SQL)
     List<Map<String, Object>> adminOperations();
 

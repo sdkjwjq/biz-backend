@@ -164,5 +164,19 @@
     },
     "limits": "Operation lists still load full projections and change bodies before pagination; list SQL pagination and end-to-end P95 remain pending.",
     "rollback": "Restore previous backend artifact when authorized; no migration or business-data changes."
+  },
+  "operationListBodyProjection": {
+    "implementation": "Advanced operation list filters and counts use summaries without before/after JSON. After pagination, one bounded primary-ID batch restores the exact original full fields of the current page. Exports and legacy direct management listing retain their existing path.",
+    "verification": {
+      "isolated_api_tests": 40,
+      "unit_tests": 2,
+      "browser_checks": 37,
+      "backend_package": "passed",
+      "fixture": "120 logs with 8KB JSON fields; seven combined/date/missing/empty filters across first, second and out-of-range pages",
+      "compatibility": "IDs, ordering including equal timestamps, totals, field options and full current-page maps compared with legacy projection; mixed source types with identical IDs remain separate."
+    },
+    "query_tradeoff": "One extra indexed body query for pages containing ADMIN records; no body query for empty or other-source-only pages. Off-page change bodies are not read.",
+    "limits": "All summary rows are still materialized for filters and count. Database pagination, large-scale endpoint latency and full-system acceptance remain unfinished.",
+    "rollback": "Restore the previous backend when authorized; no schema migration or business-data changes."
   }
 }

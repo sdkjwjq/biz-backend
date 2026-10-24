@@ -298,6 +298,24 @@ public class AdminManagementService {
 
     public List<Map<String,Object>> operationRows(Long actor) { requireAdmin(actor); return allOperations(); }
 
+    public List<Map<String,Object>> operationSummaries(Long actor) { requireAdmin(actor); return allOperations(true); }
+
+    /** Preserve legacy page fields without reading change bodies for off-page records. */
+    public List<Map<String,Object>> completeOperationPage(List<Map<String,Object>> rows, Long actor) {
+        requireAdmin(actor);
+        var ids=rows.stream().filter(r->"ADMIN".equals(r.get("recordType")))
+                .map(r->((Number)r.get("recordId")).longValue()).distinct().toList();
+        if(ids.isEmpty())return rows;
+        Map<Long,Map<String,Object>> details=new java.util.HashMap<>();
+        for(int start=0;start<ids.size();start+=500){
+            var batch=ids.subList(start,Math.min(start+500,ids.size()));
+            for(var row:mapper.adminOperationsByIds(batch))details.put(((Number)row.get("recordId")).longValue(),row);
+        }
+        return rows.stream().map(r->"ADMIN".equals(r.get("recordType"))
+                ?details.getOrDefault(((Number)r.get("recordId")).longValue(),r):r).toList();
+    }
+
+
     public void writeOperationExport(List<Map<String,Object>> rows, HttpServletResponse response, Long actor) {
         requireAdmin(actor);
         try (XSSFWorkbook workbook = new XSSFWorkbook()) {
@@ -353,9 +371,11 @@ public class AdminManagementService {
         }).toList();
     }
 
-    private List<Map<String, Object>> allOperations() {
+    private List<Map<String, Object>> allOperations() { return allOperations(false); }
+
+    private List<Map<String, Object>> allOperations(boolean summaries) {
         List<Map<String, Object>> rows = new ArrayList<>();
-        rows.addAll(mapper.adminOperations());
+        rows.addAll(summaries ? mapper.adminOperationSummaries() : mapper.adminOperations());
         rows.addAll(mapper.ownershipOperations());
         rows.addAll(mapper.relationOperations());
         rows.addAll(mapper.budgetOperations());
