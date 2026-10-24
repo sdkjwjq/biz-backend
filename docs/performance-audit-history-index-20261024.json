@@ -1,0 +1,14 @@
+{
+  "synthetic_rows": 10000,
+  "explain_before": "1\tSIMPLE\tbiz_audit_log\tNULL\tALL\tNULL\tNULL\tNULL\tNULL\t9784\t30.00\tUsing where; Using temporary",
+  "explain_after": "1\tSIMPLE\tbiz_audit_log\tNULL\trange\tidx_audit_history_sub_time\tidx_audit_history_sub_time\t8\tNULL\t30\t100.00\tUsing index condition; Using where",
+  "result_and_log_fingerprint_unchanged": true,
+  "idempotent_apply_rollback": true,
+  "preexisting_index_preserved": true,
+  "modified_index_rollback_refused": true,
+  "scope": "Disposable schema and synthetic logs only; no production migration executed. EXPLAIN row estimates are not endpoint latency measurements.",
+  "migration": "data/migrations/2026-10-24-audit-history-index.sql",
+  "verification": "data/migrations/2026-10-24-audit-history-index-check.sql",
+  "rollback": "data/migrations/2026-10-24-audit-history-index-rollback.sql",
+  "deployment": "Apply with the MySQL client against the intended database during a future authorized release, then run the check script. Rollback drops only the marked index; application rollback restores the previous backend artifact. Release integration remains pending."
+}

@@ -28,6 +28,7 @@ public class BusinessListFilterService {
     @org.springframework.beans.factory.annotation.Autowired private AdminManagementService management;
     @org.springframework.beans.factory.annotation.Autowired private BudgetService budget;
     @org.springframework.beans.factory.annotation.Autowired private WorkRecordFilterPageService recordPages;
+    @org.springframework.beans.factory.annotation.Autowired private AuditHistoryTimeService auditHistoryTimes;
     public record Data(List<Map<String,Object>> rows,List<Field> fields){}
     public Map<String,Object> query(String domain,Long actor,MultiValueMap<String,String> params){
         if(domain.equals("budget"))return budgetQuery(actor,params);
@@ -95,8 +96,9 @@ public class BusinessListFilterService {
             }else if(domain.equals("performance"))source=(List<?>)(todo?performance.getTodoPerformanceAudits(actor):performance.getPerformanceAuditRecords(actor));
             else if(domain.equals("achievements"))source=(List<?>)(todo?achievements.getTodoAchievementAudits(actor):achievements.getAchievementAuditRecords(actor));
             else source=core.audits(actor,todo);
-            Map<Long,Object> handled=new HashMap<>();if(!todo){String table=Map.of("tasks","biz_audit_log","performance","biz_performance_audit_log","achievements","biz_achievement_audit_log","core","biz_core_audit_log").get(domain);String column=domain.equals("core")?"report_id":"sub_id";String action=domain.equals("core")?"action IN('通过','退回')":"LOWER(action_type) IN('pass','reject')";for(var log:jdbc.queryForList("SELECT "+column+" id,MAX(create_time) handledTime FROM "+table+" WHERE "+action+" GROUP BY "+column))handled.put(id(log.get("id")),log.get("handledTime"));}
-            for(var value:source){var r=row(value);long object=id(r.get(domain.equals("tasks")?"taskId":domain.equals("performance")?"perfId":domain.equals("achievements")?"achId":"indicatorId"));
+            var projected=source.stream().map(this::row).toList();
+            Map<Long,Object> handled=todo?Map.of():auditHistoryTimes.latest(domain,projected.stream().map(r->id(r.get(domain.equals("core")?"reportId":"subId"))).toList());
+            for(var r:projected){long object=id(r.get(domain.equals("tasks")?"taskId":domain.equals("performance")?"perfId":domain.equals("achievements")?"achId":"indicatorId"));
                 if(!access.canRead(state,domain,object,r.get("year")==null?null:(int)id(r.get("year"))))continue;
                 int status=(int)id(r.get("flowStatus"));if(!todo&&status>=0&&status!=(domain.equals("tasks")?40:domain.equals("core")?30:30))continue;
                 String type=domain.equals("tasks")?"task":domain.equals("achievements")?"achievement":domain;Object record=r.get(domain.equals("core")?"reportId":"subId");

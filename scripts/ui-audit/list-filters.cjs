@@ -64,6 +64,10 @@ const fs=require('node:fs/promises'),path=require('node:path'),assert=require('n
   await page.goto(state.frontend+'/home/admin/accounts');await page.getByRole('tab',{name:'部门管理',exact:true}).click();await expect(page.locator('[aria-label="部门筛选"] .basic-fields > .query-field')).toHaveCount(3);checks.push('department-basic-and-advanced-controls');
   await page.goto(state.frontend+'/home/works/budget');await page.getByRole('button',{name:/版本记录|历史版本/}).click();await expect(page.locator('[aria-label="预算版本筛选"] .basic-fields > .query-field')).toHaveCount(4);checks.push('budget-version-basic-controls');
   await page.goto(state.frontend+'/home/admin/operations');await expect(page.locator('[aria-label="操作记录筛选"] .basic-fields > .query-field')).toHaveCount(4);checks.push('operation-log-basic-controls');
+  await page.goto(state.frontend+'/home/audit');
+  const doneResponse=page.waitForResponse(r=>r.url().includes('/list-filters/audits?')&&new URL(r.url()).searchParams.get('tab')==='done');
+  await page.getByText('审批记录',{exact:true}).click();const done=await doneResponse;assert.equal(done.status(),200);assert.ok((await done.json()).fields.some(f=>f.key==='handledTime'));
+  await expect(page.locator('.query-filter-bar').first().locator('.basic-fields > .query-field')).toHaveCount(4);await page.screenshot({path:path.join(out,'audit-history.png'),fullPage:true});checks.push('audit-history-tab-keeps-handled-time-filter');
   await page.goto(state.frontend+'/home/admin/overview');await page.locator('[data-metric="tasks.total"]').click();
   await expect(page.locator('[aria-label="统计分析筛选"]')).toBeVisible();checks.push('overview-analysis-filters');
   await page.goto(state.frontend+'/home/works');await page.setViewportSize({width:1536,height:864});await expect(page.locator('[aria-label="任务筛选"] .basic-fields > .query-field')).toHaveCount(4);

@@ -105,5 +105,17 @@
       "backend_package": "passed"
     },
     "limits": "Mapper call count is scoped to file/goal enrichment, not all endpoint SQL. Other audit query projections, global history aggregation, message pagination and module P95 remain pending."
+  },
+  "auditHistoryAggregation": {
+    "implementation": "Aggregate latest handling time only for distinct source record IDs, in bounded batches; empty histories issue no aggregate query. Same action predicates and timestamp representation; no authorization or workflow changes.",
+    "verification": {
+      "isolated_backend_tests": 36,
+      "browser_checks": 35,
+      "browser": "Chrome",
+      "backend_package": "passed",
+      "index_exercise": "performance-audit-history-index-20261024.json"
+    },
+    "index": "Optional task audit sub_id/create_time index with idempotent apply/check/guarded rollback; tested only in disposable synthetic schema, not deployed.",
+    "limits": "Source audit lists are still unpaged and other enrichment queries remain. EXPLAIN estimates do not establish endpoint P95; full-system concurrency acceptance remains pending."
   }
 }
