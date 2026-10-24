@@ -65,13 +65,14 @@ public class BusinessListFilterService {
         Integer y=null;if(year!=null&&!year.isBlank()&&!year.equals("missing")){try{y=Integer.valueOf(year);}catch(Exception e){throw new AdminManagementException(400,"年度不正确");}if(y<2025||y>2029)throw new AdminManagementException(400,"请选择2025—2029年度");}
         List<Map<String,Object>> rows;List<Field> fields=new ArrayList<>();
         Map<String,String> person=new HashMap<>(),dept=new HashMap<>();
-        for(var u:users.getAllUsers())person.put(str(u.getUserId()),u.getNickName()==null?str(u.getUserName()):u.getNickName());
+        var accounts=users.getAllUsers();
+        for(var u:accounts)person.put(str(u.getUserId()),u.getNickName()==null?str(u.getUserName()):u.getNickName());
         // Names are returned only for IDs encountered in authorized rows.
         if(domain.equals("tasks")||domain.equals("supervision")){rows=withinYear(tasks(actor),year);taskFields(fields,rows,person,dept);if(domain.equals("supervision"))plain(fields,"overdueDays","逾期天数","number",false,"进度与时间");}
         else if(domain.equals("performance")){rows=performances(actor,y);performanceFields(fields,rows,person,dept);}
         else if(domain.equals("achievements")){rows=withinYear(achievementRows(actor),year);achievementFields(fields,rows,person,dept);}
         else if(domain.equals("core")){int selectedMonth=month==null||month.isBlank()?LocalDate.now(ZoneId.of("Asia/Shanghai")).getMonthValue():positive(month,1);if(selectedMonth>12)throw new AdminManagementException(400,"月份不正确");rows=coreRows(actor,y==null?2026:y,selectedMonth);coreFields(fields,rows,person);}
-        else if(domain.equals("records")){rows=withinYear(recordRows(actor,null),year);recordFields(fields,rows,person,dept);}
+        else if(domain.equals("records")){rows=withinYear(recordRows(actor,y,accounts),year);recordFields(fields,rows,person,dept);}
         else{rows=noticeRows(actor);noticeFields(fields,rows,person);}
         return new Data(rows,fields);
     }
@@ -265,9 +266,9 @@ public class BusinessListFilterService {
         r.put("item",item);rows.add(r);
     }return rows;}
     private void coreFields(List<Field> f,List<Map<String,Object>> r,Map<String,String> p){years(f,false);months(f);select(f,"periodStatus","所选月份填报状态",true,"empty","尚未正式填报","pending","待审核","archived","已归档","returned","已退回／撤回","other","其他");plain(f,"keyword","编号／名称","text",true,"基础");multi(f,"root","一级改革任务序号",false,r,Map.of());multi(f,"submitBy","所选月份填报人",false,r,p);multi(f,"principalId","归口审核人",false,r,p);select(f,"stage","待审阶段",false,"10","待归口审核","20","待双高办归档");select(f,"archived","截至所选月份有效归档",false,"yes","已有归档","no","尚未归档");select(f,"attainment","期满目标达成",false,"met","已达标","unmet","未达标","unknown","待核实");plain(f,"ratio","归档达成比例（%）","number",false,"归档结果");}
-    private List<Map<String,Object>> recordRows(Long actor,Integer year){List<Map<String,Object>> rows=new ArrayList<>();List<BizWorkRecord> visible=records.filterRows(actor,year);
+    private List<Map<String,Object>> recordRows(Long actor,Integer year,List<SysUser> sourceAccounts){List<Map<String,Object>> rows=new ArrayList<>();List<BizWorkRecord> visible=records.filterRows(actor,year);
         Map<Long,List<Map<String,Object>>> entries=new HashMap<>();if(!visible.isEmpty()){String markers=String.join(",",Collections.nCopies(visible.size(),"?"));for(var e:jdbc.queryForList("SELECT record_id,reform_task_id,reform_task_name,key_progress,stage_results,typical_practices FROM biz_work_record_entry WHERE record_id IN ("+markers+")",visible.stream().map(BizWorkRecord::getRecordId).toArray()))entries.computeIfAbsent(id(e.get("record_id")),k->new ArrayList<>()).add(e);}
-        Map<Long,SysUser> accounts=users.getAllUsers().stream().collect(Collectors.toMap(SysUser::getUserId,u->u));
+        Map<Long,SysUser> accounts=sourceAccounts.stream().collect(Collectors.toMap(SysUser::getUserId,u->u));
         for(var item:visible){var r=row(item);r.put("id",item.getRecordId());r.put("year",item.getRecordYear());r.put("month",item.getRecordMonth());r.put("mine",flag(Objects.equals(actor,item.getOwnerId())));var owner=accounts.get(item.getOwnerId());r.put("deptId",owner==null?null:owner.getDeptId());var written=entries.getOrDefault(item.getRecordId(),List.of()).stream().filter(e->List.of("key_progress","stage_results","typical_practices").stream().anyMatch(k->!str(e.get(k)).isBlank())).toList();r.put("root",written.stream().map(e->e.get("reform_task_id")).toList());r.put("rootOptions",written.stream().map(e->Map.of("value",str(e.get("reform_task_id")),"label",str(e.get("reform_task_name")))).toList());r.put("keyword",str(item.getProblems())+" "+str(item.getNextFocus())+" "+str(item.getOtherMatters())+" "+written.stream().map(e->str(e.get("key_progress"))+" "+str(e.get("stage_results"))+" "+str(e.get("typical_practices"))).collect(Collectors.joining(" ")));r.put("item",item);rows.add(r);}return rows;}
     private void recordFields(List<Field> f,List<Map<String,Object>> r,Map<String,String> p,Map<String,String> d){years(f,false);months(f);multi(f,"ownerId","填报人",true,r,p);select(f,"status","状态",true,"0","草稿","1","已提交");departments(f,"deptId","填报人当前部门",false,r,d);select(f,"mine","本人记录",false,"yes","是","no","否");Map<String,String> names=new HashMap<>();for(var row:r)for(var o:(List<Map<String,Object>>)row.get("rootOptions"))names.put(str(o.get("value")),str(o.get("label")));multi(f,"root","正文涉及改革任务",false,r,names);plain(f,"keyword","正文关键词","text",false,"正文");plain(f,"submitTime","提交时间","date",false,"时间");plain(f,"updateTime","更新时间","date",false,"时间");}
     private List<Map<String,Object>> noticeRows(Long actor){

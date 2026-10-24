@@ -77,5 +77,17 @@
       "backend_package": "passed"
     },
     "remaining": "Initial filter metadata and complex narrative/root/date predicates retain legacy projection; authorization still reads permitted ID metadata; no P95 or concurrency claim"
+  },
+  "workRecordInitialLoad": {
+    "implementation": "Remove unused authors HTTP dependency; connect query loading state to table and pager; push selected year into record projection before reading entries; reuse account query for owner departments",
+    "verification": {
+      "work_record_tests": 36,
+      "browser_checks": 34,
+      "frontend_static_check": "passed",
+      "frontend_build": "passed",
+      "backend_package": "passed"
+    },
+    "benchmark": "performance-work-records-20261024.json",
+    "limits": "Only common paged record filters measured with synthetic records; complex filtering, other modules, SQL counts and full-system acceptance still pending"
   }
 }

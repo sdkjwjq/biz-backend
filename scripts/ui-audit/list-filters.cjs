@@ -46,13 +46,21 @@ const fs=require('node:fs/promises'),path=require('node:path'),assert=require('n
    await page.goto(state.frontend+'/home/'+route);await expect(page.locator('.query-filter-bar').first().locator('.basic-fields > .query-field')).toHaveCount(4);checks.push(route+'-basic-controls');
   }
   for(let month=1;month<=12;month++){const created=await api.post('/api/work-records',{headers:{Authorization:token},data:{year:2025,month}});assert.equal(created.status(),200,await created.text());}
+  let recordRequests=0,authorRequests=0,releaseRecords;const recordGate=new Promise(resolve=>{releaseRecords=resolve});
+  const watchAuthors=req=>{if(req.url().includes('/work-records/authors'))authorRequests++};page.on('request',watchAuthors);
+  await page.route('**/api/list-filters/records?**',async route=>{recordRequests++;await recordGate;await route.continue()});
   await page.goto(state.frontend+'/home/work-records');
+  await expect(page.getByText('正在加载工作纪实…',{exact:true})).toBeVisible();await expect(page.getByText('暂无工作纪实',{exact:true})).toHaveCount(0);await expect(page.locator('.el-pagination')).toHaveCount(0);
+  releaseRecords();await expect(page.locator('.el-pagination')).toBeVisible();assert.equal(recordRequests,1);assert.equal(authorRequests,0);page.off('request',watchAuthors);await page.unroute('**/api/list-filters/records?**');checks.push('record-first-load-no-false-empty-or-unused-author-request');
   const recordBar=page.locator('[aria-label="纪实筛选"]');await recordBar.getByRole('combobox',{name:'纪实年度',exact:true}).click();await page.getByRole('option',{name:'2025年',exact:true}).click();await recordBar.getByRole('button',{name:'查询',exact:true}).click();
   await expect(page.locator('.el-pagination .btn-next')).toBeEnabled();
   const recordPageResponse=page.waitForResponse(r=>r.url().includes('/list-filters/records?')&&new URL(r.url()).searchParams.get('responseMode')==='page');
   await page.locator('.el-pagination .btn-next').click();
   const recordPage=await recordPageResponse;assert.equal(recordPage.status(),200);const recordBody=await recordPage.json();assert.ok(Array.isArray(recordBody.items));assert.ok(!Object.hasOwn(recordBody,'ids'));
   await expect(page.locator('[aria-label="纪实筛选"] .basic-fields > .query-field')).toHaveCount(4);checks.push('record-list-uses-paged-response-without-losing-filter-controls');
+  const retainedRows=await page.locator('.el-table__row').count();assert.ok(retainedRows>0);
+  await page.route('**/api/list-filters/records?**',route=>route.fulfill({status:500,contentType:'application/json',body:JSON.stringify({code:500,message:'模拟纪实查询失败'})}));await recordBar.getByRole('button',{name:'查询',exact:true}).click();await expect(recordBar.locator('.el-alert')).toContainText('更新失败');await expect(page.locator('.el-table__row')).toHaveCount(retainedRows);await page.unroute('**/api/list-filters/records?**');checks.push('record-failed-refresh-retains-existing-rows');
+
   await page.goto(state.frontend+'/home/admin/accounts');await page.getByRole('tab',{name:'部门管理',exact:true}).click();await expect(page.locator('[aria-label="部门筛选"] .basic-fields > .query-field')).toHaveCount(3);checks.push('department-basic-and-advanced-controls');
   await page.goto(state.frontend+'/home/works/budget');await page.getByRole('button',{name:/版本记录|历史版本/}).click();await expect(page.locator('[aria-label="预算版本筛选"] .basic-fields > .query-field')).toHaveCount(4);checks.push('budget-version-basic-controls');
   await page.goto(state.frontend+'/home/admin/operations');await expect(page.locator('[aria-label="操作记录筛选"] .basic-fields > .query-field')).toHaveCount(4);checks.push('operation-log-basic-controls');

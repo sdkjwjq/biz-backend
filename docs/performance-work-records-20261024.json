@@ -1,0 +1,128 @@
+{
+  "scope": "Work-record common filters only; synthetic historical records with no current owner account",
+  "environment": "Disposable local serve.py fixture, warmed short HTTP runs; includes Vite proxy",
+  "limitations": "Not a whole-system acceptance test; no SQL count instrumentation, cold-start or long-duration load test",
+  "all_responses_equivalent": true,
+  "results": [
+    {
+      "rows": 120,
+      "entries": 1200,
+      "concurrency": 1,
+      "mode": "legacy",
+      "samples": 20,
+      "p50_ms": 62.86,
+      "p95_ms": 71.17,
+      "mean_response_bytes": 17914
+    },
+    {
+      "rows": 120,
+      "entries": 1200,
+      "concurrency": 1,
+      "mode": "paged",
+      "samples": 20,
+      "p50_ms": 24.83,
+      "p95_ms": 46.2,
+      "mean_response_bytes": 14909
+    },
+    {
+      "rows": 120,
+      "entries": 1200,
+      "concurrency": 10,
+      "mode": "legacy",
+      "samples": 20,
+      "p50_ms": 201.94,
+      "p95_ms": 390.44,
+      "mean_response_bytes": 17914
+    },
+    {
+      "rows": 120,
+      "entries": 1200,
+      "concurrency": 10,
+      "mode": "paged",
+      "samples": 20,
+      "p50_ms": 63.17,
+      "p95_ms": 83.25,
+      "mean_response_bytes": 14909
+    },
+    {
+      "rows": 120,
+      "entries": 1200,
+      "concurrency": 30,
+      "mode": "legacy",
+      "samples": 30,
+      "p50_ms": 404.34,
+      "p95_ms": 516.07,
+      "mean_response_bytes": 17914
+    },
+    {
+      "rows": 120,
+      "entries": 1200,
+      "concurrency": 30,
+      "mode": "paged",
+      "samples": 30,
+      "p50_ms": 94.33,
+      "p95_ms": 117.93,
+      "mean_response_bytes": 14909
+    },
+    {
+      "rows": 600,
+      "entries": 6000,
+      "concurrency": 1,
+      "mode": "legacy",
+      "samples": 20,
+      "p50_ms": 142.13,
+      "p95_ms": 174.44,
+      "mean_response_bytes": 21514
+    },
+    {
+      "rows": 600,
+      "entries": 6000,
+      "concurrency": 1,
+      "mode": "paged",
+      "samples": 20,
+      "p50_ms": 28.45,
+      "p95_ms": 46.79,
+      "mean_response_bytes": 14909
+    },
+    {
+      "rows": 600,
+      "entries": 6000,
+      "concurrency": 10,
+      "mode": "legacy",
+      "samples": 20,
+      "p50_ms": 507.41,
+      "p95_ms": 755.0,
+      "mean_response_bytes": 21514
+    },
+    {
+      "rows": 600,
+      "entries": 6000,
+      "concurrency": 10,
+      "mode": "paged",
+      "samples": 20,
+      "p50_ms": 53.5,
+      "p95_ms": 61.2,
+      "mean_response_bytes": 14909
+    },
+    {
+      "rows": 600,
+      "entries": 6000,
+      "concurrency": 30,
+      "mode": "legacy",
+      "samples": 30,
+      "p50_ms": 1246.45,
+      "p95_ms": 1692.44,
+      "mean_response_bytes": 21514
+    },
+    {
+      "rows": 600,
+      "entries": 6000,
+      "concurrency": 30,
+      "mode": "paged",
+      "samples": 30,
+      "p50_ms": 75.02,
+      "p95_ms": 114.63,
+      "mean_response_bytes": 14909
+    }
+  ]
+}
