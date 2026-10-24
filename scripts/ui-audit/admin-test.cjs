@@ -1,6 +1,7 @@
 // All writes are confined to serve.py --fixture admintest's disposable synthetic schema.
 const { chromium, request } = require('../../target/ui-audit-tools/node_modules/playwright');
-const { expect } = require('../../target/ui-audit-tools/node_modules/playwright/test');
+const { expect: baseExpect } = require('../../target/ui-audit-tools/node_modules/playwright/test');
+const expect = baseExpect.configure({timeout: 20000});
 const fs = require('node:fs/promises'), path = require('node:path'), assert = require('node:assert/strict');
 (async () => {
   const state = JSON.parse(await fs.readFile(path.resolve(__dirname, '../../target/ui-audit/state.json')));
@@ -13,7 +14,7 @@ const fs = require('node:fs/promises'), path = require('node:path'), assert = re
     const value = await token(id);
     const context = await browser.newContext({ viewport: { width: 1600, height: 1000 }, storageState: { cookies: [], origins: [{ origin: state.frontend, localStorage: [{ name: 'token', value }] }] } }); contexts.push(context);
     const page = await context.newPage(); page.on('pageerror', e => errors.push(e.message));
-    await page.goto(state.frontend + '/home/works'); return { page, token: value };
+    await page.goto(state.frontend + '/home/works'); await expect(page.getByRole('menuitem', {name:'任务',exact:true})).toBeVisible(); return { page, token: value };
   };
   const pick = async (page, select, text) => {
     await select.locator('xpath=ancestor-or-self::div[contains(concat(" ",normalize-space(@class)," ")," el-select ")][1]').click();
@@ -27,26 +28,21 @@ const fs = require('node:fs/promises'), path = require('node:path'), assert = re
     await expect(ordinary.page.getByRole('button', { name: '管理员测试', exact: true })).toHaveCount(0);
     done('ordinary-account-has-no-test-control');
     const admin = await pageFor(990009); page = admin.page;
-    await expect(page.getByRole('button', { name: '管理员测试', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: '管理员测试', exact: true })).toHaveCount(0);
     await page.goto(state.frontend + '/home/works?taskId=930002');
     let drawer = page.getByRole('dialog', { name: '任务详情与反馈' });
-    await expect(drawer.getByRole('button', { name: '提交反馈', exact: true })).toBeDisabled();
+    await expect(drawer.getByRole('spinbutton')).toBeEnabled();
     await drawer.getByRole('button', { name: /close/i }).click();
-    await page.getByRole('button', { name: '管理员测试', exact: true }).click();
-    let dialog = page.getByRole('dialog', { name: '启用管理员测试', exact: true });
-    await dialog.getByRole('button', { name: '确认启用并刷新' }).click(); await expect(dialog.getByText('请填写测试原因', { exact: true })).toBeVisible();
-    await dialog.locator('textarea').fill('Playwright 隔离库管理员全功能测试');
-    await dialog.getByRole('button', { name: '确认启用并刷新' }).click();
-    await expect(page.getByRole('button', { name: '退出管理员测试', exact: true })).toBeVisible();
-    await expect(page.locator('.admin-test-banner')).toContainText('操作写入正式数据');
-    done('opt-in-requires-reason-and-normal-mode-keeps-task-readonly');
+    let dialog;
+    done('administrator-has-direct-fill-permission-without-test-control');
 
     for (const url of ['/home/works/performance', '/home/works/achievement', '/home/works/budget', '/home/work-records', '/home/core-indicators', '/home/notice', '/home/audit', '/home/report', '/home/admin/overview', '/home/admin/accounts', '/home/admin/operations', '/dashboard']) {
       await page.goto(state.frontend + url);
-      await expect(page.getByRole('button', { name: '退出管理员测试', exact: true })).toBeVisible();
+      await expect(page.locator(url === '/dashboard' ? '.dashboard-fixed-container' : '.user-trigger')).toBeVisible();
+      await expect(page.getByRole('button', { name: '管理员测试', exact: true })).toHaveCount(0);
       assert.equal(new URL(page.url()).pathname, url);
     }
-    done('test-control-persists-across-all-business-and-admin-pages-and-dashboard');
+    done('all-business-pages-work-without-a-test-switch');
 
     await page.goto(state.frontend + '/home/works?taskId=930002'); drawer = page.getByRole('dialog', { name: '任务详情与反馈' });
     await expect(drawer.getByRole('spinbutton')).toBeEnabled(); await drawer.getByRole('spinbutton').fill('5');
@@ -104,27 +100,15 @@ const fs = require('node:fs/promises'), path = require('node:path'), assert = re
     done('core-indicator-real-fill-and-two-stage-delegated-review');
 
     await page.goto(state.frontend + '/home/admin/operations');
-    await pick(page, page.locator('.filters .el-select').first(), '管理员测试'); await page.getByRole('button', { name: '查询', exact: true }).click();
+    await pick(page, page.locator('.filters .el-select').first(), '管理员操作'); await page.getByRole('button', { name: '查询', exact: true }).click();
     await expect(page.locator('.el-table__body')).toContainText('测试管理员');
-    await expect(page.locator('.el-table__body')).toContainText('Playwright 隔离库管理员全功能测试');
+    await expect(page.locator('.el-table__body')).toContainText('管理员直接操作');
     await page.screenshot({ path: path.join(output, 'admin-test-operations.png'), fullPage: true });
-    const records = await (await api.get('/api/admin/operations?module=ADMIN_TEST&pageSize=100', { headers: { Authorization: admin.token } })).json();
+    const records = await (await api.get('/api/admin/operations?module=ADMIN_OPERATION&pageSize=100', { headers: { Authorization: admin.token } })).json();
     assert.ok(records.total >= 12); assert.ok(records.items.every(row => row.operatorId === 990009));
     done('visible-trace-records-real-admin-and-reason');
 
-    await page.getByRole('button', { name: '退出管理员测试', exact: true }).click();
-    await page.getByRole('dialog', { name: '退出管理员测试', exact: true }).getByRole('button', { name: '确认退出', exact: true }).click();
-    await expect(page.getByRole('button', { name: '管理员测试', exact: true })).toBeVisible(); await expect(page.locator('.admin-test-banner')).toHaveCount(0);
-    await page.goto(state.frontend + '/home/works?taskId=930002');
-    await expect(page.getByRole('dialog', { name: '任务详情与反馈' }).getByRole('button', { name: '提交反馈', exact: true })).toBeDisabled();
-    await page.getByRole('dialog', { name: '任务详情与反馈' }).getByRole('button', { name: /close/i }).click();
-    done('exit-clears-mode-and-restores-original-capabilities');
-    // 离开任务深链接，避免重新启用后的刷新按 taskId 再打开抽屉，遮挡退出登录入口。
     await page.goto(state.frontend + '/home/works');
-    await page.getByRole('button', { name: '管理员测试', exact: true }).click();
-    dialog = page.getByRole('dialog', { name: '启用管理员测试', exact: true });
-    await dialog.locator('textarea').fill('验证退出登录清理测试状态'); await dialog.getByRole('button', { name: '确认启用并刷新' }).click();
-    await expect(page.getByRole('button', { name: '退出管理员测试', exact: true })).toBeVisible();
     await page.locator('.user-trigger').click(); await page.getByRole('menuitem', { name: '退出登录', exact: true }).click();
     const logoutResponse = page.waitForResponse(response => response.url().endsWith('/api/system/logout'));
     await page.getByRole('dialog', { name: '提示', exact: true }).getByRole('button', { name: '确定', exact: true }).click();

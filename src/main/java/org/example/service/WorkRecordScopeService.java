@@ -75,7 +75,7 @@ public class WorkRecordScopeService {
                 || goals.stream().anyMatch(goal -> Objects.equals(goal.getLeaderId(), owner.getUserId()));
         if (testing || professional) {
             return new Scope(annual, roots(annual, catalog), testing
-                    ? "管理员测试统计：按一级任务归集全校该年度有效三级任务，四级目标归并到所属三级任务。"
+                    ? "管理员统计：按一级任务归集全校该年度有效三级任务，四级目标归并到所属三级任务。"
                     : "专业群统计：按一级任务归集全校该年度有效三级任务，四级目标归并到所属三级任务。");
         }
         Long deptId = owner.getDeptId();

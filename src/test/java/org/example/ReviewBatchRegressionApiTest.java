@@ -1932,6 +1932,23 @@ class ReviewBatchRegressionApiTest {
 
     // ---- 管理员归属移交（任务 / 绩效） ----
 
+    @Test
+    void automaticAdminTraceDoesNotBlockLargeBatchTransfers() throws Exception {
+        seedSubmissionFlow();
+        long dept = seedTransferTargets();
+        List<Long> ids = new ArrayList<>();
+        for (long id=938000;id<938020;id++) { seedTask(id,930001,3); ids.add(id); }
+        JsonNode result=body(request(HttpMethod.POST,"/manage/transfer/tasks",login(ADMIN),
+                transferPayload(ids,dept,910004L,910005L,"Bulk management trace regression")));
+        assertEquals(20,result.path("updated").asInt());
+        assertEquals(20,jdbc.queryForObject("SELECT COUNT(*) FROM biz_ownership_change_log",Integer.class));
+        assertEquals(20,jdbc.queryForObject("SELECT COUNT(*) FROM biz_task WHERE task_id BETWEEN 938000 AND 938019 AND leader_id=910004",Integer.class));
+        Map<String,Object> trace=jdbc.queryForMap("SELECT target_id,after_json,operator_id FROM sys_admin_operation_log WHERE module='ADMIN_OPERATION'");
+        assertTrue(trace.get("target_id").toString().length()<=64);
+        assertEquals(ADMIN,((Number)trace.get("operator_id")).longValue());
+        assertTrue(trace.get("after_json").toString().contains("938019"));
+    }
+
     private long seedTransferTargets() {
         jdbc.update("INSERT INTO sys_dept (dept_id, dept_name, is_delete) VALUES (920002, 'Review department B', 0)");
         jdbc.update("INSERT INTO sys_user (user_id, dept_id, user_name, nick_name, email, password, role, status, is_delete, force_password_change) "

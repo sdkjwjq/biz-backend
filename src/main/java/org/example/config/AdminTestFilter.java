@@ -29,7 +29,7 @@ import java.util.Map;
 import java.util.LinkedHashMap;
 import java.util.Set;
 
-/** Test operations use the real account; successful business writes and their trace commit together. */
+/** Current active administrators operate directly; business writes and their trace commit together. */
 @Component
 public class AdminTestFilter extends OncePerRequestFilter {
     private final SysMapper users;
@@ -50,27 +50,33 @@ public class AdminTestFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws IOException, ServletException {
         String path = request.getRequestURI().substring(request.getContextPath().length());
-        if (!"1".equals(request.getHeader("X-Admin-Test")) || "OPTIONS".equals(request.getMethod())
+        if ("OPTIONS".equals(request.getMethod())
                 || !path.matches("/(system|biz|achievement|dashboard|performance|budget|scheduled|work-records|manage|admin|core-indicators|expert-reviews)(/.*)?")
                 || path.matches("/system/(login|password.*|logout)/?") || path.startsWith("/admin/permissions/")) {
             chain.doFilter(request, response); return;
         }
         Long actor;
+        SysUser user;
+        String token = request.getHeader("Authorization");
+        if (token == null) { chain.doFilter(request, response); return; }
         try {
-            String token = request.getHeader("Authorization");
-            if (token == null || blacklist.findByToken(token) != null) throw new IllegalArgumentException();
+            if (blacklist.findByToken(token) != null) throw new IllegalArgumentException();
             actor = JWTUtil.verifyJwtToken(token).getClaim("id").asLong();
-            SysUser user = actor == null ? null : users.getUserById(actor);
-            if (user == null || !"0".equals(user.getRole()) || !"1".equals(user.getStatus())
-                    || Integer.valueOf(1).equals(user.getIsDelete())) {
-                error(response, 403, "管理员测试权限已失效，请退出测试并重新加载"); return;
-            }
+            user = actor == null ? null : users.getUserById(actor);
         } catch (Exception ignored) { error(response, 401, "登录已失效，请重新登录"); return; }
+        if (user == null || !"0".equals(user.getRole()) || !"1".equals(user.getStatus())
+                || Integer.valueOf(1).equals(user.getIsDelete())) {
+            if ("1".equals(request.getHeader("X-Admin-Test"))) {
+                error(response, 403, "当前账号无管理员权限"); return;
+            }
+            chain.doFilter(request, response); return;
+        }
         String reason;
         try {
-            reason = URLDecoder.decode(request.getHeader("X-Admin-Test-Reason"), StandardCharsets.UTF_8).strip();
+            String supplied = request.getHeader("X-Admin-Test-Reason");
+            reason = supplied == null ? "管理员直接操作" : URLDecoder.decode(supplied, StandardCharsets.UTF_8).strip();
             if (reason.isBlank() || reason.codePointCount(0, reason.length()) > 200) throw new IllegalArgumentException();
-        } catch (Exception ignored) { error(response, 400, "请填写管理员测试原因（1至200字）"); return; }
+        } catch (Exception ignored) { error(response, 400, "操作原因须为1至200字"); return; }
         request.setAttribute(AdminTestContext.ACTOR, actor);
         try {
             if (Set.of("GET", "HEAD").contains(request.getMethod())) {
@@ -87,12 +93,12 @@ public class AdminTestFilter extends OncePerRequestFilter {
                         chain.doFilter(traced, buffered);
                         if (failed(buffered)) { status.setRollbackOnly(); return; }
                         AdminOperationLog log = new AdminOperationLog();
-                        log.setModule("ADMIN_TEST"); log.setAction(request.getMethod());
+                        log.setModule("ADMIN_OPERATION"); log.setAction(request.getMethod());
                         log.setTargetType(path.split("/")[1].toUpperCase(java.util.Locale.ROOT));
                         // Only whitelisted numeric references: never persist forms, passwords, tokens or file contents.
                         Object variables = request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
                         Map<String, Object> targets = targets(traced, buffered);
-                        log.setTargetId(truncate(variables == null || "{}".equals(variables.toString()) ? targets.toString() : variables.toString(), 100));
+                        log.setTargetId(truncate(variables == null || "{}".equals(variables.toString()) ? targets.toString() : variables.toString(), 64));
                         log.setTargetName(truncate(path, 200)); log.setOperatorId(actor);
                         if (request.getAttribute(AdminTestContext.TARGET) instanceof AdminTestContext.Target target) {
                             log.setTargetType(target.type()); log.setTargetId(target.id());
@@ -100,14 +106,14 @@ public class AdminTestFilter extends OncePerRequestFilter {
                         }
                         log.setReason(reason); log.setCreateTime(new Date());
                         log.setAfterJson(json.writeValueAsString(Map.of("method", request.getMethod(), "path", path,
-                                "operatorId", actor, "adminTest", true, "targets", targets)));
+                                "operatorId", actor, "administrator", true, "targets", targets)));
                         operations.insertOperation(log);
-                    } catch (Exception failure) { throw new IllegalStateException("Admin test transaction failed", failure); }
+                    } catch (Exception failure) { throw new IllegalStateException("Administrator operation transaction failed", failure); }
                 });
                 buffered.copyBodyToResponse();
             } catch (Exception failure) {
-                logger.error("Admin test operation rolled back: " + request.getMethod() + " " + path);
-                buffered.reset(); error(response, 500, "测试操作未完成或记录失败，数据库修改已回滚，请刷新后重试");
+                logger.error("Administrator operation rolled back: " + request.getMethod() + " " + path);
+                buffered.reset(); error(response, 500, "操作未完成或记录失败，数据库修改已回滚，请刷新后重试");
             }
         } finally { request.removeAttribute(AdminTestContext.ACTOR); request.removeAttribute(AdminTestContext.TARGET); }
     }

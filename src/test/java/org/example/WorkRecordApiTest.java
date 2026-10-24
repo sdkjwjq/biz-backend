@@ -139,7 +139,7 @@ class WorkRecordApiTest {
         for (long user : List.of(OWNER, OTHER, LEADER, VIEWER, ADMIN, OFFICE)) {
             String token=login(user);
             JsonNode caps=ok(request(HttpMethod.GET,"/work-records/capabilities",token,null));
-            boolean filler=user==OWNER;
+            boolean filler=user==OWNER || user==ADMIN;
             assertEquals(filler,caps.path("canCreate").asBoolean());
             assertEquals(user==VIEWER || user==ADMIN,caps.path("canExport").asBoolean());
             if (!filler) assertEquals(403,request(HttpMethod.POST,"/work-records",token,Map.of("year",2026,"month",1)).getStatusCode().value());
@@ -149,9 +149,10 @@ class WorkRecordApiTest {
         assertEquals(428,request(HttpMethod.GET,"/work-records/capabilities",token,null).getStatusCode().value());
     }
 
-    @Test void rolesDoNotGrantFillingAndLevel4ResponsibilitiesDeduplicateParents() throws Exception {
+    @Test void ordinaryRolesDoNotGrantFillingAndLevel4ResponsibilitiesDeduplicateParents() throws Exception {
         task(900012,OTHER,2026,10,"1");
-        for(long user:List.of(ADMIN,OFFICE)) {
+        assertTrue(ok(request(HttpMethod.GET,"/work-records/capabilities",login(ADMIN),null)).path("canCreate").asBoolean());
+        for(long user:List.of(OFFICE)) {
             JsonNode caps=ok(request(HttpMethod.GET,"/work-records/capabilities",login(user),null));
             assertFalse(caps.path("canCreate").asBoolean());
             assertEquals(403,request(HttpMethod.POST,"/work-records",login(user),Map.of("year",2026,"month",1)).getStatusCode().value());
@@ -280,7 +281,9 @@ class WorkRecordApiTest {
     @Test void draftAndSubmittedVisibilityAndRevokedQualifications() throws Exception {
         String owner=login(OWNER),other=login(OTHER),admin=login(ADMIN),viewer=login(VIEWER);
         long id=create(owner,1).path("record").path("recordId").asLong();
-        for (String token: List.of(other,admin,viewer)) {
+        assertTrue(ok(request(HttpMethod.GET,"/work-records/"+id,admin,null)).path("editable").asBoolean());
+        assertEquals(1,ok(request(HttpMethod.GET,"/work-records",admin,null)).path("total").asInt());
+        for (String token: List.of(other,viewer)) {
             assertEquals(token.equals(other)?403:404,request(HttpMethod.GET,"/work-records/"+id,token,null).getStatusCode().value());
             if(token.equals(other))assertEquals(403,request(HttpMethod.GET,"/work-records",token,null).getStatusCode().value());else assertEquals(0,ok(request(HttpMethod.GET,"/work-records",token,null)).path("total").asInt());
             assertEquals(token.equals(admin)?404:403,request(HttpMethod.POST,"/work-records/"+id+"/statistics/refresh",token,Map.of("version",0)).getStatusCode().value());
@@ -337,13 +340,13 @@ class WorkRecordApiTest {
         long id=create(owner,1).path("record").path("recordId").asLong();
         assertEquals(401,export(null,Map.of("ids",List.of(id))).getStatusCode().value());
         assertEquals(403,export(owner,Map.of("ids",List.of(id))).getStatusCode().value());
-        assertEquals(404,export(admin,Map.of("ids",List.of(id))).getStatusCode().value());
+        assertEquals(409,export(admin,Map.of("ids",List.of(id))).getStatusCode().value());
         ok(request(HttpMethod.POST,"/work-records/"+id+"/submit",owner,narrative(0,"Submitted text")));
         for(Object body:List.of(Map.of("ids",List.of()),Map.of("ids",List.of(1.5)),Map.of("ids",List.of("1")),Map.of("ids",List.of(-1)),Map.of("ids","invalid")))
             assertEquals(400,export(admin,body).getStatusCode().value());
         assertEquals(404,export(admin,Map.of("ids",List.of(id,99999999))).getStatusCode().value());
         long draft=create(owner,2).path("record").path("recordId").asLong();
-        assertEquals(404,export(admin,Map.of("ids",List.of(id,draft))).getStatusCode().value());
+        assertEquals(409,export(admin,Map.of("ids",List.of(id,draft))).getStatusCode().value());
         for(String token:List.of(admin,viewer)) {
             var response=export(token,Map.of("ids",List.of(id)));
             assertEquals(200,response.getStatusCode().value());
@@ -464,9 +467,9 @@ class WorkRecordApiTest {
         String token=login(OWNER); long id=create(token,1).path("record").path("recordId").asLong();
         for(String action:List.of("save","submit")) {
             assertEquals(401,request(HttpMethod.POST,"/work-records/"+id+"/"+action,null,narrative(0,"Valid")).getStatusCode().value());
-            for(long user:List.of(ADMIN,OTHER,VIEWER)) assertEquals(user==ADMIN?404:403,request(HttpMethod.POST,"/work-records/"+id+"/"+action,login(user),narrative(0,"Valid")).getStatusCode().value());
+            for(long user:List.of(OTHER,VIEWER)) assertEquals(403,request(HttpMethod.POST,"/work-records/"+id+"/"+action,login(user),narrative(0,"Valid")).getStatusCode().value());
         }
-        assertEquals(0,ok(request(HttpMethod.GET,"/work-records/authors",login(ADMIN),null)).size());
+        assertEquals(1,ok(request(HttpMethod.GET,"/work-records/authors",login(ADMIN),null)).size());
         jdbc.update("UPDATE biz_task SET leader_id=? WHERE leader_id=?",OTHER,OWNER);
         jdbc.update("UPDATE sys_user SET dept_id=920002 WHERE user_id=?",OWNER);
         for(String action:List.of("save","submit")) assertEquals(403,request(HttpMethod.POST,"/work-records/"+id+"/"+action,token,narrative(0,"Valid")).getStatusCode().value());

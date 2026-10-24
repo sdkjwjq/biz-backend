@@ -220,11 +220,12 @@ class CoreIndicatorApiTest {
             assertEquals(id==OWNER||id==OTHER||id==ADMIN||id==OFFICE,caps.path("canFill").asBoolean());
         }
         JsonNode d=draft(login(OWNER),1);
-        assertEquals(404,request(HttpMethod.GET,"/core-indicators/reports/"+d.path("reportId").asLong(),login(ADMIN),null).getStatusCode().value());
+        assertEquals(200,request(HttpMethod.GET,"/core-indicators/reports/"+d.path("reportId").asLong(),login(ADMIN),null).getStatusCode().value());
+        assertEquals(404,request(HttpMethod.GET,"/core-indicators/reports/"+d.path("reportId").asLong(),login(OTHER),null).getStatusCode().value());
         assertEquals(200,request(HttpMethod.POST,"/core-indicators/1/draft",login(ADMIN),Map.of("year",2026,"month",1)).getStatusCode().value());
         assertEquals(401,request(HttpMethod.GET,"/core-indicators",null,null).getStatusCode().value());
     }
-    @Test void adminAndOfficeCanFillWithoutTaskResponsibilitiesAndStillRequirePrincipalReview() throws Exception {
+    @Test void adminAndOfficeCanFillWithoutTaskResponsibilitiesAndKeepWorkflowStages() throws Exception {
         int month=1;
         for(long actor:List.of(ADMIN,OFFICE)) {
             String token=login(actor);
@@ -233,7 +234,7 @@ class CoreIndicatorApiTest {
             JsonNode r=submit(token,month++);
             assertEquals(actor,r.path("submitBy").asLong());
             assertEquals(LEADER,r.path("currentHandlerId").asLong());
-            assertEquals(403,request(HttpMethod.POST,"/core-indicators/reports/"+r.path("reportId").asLong()+"/audit",token,Map.of("version",0,"pass",true)).getStatusCode().value());
+            if(actor!=ADMIN)assertEquals(403,request(HttpMethod.POST,"/core-indicators/reports/"+r.path("reportId").asLong()+"/audit",token,Map.of("version",0,"pass",true)).getStatusCode().value());
             r=audit(r,LEADER,true);r=audit(r,ADMIN,true);
             assertEquals(30,r.path("flowStatus").asInt());
         }
@@ -259,7 +260,7 @@ class CoreIndicatorApiTest {
         JsonNode r=submit(login(OWNER),1);
         assertEquals(LEADER,r.path("currentHandlerId").asLong());
         String path="/core-indicators/reports/"+r.path("reportId").asLong()+"/audit";
-        assertEquals(403,request(HttpMethod.POST,path,login(ADMIN),Map.of("version",0,"pass",true)).getStatusCode().value());
+        assertEquals(403,request(HttpMethod.POST,path,login(OTHER),Map.of("version",0,"pass",true)).getStatusCode().value());
         assertEquals(403,request(HttpMethod.POST,path,login(VIEWER),Map.of("version",0,"pass",true)).getStatusCode().value());
         assertNull(core.effective(1L,2026,1));
         r=audit(r,LEADER,true);

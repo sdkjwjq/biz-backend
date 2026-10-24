@@ -169,7 +169,7 @@ class AdminTestApiTest {
         String admin=login(ADMIN),normal=login(OWNER);
         assertEquals(403,testing(HttpMethod.GET,"/biz/audit/todo",normal,null).getStatusCode().value());
         HttpHeaders headers=new HttpHeaders();headers.set("Authorization",admin);headers.set("X-Admin-Test","1");
-        assertEquals(400,http.exchange("http://127.0.0.1:"+port+"/api/biz/tasks",HttpMethod.GET,new HttpEntity<>(headers),String.class).getStatusCode().value());
+        assertEquals(200,http.exchange("http://127.0.0.1:"+port+"/api/biz/tasks",HttpMethod.GET,new HttpEntity<>(headers),String.class).getStatusCode().value());
         jdbc.update("UPDATE sys_user SET role='1' WHERE user_id=?",ADMIN);
         assertEquals(403,testing(HttpMethod.GET,"/biz/tasks",admin,null).getStatusCode().value());
         jdbc.update("UPDATE sys_user SET role='0',status='0' WHERE user_id=?",ADMIN);
@@ -189,54 +189,48 @@ class AdminTestApiTest {
     }
     @Test void delegatedTaskFillAndThreeReviewStagesRecordRealAdmin() throws Exception {
         String admin=login(ADMIN);Map<String,Object> body=fillTask();
-        failed(request(HttpMethod.POST,"/biz/sub",admin,body));
-        assertEquals(0,count("biz_material_submission"));
-        long id=pendingTask(admin,true);
+        long id=pendingTask(admin,false);
         assertEquals(ADMIN,jdbc.queryForObject("SELECT submit_by FROM biz_material_submission WHERE sub_id=?",Long.class,id));
-        failed(request(HttpMethod.POST,"/biz/audit",admin,Map.of("sub_id",id,"is_pass",true)));
-        assertEquals(1,success(testing(HttpMethod.GET,"/biz/audit/todo",admin,null)).size());
+        assertEquals(1,success(request(HttpMethod.GET,"/biz/audit/todo",admin,null)).size());
         for(int stage:List.of(20,30,40)) {
-            success(testing(HttpMethod.POST,"/biz/audit",admin,Map.of("sub_id",id,"is_pass",true,"title","Synthetic approval")));
+            success(request(HttpMethod.POST,"/biz/audit",admin,Map.of("sub_id",id,"is_pass",true,"title","Synthetic approval")));
             assertEquals(stage,jdbc.queryForObject("SELECT flow_status FROM biz_material_submission WHERE sub_id=?",Integer.class,id));
         }
         assertEquals(4,count("sys_admin_operation_log"));
         assertEquals(4,jdbc.queryForObject("SELECT COUNT(*) FROM biz_audit_log WHERE sub_id=? AND operator_id=?",Integer.class,id,ADMIN));
-        assertEquals(0,success(testing(HttpMethod.GET,"/biz/audit/todo",admin,null)).size());
-        failed(testing(HttpMethod.POST,"/biz/audit",admin,Map.of("sub_id",id,"is_pass",true)));
+        assertEquals(0,success(request(HttpMethod.GET,"/biz/audit/todo",admin,null)).size());
         assertEquals(4,count("sys_admin_operation_log"));
-        String logs=success(request(HttpMethod.GET,"/admin/operations?module=ADMIN_TEST",admin,null)).toString();
-        assertTrue(logs.contains("管理员闭环测试"));assertFalse(logs.contains(PASSWORD));assertFalse(logs.contains(admin));
+        String logs=success(request(HttpMethod.GET,"/admin/operations?module=ADMIN_OPERATION",admin,null)).toString();
+        assertTrue(logs.contains("管理员直接操作"));assertFalse(logs.contains(PASSWORD));assertFalse(logs.contains(admin));
     }
     @Test void delegatedWithdrawRestoresTaskAndDoesNotLeakToNextRequest() throws Exception {
         String admin=login(ADMIN),owner=login(OWNER);long id=pendingTask(owner,false);
-        failed(request(HttpMethod.POST,"/biz/drawback/900010",admin,null));
-        success(testing(HttpMethod.POST,"/biz/drawback/900010",admin,null));
+        success(request(HttpMethod.POST,"/biz/drawback/900010",admin,null));
         assertEquals(1,jdbc.queryForObject("SELECT is_delete FROM biz_material_submission WHERE sub_id=?",Integer.class,id));
-        failed(request(HttpMethod.POST,"/biz/sub",admin,fillTask()));
-        assertEquals(1,count("sys_admin_operation_log"));
+        success(request(HttpMethod.POST,"/biz/sub",admin,fillTask()));
+        assertEquals(2,count("sys_admin_operation_log"));
     }
     @Test void allPerformanceTodosAvailableAndBusinessActorRetained() throws Exception {
         jdbc.update("INSERT INTO biz_performance(perf_id,project_id,perf_code,perf_name,dept_id,leader_id,auditor_id,principal_id,target_value,current_value,data_type,is_delete) VALUES(970001,1,'2.test','Manual',920001,?,?,?,10,0,'1',0)",OWNER,OTHER,LEADER);
         jdbc.update("INSERT INTO biz_performance_year(year_id,perf_id,year,target_value,data_type) VALUES(970002,970001,2026,10,'1')");
         String owner=login(OWNER),admin=login(ADMIN);
         success(request(HttpMethod.POST,"/performance/submit?pref_id=970001&year=2026&actual_value=3",owner,null));
-        assertEquals(0,success(request(HttpMethod.GET,"/performance/audit/todo",admin,null)).size());
-        assertEquals(1,success(testing(HttpMethod.GET,"/performance/audit/todo",admin,null)).size());
+        assertEquals(1,success(request(HttpMethod.GET,"/performance/audit/todo",admin,null)).size());
+        assertEquals(1,success(request(HttpMethod.GET,"/performance/audit/todo",admin,null)).size());
         long id=jdbc.queryForObject("SELECT MAX(sub_id) FROM biz_performance_submission",Long.class);
         for(int stage:List.of(20,30)) {
-            success(testing(HttpMethod.POST,"/performance/audit",admin,Map.of("sub_id",id,"is_pass",true,"title","Synthetic")));
+            success(request(HttpMethod.POST,"/performance/audit",admin,Map.of("sub_id",id,"is_pass",true,"title","Synthetic")));
             assertEquals(stage,jdbc.queryForObject("SELECT flow_status FROM biz_performance_submission WHERE sub_id=?",Integer.class,id));
         }
         assertEquals(2,count("sys_admin_operation_log"));
     }
-    @Test void anyCurrentAdminCanCreateAndReviewAchievementsOnlyInTestMode() throws Exception {
+    @Test void anyCurrentAdminCanCreateAndReviewAchievementsDirectly() throws Exception {
         jdbc.update("UPDATE sys_user SET role='0' WHERE user_id=?",OTHER);
         String admin=login(OTHER);
         Map<String,Object> payload=Map.of("category",1,"level","省级","achName","Synthetic test","gotTime",1767225600000L,"department","Synthetic department","isCompetition",1,"comment","Synthetic","deptId",100);
-        failed(request(HttpMethod.POST,"/achievement/add",admin,payload));
-        success(testing(HttpMethod.POST,"/achievement/add",admin,payload));
+        success(request(HttpMethod.POST,"/achievement/add",admin,payload));
         long id=jdbc.queryForObject("SELECT MAX(sub_id) FROM biz_achievement_submission",Long.class);
-        success(testing(HttpMethod.POST,"/achievement/audit",admin,Map.of("sub_id",id,"is_pass",true,"title","Synthetic")));
+        success(request(HttpMethod.POST,"/achievement/audit",admin,Map.of("sub_id",id,"is_pass",true,"title","Synthetic")));
         assertEquals(OTHER,jdbc.queryForObject("SELECT create_by FROM biz_achievement LIMIT 1",Long.class));
         assertEquals(100,jdbc.queryForObject("SELECT dept_id FROM biz_achievement LIMIT 1",Long.class));
         assertEquals(2,count("sys_admin_operation_log"));
@@ -246,17 +240,17 @@ class AdminTestApiTest {
         assertTrue(success(request(HttpMethod.GET,"/work-records/capabilities",admin,null)).path("canCreate").asBoolean()); // 正常管理员也可按所属归口部门填报。
         JsonNode record=success(request(HttpMethod.POST,"/work-records",owner,Map.of("year",2026,"month",1)));
         long id=record.path("record").path("recordId").asLong();
-        assertEquals(404,request(HttpMethod.GET,"/work-records/"+id,admin,null).getStatusCode().value());
-        assertTrue(success(testing(HttpMethod.GET,"/work-records/"+id,admin,null)).path("editable").asBoolean());
-        assertEquals(1,success(testing(HttpMethod.GET,"/work-records?status=0",admin,null)).path("total").asInt());
+        assertTrue(success(request(HttpMethod.GET,"/work-records/"+id,admin,null)).path("editable").asBoolean());
+        assertTrue(success(request(HttpMethod.GET,"/work-records/"+id,admin,null)).path("editable").asBoolean());
+        assertEquals(1,success(request(HttpMethod.GET,"/work-records?status=0",admin,null)).path("total").asInt());
         long reform=record.path("statistics").path("reformTasks").path(0).path("taskId").asLong();
         Map<String,Object> body=Map.of("version",0,"entries",List.of(Map.of("reformTaskId",reform,"keyProgress","Delegated synthetic")));
-        JsonNode saved=success(testing(HttpMethod.POST,"/work-records/"+id+"/submit",admin,body));
+        JsonNode saved=success(request(HttpMethod.POST,"/work-records/"+id+"/submit",admin,body));
         assertEquals(OWNER,saved.path("record").path("ownerId").asLong());assertEquals("Reporter "+OWNER,saved.path("record").path("ownerName").asText());
         assertFalse(saved.path("editable").asBoolean());
-        assertEquals(409,testing(HttpMethod.POST,"/work-records/"+id+"/save",admin,Map.of("version",1,"entries",List.of())).getStatusCode().value());
+        assertEquals(409,request(HttpMethod.POST,"/work-records/"+id+"/save",admin,Map.of("version",1,"entries",List.of())).getStatusCode().value());
         assertEquals(1,count("sys_admin_operation_log"));
-        assertTrue(success(testing(HttpMethod.POST,"/work-records",admin,Map.of("year",2026,"month",1))).path("statistics").path("notice").asText().startsWith("管理员测试统计"));
+        assertTrue(success(request(HttpMethod.POST,"/work-records",admin,Map.of("year",2026,"month",1))).path("statistics").path("notice").asText().startsWith("管理员统计"));
     }
     @Test void delegatedDepartmentWorkRecordKeepsOriginalDepartmentScopeDuringAdminTest() throws Exception {
         jdbc.update("INSERT INTO sys_dept(dept_id,dept_name,status,is_delete) VALUES(920002,'Other department','0',0)");
@@ -265,18 +259,18 @@ class AdminTestApiTest {
         JsonNode draft=success(request(HttpMethod.POST,"/work-records",department,Map.of("year",2026,"month",1)));
         assertEquals(1,draft.path("statistics").path("totalTasks").asInt());
         long id=draft.path("record").path("recordId").asLong();String path="/work-records/"+id;
-        assertEquals(400,testing(HttpMethod.POST,path+"/submit",admin,Map.of("version",0,"entries",List.of(Map.of("reformTaskId",900100,"keyProgress","Outside original department")))).getStatusCode().value());
+        assertEquals(400,request(HttpMethod.POST,path+"/submit",admin,Map.of("version",0,"entries",List.of(Map.of("reformTaskId",900100,"keyProgress","Outside original department")))).getStatusCode().value());
         assertEquals(0,jdbc.queryForObject("SELECT version FROM biz_work_record WHERE record_id=?",Integer.class,id));
-        JsonNode saved=success(testing(HttpMethod.POST,path+"/submit",admin,Map.of("version",0,"entries",List.of(Map.of("reformTaskId",900000,"keyProgress","Delegated department report")))));
+        JsonNode saved=success(request(HttpMethod.POST,path+"/submit",admin,Map.of("version",0,"entries",List.of(Map.of("reformTaskId",900000,"keyProgress","Delegated department report")))));
         assertEquals(VIEWER,saved.path("record").path("ownerId").asLong());
         assertEquals(1,saved.path("statistics").path("totalTasks").asInt());
         assertTrue(saved.path("statistics").path("notice").asText().startsWith("归口部门统计"));
-        assertEquals(ADMIN,jdbc.queryForObject("SELECT operator_id FROM sys_admin_operation_log WHERE module='ADMIN_TEST' ORDER BY log_id DESC LIMIT 1",Long.class));
+        assertEquals(ADMIN,jdbc.queryForObject("SELECT operator_id FROM sys_admin_operation_log WHERE module='ADMIN_OPERATION' ORDER BY log_id DESC LIMIT 1",Long.class));
         JsonNode otherDraft=success(request(HttpMethod.POST,"/work-records",department,Map.of("year",2026,"month",2)));
         long draftId=otherDraft.path("record").path("recordId").asLong();
         String snapshot=jdbc.queryForObject("SELECT statistics_json FROM biz_work_record_snapshot WHERE record_id=?",String.class,draftId);
         jdbc.update("UPDATE sys_user SET status='0' WHERE user_id=?",VIEWER);
-        assertEquals(401,testing(HttpMethod.POST,"/work-records/"+draftId+"/statistics/refresh",admin,Map.of("version",0)).getStatusCode().value());
+        assertEquals(401,request(HttpMethod.POST,"/work-records/"+draftId+"/statistics/refresh",admin,Map.of("version",0)).getStatusCode().value());
         assertEquals(snapshot,jdbc.queryForObject("SELECT statistics_json FROM biz_work_record_snapshot WHERE record_id=?",String.class,draftId));
         assertEquals(0,jdbc.queryForObject("SELECT version FROM biz_work_record WHERE record_id=?",Integer.class,draftId));
     }
@@ -284,16 +278,14 @@ class AdminTestApiTest {
         String owner=login(OWNER),admin=login(ADMIN);
         JsonNode draft=success(request(HttpMethod.POST,"/core-indicators/1/draft",owner,Map.of("year",2026,"month",1)));
         long id=draft.path("reportId").asLong();String path="/core-indicators/reports/"+id;
-        failed(request(HttpMethod.PUT,path,admin,Map.of("version",0,"actualValue",2,"previousYearValue",1)));
-        success(testing(HttpMethod.PUT,path,admin,Map.of("version",0,"actualValue",2,"previousYearValue",1)));
-        JsonNode submitted=success(testing(HttpMethod.POST,path+"/submit",admin,Map.of("version",1)));
+        success(request(HttpMethod.PUT,path,admin,Map.of("version",0,"actualValue",2,"previousYearValue",1)));
+        JsonNode submitted=success(request(HttpMethod.POST,path+"/submit",admin,Map.of("version",1)));
         assertEquals(ADMIN,submitted.path("submitBy").asLong());
         String review="/core-indicators/reports/"+submitted.path("reportId").asLong()+"/audit";
-        assertEquals(1,success(testing(HttpMethod.GET,"/core-indicators/audit/todo",admin,null)).size());
-        assertEquals(403,request(HttpMethod.POST,review,admin,Map.of("version",0,"pass",true)).getStatusCode().value());
-        assertEquals(20,success(testing(HttpMethod.POST,review,admin,Map.of("version",0,"pass",true))).path("flowStatus").asInt());
-        assertEquals(409,testing(HttpMethod.POST,review,admin,Map.of("version",0,"pass",true)).getStatusCode().value());
-        assertEquals(30,success(testing(HttpMethod.POST,review,admin,Map.of("version",1,"pass",true))).path("flowStatus").asInt());
+        assertEquals(1,success(request(HttpMethod.GET,"/core-indicators/audit/todo",admin,null)).size());
+        assertEquals(20,success(request(HttpMethod.POST,review,admin,Map.of("version",0,"pass",true))).path("flowStatus").asInt());
+        assertEquals(409,request(HttpMethod.POST,review,admin,Map.of("version",0,"pass",true)).getStatusCode().value());
+        assertEquals(30,success(request(HttpMethod.POST,review,admin,Map.of("version",1,"pass",true))).path("flowStatus").asInt());
         assertEquals(4,count("sys_admin_operation_log"));
         assertEquals(3,jdbc.queryForObject("SELECT COUNT(*) FROM biz_core_audit_log WHERE operator_id=?",Integer.class,ADMIN));
         assertEquals(7,jdbc.queryForObject("SELECT current_value FROM biz_performance WHERE perf_id=960001",Integer.class));
@@ -302,10 +294,24 @@ class AdminTestApiTest {
         String admin=login(ADMIN);Map<String,Object> body=fillTask();
         jdbc.execute("CREATE TRIGGER reject_admin_test_trace BEFORE INSERT ON sys_admin_operation_log FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Synthetic trace failure'");
         try {
-            assertEquals(500,testing(HttpMethod.POST,"/biz/sub",admin,body).getStatusCode().value());
+            assertEquals(500,request(HttpMethod.POST,"/biz/sub",admin,body).getStatusCode().value());
             assertEquals(0,count("biz_material_submission"));assertEquals(0,count("biz_audit_log"));assertEquals(0,count("sys_notice"));
             assertEquals(0,jdbc.queryForObject("SELECT current_value FROM biz_task WHERE task_id=900010",Integer.class));
             assertEquals(0,count("sys_admin_operation_log"));
         } finally {jdbc.execute("DROP TRIGGER reject_admin_test_trace");}
+    }
+    @Test void directAdministratorPrivilegesUseCurrentDatabaseRoleAndDoNotLeakToOtherAccounts() throws Exception {
+        String admin=login(ADMIN),viewer=login(VIEWER);
+        long id=pendingTask(admin,false);
+        assertEquals(ADMIN,jdbc.queryForObject("SELECT submit_by FROM biz_material_submission WHERE sub_id=?",Long.class,id));
+        failed(request(HttpMethod.POST,"/biz/audit",viewer,Map.of("sub_id",id,"is_pass",true)));
+        assertEquals(10,jdbc.queryForObject("SELECT flow_status FROM biz_material_submission WHERE sub_id=?",Integer.class,id));
+        jdbc.update("UPDATE sys_user SET role='1' WHERE user_id=?",ADMIN);
+        failed(request(HttpMethod.POST,"/biz/audit",admin,Map.of("sub_id",id,"is_pass",true)));
+        assertEquals(1,count("sys_admin_operation_log"));
+        jdbc.update("UPDATE sys_user SET role='0',status='0' WHERE user_id=?",ADMIN);
+        assertEquals(403,request(HttpMethod.GET,"/biz/tasks",admin,null).getStatusCode().value());
+        jdbc.update("UPDATE sys_user SET status='1',force_password_change=1 WHERE user_id=?",ADMIN);
+        assertEquals(428,request(HttpMethod.GET,"/biz/tasks",admin,null).getStatusCode().value());
     }
 }
