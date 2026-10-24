@@ -111,6 +111,11 @@ public interface WorkRecordMapper {
             + "ORDER BY record_year DESC,record_month DESC,owner_id,record_id</script>")
     List<BizWorkRecord> filterRows(@Param("userId") Long userId, @Param("viewAll") boolean viewAll,
                                   @Param("adminTest") boolean adminTest, @Param("year") Integer year, @Param("month") Integer month, @Param("ownerId") Long ownerId, @Param("status") Integer status);
+    @Select("<script>SELECT record_id FROM biz_work_record" + VISIBLE + "</script>")
+    List<Long> visibleFilterIds(@Param("userId") Long userId, @Param("viewAll") boolean viewAll,
+                              @Param("adminTest") boolean adminTest, @Param("year") Integer year,
+                              @Param("month") Integer month, @Param("ownerId") Long ownerId, @Param("status") Integer status);
+
     @Select("<script>SELECT COUNT(*) FROM biz_work_record" + VISIBLE + "</script>")
     long count(@Param("userId") Long userId, @Param("viewAll") boolean viewAll, @Param("adminTest") boolean adminTest,
                @Param("year") Integer year, @Param("month") Integer month,

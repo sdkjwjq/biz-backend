@@ -45,6 +45,14 @@ const fs=require('node:fs/promises'),path=require('node:path'),assert=require('n
   for(const route of ['works/performance','works/achievement','core-indicators','work-records','notice','expert-reviews?view=tasks','works/budget','audit','admin/accounts','admin/permissions']){
    await page.goto(state.frontend+'/home/'+route);await expect(page.locator('.query-filter-bar').first().locator('.basic-fields > .query-field')).toHaveCount(4);checks.push(route+'-basic-controls');
   }
+  for(let month=1;month<=12;month++){const created=await api.post('/api/work-records',{headers:{Authorization:token},data:{year:2025,month}});assert.equal(created.status(),200,await created.text());}
+  await page.goto(state.frontend+'/home/work-records');
+  const recordBar=page.locator('[aria-label="纪实筛选"]');await recordBar.getByRole('combobox',{name:'纪实年度',exact:true}).click();await page.getByRole('option',{name:'2025年',exact:true}).click();await recordBar.getByRole('button',{name:'查询',exact:true}).click();
+  await expect(page.locator('.el-pagination .btn-next')).toBeEnabled();
+  const recordPageResponse=page.waitForResponse(r=>r.url().includes('/list-filters/records?')&&new URL(r.url()).searchParams.get('responseMode')==='page');
+  await page.locator('.el-pagination .btn-next').click();
+  const recordPage=await recordPageResponse;assert.equal(recordPage.status(),200);const recordBody=await recordPage.json();assert.ok(Array.isArray(recordBody.items));assert.ok(!Object.hasOwn(recordBody,'ids'));
+  await expect(page.locator('[aria-label="纪实筛选"] .basic-fields > .query-field')).toHaveCount(4);checks.push('record-list-uses-paged-response-without-losing-filter-controls');
   await page.goto(state.frontend+'/home/admin/accounts');await page.getByRole('tab',{name:'部门管理',exact:true}).click();await expect(page.locator('[aria-label="部门筛选"] .basic-fields > .query-field')).toHaveCount(3);checks.push('department-basic-and-advanced-controls');
   await page.goto(state.frontend+'/home/works/budget');await page.getByRole('button',{name:/版本记录|历史版本/}).click();await expect(page.locator('[aria-label="预算版本筛选"] .basic-fields > .query-field')).toHaveCount(4);checks.push('budget-version-basic-controls');
   await page.goto(state.frontend+'/home/admin/operations');await expect(page.locator('[aria-label="操作记录筛选"] .basic-fields > .query-field')).toHaveCount(4);checks.push('operation-log-basic-controls');

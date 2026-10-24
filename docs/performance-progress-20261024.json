@@ -60,5 +60,22 @@
       "compatibility": "Ordered legacy page concatenation equals new projection for owner, other user, administrator and viewer; isolated database only"
     },
     "remaining": "Full authorized projection remains; SQL predicate pagination and workload benchmarks are not yet implemented"
+  },
+  "workRecordSqlPagination": {
+    "implementation": "Optional paged response for year, month, owner, status, current department and own-record predicates. Same live visibility; SQL count and LIMIT precede materializing record bodies; no entry narratives or all matching IDs in response. Work-record page navigation uses this path.",
+    "verification": {
+      "work_record_tests": 36,
+      "fixture_rows": 120,
+      "comparison": "Same items, ordering, counts and clamped pages; unauthorized status codes remain unchanged",
+      "browser": {
+        "checks": 32,
+        "errors": [],
+        "result": "passed"
+      },
+      "frontend_static_check": "passed",
+      "frontend_build": "passed",
+      "backend_package": "passed"
+    },
+    "remaining": "Initial filter metadata and complex narrative/root/date predicates retain legacy projection; authorization still reads permitted ID metadata; no P95 or concurrency claim"
   }
 }

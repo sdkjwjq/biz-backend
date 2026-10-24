@@ -729,6 +729,26 @@ class WorkRecordApiTest {
         assertEquals(before,jdbc.queryForObject("SELECT statistics_json FROM biz_work_record_snapshot WHERE record_id=?",String.class,id));
     }
 
+    @Test void pagedRecordFiltersMatchLegacyBeyondOneHundredRows() throws Exception {
+        for (long owner : List.of(OWNER,OTHER,LEADER,VIEWER,OFFICE)) {
+            for(int year=2025;year<=2026;year++)for(int month=1;month<=12;month++) {
+                jdbc.update("INSERT INTO biz_work_record(owner_id,owner_name,record_year,record_month,status,create_time,update_time) VALUES(?,?,?,?,1,NOW(),NOW())",
+                        owner,"Reporter "+owner,year,month);
+            }
+        }
+        String token=login(ADMIN);
+        for (String filters:List.of("", "&f.year=2026", "&f.deptId=920001&f.deptId=920002", "&f.ownerId="+OTHER, "&f.mine=&f.mine=no")) {
+            for(int page:List.of(1,2,12,99)) {
+                String path="/list-filters/records?pageSize=10&page="+page+filters;
+                JsonNode legacy=ok(request(HttpMethod.GET,path,token,null));
+                JsonNode paged=ok(request(HttpMethod.GET,path+"&responseMode=page&includeFields=false",token,null));
+                for(String key:List.of("items","total","page","pageSize"))
+                    assertEquals(legacy.path(key),paged.path(key),filters+" page="+page+" "+key);
+                if(filters.isEmpty())assertEquals(120,paged.path("total").asInt());
+            }
+        }
+    }
+
     @Test void listFiltersPaginationAndNoBusinessWritesFromStatistics() throws Exception {
         String token=login(OWNER); create(token,1); create(token,2);
         assertEquals(2,ok(request(HttpMethod.GET,"/work-records?pageSize=1",token,null)).path("total").asInt());
@@ -746,6 +766,26 @@ class WorkRecordApiTest {
                     json.readTree(json.writeValueAsString(recordService.filterRows(actor,null))),
                     "Filter projection must preserve ordered visibility for actor " + actor);
         }
+        for (long actor : List.of(OWNER, OTHER, ADMIN, VIEWER)) {
+            String actorToken=login(actor);
+            for (String filters : List.of("", "&f.year=2026", "&f.month=1", "&f.month=12",
+                    "&f.ownerId="+OWNER+"&f.ownerId="+OTHER, "&f.status=1", "&f.mine=yes", "&f.mine=no",
+                    "&f.deptId=920001", "&f.deptId=missing", "&f.year=2026&f.month=2&f.status=0")) {
+                String path="/list-filters/records?pageSize=1&page=99"+filters;
+                var legacyResponse=request(HttpMethod.GET,path,actorToken,null);
+                var pagedResponse=request(HttpMethod.GET,path+"&responseMode=page&includeFields=false",actorToken,null);
+                assertEquals(legacyResponse.getStatusCode(),pagedResponse.getStatusCode());
+                if (legacyResponse.getStatusCode().value()==403) continue;
+                JsonNode legacy=ok(legacyResponse);
+                JsonNode paged=ok(pagedResponse);
+                for(String key:List.of("items","total","page","pageSize"))
+                    assertEquals(legacy.path(key),paged.path(key),"actor="+actor+" filter="+filters+" field="+key);
+                assertFalse(paged.has("ids"));
+                assertFalse(paged.has("fields"));
+            }
+        }
+        assertEquals(400,request(HttpMethod.GET,"/list-filters/records?responseMode=page&includeFields=false&f.year=missing",token,null).getStatusCode().value());
+        assertEquals(400,request(HttpMethod.GET,"/list-filters/records?responseMode=page&includeFields=false&f.month=13",token,null).getStatusCode().value());
         List<Map<String,Object>> before=jdbc.queryForList("SELECT * FROM biz_task ORDER BY task_id");
         preview(token,1); preview(token,9);
         assertEquals(before,jdbc.queryForList("SELECT * FROM biz_task ORDER BY task_id"));

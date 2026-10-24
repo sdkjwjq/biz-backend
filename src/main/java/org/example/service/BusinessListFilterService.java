@@ -27,6 +27,7 @@ public class BusinessListFilterService {
     @org.springframework.beans.factory.annotation.Autowired private AdminManagementMapper administration;
     @org.springframework.beans.factory.annotation.Autowired private AdminManagementService management;
     @org.springframework.beans.factory.annotation.Autowired private BudgetService budget;
+    @org.springframework.beans.factory.annotation.Autowired private WorkRecordFilterPageService recordPages;
     public record Data(List<Map<String,Object>> rows,List<Field> fields){}
     public Map<String,Object> query(String domain,Long actor,MultiValueMap<String,String> params){
         if(domain.equals("budget"))return budgetQuery(actor,params);
@@ -35,6 +36,7 @@ public class BusinessListFilterService {
             Set<String> supported=Set.of("f.keyword","f.deptId","f.status","f.role","f.force","f.leadership");
             if(params.keySet().stream().filter(k->k.startsWith("f.")).allMatch(supported::contains))return accountPage(params);
         }
+        if(domain.equals("records") && recordPages.supports(params)) return recordPages.query(actor,params);
         boolean exporting="export".equals(params.getFirst("purpose"));
         if(exporting){if(domain.equals("admin-operations"))access.requireAdmin(actor);else if(domain.equals("achievements"))access.require(actor,"achievements.export");else throw new AdminManagementException(400,"该模块不支持此导出方式");}
         Data data=domain.equals("audits")?auditData(actor,params.getFirst("tab")):data(domain,actor,params.getFirst("f.year"),params.getFirst("f.month"));var query=new ListFilterQuery(params,data.fields());

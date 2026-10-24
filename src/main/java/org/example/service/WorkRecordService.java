@@ -258,6 +258,13 @@ public class WorkRecordService {
         return content;
     }
 
+    /** Same visibility as list(), without reading narratives or repeated counts. */
+    public List<Long> visibleFilterIds(Long userId) {
+        Capabilities access = capabilities(userId);
+        if (permissions.enforced(userId)) return permissions.recordIds(userId);
+        return records.visibleFilterIds(userId, access.canViewAll(), AdminTestContext.enabled(userId), null, null, null, null);
+    }
+
     /** Compatibility projection for advanced filters: resolve visibility once, without repeated page counts. */
     @Transactional(readOnly=true, isolation=Isolation.REPEATABLE_READ)
     public List<BizWorkRecord> filterRows(Long userId, Integer year) {
