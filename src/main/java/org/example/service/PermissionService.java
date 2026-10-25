@@ -71,8 +71,16 @@ public class PermissionService {
         }
         a.getRequest().setAttribute(PermissionService.class.getName()+":coreReporters",new HashSet<>(jdbc.queryForList("SELECT t.leader_id FROM biz_task t WHERE t.level=3 AND t.phase BETWEEN 2025 AND 2029 AND COALESCE(t.is_delete,0)=0 UNION SELECT c.leader_id FROM biz_level4_task c JOIN biz_task t ON t.task_id=c.parent_id WHERE t.level=3 AND t.phase BETWEEN 2025 AND 2029 AND COALESCE(t.is_delete,0)=0 AND COALESCE(c.is_delete,0)=0",Long.class)));
         a.getRequest().setAttribute(PermissionService.class.getName()+":coreReviewers",new HashSet<>(jdbc.queryForList("SELECT p.principal_id FROM biz_performance p JOIN biz_core_indicator c ON BINARY c.indicator_code=BINARY p.perf_code WHERE COALESCE(p.is_delete,0)=0 UNION SELECT r.current_handler_id FROM biz_core_report r JOIN biz_core_indicator c ON c.indicator_id=r.indicator_id AND BINARY c.indicator_code=BINARY r.performance_code WHERE r.flow_status IN(10,20)",Long.class)));
-        a.getRequest().setAttribute(PermissionService.class.getName()+":recordReporters",records.fillableAccountIds(accounts));
+        a.getRequest().setAttribute(PermissionService.class.getName()+":recordReporters",records.fillableAccountIdsSql(accounts));
         for(var account:accounts)a.getRequest().setAttribute(PermissionService.class.getName()+":policy:"+account.getUserId(),policies.getOrDefault(account.getUserId(),new Policy("LEGACY",Map.of(),Map.of(),List.of(),0)));
+    }
+    public void releaseAccountList(Collection<SysUser> accounts){
+        if(RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes a){Long current=actor();for(var account:accounts)if(!Objects.equals(current,account.getUserId()))a.getRequest().removeAttribute(PermissionService.class.getName()+":policy:"+account.getUserId());}
+    }
+    public Map<String,Object> accountFilterValues(SysUser user){
+        var roles=assignedRoleCodes(user);var p=policy(user.getUserId());boolean expert=roles().stream().anyMatch(r->roles.contains(r.code())&&r.enabled()&&r.permissions().contains("expert.read"));
+        if(p.overrides().containsKey("expert.read"))expert=Boolean.TRUE.equals(p.overrides().get("expert.read"));
+        return Map.of("roles",roles,"personal",!p.overrides().isEmpty()||!p.scopes().isEmpty()||!p.roles().isEmpty()||!"LEGACY".equals(p.mode())?"yes":"no","expert",expert?"yes":"no");
     }
     public SysDept department(Long id){return id==null?null:cached("department:"+id,()->Optional.ofNullable(users.getDeptById(id))).orElse(null);}
     public List<PermissionCatalog.Role> roles(){return cached("roleDefinitions",this::loadRoles);}
@@ -119,7 +127,7 @@ public class PermissionService {
         if(AchievementPermissionUtil.isAchievementAuditor(u))result.add("ACHIEVEMENT_REVIEWER");
         if(recordViewers.contains(id))result.add("RECORD_VIEWER");
         if(cached("recordOwnerIds",()->new HashSet<>(jdbc.queryForList("SELECT DISTINCT owner_id FROM biz_work_record WHERE delete_marker=0",Long.class))).contains(id))result.add("RECORD_OWNER");
-        if(accountMembership("recordReporters",id,()->!records.fillableYears(u).isEmpty()))result.add("RECORD_REPORTER");
+        if(accountMembership("recordReporters",id,()->RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attributes&&"GET".equals(attributes.getRequest().getMethod())?records.fillableAccountIdsSql(List.of(u)).contains(id):!records.fillableYears(u).isEmpty()))result.add("RECORD_REPORTER");
         if(accountMembership("coreReporters",id,()->jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM biz_task t WHERE t.level=3 AND t.phase BETWEEN 2025 AND 2029 AND COALESCE(t.is_delete,0)=0 AND (t.leader_id=? OR EXISTS(SELECT 1 FROM biz_level4_task c WHERE c.parent_id=t.task_id AND c.leader_id=? AND COALESCE(c.is_delete,0)=0)))",Integer.class,id,id)==1))result.add("CORE_REPORTER");
         if(accountMembership("coreReviewers",id,()->jdbc.queryForObject("SELECT (EXISTS(SELECT 1 FROM biz_performance p JOIN biz_core_indicator c ON BINARY c.indicator_code=BINARY p.perf_code WHERE p.principal_id=? AND COALESCE(p.is_delete,0)=0) OR EXISTS(SELECT 1 FROM biz_core_report r JOIN biz_core_indicator c ON c.indicator_id=r.indicator_id AND BINARY c.indicator_code=BINARY r.performance_code WHERE r.current_handler_id=? AND r.flow_status IN(10,20)))",Integer.class,id,id)==1))result.add("CORE_REVIEWER");
         return result;

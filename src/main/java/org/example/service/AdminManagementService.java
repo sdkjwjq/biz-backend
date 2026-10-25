@@ -406,9 +406,11 @@ public class AdminManagementService {
         rows.sort((left, right) -> {
             Instant leftTime = operationTime(left.get("createTime"));
             Instant rightTime = operationTime(right.get("createTime"));
-            if (leftTime == null) return rightTime == null ? 0 : 1;
-            if (rightTime == null) return -1;
-            return rightTime.compareTo(leftTime);
+            int time=leftTime==null?(rightTime==null?0:1):rightTime==null?-1:rightTime.compareTo(leftTime);
+            if(time!=0)return time;
+            var types=List.of("ADMIN","OWNERSHIP","RELATION","BUDGET","WORK_RECORD");
+            int source=Integer.compare(types.indexOf(string(left.get("recordType"))),types.indexOf(string(right.get("recordType"))));
+            return source!=0?source:Long.compare(longValue(right.get("recordId")),longValue(left.get("recordId")));
         });
         return rows;
     }

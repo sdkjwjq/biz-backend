@@ -33,16 +33,14 @@ public class BusinessListFilterService {
     @org.springframework.beans.factory.annotation.Autowired private BizMapper auditMapper;
     @org.springframework.beans.factory.annotation.Autowired private BudgetVersionListService budgetVersions;
     @org.springframework.beans.factory.annotation.Autowired private OperationFilterPageService operationPages;
+    @org.springframework.beans.factory.annotation.Autowired private AccountFilterPageService accountPages;
+    @org.springframework.beans.factory.annotation.Autowired private FilterOptionReadService optionReads;
+    @org.springframework.beans.factory.annotation.Autowired private AuditOptionReadService auditOptionReads;
     public record Data(List<Map<String,Object>> rows,List<Field> fields,List<Map<String,Object>> catalog){public Data(List<Map<String,Object>> rows,List<Field> fields){this(rows,fields,List.of());}}
     public Map<String,Object> query(String domain,Long actor,MultiValueMap<String,String> params){
         if(domain.equals("budget"))return budgetQuery(actor,params);
         if(domain.equals("admin-users")&&!"export".equals(params.getFirst("purpose"))&&"page".equals(params.getFirst("responseMode"))&&"false".equals(params.getFirst("includeFields"))){
-            access.requireAdmin(actor);
-            Set<String> supported=Set.of("f.keyword","f.deptId","f.status","f.role","f.force","f.leadership");
-            if(params.keySet().stream().filter(k->k.startsWith("f.")).allMatch(supported::contains)&&str(params.getFirst("f.keyword")).codePoints().allMatch(c->c<128))return accountPage(params);
-            var data=userData();var predicate=new ListFilterQuery(params,data.fields());var matching=data.rows().stream().filter(r->predicate.matches(r,data.fields())).toList();
-            int size=Math.min(100,positive(params.getFirst("pageSize"),10)),page=Math.min(positive(params.getFirst("page"),1),Math.max(1,(matching.size()+size-1)/size));
-            return Map.of("items",matching.subList((page-1)*size,Math.min(page*size,matching.size())).stream().map(r->r.get("item")).toList(),"total",matching.size(),"page",page,"pageSize",size);
+            return accountPages.query(actor,params);
         }
         if(domain.equals("budget-versions")&&"page".equals(params.getFirst("responseMode"))&&"true".equals(params.getFirst("separateOptions")))return budgetVersions.page(actor,params,definitions(domain,actor,params));
         if(domain.equals("records") && recordPages.supports(params)) return recordPages.query(actor,params);
@@ -122,6 +120,9 @@ public class BusinessListFilterService {
         if(key==null||key.isBlank())return Map.of("permissionVersion",access.state(actor).revision(),"fields",definitions.stream().map(f->{var map=row(f);map.put("remote",f.type().equals("multi")&&f.options().isEmpty());return map;}).toList());
         var definition=definitions.stream().filter(f->f.key().equals(key)).findFirst().orElseThrow(()->new AdminManagementException(400,"不支持的选项字段"));
         if(!Set.of("multi","select").contains(definition.type()))throw new AdminManagementException(400,"该字段不支持选项查询");
+        if(domain.equals("audits")&&definition.options().isEmpty()){var projected=auditOptionReads.query(key,actor,params);if(projected!=null)return projected;}
+        if(domain.equals("admin-operations")&&definition.options().isEmpty()){var projected=operationPages.options(actor,key,params);if(projected!=null)return projected;}
+        if(definition.options().isEmpty()){var projected=optionReads.query(domain,key,actor,params);if(projected!=null)return projected;}
         List<Field> fields;
         if(!definition.options().isEmpty())fields=definitions;
         else if(domain.equals("admin-users"))fields=(List<Field>)accountOptions(actor).get("fields");
@@ -318,7 +319,7 @@ public class BusinessListFilterService {
         return Map.of("fields",accountFields(rows,roles,departments));
     }
     private Data roleData(){
-        var rows=new ArrayList<Map<String,Object>>();var accounts=accountCandidates().stream().filter(u->!Integer.valueOf(1).equals(u.getIsDelete())).toList();access.prepareAccountList(accounts);Set<String> assigned=new HashSet<>();for(var account:accounts)assigned.addAll(access.assignedRoleCodes(account));
+        var rows=new ArrayList<Map<String,Object>>();Set<String> assigned=accountPages.assignedCodes();
         for(var role:access.roles()){var r=row(role);r.put("id",role.code());r.put("keyword",role.name()+" "+role.code());r.put("enabled",flag(role.enabled()));r.put("builtin",flag(role.builtin()));r.put("assigned",flag(assigned.contains(role.code())));r.put("modules",role.permissions().stream().map(p->p.split("\\.")[0]).distinct().toList());List<String> modes=new ArrayList<>();for(var scope:role.scopes().values())if(scope instanceof Map<?,?> m)modes.add(str(m.get("mode")));r.put("scopeTypes",modes);rows.add(r);}
         List<Field> f=new ArrayList<>();plain(f,"keyword","角色名称","text",true,"基础");select(f,"enabled","启停状态",true,"yes","启用","no","停用");select(f,"builtin","模板来源",true,"yes","内置","no","自定义");select(f,"assigned","已分配人员",true,"yes","是","no","否");multi(f,"permissions","包含功能权限",false,rows,PermissionCatalog.ACTIONS);multi(f,"modules","业务模块",false,rows,PermissionCatalog.MODULES);multi(f,"scopeTypes","数据范围类型",false,rows,Map.of("ALL","全校","OWN","本人","NONE","无","CUSTOM","自定义"));return new Data(rows,f);
     }

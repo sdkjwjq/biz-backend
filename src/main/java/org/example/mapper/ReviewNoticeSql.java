@@ -24,7 +24,7 @@ public final class ReviewNoticeSql {
 
     public static String jdbcVisibleFrom() { return visibleFrom().replace("#{userId}","?"); }
 
-    public static String visible() { return "SELECT n.*" + visibleFrom(); }
+    public static String visible() { return "SELECT n.*" + visibleFrom()+" ORDER BY n.create_time IS NULL,n.create_time DESC,n.notice_id DESC"; }
 
     public static String unreadCount() {
         return "SELECT COUNT(*)" + visibleFrom() + " AND BINARY n.is_read = BINARY '0'";

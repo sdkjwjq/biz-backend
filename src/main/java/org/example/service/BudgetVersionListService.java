@@ -41,13 +41,25 @@ public class BudgetVersionListService {
             where+=" AND BINARY COALESCE(CAST("+column+" AS CHAR),'missing') IN ("+String.join(",",Collections.nCopies(values.size(),"?"))+")";args.addAll(values);
         }
         boolean date=params.keySet().stream().anyMatch(k->k.startsWith("f.createTime"));
-        boolean ties=!jdbc.queryForList("SELECT v.year,v.month,v.version_no "+FROM+where+" GROUP BY v.year,v.month,v.version_no HAVING COUNT(*)>1 LIMIT 1",args.toArray()).isEmpty();
         long total;List<Map<String,Object>> items;
-        if(date||ties){
-            var matched=rows(actor).stream().peek(this::project).filter(r->query.matches(r,fields)).toList();total=matched.size();int page=(int)Math.min(requested,Math.max(1,(total+size-1)/size));items=matched.subList((page-1)*size,Math.min(page*size,matched.size()));
+        if(date){
+            var collector=new BoundedFilterPage<Map<String,Object>>(requested,size);
+            JdbcProjectionStream.read(jdbc,SELECT+FROM+where+ORDER,args,row->{project(row);if(query.matches(row,fields))collector.accept(row);});
+            var result=collector.result();total=result.total();items=result.items();
         }else{
-            total=jdbc.queryForObject("SELECT COUNT(*) "+FROM+where,Long.class,args.toArray());int page=(int)Math.min(requested,Math.max(1,(total+size-1)/size));args.add(size);args.add((long)(page-1)*size);
-            items=jdbc.queryForList(SELECT+FROM+where+ORDER+" LIMIT ? OFFSET ?",args.toArray());items.forEach(this::project);
+            total=jdbc.queryForObject("SELECT COUNT(*) "+FROM+where,Long.class,args.toArray());int page=(int)Math.min(requested,Math.max(1,(total+size-1)/size));var bindings=new ArrayList<>(args);bindings.add(size);bindings.add((long)(page-1)*size);
+            items=jdbc.queryForList(SELECT+",COUNT(*) OVER(PARTITION BY v.year,v.month,v.version_no) _duplicates "+FROM+where+ORDER+" LIMIT ? OFFSET ?",bindings.toArray());
+            Set<String> repaired=new HashSet<>();
+            for(int index=0;index<items.size();index++){
+                var row=items.get(index);String group=row.get("year")+":"+row.get("month")+":"+row.get("versionNo");
+                if(repaired.contains(group)||((Number)row.get("_duplicates")).longValue()<=1||!repaired.add(group))continue;
+                var beforeArgs=new ArrayList<>(args);Collections.addAll(beforeArgs,row.get("year"),row.get("year"),row.get("month"),row.get("year"),row.get("month"),row.get("versionNo"));
+                long before=jdbc.queryForObject("SELECT COUNT(*) "+FROM+where+" AND (v.year>? OR (v.year=? AND v.month>?) OR (v.year=? AND v.month=? AND v.version_no>?))",Long.class,beforeArgs.toArray());
+                long localStart=Math.max(0,(long)(page-1)*size-before),localEnd=Math.min(((Number)row.get("_duplicates")).longValue(),(long)page*size-before);var replacements=new ArrayList<Map<String,Object>>();long[] position={0};var groupArgs=new ArrayList<>(args);Collections.addAll(groupArgs,row.get("year"),row.get("month"),row.get("versionNo"));
+                JdbcProjectionStream.read(jdbc,SELECT+FROM+where+" AND v.year=? AND v.month=? AND v.version_no=?"+ORDER,groupArgs,value->{long offset=position[0]++;if(offset>=localStart&&offset<localEnd)replacements.add(value);});
+                for(int n=0;n<replacements.size();n++)items.set(index+n,replacements.get(n));
+            }
+            items.forEach(row->{row.remove("_duplicates");project(row);});
         }
         var output=items.stream().map(r->{var item=new LinkedHashMap<>(r);item.remove("effective");return item;}).toList();
         return Map.of("items",output,"total",total,"page",(int)Math.min(requested,Math.max(1,(total+size-1)/size)),"pageSize",size);

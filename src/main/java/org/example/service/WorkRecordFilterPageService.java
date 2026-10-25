@@ -60,7 +60,7 @@ public class WorkRecordFilterPageService {
             var selected = params.getOrDefault("f."+entry.getKey(),List.of()).stream()
                     .filter(v -> v!=null && !v.isBlank()).distinct().toList();
             if (selected.isEmpty()) continue;
-            where.append(" AND COALESCE(CAST(").append(entry.getValue()).append(" AS CHAR),'missing') IN (")
+            where.append(" AND BINARY COALESCE(CAST(").append(entry.getValue()).append(" AS CHAR),'missing') IN (")
                     .append(String.join(",",Collections.nCopies(selected.size(),"?"))).append(")");
             args.addAll(selected);
         }
@@ -79,27 +79,32 @@ public class WorkRecordFilterPageService {
         if (dates || narrative || roots) {
             // Retain the legacy JSON/date matcher, including its timezone and direct-equality semantics.
             // Reading only IDs and dates avoids every narrative and reform-entry body on this path.
-            var metadata=jdbc.query("SELECT r.record_id,r.submit_time,r.update_time"+(narrative?",r.problems,r.next_focus,r.other_matters":"")+from+where,
-                    BeanPropertyRowMapper.newInstance(BizWorkRecord.class),args.toArray());
-            Map<Long,List<Map<String,Object>>> entries=new HashMap<>();
-            if(narrative||roots)for(int offset=0;offset<metadata.size();offset+=500){
-                var batch=metadata.subList(offset,Math.min(offset+500,metadata.size())).stream().map(BizWorkRecord::getRecordId).toList();
-                for(var entry:jdbc.queryForList("SELECT record_id,reform_task_id,key_progress,stage_results,typical_practices FROM biz_work_record_entry WHERE record_id IN ("+String.join(",",Collections.nCopies(batch.size(),"?"))+")",batch.toArray()))
-                    entries.computeIfAbsent(((Number)entry.get("record_id")).longValue(),k->new ArrayList<>()).add(entry);
+            var collector=new BoundedFilterPage<Long>(requestedPage,size);
+            for(int offset=0;;offset+=BoundedFilterPage.BATCH_SIZE){
+                var batchArgs=new ArrayList<>(args);batchArgs.add(BoundedFilterPage.BATCH_SIZE);batchArgs.add(offset);
+                var metadata=jdbc.query("SELECT r.record_id,r.submit_time,r.update_time"+(narrative?",r.problems,r.next_focus,r.other_matters":"")+from+where
+                        +" ORDER BY r.record_year DESC,r.record_month DESC,r.owner_id,r.record_id LIMIT ? OFFSET ?",
+                        BeanPropertyRowMapper.newInstance(BizWorkRecord.class),batchArgs.toArray());
+                Map<Long,List<Map<String,Object>>> entries=new HashMap<>();
+                if((narrative||roots)&&!metadata.isEmpty()){
+                    var batch=metadata.stream().map(BizWorkRecord::getRecordId).toList();
+                    for(var entry:jdbc.queryForList("SELECT record_id,reform_task_id,key_progress,stage_results,typical_practices FROM biz_work_record_entry WHERE record_id IN ("+String.join(",",Collections.nCopies(batch.size(),"?"))+")",batch.toArray()))
+                        entries.computeIfAbsent(((Number)entry.get("record_id")).longValue(),k->new ArrayList<>()).add(entry);
+                }
+                for(var r:metadata){
+                    if(r.getSubmitTime()!=null)r.setSubmitTime(new java.util.Date(r.getSubmitTime().getTime()));
+                    if(r.getUpdateTime()!=null)r.setUpdateTime(new java.util.Date(r.getUpdateTime().getTime()));
+                    Map<String,Object> row=json.convertValue(r,new TypeReference<LinkedHashMap<String,Object>>(){});
+                    var written=entries.getOrDefault(r.getRecordId(),List.of()).stream().filter(e->List.of("key_progress","stage_results","typical_practices").stream().anyMatch(k->!text(e.get(k)).isBlank())).toList();
+                    row.put("root",written.stream().map(e->e.get("reform_task_id")).toList());
+                    row.put("keyword",text(r.getProblems())+" "+text(r.getNextFocus())+" "+text(r.getOtherMatters())+" "+written.stream().map(e->text(e.get("key_progress"))+" "+text(e.get("stage_results"))+" "+text(e.get("typical_practices"))).collect(java.util.stream.Collectors.joining(" ")));
+                    if(query.matches(row,projectedFields))collector.accept(r.getRecordId());
+                }
+                if(metadata.size()<BoundedFilterPage.BATCH_SIZE)break;
             }
-            var matching=metadata.stream().filter(r -> {
-                if(r.getSubmitTime()!=null)r.setSubmitTime(new java.util.Date(r.getSubmitTime().getTime()));
-                if(r.getUpdateTime()!=null)r.setUpdateTime(new java.util.Date(r.getUpdateTime().getTime()));
-                Map<String,Object> row=json.convertValue(r,new TypeReference<LinkedHashMap<String,Object>>(){});
-                var written=entries.getOrDefault(r.getRecordId(),List.of()).stream().filter(e->List.of("key_progress","stage_results","typical_practices").stream().anyMatch(k->!text(e.get(k)).isBlank())).toList();
-                row.put("root",written.stream().map(e->e.get("reform_task_id")).toList());
-                row.put("keyword",text(r.getProblems())+" "+text(r.getNextFocus())+" "+text(r.getOtherMatters())+" "+written.stream().map(e->text(e.get("key_progress"))+" "+text(e.get("stage_results"))+" "+text(e.get("typical_practices"))).collect(java.util.stream.Collectors.joining(" ")));
-                return query.matches(row,projectedFields);
-            }).map(BizWorkRecord::getRecordId).toList();
-            if(matching.isEmpty())return result(List.of(),0,1,size);
-            total=matching.size();
-            where.append(" AND r.record_id IN (").append(String.join(",",Collections.nCopies(matching.size(),"?"))).append(")");
-            args.addAll(matching);
+            var page=collector.result();if(page.items().isEmpty())return result(List.of(),0,1,size);
+            var items=jdbc.query("SELECT r.* FROM biz_work_record r WHERE r.record_id IN ("+String.join(",",Collections.nCopies(page.items().size(),"?"))+") ORDER BY r.record_year DESC,r.record_month DESC,r.owner_id,r.record_id",BeanPropertyRowMapper.newInstance(BizWorkRecord.class),page.items().toArray());
+            return result(items,page.total(),page.page(),size);
         } else total = jdbc.queryForObject("SELECT COUNT(*)"+from+where,Long.class,args.toArray());
         int page = (int)Math.min(requestedPage,Math.max(1,(total+size-1)/size));
         args.add(size); args.add((long)(page-1)*size);

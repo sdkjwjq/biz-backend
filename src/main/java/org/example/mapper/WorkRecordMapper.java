@@ -49,6 +49,9 @@ public interface WorkRecordMapper {
     @Select("SELECT task_id,parent_id,phase,leader_id,dept_id FROM biz_level4_task WHERE COALESCE(is_delete,0)=0")
     List<BizLevel4Task> scopeGoals();
 
+    @org.apache.ibatis.annotations.SelectProvider(type=WorkRecordQualificationSql.class,method="fillableAccountIds")
+    List<Long> fillableAccountIds(@Param("ids") List<Long> ids);
+
     // 归档历史可以来自已替换材料对应的软删除审核单；绝不将其当前状态当作历史月份的状态。
     // 四级历史记录只用于识别缺失的三级汇总证据，不单独增加三级任务完成数。
     @Select("<script>SELECT t.task_id parent_task_id,s.task_id source_task_id,s.sub_id,s.reported_value,"

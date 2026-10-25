@@ -95,6 +95,11 @@ public class WorkRecordScopeService {
         return result;
     }
 
+    public Set<Long> fillableAccountIdsSql(java.util.Collection<SysUser> accounts){
+        var ids=accounts.stream().map(SysUser::getUserId).filter(Objects::nonNull).distinct().toList();Set<Long> result=new HashSet<>();
+        for(int start=0;start<ids.size();start+=500)result.addAll(records.fillableAccountIds(ids.subList(start,Math.min(start+500,ids.size()))));return result;
+    }
+
     private boolean eligibleDepartment(Long id,Set<Long> participating,Map<Long,SysDept> departments){
         if(id==null||!participating.contains(id))return false;
         if(!departments.containsKey(id))departments.put(id,users.getDeptById(id));

@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 @Service
 public class AdminOverviewService {
     @org.springframework.beans.factory.annotation.Autowired private PermissionService permissions;
+    @org.springframework.beans.factory.annotation.Autowired private OverviewReadQueries readQueries;
     private static final List<String> MODULES=List.of("tasks","performance","core","achievements","budget","records");
     private static final Map<String,List<String>> DIMENSIONS=Map.of(
         "tasks",List.of("status","reform","department"), "performance",List.of("status","department","category"),
@@ -68,9 +69,7 @@ public class AdminOverviewService {
         for(String key:module==null?MODULES:List.of(module)) {
             try {
                 if(permissions.enforced(actor)&&!permissions.allowed(actor,key+".read")){sections.put(key,map("status","forbidden","message","未获准查阅此模块"));continue;}
-                Data d=administrator&&key.equals("tasks")?taskSummary(year)
-                        :administrator&&key.equals("achievements")?achievementSummary(year)
-                        :administrator&&key.equals("performance")&&permissions.enforced(actor)?performanceSummary(year,actor):data(key,year,month,actor);
+                Data d=permissions.enforced(actor)&&OverviewReadQueries.supports(key)?sqlData(key,year,month,actor):administrator&&key.equals("tasks")?taskSummary(year):administrator&&key.equals("achievements")?achievementSummary(year):data(key,year,month,actor);
                 sections.put(key,map("status","ok","title",d.title,"period",d.period,"note",d.note,"metrics",d.metrics,"extra",d.extra));
             } catch(Exception error) {
                 org.slf4j.LoggerFactory.getLogger(getClass()).error("Overview module failed: {}",key,error);
@@ -95,6 +94,13 @@ public class AdminOverviewService {
         String module=parts[0],key=parts[1];
         String dim=dimension==null?DIMENSIONS.get(module).get(0):dimension;
         if(!DIMENSIONS.get(module).contains(dim)) throw new AdminManagementException(400,"此指标不支持所选维度");
+        if(permissions.enforced(actor)&&OverviewReadQueries.supports(module)){
+            permissions.require(actor,module+".read");
+            Data d=sqlData(module,year,month,actor);
+            var selected=d.metrics.stream().filter(m->key.equals(m.get("key"))).findFirst().orElseThrow(()->new AdminManagementException(400,"未知统计指标"));
+            var result=map("module",module,"metric",metric,"label",selected.get("label"),"value",selected.get("value"),"unit",selected.get("unit"),"period",d.period,"note",d.note,"dimension",dim,"dimensions",DIMENSIONS.get(module),"groupable",true,"chartUnit","数量","extra",d.extra);
+            result.putAll(readQueries.analysis(readQueries.source(module,year,month,actor),module,key,dim,groupKey,page,pageSize,filters));return result;
+        }
         Data d=data(module,year,month,actor);
         Map<String,Object> selected=d.metrics.stream().filter(m->key.equals(m.get("key"))).findFirst()
                 .orElseThrow(()->new AdminManagementException(400,"未知统计指标"));
@@ -129,6 +135,17 @@ public class AdminOverviewService {
             "filterApplied",query.active()||(groupKey!=null&&!groupKey.isBlank()),"fields",fields,"period",d.period,"note",d.note,"dimension",dim,"dimensions",DIMENSIONS.get(module),"chart",chart,"groupable",groupable,
             "chartUnit",module.equals("budget")&&dim.equals("reform")&&key.equals("executionRate")?"%":module.equals("budget")?"万元":module.equals("core")?"%":"数量",
             "total",total,"page",safePage,"pageSize",pageSize,"rows",rows.subList(start,Math.min(start+pageSize,rows.size())),"extra",d.extra);
+    }
+    private Data sqlData(String module,int year,int month,Long actor){
+        var values=readQueries.summary(readQueries.source(module,year,month,actor),module);Map<String,Long> counts=new LinkedHashMap<>();
+        values.forEach((k,v)->{if(v instanceof Number n)counts.put(k,n.longValue());});
+        return switch(module){
+            case "tasks"->{long total=counts.get("total");BigDecimal average=total==0||counts.get("progressCount")!=total?null:decimal(values.get("progressSum")).divide(BigDecimal.valueOf(total),2,RoundingMode.HALF_UP);yield taskData(counts,average,List.of());}
+            case "performance"->performanceData(counts,List.of());
+            case "achievements"->achievementData(counts,readQueries.missingAchievementDates(actor),List.of());
+            case "records"->recordData(counts.get("expected"),counts.get("submitted"),counts.get("historical"),List.of());
+            default->throw new IllegalArgumentException(module);
+        };
     }
     private Data data(String module,int year,int month,Long actor) {
         if(permissions.enforced(actor)){permissions.require(actor,module+".read");if(module.equals("budget")&&!permissions.budgetScope(actor,year))throw new AdminManagementException(403,"预算年度不在授权范围内");}
@@ -337,9 +354,12 @@ public class AdminOverviewService {
         // 保留已失去资格人员的已提交记录入口，但不混入提交率分子。
         for(var s:submitted) if(!ids.contains(str(s.get("owner_id"))))rows.add(map("id",s.get("owner_id"),"code",str(s.get("owner_id")),"name",s.get("owner_name"),"kind","record","recordId",s.get("record_id"),"eligible",false,"submitted",true,"status","原资格已提交","statusKey","原资格已提交","departmentKey","historical","department","原资格记录","submitTime",s.get("submit_time")));
         long done=rows.stream().filter(matches("records","submitted")).count();
+        return recordData(eligible.size(),done,rows.stream().filter(r->Boolean.FALSE.equals(r.get("eligible"))).count(),rows);
+    }
+    private Data recordData(long expected,long done,long historical,List<Map<String,Object>> rows){
         return new Data("工作纪实","所选月份／当前填报资格","应填、已提交、未提交及提交率使用所选年度当前有资格的同一人员集合。原资格已提交记录仍可查阅；不读取或展示他人草稿。部门按人员当前所属部门统计。",List.of(
-            metric("expected","当前应填",eligible.size(),"人"),metric("submitted","已提交",done,"人"),metric("missing","未提交",eligible.size()-done,"人"),metric("submissionRate","提交率",rate(done,eligible.size()),"%"),
-            metric("historical","原资格已提交",rows.stream().filter(r->Boolean.FALSE.equals(r.get("eligible"))).count(),"人")),rows,Map.of());
+            metric("expected","当前应填",expected,"人"),metric("submitted","已提交",done,"人"),metric("missing","未提交",expected-done,"人"),metric("submissionRate","提交率",rate(done,expected),"%"),
+            metric("historical","原资格已提交",historical,"人")),rows,Map.of());
     }
     private Predicate<Map<String,Object>> matches(String module,String key) {
         return r->switch(module+"."+key) {

@@ -29,30 +29,29 @@ public class NoticeFilterPageService {
         for(String key:List.of("isRead","type","fromUserId")){
             var selected=params.getOrDefault("f."+key,List.of()).stream().filter(v->v!=null&&!v.isBlank()).distinct().toList();
             if(selected.isEmpty())continue;
+            if(key.equals("type")&&selected.contains("missing"))continue;
             String column=switch(key){case "isRead"->"n.is_read";case "fromUserId"->"n.from_user_id";default->"n.type";};
             from+=" AND BINARY COALESCE(CAST("+column+" AS CHAR),'missing') IN ("+String.join(",",Collections.nCopies(selected.size(),"?"))+")";
             args.addAll(selected);
         }
-        boolean complex=params.keySet().stream().filter(k->k.startsWith("f.")).anyMatch(k->!Set.of("f.isRead","f.type","f.fromUserId").contains(k));
-        // Equal/unknown timestamps must preserve the old SELECT encounter order, not invent an ID tie-break.
-        boolean ambiguous=!jdbc.queryForList("SELECT n.create_time"+from+" GROUP BY n.create_time HAVING COUNT(*)>1 OR n.create_time IS NULL LIMIT 1",args.toArray()).isEmpty();
+        boolean complex=params.keySet().stream().filter(k->k.startsWith("f.")).anyMatch(k->!Set.of("f.isRead","f.type","f.fromUserId").contains(k))||params.getOrDefault("f.type",List.of()).contains("missing");
         long total;List<SysNotice> items;
-        if(complex||ambiguous){
+        if(complex){
             String columns=complex&&params.containsKey("f.keyword")?",n.title,n.content":"";
-            List<SysNotice> candidates;
-            if(ambiguous)candidates=mapper.getNotices(actor);
-            else candidates=jdbc.query("SELECT n.notice_id,n.from_user_id,n.to_user_id,n.type,n.source_type,n.source_id,n.is_read,n.create_time"+columns+from,
-                    BeanPropertyRowMapper.newInstance(SysNotice.class),args.toArray());
-            for(var candidate:candidates)if(candidate.getCreateTime()!=null)candidate.setCreateTime(new java.util.Date(candidate.getCreateTime().getTime()));
-            Map<Long,Long> times=new HashMap<>();candidates.forEach(n->times.put(n.getNoticeId(),n.getCreateTime()==null?0:n.getCreateTime().getTime()));
-            var matched=filters.noticeRows(candidates).stream().filter(r->predicate.matches(r,fields)).sorted((a,b)->Long.compare(times.get(Long.valueOf(b.get("id").toString())),times.get(Long.valueOf(a.get("id").toString())))).toList();
-            total=matched.size();int page=(int)Math.min(requested,Math.max(1,(total+size-1)/size));
-            var ids=matched.subList((page-1)*size,Math.min(page*size,matched.size())).stream().map(r->Long.valueOf(r.get("id").toString())).toList();
-            items=hydrate(ids);
+            var page=new BoundedFilterPage<Long>(requested,size);
+            for(int offset=0;;offset+=BoundedFilterPage.BATCH_SIZE){
+                var batchArgs=new ArrayList<>(args);batchArgs.add(BoundedFilterPage.BATCH_SIZE);batchArgs.add(offset);
+                var candidates=jdbc.query("SELECT n.notice_id,n.from_user_id,n.to_user_id,n.type,n.source_type,n.source_id,n.is_read,n.create_time"+columns+from
+                        +" ORDER BY n.create_time IS NULL,n.create_time DESC,n.notice_id DESC LIMIT ? OFFSET ?",BeanPropertyRowMapper.newInstance(SysNotice.class),batchArgs.toArray());
+                for(var candidate:candidates)if(candidate.getCreateTime()!=null)candidate.setCreateTime(new java.util.Date(candidate.getCreateTime().getTime()));
+                for(var row:filters.noticeRows(candidates))if(predicate.matches(row,fields))page.accept(Long.valueOf(row.get("id").toString()));
+                if(candidates.size()<BoundedFilterPage.BATCH_SIZE)break;
+            }
+            var result=page.result();total=result.total();items=hydrate(result.items());
         }else{
             total=jdbc.queryForObject("SELECT COUNT(*)"+from,Long.class,args.toArray());
             int page=(int)Math.min(requested,Math.max(1,(total+size-1)/size));args.add(size);args.add((long)(page-1)*size);
-            items=jdbc.query("SELECT n.*"+from+" ORDER BY n.create_time DESC LIMIT ? OFFSET ?",BeanPropertyRowMapper.newInstance(SysNotice.class),args.toArray());
+            items=jdbc.query("SELECT n.*"+from+" ORDER BY n.create_time IS NULL,n.create_time DESC,n.notice_id DESC LIMIT ? OFFSET ?",BeanPropertyRowMapper.newInstance(SysNotice.class),args.toArray());
         }
         int page=(int)Math.min(requested,Math.max(1,(total+size-1)/size));
         var names=new HashMap<Long,String>();var senders=items.stream().map(SysNotice::getFromUserId).filter(Objects::nonNull).distinct().toList();
