@@ -18,8 +18,8 @@ public class AccountFilterPageService {
     private static final String COLUMNS="u.user_id userId,u.dept_id deptId,u.user_name userName,u.nick_name nickName,u.email,u.role,u.status,u.force_password_change forcePasswordChange,u.create_time createTime,u.update_time updateTime,d.dept_name deptName,u.is_delete _isDelete";
     // Materialize the small set of active responsibility IDs once, rather than
     // running eight correlated relationship scans for every candidate account.
-    private static final String DUTIES="u.user_id IN ("
-            +"SELECT leader_id FROM sys_dept WHERE status='0' AND COALESCE(is_delete,0)=0 "
+    private static final String DUTIES="u.user_id IN (SELECT responsibility.userId FROM ("
+            +"SELECT leader_id userId FROM sys_dept WHERE status='0' AND COALESCE(is_delete,0)=0 "
             +"UNION SELECT leader_id FROM biz_task WHERE level=3 AND COALESCE(is_delete,0)=0 "
             +"UNION SELECT auditor_id FROM biz_task WHERE level=3 AND COALESCE(is_delete,0)=0 "
             +"UNION SELECT principal_id FROM biz_task WHERE level=3 AND COALESCE(is_delete,0)=0 "
@@ -30,7 +30,7 @@ public class AccountFilterPageService {
             +"UNION SELECT current_handler_id FROM biz_material_submission WHERE COALESCE(is_delete,0)=0 AND flow_status IN(10,20,30) "
             +"UNION SELECT current_handler_id FROM biz_performance_submission WHERE COALESCE(is_delete,0)=0 AND flow_status IN(10,20) "
             +"UNION SELECT current_handler_id FROM biz_achievement WHERE COALESCE(is_delete,0)=0 AND audit_status=10 "
-            +"UNION SELECT current_handler_id FROM biz_core_report WHERE flow_status IN(10,20))";
+            +"UNION SELECT current_handler_id FROM biz_core_report WHERE flow_status IN(10,20)) responsibility)";
     private final JdbcTemplate jdbc;private final PermissionService access;
     public AccountFilterPageService(JdbcTemplate jdbc,PermissionService access){this.jdbc=jdbc;this.access=access;}
     @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)

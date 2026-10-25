@@ -11,12 +11,14 @@ public final class WorkRecordQualificationSql {
         String catalog=validTasks(year);
         String goals=" FROM biz_level4_task g JOIN (SELECT t.task_id,t.phase"+catalog+") eligible_task ON eligible_task.task_id=g.parent_id "
                 +"WHERE COALESCE(g.is_delete,0)=0 AND (g.phase IS NULL OR g.phase=eligible_task.phase)";
-        String responsible="SELECT t.leader_id"+catalog+" UNION SELECT g.leader_id"+goals;
-        String departments="SELECT t.dept_id"+catalog+" UNION SELECT m.dept_id"+catalog+" UNION SELECT g.dept_id"+goals;
+        // Keep a derived boundary: MySQL can rewrite a bare IN (UNION) to
+        // correlated scans of each task relation for every account.
+        String responsible="SELECT t.leader_id userId"+catalog+" UNION SELECT g.leader_id"+goals;
+        String departments="SELECT t.dept_id deptId"+catalog+" UNION SELECT m.dept_id"+catalog+" UNION SELECT g.dept_id"+goals;
         return "(BINARY "+alias+".status=BINARY '1' AND ("+alias+".is_delete IS NULL OR "+alias+".is_delete<>1) AND ("
-                +alias+".user_id IN ("+responsible+") OR (EXISTS(SELECT 1 FROM sys_dept ud WHERE ud.dept_id="+alias+".dept_id "
+                +alias+".user_id IN (SELECT responsible.userId FROM ("+responsible+") responsible) OR (EXISTS(SELECT 1 FROM sys_dept ud WHERE ud.dept_id="+alias+".dept_id "
                 +"AND (ud.is_delete IS NULL OR ud.is_delete<>1) AND (ud.status IS NULL OR BINARY ud.status<>BINARY '1')) "
-                +"AND "+alias+".dept_id IN ("+departments+"))))";
+                +"AND "+alias+".dept_id IN (SELECT participating.deptId FROM ("+departments+") participating))))";
     }
     private WorkRecordQualificationSql(){}
 }
