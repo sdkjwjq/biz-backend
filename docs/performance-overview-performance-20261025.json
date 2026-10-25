@@ -1,0 +1,90 @@
+{
+  "date": "2026-10-25",
+  "scope": "Performance overview summary data phase only. Random isolated synthetic MySQL schema, 120 and 600 added performance indicators plus 10 existing fixture indicators; common permission state initialized before timing, one warm-up discarded, median of five sequential samples. The full-projection comparison already uses the new bounded metadata batch. Not an exact pre-batch permission benchmark, HTTP/page latency, P95 or concurrent-user acceptance.",
+  "implementation": {
+    "administrator_summary": "One SQL aggregate for installed permissions, canonical numeric/dot/comma/space ancestry and unambiguous active annual rows. Uses annual target/actual values only, preserves exact missing/zero/negative target handling, excludes directories and keeps code-prefix manual/automatic classification. No name or full business projections in the fast path.",
+    "compatible_fallback": "Nonstandard ancestry (including Unicode/control whitespace) and duplicate active annual rows use the original projection. Never assumes MAX(year_id), merges duplicate annual values, or normalizes stored ancestry. Database without unified permission tables retains the original path.",
+    "scoped_drilldown": "Requested IDs are deduplicated and read in chunks of at most 500. Uses the same original row matcher and requested year. Account, leadership and department-duty reads are reused only within one invocation; ordinary single-object canRead remains live. All list order and business projections are retained."
+  },
+  "measurements": [
+    {
+      "aggregate_median_us": 4911,
+      "syntheticPerformance": 120,
+      "full_projection_median_us": 9991,
+      "existingPerformance": 10,
+      "equalMetrics": true
+    },
+    {
+      "aggregate_median_us": 17023,
+      "syntheticPerformance": 600,
+      "full_projection_median_us": 49347,
+      "existingPerformance": 10,
+      "equalMetrics": true
+    }
+  ],
+  "verification": {
+    "isolated_api_regressions": 199,
+    "query_and_scope_unit_tests": 9,
+    "overview_browser_checks": 14,
+    "browser_script_syntax": "passed",
+    "backend_package": "passed",
+    "frontend_runtime_changes": false
+  },
+  "scope_query_evidence": {
+    "unique_requested_ids": 501,
+    "metadata_queries": 2,
+    "max_ids_per_query": 500,
+    "account_reads_per_invocation": 1,
+    "one_department_duty_reads_per_invocation": 1,
+    "second_invocation_observes_changed_duty": true,
+    "source": "PermissionPerformanceBatchTest",
+    "limits": "Mocked query-count assertion, not live SQL tracing or scan-row measurement."
+  },
+  "compatibility_cases": [
+    "Annual values differ from total values; missing annual rows stay uncertain",
+    "Zero, null and negative annual targets; missing completion values; differing units",
+    "Ordinary, repeated, blank and trailing ancestor separators; directory exclusion",
+    "Unicode/control whitespace and nonnumeric ancestors retain original projection",
+    "Duplicate active annual rows retain original mapper encounter semantics",
+    "Annual soft-delete values 0/1/2 and base delete values 0/1/2",
+    "ALL, year-limited ALL, OWN, BUSINESS, LEADERSHIP and custom department/item combinations",
+    "Batch ID sets equal original individual canRead checks for 2025 and 2026",
+    "Changed department head, leadership scope, revoked function and disabled account using old token",
+    "All six performance metrics equal chart groups and drilldown totals",
+    "Existing task, performance, achievement, core, budget, expert and management regression flows"
+  ],
+  "browser": {
+    "checks": [
+      "six-modules-and-all-summary-numbers-match-real-API",
+      "performance-aggregate-status-and-mode-numbers-match-chart-and-drilldown",
+      "pagination-real-chart-click-group-intersection-and-existing-task-detail",
+      "core-cutoff-excludes-future-and-obsolete-results-and-opens-history",
+      "achievement-aggregate-numbers-match-chart-and-drilldown-records-and-awards",
+      "achievement-rejection-reason-and-existing-detail-link",
+      "budget-missing-null-gaps-adjustments-three-trend-views-original-chart-hidden",
+      "work-record-current-eligibility-draft-privacy-and-frozen-record-link",
+      "leader-readonly-maintenance-current-scope-old-token-and-ordinary-user-denial",
+      "slow-old-year-response-cannot-replace-current-year",
+      "injected-module-failure-is-not-zero-and-independent-retry-recovers",
+      "injected-analysis-failure-retry-and-close-cancels-old-response",
+      "narrow-screen-page-table-scroll-and-accessible-drawer-footer",
+      "zero-records-and-zero-denominators-show-empty-data-without-false-percentage"
+    ],
+    "errors": [],
+    "fixtures": "random isolated synthetic database",
+    "simulated": [
+      "delayed year response",
+      "module failure",
+      "analysis failure",
+      "closed analysis response"
+    ]
+  },
+  "rollback": "Restore the previous backend artifact or revert this backend commit when authorized. No schema migration, business-data change or frontend runtime change.",
+  "remaining": [
+    "Unusual ancestry and duplicate-year configurations deliberately retain full projection fallback.",
+    "Non-admin performance summaries and analysis still materialize full indicator/annual projections, although permission metadata is batched.",
+    "Core, budget and work-record summary data phases, initial multi-module request latency and other list pagination work remain incomplete.",
+    "Sustained multi-account load, full-system P50/P95, SQL scan counts and index acceptance remain pending."
+  ],
+  "production_changes": false
+}

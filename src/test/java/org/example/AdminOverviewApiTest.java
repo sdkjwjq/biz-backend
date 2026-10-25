@@ -335,6 +335,98 @@ class AdminOverviewApiTest {
         assertEquals(1,value(s,"tasks","priority").asInt());assertEquals(1,value(s,"tasks","difficult").asInt());
         JsonNode a=analysis(token,"tasks.total","reform");assertEquals(2,a.path("total").asInt());assertEquals(2,a.path("chart").get(0).path("value").asInt());
     }
+    private void comparePerformanceSummaryWithProjection(String token,int year) throws Exception {
+        Object target=org.springframework.test.util.AopTestUtils.getUltimateTargetObject(overview);
+        Object detail=org.springframework.test.util.ReflectionTestUtils.invokeMethod(target,"data","performance",year,4,ADMIN);
+        var result=ok(request(HttpMethod.GET,"/admin/overview/summary?year="+year+"&month=4&module=performance",token,null)).path("modules").path("performance");
+        assertEquals("ok",result.path("status").asText());
+        for(String key:List.of("title","period","note","metrics","extra"))assertEquals(json.readTree(json.writeValueAsString(org.springframework.test.util.ReflectionTestUtils.getField(detail,key))),result.path(key),year+" "+key);
+    }
+    @Test void performanceAggregationPreservesAnnualValuesAndAmbiguousConfigurationFallback() throws Exception {
+        jdbc.update("UPDATE biz_performance SET ancestors='0,1,1.1'");
+        String[] paths={null,"",",,", "0,1", "0,, 1, , 1.1,", "0,1,1.1,", " 0 , 1 , 1.1 ","0,1,2,3","1 2,3,4","0,,1,1.2"};
+        for(int i=0;i<paths.length;i++)jdbc.update("UPDATE biz_performance SET ancestors=?,current_value=999,target_value=1 WHERE perf_id=?",paths[i],960001+i);
+        jdbc.update("INSERT INTO biz_performance_year(perf_id,year,target_value,actual_value,is_delete) VALUES(960005,2026,10,10,0),(960006,2026,100,25,0),(960007,2026,0,200,0),(960008,2026,10,NULL,0),(960009,2026,NULL,10,0),(960010,2026,-1,10,0)");
+        jdbc.update("INSERT INTO biz_performance_year(perf_id,year,target_value,actual_value,is_delete) VALUES(960005,2025,10,0,0),(960006,2025,10,20,1),(960007,2025,10,20,2)");
+        jdbc.update("UPDATE biz_performance SET perf_code='1.2.X' WHERE perf_id=960005");
+        jdbc.update("UPDATE biz_performance SET perf_code=' 1.1.1' WHERE perf_id=960006");
+        jdbc.update("UPDATE biz_performance SET perf_code='2.1.1' WHERE perf_id=960007");
+        jdbc.update("UPDATE biz_performance SET is_delete=2 WHERE perf_id=960008");
+        jdbc.update("UPDATE biz_performance SET is_delete=1 WHERE perf_id=960009");
+        String token=login(ADMIN);
+        for(int year:List.of(2025,2026,2029))comparePerformanceSummaryWithProjection(token,year);
+        // Do not choose MAX(year_id) or merge columns when old data contains multiple active annual rows.
+        jdbc.update("INSERT INTO biz_performance_year(perf_id,year,target_value,actual_value,is_delete) VALUES(960005,2026,10,0,0)");
+        comparePerformanceSummaryWithProjection(token,2026);
+        jdbc.update("UPDATE biz_performance_year SET is_delete=1 WHERE perf_id=960005 AND actual_value=0 AND year=2026");
+        for(String path:List.of("0,\t,1,1.1","0,\u2003,1,1.1","0,\u00a0,1","目录,分类,指标","0,1,1.1\n")){
+            jdbc.update("UPDATE biz_performance SET ancestors=? WHERE perf_id=960005",path);
+            comparePerformanceSummaryWithProjection(token,2026);
+        }
+        jdbc.update("UPDATE biz_performance SET is_delete=1");comparePerformanceSummaryWithProjection(token,2026);
+    }
+    @Test void batchedPerformanceScopeMatchesIndividualChecksAndCurrentDuties() throws Exception {
+        jdbc.update("INSERT INTO sys_dept(dept_id,dept_name,leader_id,is_delete) VALUES(920002,'Other synthetic',?,0)",OWNER);
+        jdbc.update("UPDATE biz_performance SET ancestors='0,1,1.1',leader_id=?,auditor_id=?,principal_id=?",OWNER,OWNER,OWNER);
+        jdbc.update("UPDATE biz_performance SET dept_id=920002 WHERE perf_id IN(960002,960005)");
+        jdbc.update("UPDATE biz_performance SET leader_id=? WHERE perf_id=960002",VIEWER);
+        jdbc.update("UPDATE biz_performance SET auditor_id=? WHERE perf_id=960003",VIEWER);
+        jdbc.update("UPDATE biz_performance SET principal_id=? WHERE perf_id=960004",VIEWER);
+        jdbc.update("UPDATE biz_performance SET is_delete=1 WHERE perf_id=960009");
+        jdbc.update("UPDATE biz_performance SET is_delete=2 WHERE perf_id=960010");
+        List<Long> ids=new ArrayList<>();for(long id=960001;id<=960010;id++)ids.add(id);ids.add(999999L);
+        List<Map<String,Object>> rules=List.of(Map.of("mode","ALL"),Map.of("mode","ALL","years",List.of(2026)),Map.of("mode","OWN"),Map.of("mode","BUSINESS"),Map.of("mode","LEADERSHIP"),
+                Map.of("mode","CUSTOM","departments",List.of(920001)),Map.of("mode","CUSTOM","items",List.of(960002,960005)),Map.of("mode","CUSTOM","departments",List.of(920001),"items",List.of(960005),"years",List.of(2025)));
+        String token=login(VIEWER);
+        for(var rule:rules){
+            jdbc.update("INSERT INTO sys_user_permission(user_id,access_mode,permissions_json,scopes_json,version) VALUES(?,'CUSTOM',?,?,1) ON DUPLICATE KEY UPDATE permissions_json=VALUES(permissions_json),scopes_json=VALUES(scopes_json),version=version+1",
+                    VIEWER,json.writeValueAsString(Map.of("overview.read",true,"performance.read",true)),json.writeValueAsString(Map.of("performance",rule)));
+            for(int pass=0;pass<3;pass++){
+                jdbc.update("DELETE FROM sys_leadership_department");jdbc.update("DELETE FROM sys_leadership_access");
+                jdbc.update("UPDATE sys_dept SET leader_id=? WHERE dept_id=920001",pass==0?VIEWER:OWNER);
+                if(pass==0){jdbc.update("INSERT INTO sys_leadership_access(user_id,scope,version) VALUES(?,'DEPARTMENTS',1)",VIEWER);jdbc.update("INSERT INTO sys_leadership_department(user_id,dept_id) VALUES(?,920001)",VIEWER);}
+                if(pass==1)jdbc.update("INSERT INTO sys_leadership_access(user_id,scope,version) VALUES(?,'ALL',1)",VIEWER);
+                for(int year:List.of(2025,2026)){
+                    Set<Long> expected=new HashSet<>();for(Long id:ids)if(overviewPermissions.canRead(VIEWER,"performance",id,year))expected.add(id);
+                    assertEquals(expected,overviewPermissions.readablePerformanceIds(VIEWER,ids,year),rule+" year="+year);
+                }
+                var detail=analysis(token,"performance.total","department");Set<Long> actual=new HashSet<>();detail.path("rows").forEach(row->actual.add(row.path("id").asLong()));
+                assertEquals(overviewPermissions.readablePerformanceIds(VIEWER,ids,2026),actual);
+                assertEquals(actual.size(),value(summary(token,4),"performance","total").asInt());
+                if(!Set.of("BUSINESS","LEADERSHIP").contains(rule.get("mode")))break;
+            }
+        }
+        jdbc.update("UPDATE sys_user_permission SET permissions_json=? WHERE user_id=?",json.writeValueAsString(Map.of("overview.read",true,"performance.read",false)),VIEWER);
+        assertTrue(overviewPermissions.readablePerformanceIds(VIEWER,ids,2026).isEmpty());
+        assertEquals("forbidden",summary(token,4).path("modules").path("performance").path("status").asText());
+        jdbc.update("UPDATE sys_user SET status='0' WHERE user_id=?",VIEWER);
+        assertEquals(403,request(HttpMethod.GET,"/admin/overview/summary?year=2026&month=4",token,null).getStatusCode().value());
+    }
+    @Test void performanceSummaryAtCurrentAndFiveTimesSyntheticScale() throws Exception {
+        Object target=org.springframework.test.util.AopTestUtils.getUltimateTargetObject(overview);String token=login(ADMIN);
+        jdbc.update("UPDATE biz_performance SET ancestors='0,1,1.1'");
+        for(int size:List.of(120,600)){
+            jdbc.update("DELETE FROM biz_performance_year WHERE perf_id BETWEEN 9960000 AND 9960599");
+            jdbc.update("DELETE FROM biz_performance WHERE perf_id BETWEEN 9960000 AND 9960599");
+            List<Object[]> rows=new ArrayList<>();for(int i=0;i<size;i++)rows.add(new Object[]{9960000+i,(i%2==0?"1.1.":"2.1.")+i,i});
+            jdbc.batchUpdate("INSERT INTO biz_performance(perf_id,perf_code,perf_name,project_id,parent_id,ancestors,dept_id,leader_id,auditor_id,principal_id,target_value,current_value,data_type,is_delete) VALUES(?,?,CONCAT('Bench ',?),1,0,'0,1,1.1',920001,910001,910005,910003,999,999,'1',0)",rows);
+            jdbc.update("INSERT INTO biz_performance_year(perf_id,year,target_value,actual_value,is_delete) SELECT perf_id,2026,100,MOD(perf_id,125),0 FROM biz_performance WHERE perf_id BETWEEN 9960000 AND 9960599");
+            List<Long> full=new ArrayList<>(),aggregate=new ArrayList<>();
+            try{
+                for(int run=0;run<6;run++){
+                    var req=new org.springframework.mock.web.MockHttpServletRequest("GET","/admin/overview/summary");req.addHeader("Authorization",token);
+                    org.springframework.web.context.request.RequestContextHolder.setRequestAttributes(new org.springframework.web.context.request.ServletRequestAttributes(req));
+                    overviewPermissions.state(ADMIN);
+                    long start=System.nanoTime();Object original=org.springframework.test.util.ReflectionTestUtils.invokeMethod(target,"data","performance",2026,4,ADMIN);
+                    long middle=System.nanoTime();Object optimized=org.springframework.test.util.ReflectionTestUtils.invokeMethod(target,"performanceSummary",2026,ADMIN);long end=System.nanoTime();
+                    assertEquals(org.springframework.test.util.ReflectionTestUtils.getField(original,"metrics"),org.springframework.test.util.ReflectionTestUtils.getField(optimized,"metrics"));
+                    if(run>0){full.add((middle-start)/1000);aggregate.add((end-middle)/1000);}
+                }
+            }finally{org.springframework.web.context.request.RequestContextHolder.resetRequestAttributes();}
+            Collections.sort(full);Collections.sort(aggregate);
+            System.out.println("OVERVIEW_PERFORMANCE_DATA_BENCH "+json.writeValueAsString(Map.of("syntheticPerformance",size,"existingPerformance",10,"full_projection_median_us",full.get(2),"aggregate_median_us",aggregate.get(2),"equalMetrics",true)));
+        }
+    }
     @Test void annualPerformanceExcludesDirectoriesAndDoesNotSumDifferentUnits() throws Exception {
         jdbc.update("UPDATE biz_performance SET ancestors='0,1,1.1'");
         jdbc.update("INSERT INTO biz_performance_year(year_id,perf_id,year,target_value,actual_value,is_delete) VALUES(980001,960001,2026,10,15,0),(980002,960002,2026,100,50,0),(980003,960003,2026,0,5,0)");

@@ -212,13 +212,29 @@ public class PermissionService {
         }
         return result;
     }
+    public Set<Long> readablePerformanceIds(Long actor,Collection<Long> requested,Integer year){
+        List<Long> ids=requested.stream().filter(Objects::nonNull).distinct().toList();
+        if(ids.isEmpty())return Set.of();
+        State state=state(actor);if(!state.permissions().contains("performance.read"))return Set.of();
+        Set<Long> result=new HashSet<>();RowAccess context=new RowAccess(state);
+        for(int start=0;start<ids.size();start+=500){
+            var batch=ids.subList(start,Math.min(start+500,ids.size()));
+            String marks=String.join(",",Collections.nCopies(batch.size(),"?"));
+            for(var row:jdbc.queryForList("SELECT perf_id id,dept_id,leader_id,auditor_id,principal_id FROM biz_performance WHERE perf_id IN ("+marks+") AND COALESCE(is_delete,0)=0",batch.toArray())){
+                Long id=number(row.get("id"));if(matchesRow(state,"performance",id,year,row,context))result.add(id);
+            }
+        }
+        return result;
+    }
     /** Invocation-local relationship reads; discarded when this batch returns, including on writes. */
     private class RowAccess {
         private final State state;private SysUser account;private Boolean all;private Set<Long> departments;
+        private final Map<Object,Boolean> departmentDuties=new HashMap<>();
         RowAccess(State state){this.state=state;}
         SysUser user(){if(account==null)account=PermissionService.this.user(state.userId());return account;}
         boolean leadershipAll(){if(all==null)all=PermissionService.this.leadershipAll(state.userId());return all;}
         Set<Long> leadershipDepartments(){if(departments==null)departments=PermissionService.this.leadershipDepartments(state.userId());return departments;}
+        boolean leadsDepartment(Object department){return departmentDuties.computeIfAbsent(department,key->jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM sys_dept WHERE dept_id=? AND leader_id=? AND COALESCE(is_delete,0)=0)",Integer.class,key,state.userId())==1);}
     }
     private boolean matchesRow(State s,String domain,Long id,Integer year,Map<String,Object> row){
         return matchesRow(s,domain,id,year,row,new RowAccess(s));
@@ -232,7 +248,7 @@ public class PermissionService {
             boolean duty=own||Objects.equals(number(row.get("auditor_id")),s.userId())||Objects.equals(number(row.get("principal_id")),s.userId());
             if(switch(mode){case "ALL"->true;case "OWN"->own;case "CUSTOM"->ids(rule.get("items")).contains(id)||ids(rule.get("departments")).contains(number(row.get("dept_id")));
                 case "LEADERSHIP"->context.leadershipAll()||context.leadershipDepartments().contains(number(row.get("dept_id")))||duty;
-                case "BUSINESS"->"performance".equals(domain)?duty||jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM sys_dept WHERE dept_id=? AND leader_id=? AND COALESCE(is_delete,0)=0)",Integer.class,row.get("dept_id"),s.userId())==1:own||Objects.equals(number(row.get("dept_id")),u.getDeptId());default->false;})return true;
+                case "BUSINESS"->"performance".equals(domain)?duty||context.leadsDepartment(row.get("dept_id")):own||Objects.equals(number(row.get("dept_id")),u.getDeptId());default->false;})return true;
         }return false;
     }
     public List<Long> recordIds(Long actor){State s=state(actor);if(!s.permissions().contains("records.read"))return List.of();return jdbc.queryForList("SELECT r.record_id id,r.owner_id,r.status,r.record_year,u.dept_id FROM biz_work_record r LEFT JOIN sys_user u ON u.user_id=r.owner_id WHERE r.delete_marker=0").stream().filter(r->matchesRow(s,"records",number(r.get("id")),null,r)).map(r->number(r.get("id"))).toList();}

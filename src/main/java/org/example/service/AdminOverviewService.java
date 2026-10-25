@@ -69,7 +69,8 @@ public class AdminOverviewService {
             try {
                 if(permissions.enforced(actor)&&!permissions.allowed(actor,key+".read")){sections.put(key,map("status","forbidden","message","未获准查阅此模块"));continue;}
                 Data d=administrator&&key.equals("tasks")?taskSummary(year)
-                        :administrator&&key.equals("achievements")?achievementSummary(year):data(key,year,month,actor);
+                        :administrator&&key.equals("achievements")?achievementSummary(year)
+                        :administrator&&key.equals("performance")&&permissions.enforced(actor)?performanceSummary(year,actor):data(key,year,month,actor);
                 sections.put(key,map("status","ok","title",d.title,"period",d.period,"note",d.note,"metrics",d.metrics,"extra",d.extra));
             } catch(Exception error) {
                 org.slf4j.LoggerFactory.getLogger(getClass()).error("Overview module failed: {}",key,error);
@@ -190,9 +191,10 @@ public class AdminOverviewService {
             values.add(new PerformanceYearVO(p,y));
         }
         List<Map<String,Object>> rows=new ArrayList<>();
-        for(var p:values) {
-            if(Integer.valueOf(1).equals(p.getIsDelete())||p.getAncestors()==null||Arrays.stream(p.getAncestors().split(",")).filter(s->!s.isBlank()).count()<3)continue;
-            if(permissions.enforced(actor)){if(!permissions.canRead(actor,"performance",p.getPerfId(),year))continue;}else if(access.restricted(actor)&&!access.scope(actor).contains(p.getDeptId()))continue;
+        var candidates=values.stream().filter(p->!Integer.valueOf(1).equals(p.getIsDelete())&&p.getAncestors()!=null&&Arrays.stream(p.getAncestors().split(",")).filter(s->!s.isBlank()).count()>=3).toList();
+        Set<Long> visible=permissions.enforced(actor)?permissions.readablePerformanceIds(actor,candidates.stream().map(PerformanceYearVO::getPerfId).toList(),year):null;
+        for(var p:candidates) {
+            if(visible!=null){if(!visible.contains(p.getPerfId()))continue;}else if(access.restricted(actor)&&!access.scope(actor).contains(p.getDeptId()))continue;
             String state=p.getTargetValue()==null||p.getTargetValue().signum()<=0||p.getCurrentValue()==null?"数据待核实":p.getCurrentValue().compareTo(p.getTargetValue())>=0?"数值达标":"未达标";
             Map<String,Object> r=base(p.getPerfId(),p.getPerfCode(),p.getPerfName(),p.getDeptId(),n);
             String code=str(p.getPerfCode()),category=Arrays.stream(p.getAncestors().split(",")).filter(s->!s.isBlank()).toList().get(2).trim();
@@ -200,9 +202,36 @@ public class AdminOverviewService {
             r.putAll(map("kind","performance","statusKey",state,"status",state,"target",p.getTargetValue(),"value",p.getCurrentValue(),"categoryKey",category,"category",categoryName,
                 "mode",code.startsWith("1.1.")||code.startsWith("1.2.")?"自动":"手动","owner",n.users.getOrDefault(str(p.getLeaderId()),"未配置")));rows.add(r);
         }
+        Map<String,Long> counts=new LinkedHashMap<>();
+        for(String key:List.of("total","attained","unattained","uncertain","manual","automatic"))counts.put(key,count(rows,"performance",key));
+        return performanceData(counts,rows);
+    }
+    /** Administrator summary only. Unusual ancestry and ambiguous annual rows retain the original projection. */
+    private Data performanceSummary(int year,Long actor) {
+        var result=jdbc.queryForMap("WITH base AS (SELECT perf_id,perf_code,"
+                +"TRIM(BOTH ',' FROM REGEXP_REPLACE(REPLACE(ancestors,' ',''),',+',',')) path,"
+                +"REGEXP_LIKE(ancestors,'[^0-9., ]','c') unusual FROM biz_performance WHERE COALESCE(is_delete,0)=0),"
+                +"annual AS (SELECT perf_id,COUNT(*) annual_rows,MIN(target_value) target_value,MIN(actual_value) actual_value "
+                +"FROM biz_performance_year WHERE year=? AND (is_delete IS NULL OR is_delete<>1) GROUP BY perf_id),"
+                +"items AS (SELECT b.perf_code,y.annual_rows,y.target_value,y.actual_value FROM base b LEFT JOIN annual y ON y.perf_id=b.perf_id "
+                +"WHERE LENGTH(b.path)-LENGTH(REPLACE(b.path,',',''))>=2) "
+                +"SELECT COUNT(*) total,"
+                +"COALESCE(SUM(CASE WHEN target_value>0 AND actual_value>=target_value THEN 1 ELSE 0 END),0) attained,"
+                +"COALESCE(SUM(CASE WHEN target_value>0 AND actual_value<target_value THEN 1 ELSE 0 END),0) unattained,"
+                +"COALESCE(SUM(CASE WHEN target_value IS NULL OR target_value<=0 OR actual_value IS NULL THEN 1 ELSE 0 END),0) uncertain,"
+                +"COALESCE(SUM(CASE WHEN BINARY perf_code LIKE BINARY '1.1.%' OR BINARY perf_code LIKE BINARY '1.2.%' THEN 1 ELSE 0 END),0) automatic,"
+                +"COALESCE(MAX(annual_rows),0) maxAnnualRows,(SELECT COUNT(*) FROM base WHERE unusual) unusualPaths FROM items",year);
+        if(((Number)result.get("maxAnnualRows")).longValue()>1||((Number)result.get("unusualPaths")).longValue()>0)
+            return performances(year,actor,names());
+        Map<String,Long> counts=new LinkedHashMap<>();
+        for(String key:List.of("total","attained","unattained","uncertain","automatic"))counts.put(key,((Number)result.get(key)).longValue());
+        counts.put("manual",counts.get("total")-counts.get("automatic"));
+        return performanceData(counts,List.of());
+    }
+    private Data performanceData(Map<String,Long> counts,List<Map<String,Object>> rows) {
         List<Map<String,Object>> metrics=new ArrayList<>();
         String[] keys={"total","attained","unattained","uncertain","manual","automatic"},labels={"实际指标","数值达标","未达标","数据待核实","手动指标","自动指标"};
-        for(int i=0;i<keys.length;i++)metrics.add(metric(keys[i],labels[i],count(rows,"performance",keys[i]),"项"));
+        for(int i=0;i<keys.length;i++)metrics.add(metric(keys[i],labels[i],counts.get(keys[i]),"项"));
         return new Data("绩效达成","年度当前状态","排除分类目录，使用既有年度目标值及年度完成值判断数值达标；缺少有效目标或完成值列入待核实，不相加不同单位的完成值。",metrics,rows,Map.of());
     }
     private Data core(int year,int month,Long actor) {

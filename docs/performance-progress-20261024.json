@@ -277,5 +277,44 @@
       "Sustained multi-account load, full-system P50/P95, SQL scan counts and index acceptance remain pending."
     ],
     "rollback": "Restore the previous backend artifact or revert this backend commit when authorized. No schema migration, business-data update or frontend runtime change."
+  },
+  "overviewPerformanceAggregation": {
+    "implementation": {
+      "administrator_summary": "One SQL aggregate for installed permissions, canonical numeric/dot/comma/space ancestry and unambiguous active annual rows. Uses annual target/actual values only, preserves exact missing/zero/negative target handling, excludes directories and keeps code-prefix manual/automatic classification. No name or full business projections in the fast path.",
+      "compatible_fallback": "Nonstandard ancestry (including Unicode/control whitespace) and duplicate active annual rows use the original projection. Never assumes MAX(year_id), merges duplicate annual values, or normalizes stored ancestry. Database without unified permission tables retains the original path.",
+      "scoped_drilldown": "Requested IDs are deduplicated and read in chunks of at most 500. Uses the same original row matcher and requested year. Account, leadership and department-duty reads are reused only within one invocation; ordinary single-object canRead remains live. All list order and business projections are retained."
+    },
+    "verification": {
+      "isolated_api_regressions": 199,
+      "query_and_scope_unit_tests": 9,
+      "overview_browser_checks": 14,
+      "browser_script_syntax": "passed",
+      "backend_package": "passed",
+      "frontend_runtime_changes": false
+    },
+    "measurements": [
+      {
+        "aggregate_median_us": 4911,
+        "syntheticPerformance": 120,
+        "full_projection_median_us": 9991,
+        "existingPerformance": 10,
+        "equalMetrics": true
+      },
+      {
+        "aggregate_median_us": 17023,
+        "syntheticPerformance": 600,
+        "full_projection_median_us": 49347,
+        "existingPerformance": 10,
+        "equalMetrics": true
+      }
+    ],
+    "evidence": "performance-overview-performance-20261025.json",
+    "limits": [
+      "Unusual ancestry and duplicate-year configurations deliberately retain full projection fallback.",
+      "Non-admin performance summaries and analysis still materialize full indicator/annual projections, although permission metadata is batched.",
+      "Core, budget and work-record summary data phases, initial multi-module request latency and other list pagination work remain incomplete.",
+      "Sustained multi-account load, full-system P50/P95, SQL scan counts and index acceptance remain pending."
+    ],
+    "rollback": "Restore the previous backend artifact or revert this backend commit when authorized. No schema migration, business-data change or frontend runtime change."
   }
 }

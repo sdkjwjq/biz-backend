@@ -41,6 +41,18 @@ const fs = require('node:fs/promises'), path = require('node:path'), assert = re
     await page.screenshot({ path: path.join(output, 'dashboard-desktop.png'), fullPage: true });
     done('six-modules-and-all-summary-numbers-match-real-API');
 
+    for (const key of ['total', 'attained', 'unattained', 'uncertain', 'manual', 'automatic']) {
+      const metric = summary.modules.performance.metrics.find(item => item.key === key);
+      await open('performance.' + key);
+      const detail = await get('/admin/overview/analysis?year=2026&month=4&metric=performance.' + key + '&dimension=department');
+      assert.equal(detail.value, metric.value);
+      assert.equal(detail.total, metric.value);
+      assert.equal(detail.chart.reduce((sum, row) => sum + row.value, 0), metric.value);
+      await expect(drawer().locator('.analysis-table .el-table__body .el-table__row')).toHaveCount(detail.rows.length);
+      await close();
+    }
+    done('performance-aggregate-status-and-mode-numbers-match-chart-and-drilldown');
+
     await open('tasks.total'); const a = await get('/admin/overview/analysis?year=2026&month=4&metric=tasks.total');
     assert.equal(a.total, 12); assert.equal(a.rows.length, 10); assert.equal(a.chart.reduce((sum, r) => sum + r.value, 0), a.total);
     await expect(drawer().locator('.analysis-table .el-table__body .el-table__row')).toHaveCount(10);
