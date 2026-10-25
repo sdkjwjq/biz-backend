@@ -1,0 +1,84 @@
+{
+  "date": "2026-10-25",
+  "scope": "Achievement overview summary data phase only. Random isolated synthetic MySQL schema, 120 and 600 achievements with submissions and audit logs; common permission state initialized before timing, one warm-up discarded, median of five sequential samples. Full-projection comparison already uses batched scope metadata; this is not an exact pre-batch permission benchmark, HTTP/page latency, P95 or concurrent-user acceptance.",
+  "implementation": {
+    "administrator_summary": "One SQL aggregate over the original is_delete=0 records; date boundaries use the existing Asia/Shanghai connection convention. Preserves achievement counts separately from all nine award quantities, null quantities, current status, missing-date warning across years and empty values. No history, body or name projections for this summary.",
+    "scoped_drilldown": "Permission metadata limited to requested IDs, deduplicated and read in batches of at most 500. Reuses the original row-scope matcher. Account and leadership relationships reused only within this invocation, never across requests; ordinary canRead behavior retained."
+  },
+  "measurements": [
+    {
+      "equalMetrics": true,
+      "syntheticAchievements": 120,
+      "full_projection_median_us": 81344,
+      "aggregate_median_us": 3596
+    },
+    {
+      "equalMetrics": true,
+      "syntheticAchievements": 600,
+      "full_projection_median_us": 316634,
+      "aggregate_median_us": 3387
+    }
+  ],
+  "verification": {
+    "isolated_api_regressions": 196,
+    "work_record_regressions": 36,
+    "query_and_scope_unit_tests": 5,
+    "overview_browser_checks": 13,
+    "frontend_static_check": "passed",
+    "frontend_build": "passed",
+    "backend_package": "passed"
+  },
+  "scope_query_evidence": {
+    "unique_requested_ids": 501,
+    "metadata_queries": 2,
+    "max_ids_per_query": 500,
+    "account_reads_per_batch_invocation": 1,
+    "leadership_all_reads_per_batch_invocation": 1,
+    "leadership_department_reads_per_batch_invocation": 1,
+    "source": "PermissionAchievementBatchTest",
+    "limits": "Mocked query-count assertion, not live SQL tracing or scan-row measurement."
+  },
+  "compatibility_cases": [
+    "2025/2026/2027/empty 2029 and year-boundary timestamps",
+    "missing acquisition dates remain outside every annual total",
+    "all nine award columns, null and negative quantities, quantities exceeding signed-int total",
+    "unknown audit state and soft-delete values 0/1/2",
+    "ALL, year-limited ALL, OWN, BUSINESS, custom department/item union and dynamic LEADERSHIP scopes",
+    "batch vs individual canRead with deleted and nonexistent IDs",
+    "permission revocation and account disable using the same old login token",
+    "summary numbers vs chart groups, drilldown rows and award counts",
+    "existing task, performance, core, achievement, budget, expert, management and work-record regressions"
+  ],
+  "browser": {
+    "checks": [
+      "six-modules-and-all-summary-numbers-match-real-API",
+      "pagination-real-chart-click-group-intersection-and-existing-task-detail",
+      "core-cutoff-excludes-future-and-obsolete-results-and-opens-history",
+      "achievement-aggregate-numbers-match-chart-and-drilldown-records-and-awards",
+      "achievement-rejection-reason-and-existing-detail-link",
+      "budget-missing-null-gaps-adjustments-three-trend-views-original-chart-hidden",
+      "work-record-current-eligibility-draft-privacy-and-frozen-record-link",
+      "leader-readonly-maintenance-current-scope-old-token-and-ordinary-user-denial",
+      "slow-old-year-response-cannot-replace-current-year",
+      "injected-module-failure-is-not-zero-and-independent-retry-recovers",
+      "injected-analysis-failure-retry-and-close-cancels-old-response",
+      "narrow-screen-page-table-scroll-and-accessible-drawer-footer",
+      "zero-records-and-zero-denominators-show-empty-data-without-false-percentage"
+    ],
+    "errors": [],
+    "fixtures": "random isolated synthetic database",
+    "simulated": [
+      "delayed year response",
+      "module failure",
+      "analysis failure",
+      "closed analysis response"
+    ]
+  },
+  "rollback": "Restore the previous backend artifact or revert this backend commit when authorized. No schema migration, business-data update or frontend runtime change.",
+  "remaining": [
+    "Non-admin summaries and analysis still materialize full achievement projections with audit-history subqueries.",
+    "Other overview aggregations and initial multi-module request latency remain unfinished.",
+    "Sustained multi-account load, full-system P50/P95, SQL scan counts and index acceptance remain pending."
+  ],
+  "production_changes": false
+}

@@ -1,6 +1,7 @@
 package org.example;
 
 import org.example.service.*;
+import org.example.mapper.AchievementMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -12,6 +13,16 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class AdminOverviewQueryTest {
+    @Test void adminAchievementSummaryUsesOneAggregateWithoutHistoryOrNames(){
+        var access=mock(LeadershipAccessService.class);var jdbc=mock(JdbcTemplate.class);var achievements=mock(AchievementMapper.class);
+        when(access.isAdmin(1L)).thenReturn(true);
+        when(jdbc.queryForMap(anyString(),any(Object[].class))).thenReturn(Map.of("total",3L,"archived",1L,"pending",1L,"rejected",1L,"awards",9L,"missingDates",2L));
+        var service=new AdminOverviewService(access,null,achievements,null,null,null,jdbc);
+        ReflectionTestUtils.setField(service,"permissions",mock(PermissionService.class));
+        @SuppressWarnings("unchecked") var modules=(Map<String,Object>)service.summary(2026,10,"achievements",1L).get("modules");
+        assertEquals("ok",((Map<?,?>)modules.get("achievements")).get("status"));
+        verifyNoInteractions(achievements);verify(jdbc).queryForMap(anyString(),any(Object[].class));verifyNoMoreInteractions(jdbc);
+    }
     @Test void adminTaskSummaryUsesOneAggregateAndNoTaskTreeOrNameLists(){
         var access=mock(LeadershipAccessService.class);var jdbc=mock(JdbcTemplate.class);
         when(access.isAdmin(1L)).thenReturn(true);

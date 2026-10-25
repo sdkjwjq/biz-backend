@@ -241,5 +241,41 @@
     "evidence": "performance-overview-task-20261025.json",
     "limits": "Other overview modules still materialize their business projections, non-admin task summaries retain scoped tree queries, and full-system P95/load acceptance remain pending.",
     "rollback": "Restore matching previous frontend and backend artifacts when authorized; no schema migration or business-data changes."
+  },
+  "overviewAchievementAggregation": {
+    "implementation": {
+      "administrator_summary": "One SQL aggregate over the original is_delete=0 records; date boundaries use the existing Asia/Shanghai connection convention. Preserves achievement counts separately from all nine award quantities, null quantities, current status, missing-date warning across years and empty values. No history, body or name projections for this summary.",
+      "scoped_drilldown": "Permission metadata limited to requested IDs, deduplicated and read in batches of at most 500. Reuses the original row-scope matcher. Account and leadership relationships reused only within this invocation, never across requests; ordinary canRead behavior retained."
+    },
+    "verification": {
+      "isolated_api_regressions": 196,
+      "work_record_regressions": 36,
+      "query_and_scope_unit_tests": 5,
+      "overview_browser_checks": 13,
+      "frontend_static_check": "passed",
+      "frontend_build": "passed",
+      "backend_package": "passed"
+    },
+    "measurements": [
+      {
+        "equalMetrics": true,
+        "syntheticAchievements": 120,
+        "full_projection_median_us": 81344,
+        "aggregate_median_us": 3596
+      },
+      {
+        "equalMetrics": true,
+        "syntheticAchievements": 600,
+        "full_projection_median_us": 316634,
+        "aggregate_median_us": 3387
+      }
+    ],
+    "evidence": "performance-overview-achievements-20261025.json",
+    "limits": [
+      "Non-admin summaries and analysis still materialize full achievement projections with audit-history subqueries.",
+      "Other overview aggregations and initial multi-module request latency remain unfinished.",
+      "Sustained multi-account load, full-system P50/P95, SQL scan counts and index acceptance remain pending."
+    ],
+    "rollback": "Restore the previous backend artifact or revert this backend commit when authorized. No schema migration, business-data update or frontend runtime change."
   }
 }

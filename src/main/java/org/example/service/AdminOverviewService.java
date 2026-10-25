@@ -63,18 +63,20 @@ public class AdminOverviewService {
         authorize(year,month,actor);
         if(module!=null&&!MODULES.contains(module)) throw new AdminManagementException(400,"未知统计模块");
         Map<String,Object> sections=new LinkedHashMap<>();
+        boolean administrator=access.isAdmin(actor);
         // 各模块独立失败，绝不以零代替异常；重试可只请求一个模块。
         for(String key:module==null?MODULES:List.of(module)) {
             try {
                 if(permissions.enforced(actor)&&!permissions.allowed(actor,key+".read")){sections.put(key,map("status","forbidden","message","未获准查阅此模块"));continue;}
-                Data d=key.equals("tasks")&&access.isAdmin(actor)?taskSummary(year):data(key,year,month,actor);
+                Data d=administrator&&key.equals("tasks")?taskSummary(year)
+                        :administrator&&key.equals("achievements")?achievementSummary(year):data(key,year,month,actor);
                 sections.put(key,map("status","ok","title",d.title,"period",d.period,"note",d.note,"metrics",d.metrics,"extra",d.extra));
             } catch(Exception error) {
                 org.slf4j.LoggerFactory.getLogger(getClass()).error("Overview module failed: {}",key,error);
                 sections.put(key,map("status","error","message","统计加载失败，请重试"));
             }
         }
-        return map("year",year,"month",month,"generatedAt",Instant.now().toString(),"readOnly",!access.isAdmin(actor),
+        return map("year",year,"month",month,"generatedAt",Instant.now().toString(),"readOnly",!administrator,
             "scope",access.scope(actor),"modules",sections);
     }
     @Transactional(readOnly=true,isolation=org.springframework.transaction.annotation.Isolation.REPEATABLE_READ)
@@ -228,8 +230,10 @@ public class AdminOverviewService {
     }
     private Data achievements(int year,Names n,Long actor) {
         List<Map<String,Object>> rows=new ArrayList<>();long missing=0;
-        for(var a:achievements.listAllAchievements()) {
-            if(permissions.enforced(actor)&&!permissions.canRead(actor,"achievements",a.getAchId(),year))continue;
+        var all=achievements.listAllAchievements();
+        Set<Long> visible=permissions.enforced(actor)?permissions.readableAchievementIds(actor,all.stream().map(BizAchievement::getAchId).toList()):null;
+        for(var a:all) {
+            if(visible!=null&&!visible.contains(a.getAchId()))continue;
             if(a.getGotTime()==null){missing++;continue;}
             if(a.getGotTime().toInstant().atZone(ZoneId.of("Asia/Shanghai")).getYear()!=year)continue;
             String state=a.getAuditStatus()==null?"状态待核实":a.getAuditStatus()==30?"已归档":a.getAuditStatus()<0?"已驳回":a.getAuditStatus()==10?"待审核":"状态待核实";
@@ -238,9 +242,32 @@ public class AdminOverviewService {
             Map<String,Object> r=base(a.getAchId(),"",a.getAchName(),a.getDeptId(),n);
             r.putAll(map("kind","achievement","categoryKey",str(category),"category",CATEGORIES[category],"levelKey",Objects.toString(a.getLevel(),"未填写"),"level",Objects.toString(a.getLevel(),"未填写"),"statusKey",state,"status",state,"quantity",quantity,"reason",a.getRejectionReason()));rows.add(r);
         }
+        Map<String,Long> counts=new LinkedHashMap<>();
+        for(String key:List.of("total","archived","pending","rejected"))counts.put(key,count(rows,"achievements",key));
+        counts.put("awards",rows.stream().filter(matches("achievements","archived")).mapToLong(r->((Number)r.get("quantity")).longValue()).sum());
+        return achievementData(counts,missing,rows);
+    }
+    /** Summary reads no attachment, text body or per-record audit history. */
+    private Data achievementSummary(int year) {
+        var result=jdbc.queryForMap("SELECT COALESCE(SUM(in_year),0) total,"
+                +"COALESCE(SUM(CASE WHEN in_year AND audit_status=30 THEN 1 ELSE 0 END),0) archived,"
+                +"COALESCE(SUM(CASE WHEN in_year AND audit_status=10 THEN 1 ELSE 0 END),0) pending,"
+                +"COALESCE(SUM(CASE WHEN in_year AND audit_status<0 THEN 1 ELSE 0 END),0) rejected,"
+                +"COALESCE(SUM(CASE WHEN in_year AND audit_status=30 THEN quantity ELSE 0 END),0) awards,"
+                +"COALESCE(SUM(got_time IS NULL),0) missingDates FROM ("
+                +"SELECT got_time,audit_status,(got_time>=? AND got_time<?) in_year,"
+                +"COALESCE(te_deng_jiang,0)+COALESCE(yi_deng_jiang,0)+COALESCE(er_deng_jiang,0)"
+                +"+COALESCE(san_deng_jiang,0)+COALESCE(jin_jiang,0)+COALESCE(yin_jiang,0)"
+                +"+COALESCE(tong_jiang,0)+COALESCE(you_sheng_jiang,0)+COALESCE(bud_deng_deng_ci,0) quantity "
+                +"FROM biz_achievement WHERE is_delete=0) a",year+"-01-01",(year+1)+"-01-01");
+        Map<String,Long> counts=new LinkedHashMap<>();
+        for(String key:List.of("total","archived","pending","rejected","awards"))counts.put(key,((Number)result.get(key)).longValue());
+        return achievementData(counts,((Number)result.get("missingDates")).longValue(),List.of());
+    }
+    private Data achievementData(Map<String,Long> counts,long missing,List<Map<String,Object>> rows) {
         List<Map<String,Object>> metrics=new ArrayList<>();String[] keys={"total","archived","pending","rejected"},labels={"成果条数","已归档","待审核","已驳回"};
-        for(int i=0;i<keys.length;i++)metrics.add(metric(keys[i],labels[i],count(rows,"achievements",keys[i]),"条"));
-        metrics.add(metric("awards","已归档奖项数量",rows.stream().filter(matches("achievements","archived")).mapToLong(r->((Number)r.get("quantity")).longValue()).sum(),"个"));
+        for(int i=0;i<keys.length;i++)metrics.add(metric(keys[i],labels[i],counts.get(keys[i]),"条"));
+        metrics.add(metric("awards","已归档奖项数量",counts.get("awards"),"个"));
         return new Data("建设成果","取得年份／审核为当前状态","按取得日期归入年度；成果条数和奖项数量分别统计。驳回记录保留当前驳回原因。",metrics,rows,map("missingDates",missing,"warning",missing>0?"另有 "+missing+" 条成果缺少取得日期，未计入任何年度":""));
     }
     @SuppressWarnings("unchecked")

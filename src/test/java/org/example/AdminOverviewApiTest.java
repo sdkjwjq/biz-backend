@@ -180,6 +180,99 @@ class AdminOverviewApiTest {
         for(JsonNode m:summary.path("modules").path(module).path("metrics"))if(key.equals(m.path("key").asText()))return m.path("value");
         fail("Missing metric "+module+"."+key+": "+summary);return null;
     }
+    private void achievement(long id,String date,Integer status,int deleted,long department,long owner) {
+        jdbc.update("INSERT INTO biz_achievement(ach_id,ach_name,got_time,audit_status,category,dept_id,yi_deng_jiang,is_delete,level,department,create_by,comment,is_competition,create_time,update_time) VALUES(?,CONCAT('Synthetic ',?),?,?,1,?,3,?,'省级','Synthetic',?,'Fixture',1,NOW(),NOW())",
+                id,id,date,status,department,deleted,owner);
+    }
+    @Test void achievementAggregateMatchesDetailProjectionAcrossDatesStatesAndAllAwardFields() throws Exception {
+        jdbc.execute("ALTER TABLE biz_achievement MODIFY got_time datetime NULL");
+        try{
+            achievement(970001,"2026-01-01 00:00:00",30,0,920001,OWNER);
+            achievement(970002,"2026-12-31 23:59:59",10,0,920001,OWNER);
+            achievement(970003,"2025-12-31 23:59:59",-20,0,920001,OWNER);
+            achievement(970004,"2027-01-01 00:00:00",99,0,920001,OWNER);
+            achievement(970005,null,30,0,920001,OWNER);
+            achievement(970006,"2026-06-01",30,1,920001,OWNER);
+            achievement(970007,"2026-06-01",30,2,920001,OWNER);
+            achievement(970008,"2026-06-01",-1,0,920001,OWNER);
+            jdbc.update("UPDATE biz_achievement SET te_deng_jiang=2147483647,yi_deng_jiang=2147483647,er_deng_jiang=2,san_deng_jiang=3,jin_jiang=4,yin_jiang=5,tong_jiang=6,you_sheng_jiang=7,bud_deng_deng_ci=8 WHERE ach_id=970001");
+            jdbc.update("UPDATE biz_achievement SET yi_deng_jiang=NULL WHERE ach_id=970002");
+            Object target=org.springframework.test.util.AopTestUtils.getUltimateTargetObject(overview);String token=login(ADMIN);
+            for(int pass=0;pass<2;pass++){
+                for(int year:List.of(2025,2026,2027,2029)){
+                    Object detail=org.springframework.test.util.ReflectionTestUtils.invokeMethod(target,"data","achievements",year,4,ADMIN);
+                    var result=ok(request(HttpMethod.GET,"/admin/overview/summary?year="+year+"&month=4&module=achievements",token,null)).path("modules").path("achievements");
+                    assertEquals("ok",result.path("status").asText());
+                    for(String key:List.of("title","period","note","metrics","extra"))assertEquals(json.readTree(json.writeValueAsString(org.springframework.test.util.ReflectionTestUtils.getField(detail,key))),result.path(key),year+" "+key);
+                }
+                jdbc.update("UPDATE biz_achievement SET audit_status=30,yi_deng_jiang=-2 WHERE ach_id=970002");
+                jdbc.update("UPDATE biz_achievement SET got_time='2026-06-01' WHERE ach_id=970005");
+            }
+            jdbc.update("DELETE FROM biz_achievement");
+            var empty=ok(request(HttpMethod.GET,"/admin/overview/summary?year=2026&month=4&module=achievements",token,null));
+            assertEquals(0,value(empty,"achievements","total").asLong());assertEquals(0,value(empty,"achievements","awards").asLong());
+        }finally{jdbc.update("DELETE FROM biz_achievement WHERE got_time IS NULL");jdbc.execute("ALTER TABLE biz_achievement MODIFY got_time datetime NOT NULL");}
+    }
+    @Test void achievementBatchScopeMatchesIndividualChecksAndReflectsChangesWithOldToken() throws Exception {
+        jdbc.execute("ALTER TABLE biz_achievement MODIFY got_time datetime NULL");
+        try{
+            achievement(970001,"2026-04-01",30,0,920001,OWNER);
+            achievement(970002,"2026-04-01",-10,0,920002,VIEWER);
+            achievement(970003,"2025-04-01",10,0,920002,OWNER);
+            achievement(970004,null,30,0,920001,OWNER);
+            achievement(970005,"2026-04-01",30,1,920001,VIEWER);
+            var requested=List.of(970001L,970002L,970003L,970004L,970005L,999999L);
+            List<Map<String,Object>> rules=List.of(Map.of("mode","ALL"),Map.of("mode","ALL","years",List.of(2026)),
+                    Map.of("mode","OWN"),Map.of("mode","BUSINESS"),Map.of("mode","CUSTOM","departments",List.of(920001)),
+                    Map.of("mode","CUSTOM","items",List.of(970002,970003)),Map.of("mode","CUSTOM","departments",List.of(920001),"items",List.of(970002)),Map.of("mode","LEADERSHIP"));
+            String token=login(VIEWER);
+            for(var rule:rules){
+                jdbc.update("INSERT INTO sys_user_permission(user_id,access_mode,permissions_json,scopes_json,version) VALUES(?,'CUSTOM',?,?,1) ON DUPLICATE KEY UPDATE permissions_json=VALUES(permissions_json),scopes_json=VALUES(scopes_json),version=version+1",
+                        VIEWER,json.writeValueAsString(Map.of("overview.read",true,"achievements.read",true)),json.writeValueAsString(Map.of("achievements",rule)));
+                for(int leadershipPass=0;leadershipPass<("LEADERSHIP".equals(rule.get("mode"))?3:1);leadershipPass++){
+                    jdbc.update("DELETE FROM sys_leadership_department");jdbc.update("DELETE FROM sys_leadership_access");
+                    if(leadershipPass==0){jdbc.update("INSERT INTO sys_leadership_access(user_id,scope,version) VALUES(?,'DEPARTMENTS',1)",VIEWER);jdbc.update("INSERT INTO sys_leadership_department(user_id,dept_id) VALUES(?,920001)",VIEWER);}
+                    if(leadershipPass==1)jdbc.update("INSERT INTO sys_leadership_access(user_id,scope,version) VALUES(?,'ALL',1)",VIEWER);
+                    Set<Long> expected=new HashSet<>();for(Long id:requested)if(overviewPermissions.canRead(VIEWER,"achievements",id,2026))expected.add(id);
+                    assertEquals(expected,overviewPermissions.readableAchievementIds(VIEWER,requested),rule.toString());
+                    var details=analysis(token,"achievements.total","category");
+                    Set<Long> actual=new HashSet<>();details.path("rows").forEach(row->actual.add(row.path("id").asLong()));
+                    Set<Long> selected=new HashSet<>(expected);selected.retainAll(Set.of(970001L,970002L));assertEquals(selected,actual);
+                    var result=summary(token,4);assertEquals(actual.size(),value(result,"achievements","total").asInt());
+                    assertEquals(expected.contains(970004L)?1:0,result.path("modules").path("achievements").path("extra").path("missingDates").asInt());
+                }
+            }
+            jdbc.update("UPDATE sys_user_permission SET permissions_json=? WHERE user_id=?",json.writeValueAsString(Map.of("overview.read",true,"achievements.read",false)),VIEWER);
+            assertTrue(overviewPermissions.readableAchievementIds(VIEWER,requested).isEmpty());
+            assertEquals("forbidden",summary(token,4).path("modules").path("achievements").path("status").asText());
+            jdbc.update("UPDATE sys_user SET status='0' WHERE user_id=?",VIEWER);
+            assertEquals(403,request(HttpMethod.GET,"/admin/overview/summary?year=2026&month=4",token,null).getStatusCode().value());
+        }finally{jdbc.update("DELETE FROM biz_achievement WHERE got_time IS NULL");jdbc.execute("ALTER TABLE biz_achievement MODIFY got_time datetime NOT NULL");}
+    }
+    @Test void achievementSummaryAtCurrentAndFiveTimesSyntheticScale() throws Exception {
+        Object target=org.springframework.test.util.AopTestUtils.getUltimateTargetObject(overview);String token=login(ADMIN);
+        for(int size:List.of(120,600)){
+            jdbc.update("DELETE FROM biz_achievement");
+            List<Object[]> rows=new ArrayList<>();for(int i=0;i<size;i++)rows.add(new Object[]{9970000+i,i,i%3==0?30:i%3==1?10:-10});
+            jdbc.batchUpdate("INSERT INTO biz_achievement(ach_id,ach_name,got_time,audit_status,category,dept_id,yi_deng_jiang,is_delete,level,department,create_by,comment,is_competition,create_time,update_time) VALUES(?,CONCAT('Bench ',?),'2026-04-01',?,1,920001,3,0,'省级','Synthetic',910001,'Fixture',1,NOW(),NOW())",rows);
+            jdbc.update("INSERT INTO biz_achievement_submission(ach_id,flow_status,is_delete,submit_by,submit_time) SELECT ach_id,audit_status,0,910001,NOW() FROM biz_achievement");
+            jdbc.update("INSERT INTO biz_achievement_audit_log(sub_id,operator_id,action_type,comment,pre_status,post_status,create_time) SELECT sub_id,110228,IF(flow_status<0,'reject','pass'),'Synthetic history',10,flow_status,NOW() FROM biz_achievement_submission");
+            List<Long> full=new ArrayList<>(),aggregate=new ArrayList<>();
+            try{
+                for(int run=0;run<6;run++){
+                    var req=new org.springframework.mock.web.MockHttpServletRequest("GET","/admin/overview/summary");req.addHeader("Authorization",token);
+                    org.springframework.web.context.request.RequestContextHolder.setRequestAttributes(new org.springframework.web.context.request.ServletRequestAttributes(req));
+                    overviewPermissions.state(ADMIN);
+                    long start=System.nanoTime();Object original=org.springframework.test.util.ReflectionTestUtils.invokeMethod(target,"data","achievements",2026,4,ADMIN);
+                    long middle=System.nanoTime();Object optimized=org.springframework.test.util.ReflectionTestUtils.invokeMethod(target,"achievementSummary",2026);long end=System.nanoTime();
+                    assertEquals(org.springframework.test.util.ReflectionTestUtils.getField(original,"metrics"),org.springframework.test.util.ReflectionTestUtils.getField(optimized,"metrics"));
+                    if(run>0){full.add((middle-start)/1000);aggregate.add((end-middle)/1000);}
+                }
+            }finally{org.springframework.web.context.request.RequestContextHolder.resetRequestAttributes();}
+            Collections.sort(full);Collections.sort(aggregate);
+            System.out.println("OVERVIEW_ACHIEVEMENT_DATA_BENCH "+json.writeValueAsString(Map.of("syntheticAchievements",size,"full_projection_median_us",full.get(2),"aggregate_median_us",aggregate.get(2),"equalMetrics",true)));
+        }
+    }
     @Test void aggregatedTaskSummaryMatchesOriginalDetailProjection() throws Exception {
         task(900011,OWNER,2026,10,"3");task(900012,OWNER,2026,10,"1");
         task(900013,OWNER,2026,10,"2");task(900014,OWNER,2025,10,"1");task(900015,OWNER,2026,10,"3");

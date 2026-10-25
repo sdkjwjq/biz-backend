@@ -75,6 +75,19 @@ const fs = require('node:fs/promises'), path = require('node:path'), assert = re
     }finally{releaseCore();await page.unroute('**/api/core-indicators?**');}
     done('core-cutoff-excludes-future-and-obsolete-results-and-opens-history');
 
+    await home();
+    for (const key of ['total', 'archived', 'awards']) {
+      const metric = summary.modules.achievements.metrics.find(item => item.key === key);
+      await open('achievements.' + key);
+      const detail = await get('/admin/overview/analysis?year=2026&month=4&metric=achievements.' + key + '&dimension=category');
+      assert.equal(detail.value, metric.value);
+      assert.equal(detail.chart.reduce((sum, row) => sum + row.value, 0), metric.value);
+      if (key !== 'awards') assert.equal(detail.total, metric.value);
+      await expect(drawer().locator('.analysis-table .el-table__body .el-table__row')).toHaveCount(detail.rows.length);
+      await close();
+    }
+    done('achievement-aggregate-numbers-match-chart-and-drilldown-records-and-awards');
+
     await home(); await open('achievements.rejected');
     await expect(drawer()).toContainText('请补充上级发文依据（合成驳回原因）');
     await drawer().getByRole('button', { name: '详情', exact: true }).click(); await expect(page).toHaveURL(/achId=990101/);
