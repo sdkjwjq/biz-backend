@@ -392,7 +392,7 @@ class ExpertReviewApiTest {
   jdbc.update("UPDATE sys_user SET role='1' WHERE user_id=110228");
   assertEquals(403,get("/admin/operations/ADMIN/1",admin).getStatusCode().value());
  }
- @Test void sqlOperationPagesMatchLegacyAndFallBackForAmbiguousOrder()throws Exception{
+ @Test void sqlOperationPagesKeepExactResultsForTiesAndComplexFilters()throws Exception{
   for(int n=1;n<=30;n++)jdbc.update("INSERT INTO sys_admin_operation_log(log_id,module,action,target_type,target_id,target_name,operator_id,reason,before_json,create_time) VALUES(?,?,'UPDATE','USER',?,'Object',110228,'Reason','{\"name\":\"before\"}',DATE_ADD('2026-10-24',INTERVAL ? MINUTE))",n,n%2==0?"USER":"TASK",String.valueOf(n),n);
   jdbc.update("INSERT INTO biz_ownership_change_log(log_id,target_type,target_id,target_name,operator_id,reason,create_time) VALUES(1,'TASK',3,'Transfer',999999,'Reason','2026-10-23')");
   jdbc.update("INSERT INTO biz_performance_relation_log(log_id,perf_id,perf_name,year,action,task_id,operator_id,reason,create_time) VALUES(1,7,'Relation',2026,'ADD',3,110228,'Reason','2026-10-22')");
@@ -406,8 +406,8 @@ class ExpertReviewApiTest {
   }
   jdbc.update("UPDATE sys_admin_operation_log SET create_time='2026-10-24' WHERE log_id IN(1,2)");
   var fallback=body(get("/list-filters/admin-operations?responseMode=page&includeFields=false",admin));
-  assertTrue(fallback.has("fields"));assertEquals(body(get("/list-filters/admin-operations",admin)).path("items"),fallback.path("items"));
-  assertTrue(body(get("/list-filters/admin-operations?responseMode=page&includeFields=false&f.keyword=Object",admin)).has("fields"));
+  assertFalse(fallback.has("fields"));assertEquals(body(get("/list-filters/admin-operations",admin)).path("items"),fallback.path("items"));
+  assertFalse(body(get("/list-filters/admin-operations?responseMode=page&includeFields=false&f.keyword=Object",admin)).has("fields"));
   assertEquals(403,get("/list-filters/admin-operations?responseMode=page&includeFields=false",owner).getStatusCode().value());
   assertEquals(400,get("/list-filters/admin-operations?responseMode=page&includeFields=false&f.createTimeFrom=2026-10-25&f.createTimeTo=2026-10-24",admin).getStatusCode().value());
  }
@@ -510,4 +510,46 @@ class ExpertReviewApiTest {
   var history=body(get("/expert-reviews/admin/experts",admin));boolean found=false;for(var row:history)if(row.path("userId").asLong()==90103){assertFalse(row.path("active").asBoolean());found=true;}assertTrue(found);
  }
 
+
+ @Test void remoteOptionsPreserveAuthorizedLegacyValuesWithoutBusinessBodies()throws Exception{
+  for(String domain:List.of("tasks","performance","achievements","notices","admin-users","admin-operations","budget-versions","records")){
+   String context=Set.of("tasks","performance","achievements","budget-versions","records").contains(domain)?"f.year=2026&":"";var old=body(get("/list-filters/"+domain+"?"+context+"pageSize=100",admin));assertTrue(old.has("fields"),domain);
+   for(var field:old.path("fields"))if("multi".equals(field.path("type").asText())){
+    String key=field.path("key").asText();var actual=body(get("/list-filters/"+domain+"/filter-options?field="+key+"&f.year=2026&f.month=10&pageSize=100",admin));
+    assertEquals(field.path("options"),actual.path("items"),domain+"."+key);assertEquals(field.path("options").size(),actual.path("total").asInt(),domain+"."+key);
+   }
+  }
+ }
+ @Test void departmentCandidatesArePagedScopedAndDoNotExposeCredentials()throws Exception{
+  for(int i=0;i<113;i++)jdbc.update("INSERT INTO sys_user(user_id,dept_id,user_name,nick_name,role,status,is_delete) VALUES(?,991001,?,?,'1','1',0)",700000+i,"candidate-"+i,"Candidate "+i);
+  var first=body(get("/admin/departments/991001/leader-candidates?pageSize=50&ids=700112",admin));assertEquals(50,first.path("items").size());assertTrue(first.path("total").asInt()>=113);assertEquals("700112",first.path("selected").get(0).path("value").asText());assertFalse(first.toString().contains("password"));
+  assertEquals(403,get("/admin/departments/991001/leader-candidates",owner).getStatusCode().value());assertEquals(0,body(get("/admin/departments/991002/leader-candidates?ids=700112",admin)).path("selected").size());
+ }
+
+ @Test void auditOptionsMatchConsolidatedPageDefinitions()throws Exception{
+  for(String tab:List.of("todo","done")){
+   var old=body(get("/list-filters/audits?responseMode=page&includeFields=true&tab="+tab,admin));
+   for(var field:old.path("fields"))if("multi".equals(field.path("type").asText())){
+    String key=field.path("key").asText();var actual=body(get("/list-filters/audits/filter-options?field="+key+"&tab="+tab+"&pageSize=100",admin));assertEquals(field.path("options"),actual.path("items"),tab+"."+key);
+   }
+  }
+ }
+
+ @Test void remoteTextOptionsKeepCaseAndUnicodeExactness()throws Exception{
+  int id=8000;for(String value:List.of("K","k","K","İ","i","", "\u2003"))jdbc.update("INSERT INTO biz_achievement(ach_id,category,ach_name,level,department,got_time,dept_id,create_by,is_delete,audit_status,comment,is_competition) VALUES(?,1,'Option precision',?,'Precision fixture','2026-01-01',991001,90101,0,30,'Precision fixture','0')",id++,value);
+  var old=body(get("/list-filters/achievements?f.year=2026",admin));com.fasterxml.jackson.databind.JsonNode expected=null;for(var field:old.path("fields"))if("level".equals(field.path("key").asText()))expected=field.path("options");
+  assertEquals(expected,body(get("/list-filters/achievements/filter-options?field=level&f.year=2026",admin)).path("items"));
+  var searched=body(get("/list-filters/achievements/filter-options?field=level&f.year=2026&keyword=i",admin));assertEquals(2,searched.path("total").asInt());
+ }
+
+ @Test void managementCandidatesKeepSelectedRowsAndDoNotPreloadBusinessLists()throws Exception{
+  var structure=body(get("/admin/permissions/options?separateOptions=true",admin));assertEquals(0,structure.path("tasks").size());assertTrue(structure.has("departments"));
+  var expected=body(get("/admin/permissions/options",admin));for(String domain:List.of("tasks","performance","achievements")){
+   var actual=body(get("/admin/permissions/candidates?domain="+domain+"&pageSize=100",admin));long expectedSize=0;for(var item:expected.path(domain))if(!domain.equals("tasks")||item.path("level").asInt()==3)expectedSize++;
+   assertEquals(expectedSize,actual.path("total").asLong(),domain);assertFalse(actual.toString().contains("password"));
+  }
+  assertEquals(403,get("/admin/permissions/candidates?domain=users",owner).getStatusCode().value());
+  var lightweight=body(get("/biz/tasks/manage/options?separateOptions=true",admin));assertEquals(0,lightweight.path("users").size());assertEquals(0,lightweight.path("directories").size());
+  assertTrue(body(get("/biz/tasks/manage/candidates?domain=users&ids=90101",admin)).path("selected").size()>0);
+ }
 }

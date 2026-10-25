@@ -1,13 +1,25 @@
 """Deterministic distinct synthetic business objects; used only by guarded serve.py schemas."""
 def statements(scale):
     n=131*scale
+    def long_suffix(i): return "（跨部门协同推进建设目标并核对年度任务完成情况，验证连续长名称完整换行展示）"*2 if i%17==0 else ""
     def insert(table,columns,rows):
         for offset in range(0,len(rows),200):yield "INSERT INTO "+table+"("+columns+") VALUES "+",".join(rows[offset:offset+200])
     yield from insert("sys_user","user_id,dept_id,user_name,nick_name,password,role,status,is_delete,force_password_change",[f"({5100000+i},920001,'synthetic-admin-{i}','Synthetic concurrent administrator {i}','review-fixture-password','0','1',0,0)" for i in range(30)])
     yield from insert("sys_user","user_id,dept_id,user_name,nick_name,password,role,status,is_delete,force_password_change",[f"({5000000+i},920001,'synthetic-{i}','Synthetic reporter {i}','review-fixture-password','1','1',0,0)" for i in range(n)])
-    yield from insert("biz_task","task_id,project_id,parent_id,phase,task_code,task_name,level,dept_id,leader_id,auditor_id,principal_id,data_type,target_value,current_value,progress,status,is_delete",[f"({3000000+i},1,930001,2026,'SYN{i:05d}','Synthetic distinct task {i}',3,{920001+i%2},{5000000+i},910003,910002,'1',10,{i%11},{min(i%11*10,100)},'1',0)" for i in range(n)])
+    # Thirty separate, authorized accounts per capacity profile. No rejection is a fast success.
+    for prefix,role in [(5200000,'LEADERSHIP'),(5300000,'LEADERSHIP'),(5400000,'EXPERT'),(5500000,'FINANCE')]:
+        yield from insert("sys_user","user_id,dept_id,user_name,nick_name,password,role,status,is_delete,force_password_change",[f"({prefix+i},920001,'profile-{prefix+i}','Synthetic profile {prefix+i}','review-fixture-password','1','1',0,0)" for i in range(30)])
+        yield from insert("sys_user_permission","user_id,access_mode,permissions_json,scopes_json",[f"({prefix+i},'CUSTOM','{{}}','{{}}')" for i in range(30)])
+        yield from insert("sys_user_permission_role","user_id,role_code",[f"({prefix+i},'{role}')" for i in range(30)])
+        if role=='LEADERSHIP':
+            scope='ALL' if prefix==5200000 else 'DEPARTMENTS'
+            yield from insert("sys_leadership_access","user_id,scope,version",[f"({prefix+i},'{scope}',1)" for i in range(30)])
+            if prefix==5300000:yield from insert("sys_leadership_department","user_id,dept_id",[f"({prefix+i},920002)" for i in range(30)])
+        if role=='EXPERT':
+            yield f"UPDATE sys_user_permission SET scopes_json='{{\"tasks\":{{\"mode\":\"CUSTOM\",\"directories\":[930001],\"years\":[2026]}}}}' WHERE user_id BETWEEN {prefix} AND {prefix+29}"
+    yield from insert("biz_task","task_id,project_id,parent_id,phase,task_code,task_name,level,dept_id,leader_id,auditor_id,principal_id,data_type,target_value,current_value,progress,status,is_delete",[f"({3000000+i},1,930001,2026,'SYN{i:05d}','Synthetic distinct task {i}{long_suffix(i)}',3,{920001+i%2},{5000000+i},910003,910002,'1',10,{i%11},{min(i%11*10,100)},'1',0)" for i in range(n)])
     yield from insert("biz_material_submission","sub_id,task_id,file_id,reported_value,submit_by,submit_dept_id,manage_dept_id,file_suffix,flow_status,current_handler_id,is_delete,submit_time",[f"({7000000+4*i+j},{3000000+i},940001,{j+1},{5000000+i},920001,920001,'pdf',{10 if j==3 else 40},{5100000+i%30 if j==3 else 'NULL'},0,DATE_ADD('2026-09-01',INTERVAL {4*i+j} SECOND))" for i in range(n) for j in range(4)])
-    yield from insert("biz_performance","perf_id,project_id,perf_code,perf_name,target_value,current_value,data_type,dept_id,principal_id,auditor_id,leader_id,ancestors",[f"({4000000+i},1,'2.1.synthetic-{i}','Synthetic performance {i}',10,{i%11},'1',920001,910002,910003,{5000000+i},'0,2,2.1')" for i in range(n)])
+    yield from insert("biz_performance","perf_id,project_id,perf_code,perf_name,target_value,current_value,data_type,dept_id,principal_id,auditor_id,leader_id,ancestors",[f"({4000000+i},1,'2.1.synthetic-{i}','Synthetic performance {i}{long_suffix(i)}',10,{i%11},'1',{920001+i%2},910002,910003,{5000000+i},'0,2,2.1')" for i in range(n)])
     yield from insert("biz_performance_year","year_id,perf_id,year,target_value,actual_value",[f"({4100000+i},{4000000+i},2026,10,{i%11})" for i in range(n)])
     yield from insert("biz_performance_submission","sub_id,perf_id,year_id,year,actual_value,submit_by,submit_time,flow_status,current_handler_id,comment,is_delete",[f"({4200000+2*i+j},{4000000+i},{4100000+i},2026,{i%11},{5000000+i},DATE_ADD('2026-09-01',INTERVAL {2*i+j} SECOND),{10 if j else 30},{5100000+i%30 if j else 110228},'Distinct performance report {i}-{j}',0)" for i in range(n) for j in range(2)])
     yield from insert("biz_achievement","ach_id,category,level,ach_name,department,got_time,dept_id,create_by,audit_status,comment,is_competition,is_delete",[f"({4300000+i},1,'Province','Synthetic achievement {i}','Synthetic department','2026-09-01',920001,1910001,{10 if i%2 else 30},'Distinct achievement {i}',0,0)" for i in range(n)])

@@ -39,27 +39,18 @@ class AdminOverviewQueryTest {
         assertEquals("ok",((Map<?,?>)sections.get("budget")).get("status"));
         verify(budgets).getSheet(2026,4);verify(budgets).getSources(10L);verify(budgets).getTasks(10L);verifyNoMoreInteractions(budgets);verifyNoInteractions(jdbc);
     }
-    @Test void adminPerformanceSummaryUsesOneAggregateWithoutFullProjectionOrNames(){
-        var access=mock(LeadershipAccessService.class);var jdbc=mock(JdbcTemplate.class);var performance=mock(PerformanceMapper.class);var permissions=mock(PermissionService.class);
+    @Test void performanceSummaryUsesScopedAggregateWithoutFullProjectionOrNames(){
+        var access=mock(LeadershipAccessService.class);var jdbc=mock(JdbcTemplate.class);var performance=mock(PerformanceMapper.class);var permissions=mock(PermissionService.class);var scopes=mock(ReadScopeSql.class);
         when(access.isAdmin(1L)).thenReturn(true);when(permissions.enforced(1L)).thenReturn(true);when(permissions.allowed(1L,"performance.read")).thenReturn(true);
-        when(jdbc.queryForMap(anyString(),any(Object[].class))).thenReturn(Map.of("total",3L,"attained",1L,"unattained",1L,"uncertain",1L,"automatic",2L,"maxAnnualRows",1L,"unusualPaths",0L));
-        var service=new AdminOverviewService(access,performance,null,null,null,null,jdbc);ReflectionTestUtils.setField(service,"permissions",permissions);
-        @SuppressWarnings("unchecked") var modules=(Map<String,Object>)service.summary(2026,10,"performance",1L).get("modules");
-        assertEquals("ok",((Map<?,?>)modules.get("performance")).get("status"));
-        verifyNoInteractions(performance);verify(jdbc).queryForMap(anyString(),any(Object[].class));verifyNoMoreInteractions(jdbc);
+        when(scopes.row(1L,"performance","p",2026)).thenReturn(new ReadScopeSql.Clause("p.dept_id=?",List.of(99L)));
+        when(jdbc.queryForMap(anyString(),any(Object[].class))).thenReturn(Map.of("total",2L,"attained",1L,"unattained",0L,"uncertain",1L,"manual",1L,"automatic",1L));
+        var service=new AdminOverviewService(access,performance,null,null,null,null,jdbc);ReflectionTestUtils.setField(service,"permissions",permissions);ReflectionTestUtils.setField(service,"readQueries",new OverviewReadQueries(jdbc,scopes));
+        var result=service.summary(2026,10,"performance",1L);assertEquals("ok",((Map<?,?>)((Map<?,?>)result.get("modules")).get("performance")).get("status"));verifyNoInteractions(performance);
+        var sql=mockingDetails(jdbc).getInvocations().stream().map(i->i.getArguments()[0].toString()).filter(q->q.contains("SUM(CASE")).findFirst().orElseThrow();assertTrue(sql.contains("p.dept_id=?"));assertTrue(sql.contains("JSON_TABLE"));assertFalse(sql.contains("SELECT *"));
     }
-    @Test void ambiguousAnnualRowsOrNonstandardAncestryRetainOriginalProjection(){
-        for(String guard:List.of("maxAnnualRows","unusualPaths")){
-            var access=mock(LeadershipAccessService.class);var jdbc=mock(JdbcTemplate.class);var performance=mock(PerformanceMapper.class);
-            when(access.isAdmin(1L)).thenReturn(true);var permissions=mock(PermissionService.class);
-            when(permissions.enforced(1L)).thenReturn(true);when(permissions.allowed(1L,"performance.read")).thenReturn(true);
-            Map<String,Object> result=new HashMap<>(Map.of("maxAnnualRows",0L,"unusualPaths",0L));result.put(guard,2L);
-            when(jdbc.queryForMap(anyString(),any(Object[].class))).thenReturn(result);
-            var service=new AdminOverviewService(access,performance,null,null,null,null,jdbc);ReflectionTestUtils.setField(service,"permissions",permissions);
-            @SuppressWarnings("unchecked") var modules=(Map<String,Object>)service.summary(2026,10,"performance",1L).get("modules");
-            assertEquals("ok",((Map<?,?>)modules.get("performance")).get("status"));
-            verify(performance).getAllPerformance();verify(performance).getPerformanceYearByYear(2026);
-        }
+    @Test void scopedAncestryDoesNotInvokeWholeModuleFallback(){
+        var jdbc=mock(JdbcTemplate.class);var scopes=mock(ReadScopeSql.class);when(scopes.row(1L,"performance","p",2026)).thenReturn(new ReadScopeSql.Clause("p.perf_id=?",List.of(3L)));
+        var source=new OverviewReadQueries(jdbc,scopes).source("performance",2026,10,1L);assertEquals(List.of(3L,2026),source.args());assertTrue(source.sql().contains("JSON_TABLE"));assertFalse(source.sql().contains("ORDER BY year_id DESC"));verify(jdbc).queryForList(contains("HAVING COUNT(*)>1"),eq(Long.class),eq(2026));verifyNoMoreInteractions(jdbc);
     }
     @Test void adminAchievementSummaryUsesOneAggregateWithoutHistoryOrNames(){
         var access=mock(LeadershipAccessService.class);var jdbc=mock(JdbcTemplate.class);var achievements=mock(AchievementMapper.class);

@@ -616,4 +616,25 @@ class AdminOverviewApiTest {
         try {JsonNode s=summary(login(ADMIN),4);assertEquals("error",s.path("modules").path("achievements").path("status").asText());assertFalse(s.path("modules").path("achievements").has("metrics"));assertEquals(1,value(s,"tasks","total").asInt());}
         finally {jdbc.execute("RENAME TABLE overview_test_achievement TO biz_achievement");}
     }
+
+    @Autowired private org.example.service.OverviewReadQueries overviewSql;
+    @Autowired private org.example.mapper.SysMapper scopeUsers;
+    @Test void sqlRecordQualificationMatchesCurrentFrozenCatalogAcrossYears(){
+        for(int year=2025;year<=2029;year++){
+            var expected=overviewRecordScopes.eligibleAuthors(year).stream().map(org.example.entity.SysUser::getUserId).collect(java.util.stream.Collectors.toSet());
+            var actual=new HashSet<>(jdbc.queryForList("SELECT u.user_id FROM sys_user u WHERE "+org.example.mapper.WorkRecordQualificationSql.reporter("u","= "+year),Long.class));assertEquals(expected,actual,"year "+year);
+        }
+        var users=scopeUsers.getAllUsers();assertEquals(overviewRecordScopes.fillableAccountIds(users),overviewRecordScopes.fillableAccountIdsSql(users));
+    }
+    @Test void sqlOverviewRowsAndGroupsPreserveOriginalProjection()throws Exception{
+        String token=login(ADMIN);Object target=org.springframework.test.util.AopTestUtils.getUltimateTargetObject(overview);
+        jdbc.update("UPDATE biz_performance SET ancestors='0,1,1.1'");
+        for(String module:List.of("tasks","performance","achievements","records")){
+            Object original=org.springframework.test.util.ReflectionTestUtils.invokeMethod(target,"data",module,2026,4,ADMIN);
+            String metric=module+"."+(module.equals("records")?"expected":"total");String dimension=module.equals("tasks")?"reform":"department";
+            var actual=ok(request(HttpMethod.GET,"/admin/overview/analysis?year=2026&month=4&metric="+metric+"&dimension="+dimension+"&pageSize=100",token,null));
+            var rows=json.readTree(json.writeValueAsString(org.springframework.test.util.ReflectionTestUtils.getField(original,"rows")));
+            assertEquals(rows,actual.path("rows"),module+" rows");
+        }
+    }
 }
