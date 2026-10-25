@@ -1,0 +1,26 @@
+{
+  "release": "shuanggao-update-20261025",
+  "archive": "D:\\college\\2026\\shuanggao\\releases\\shuanggao-update-20261025.tar.gz",
+  "bytes": 60771356,
+  "sha256": "b0f28779afcea83416f7e8b82f585326e97f004638a6f47206db1edea0f49c12",
+  "fileChecksumsVerified": 141,
+  "archiveMatchesDirectory": true,
+  "packagedJarMatchesSmokeTestedBuild": true,
+  "backendCommit": "1896b4d14ae3308c7785be72d2565e0bab81083f",
+  "frontendCommit": "77b74df2f9f3fcd777234b7ea2a6c909c3bb8302",
+  "frontendWorkingChanges": [
+    "src/components/ExpertReviewEditor.vue",
+    "vite.config.js"
+  ],
+  "releaseChecks": 25,
+  "manualSections": 14,
+  "manualScreenshots": 19,
+  "portableManual": "docs/双高平台操作手册20261025.html",
+  "newIndex": "audit history sub_id; existing compatible index reused",
+  "deferredPerformance": [
+    "五倍数据、30人并发下督办树查询P95为1531.49ms，超过常用列表1秒目标；延后进一步尾延迟优化。",
+    "最终查询改动后的五倍数据其他身份全档压测及页面重复压测未全部重跑；保留此前完整配对容量、页面及最新兼容性证据，不宣称最终全部性能目标通过。",
+    "线上容量验证、制作更新包和部署等待明确要求。"
+  ],
+  "productionDeployed": false
+}
