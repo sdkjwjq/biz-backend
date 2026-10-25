@@ -107,7 +107,7 @@ public class PermissionRequestGuard {
         if(p.contains("/manage/add"))return "tasks.create";
         if(p.contains("/manage/finish"))return "tasks.finish";
         if(p.contains("/manage/update"))return "tasks.transfer";
-        if(p.endsWith("/manage/options"))return "tasks.create";
+        if(p.endsWith("/manage/options")||p.endsWith("/manage/candidates"))return "tasks.create";
         return domain+(get?".read":".fill");
     }
     public void scope(Long actor,String domain,Long id,Integer year){boolean ok=domain.equals("performance")&&year==null?access.visiblePerformances(actor,null).stream().anyMatch(p->Objects.equals(p.getPerfId(),id)):access.canRead(actor,domain,id,year);if(!ok)throw new AdminManagementException(domain.equals("records")?404:403,"对象不存在或不在授权范围内");}

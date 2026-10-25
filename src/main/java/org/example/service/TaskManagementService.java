@@ -42,6 +42,8 @@ public class TaskManagementService {
         return Map.of("users", users, "departments", mapper.departments(), "directories", mapper.directories());
     }
 
+    public Map<String,Object> optionStructure(Long actor){requireAdmin(actor);return Map.of("users",List.of(),"directories",List.of(),"departments",mapper.departments());}
+
     @Transactional
     public BizTask create(BizTaskDTO input, Long userId) {
         requireAdmin(userId);

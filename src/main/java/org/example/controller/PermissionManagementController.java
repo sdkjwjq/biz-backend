@@ -8,12 +8,14 @@ import org.springframework.web.bind.annotation.*;
 @RestController @RequestMapping("/admin/permissions")
 public class PermissionManagementController {
     @org.springframework.beans.factory.annotation.Autowired private PermissionDutyService duties;
-    @GetMapping("/duties/preview")public Object dutyPreview(@RequestParam String domain,@RequestParam Long id){return duties.preview(access.actor(),domain,id);}
+    @GetMapping("/duties/preview")public Object dutyPreview(@RequestParam String domain,@RequestParam Long id,@RequestParam(value="separateOptions",defaultValue="false") boolean separate){return duties.preview(access.actor(),domain,id,separate);}
     @PostMapping("/duties/transfer")public Object dutyTransfer(@RequestBody PermissionDutyService.Change body){return duties.save(access.actor(),body);}
     private final PermissionManagementService management;private final PermissionService access;
     public PermissionManagementController(PermissionManagementService management,PermissionService access){this.management=management;this.access=access;}
     @GetMapping("/catalog")public Object catalog(){return management.catalog(access.actor());}
-    @GetMapping("/options")public Object options(){return management.options(access.actor());}
+    @GetMapping("/options")public Object options(@RequestParam(value="separateOptions",defaultValue="false") boolean separate){return separate?management.optionStructure(access.actor()):management.options(access.actor());}
+    @org.springframework.beans.factory.annotation.Autowired private ManagementCandidateReadService candidates;
+    @GetMapping("/candidates")public Object candidates(@RequestParam String domain,@RequestParam org.springframework.util.MultiValueMap<String,String> params){return candidates.query(access.actor(),domain,false,params);}
     @GetMapping("/users/{id}")public Object user(@PathVariable Long id){return management.configuration(id,access.actor());}
     @PostMapping("/users/{id}/preview")public Object previewUser(@PathVariable Long id,@RequestBody PermissionManagementService.UserChange body){return management.previewUser(id,body,access.actor());}
     @PutMapping("/users/{id}")public Object saveUser(@PathVariable Long id,@RequestBody PermissionManagementService.UserChange body){return management.saveUser(id,body,access.actor());}

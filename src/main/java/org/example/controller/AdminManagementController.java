@@ -30,6 +30,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 public class AdminManagementController {
     private static final Logger LOG = LoggerFactory.getLogger(AdminManagementController.class);
     private final AdminManagementService admin;
+    @org.springframework.beans.factory.annotation.Autowired private org.example.service.OperationFilterPageService operationPages;
 
     public AdminManagementController(AdminManagementService admin) {
         this.admin = admin;
@@ -90,6 +91,14 @@ public class AdminManagementController {
         return admin.departmentImpact(deptId, user(request));
     }
 
+    @org.springframework.beans.factory.annotation.Autowired private org.example.service.RemoteOptionPages candidatePages;
+    @org.springframework.beans.factory.annotation.Autowired private org.example.service.PermissionService permissions;
+    @GetMapping("/departments/{deptId}/leader-candidates")
+    public Object leaderCandidates(@PathVariable Long deptId,@RequestParam org.springframework.util.MultiValueMap<String,String> params,HttpServletRequest request){
+        permissions.requireAdmin(user(request));
+        return candidatePages.query("SELECT CAST(u.user_id AS CHAR) value,CONCAT(COALESCE(u.nick_name,''),'（',u.user_id,'）') label FROM sys_user u WHERE u.dept_id=? AND BINARY u.status=BINARY '1' AND COALESCE(u.is_delete,0)=0",java.util.List.of(deptId),params,"CAST(value AS UNSIGNED)",null);
+    }
+
     @PutMapping("/departments/{deptId}")
     public Object updateDepartment(@PathVariable Long deptId, @RequestBody AdminDepartmentDTO body,
                                    HttpServletRequest request) {
@@ -106,7 +115,7 @@ public class AdminManagementController {
                              @RequestParam(value="page", defaultValue="1") Integer page,
                              @RequestParam(value="pageSize", defaultValue="10") Integer pageSize,
                              HttpServletRequest request) {
-        return admin.operations(module, operatorId, keyword, action, startDate, endDate, page, pageSize, user(request));
+        return operationPages.legacyPage(user(request),module,operatorId,keyword,action,startDate,endDate,page,pageSize);
     }
 
     @GetMapping("/operations/{type}/{id}")
@@ -125,9 +134,8 @@ public class AdminManagementController {
                                  @RequestParam org.springframework.util.MultiValueMap<String,String> filters, HttpServletRequest request, HttpServletResponse response) {
         if(filters.keySet().stream().anyMatch(k->k.startsWith("f."))){
             filters.set("purpose","export");
-            var result=listFilters.query("admin-operations",user(request),filters);
-            admin.writeOperationExport((java.util.List<java.util.Map<String,Object>>)result.get("items"),response,user(request));
-        } else admin.exportOperations(module, operatorId, keyword, action, startDate, endDate, response, user(request));
+            operationPages.export(user(request),filters,response);
+        } else operationPages.legacyExport(user(request),module,operatorId,keyword,action,startDate,endDate,response);
     }
 
     @GetMapping("/work-records/deleted")

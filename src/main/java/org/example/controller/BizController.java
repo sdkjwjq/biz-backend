@@ -35,10 +35,13 @@ public class BizController {
         return Map.of("canCreate", taskManagementService.canManage(JWTUtil.getUserIdFromToken(request.getHeader("Authorization"))));
     }
 
+    @Autowired private org.example.service.ManagementCandidateReadService managementCandidates;
+    @GetMapping("/tasks/manage/candidates")
+    public Object taskCandidates(HttpServletRequest request,@RequestParam String domain,@RequestParam org.springframework.util.MultiValueMap<String,String> params){try{return managementCandidates.query(JWTUtil.getUserIdFromToken(request.getHeader("Authorization")),domain,true,params);}catch(org.example.service.AdminManagementException error){return ResponseEntity.status(error.getCode()).body(new ErrorVO(error.getMessage(),error.getCode()));}}
     @GetMapping("/tasks/manage/options")
-    public Object taskManagementOptions(HttpServletRequest request) {
+    public Object taskManagementOptions(HttpServletRequest request,@RequestParam(value="separateOptions",defaultValue="false") boolean separate) {
         try {
-            return taskManagementService.options(JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
+            return separate?taskManagementService.optionStructure(JWTUtil.getUserIdFromToken(request.getHeader("Authorization"))):taskManagementService.options(JWTUtil.getUserIdFromToken(request.getHeader("Authorization")));
         } catch (TaskManagementException e) {
             return ResponseEntity.status(e.getCode()).body(new ErrorVO(e.getMessage(), e.getCode()));
         }
