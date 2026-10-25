@@ -1,0 +1,568 @@
+{
+  "main": {
+    "tests": 214,
+    "classes": [
+      {
+        "class": "org.example.AdminManagementApiTest",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "accessUsesCurrentDatabaseRoleAndStatus",
+          "impactLastAdministratorAndOptimisticLockAreEnforced",
+          "departmentLeaderMustBeActiveMemberAndActiveDepartmentCannotBeDisabled",
+          "createResetAndDisableUserAreAuditedWithoutPasswords",
+          "overviewOperationsExportAndDeletedRecordsAreAvailable"
+        ]
+      },
+      {
+        "class": "org.example.AdminOverviewApiTest",
+        "tests": 22,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "performanceAggregationPreservesAnnualValuesAndAmbiguousConfigurationFallback",
+          "moduleFailureIsNotAFalseZeroAndOtherModulesRemainAvailable",
+          "achievementSummaryAtCurrentAndFiveTimesSyntheticScale",
+          "coreCutoffAndMappingKeepFutureAndObsoleteResultsOut",
+          "achievementYearAwardsAndRejectionReasonStayDistinct",
+          "recordDenominatorIntersectionAndDraftPrivacy",
+          "taskSummaryAggregationAtCurrentAndFiveTimesSyntheticScale",
+          "performanceSummaryAtCurrentAndFiveTimesSyntheticScale",
+          "batchedPerformanceScopeMatchesIndividualChecksAndCurrentDuties",
+          "exactReadOnlyPermissionAndCurrentDatabaseScope",
+          "achievementAggregateMatchesDetailProjectionAcrossDatesStatesAndAllAwardFields",
+          "achievementBatchScopeMatchesIndividualChecksAndReflectsChangesWithOldToken",
+          "annualPerformanceExcludesDirectoriesAndDoesNotSumDifferentUnits",
+          "recordScopeReadsAtCurrentAndFiveTimesSyntheticScale",
+          "deniedBudgetYearMarksAccessFailureWithoutChangingLegacyErrorShape",
+          "allowlistsPaginationAndReadOnlyNoBusinessUpdates",
+          "budgetMissingMonthsZeroAndNegativeAdjustments",
+          "coreScopeBatchPreservesCutoffSnapshotAndMappingWarnings",
+          "achievementListBatchReadBenchmarkPreservesCompleteOrderedPayload",
+          "aggregatedTaskSummaryMatchesOriginalDetailProjection",
+          "recordBatchesAndOverviewMatchOriginalScopeChecksAcrossYearsAndDrafts",
+          "taskCountsDeduplicateGoalsAndKeepOverlappingFlags"
+        ]
+      },
+      {
+        "class": "org.example.AdminTestApiTest",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "directAdministratorPrivilegesUseCurrentDatabaseRoleAndDoNotLeakToOtherAccounts",
+          "anyCurrentAdminCanCreateAndReviewAchievementsDirectly",
+          "allPerformanceTodosAvailableAndBusinessActorRetained",
+          "testHeadersRequireCurrentActiveAdminAndReason",
+          "failedTraceRollsBackBusinessValuesAuditsAndNotifications",
+          "delegatedDepartmentWorkRecordKeepsOriginalDepartmentScopeDuringAdminTest",
+          "delegatedWithdrawRestoresTaskAndDoesNotLeakToNextRequest",
+          "delegatedTaskFillAndThreeReviewStagesRecordRealAdmin",
+          "delegatedCoreDraftAndReviewUseActualOperatorAndKeepStages",
+          "delegatedWorkRecordKeepsOwnerScopeNameAndSubmittedImmutability"
+        ]
+      },
+      {
+        "class": "org.example.BudgetTrendApiTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "batchTrendMatchesOriginalProjectionForEveryTaskAndYear",
+          "archivedCoreValuesNeverReferenceFutureMonthsOrMutateImports",
+          "continuousMonthsGapsAndNegativeAdjustments",
+          "accessAndInvalidPeriodsAreRejected",
+          "zeroMissingValuesAndDenominatorsRemainDistinct",
+          "restorationRefreshesTrendWithoutDuplicatingHistory",
+          "budgetTrendReadsAtCurrentAndFiveTimesStoredYearScale"
+        ]
+      },
+      {
+        "class": "org.example.CoreIndicatorApiTest",
+        "tests": 13,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "obsoleteReportsRemainReadableButCannotAffectCurrentResultsOrWorkflow",
+          "reportIndicatorUsesCorrectMetadataAndPrincipalWithoutChangingPerformance",
+          "adminOrOfficeFillPermissionIsRevokedImmediatelyWithExistingToken",
+          "withdrawalAndApprovalCannotBothCommit",
+          "concurrentReportersProduceOnlyOneActiveSubmission",
+          "adminAndOfficeCanFillWithoutTaskResponsibilitiesAndKeepWorkflowStages",
+          "invalidMappingOrReviewerPreventsSubmissionWithoutSideEffects",
+          "recentTwoCrossMonthsAndFrozenEffectiveResults",
+          "validationAndVersionConflictsDoNotWrite",
+          "rejectedAndWithdrawnSubmissionsRemainInHistoryAndRestartFlow",
+          "eligibilityUsesLevel3OrLevel4OwnerAndKeepsDraftPrivate",
+          "reportIndicatorRefusesAUniqueButWrongPerformanceName",
+          "workflowUsesPrincipalThenArchiveWithoutChangingPerformance"
+        ]
+      },
+      {
+        "class": "org.example.ExpertReviewApiTest",
+        "tests": 49,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "changingReviewerFilterDoesNotChangeActualAuthorizedScope",
+          "operationDetailsMatchLegacyAcrossAllSources",
+          "accountOptionEndpointMatchesExistingFieldsAndProtectsAccess",
+          "treeResponsesPreserveMatchesAndOnlyNecessaryAncestors",
+          "unsupportedDirectoryWrongYearAndOutOfScopeTaskAreRejected",
+          "lightweightAuditDepartmentNamesMatchManagementProjection",
+          "batchJoinedAuditSummariesMatchExistingSingleRecordProjection",
+          "revocationAndDeletedTaskDenyExpertButAdminKeepsHistory",
+          "batchedRoleAssignmentsMatchLegacyIncludingDisabledAccounts",
+          "auditFiltersRespectCurrentHandlerAndCannotExposeOtherModules",
+          "noticeFiltersUseCurrentBusinessAndNeverOtherRecipients",
+          "boundedAuditTimesMatchFullAggregationAndIgnoreOtherRecords",
+          "scopeChangeRejectsOldFormAndAllowsNewlyConfirmedScope",
+          "listFiltersRespectRevocationAndDoNotGrantOtherModules",
+          "performanceFiltersUseAnnualRatiosAndKeepAuditSeparate",
+          "fullScopeFirstLevelAndThirdLevelReviewsDoNotChangeBusinessState",
+          "shrinkingLevelOneScopeDoesNotLeakRemovedTasksThroughOldOpinionOrDraft",
+          "batchAccountPermissionsMatchUnbatchedEvaluation",
+          "partialLevelOneScopeIsExplicitAndFrozenWithFormalRevision",
+          "groupedBudgetVersionsMatchLegacyAndRecheckYearScope",
+          "operationSummariesPreserveFiltersPagesAndFullPageBodies",
+          "adminCanReviewDirectlyAndDelegationRecordsBothIdentities",
+          "independentFilterDefinitionsAndRemoteOptionsPreserveScopeAndSelection",
+          "savedRevisionDraftDoesNotOverwritePreviousFormalOpinion",
+          "budgetFiltersUseWholeExpenseAndOriginalDenominator",
+          "listFiltersRejectInvalidRangesEnumsAndUnknownFields",
+          "joinedTaskStateProjectionPreservesLatestDeletedGoalsAndIdCollisions",
+          "overviewFiltersApplyToBothChartAndDetail",
+          "listFiltersDoNotTreatMissingDatesAsZero",
+          "expertAdvancedFiltersRunBeforePaginationWithoutChangingReviewScope",
+          "noticePageMatchesStableDisplayedOrderWithTiesDatesTextAndMissingSources",
+          "countOnlyAuditResponsesMatchOriginalSidebarPredicates",
+          "expertSelectorIncludesDirectAndCustomRoleGrantsAndKeepsHistoricalInactiveExperts",
+          "formalFiltersUseLatestSubmittedOpinionAndKeepDraftsPrivate",
+          "sqlOperationPagesMatchLegacyAndFallBackForAmbiguousOrder",
+          "pagedAccountSqlMatchesLegacyFiltersAndKeepsAuthorization",
+          "noticesWithoutBusinessIdsKeepUnknownFiltersAndRecipientIsolation",
+          "budgetVersionFiltersKeepCurrentPerMonthBeforePaging",
+          "adminExportContainsFormalRevisionsAndCompleteScopeButNoDraft",
+          "batchAuditProjectionMatchesSingleRecordQueries",
+          "duplicateAndConcurrentSubmitOnlyCreateOneFormalRevision",
+          "taskFilterExportRechecksAuthorizationAndExportsOnlyMatchingLeaves",
+          "departmentFiltersRemainAdminOnlyAndUseRealRelationships",
+          "listFiltersCombineScopeYearMultiSelectAndProgressBeforeCounting",
+          "operationFiltersAndExportUseTheSameRowsAcrossPages",
+          "blankAndOverlongContentAreRejectedButUnicodeLimitIsByCharacters",
+          "onlyOwnStatusAndDraftAreReturnedAndAdminListNeverReturnsDrafts",
+          "unreadCountOnlyUsesVisibleRecipientNoticesAndCurrentBusiness",
+          "administrativeFiltersArePrivateAndRespectRoleAssignments"
+        ]
+      },
+      {
+        "class": "org.example.LeadershipAccessApiTest",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "schoolwideMigrationDoesNotRepeatOverLaterAdministratorConfiguration",
+          "explicitBusinessDutiesRemainAvailableWithoutExpandingOverviewScope",
+          "leadershipAloneDoesNotGrantWorkRecordFillingAndDepartmentTrendsNeverUseSchoolHistory",
+          "concurrentConfigurationOnlyAllowsOneWriterAndInvalidDepartmentDoesNotWrite",
+          "permissionsUseDatabaseWithOldTokensAndDoNotGrantWrites",
+          "migrationInitializesOnlyApprovedIdsAndNeverOverwritesLaterConfiguration",
+          "cancellingLeadershipImmediatelyRevokesDirectLinksAndKeepsExplicitDuties",
+          "schoolwideMigrationIncludesConfirmedLeaderAndIsIdempotentAndReversible",
+          "fileLinksAndExportCannotEscapeScope",
+          "scopesApplyToListsDetailsAndStatistics"
+        ]
+      },
+      {
+        "class": "org.example.PermissionApiTest",
+        "tests": 32,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "invalidScopeIdsAndRawPathsAreRejectedWithoutWriting",
+          "recordsScopeFiltersPaginationAndAuthorsAndNeverIncludesOtherDrafts",
+          "performanceScopeAndYearCannotBeBypassedThroughAnnualEndpoint",
+          "newExternalExpertHasNoDepartmentAndMustChangeInitialPassword",
+          "concurrentConfigurationAllowsExactlyOneWriter",
+          "pendingWorkBlocksPermissionTighteningButDoesNotCreateBusinessDuties",
+          "departmentAndDirectoryScopesDynamicallyFollowMovesButFixedIdsDoNot",
+          "unconfiguredLegacyAccountsCannotBypassUnifiedScopes",
+          "roleTemplateChangeCannotStrandImplicitLegacyReviewers",
+          "relationshipCountsOnlyIncludeAuthorizedPerformanceIdsAndYear",
+          "personalDenyOverridesMergedRolesAndTakesEffectOnOldToken",
+          "stoppedAccountAndOldTokenAreRejectedImmediately",
+          "expertTemplateIsIsolatedAndMenusHaveNoBusinessWriteGrants",
+          "externalExpertProfileCanBeEditedWithoutAssigningSchoolDepartment",
+          "maintenanceCountsDoNotLeakOtherYearsOrUnauthorizedIndicatorsInSameDepartment",
+          "newSubmissionCannotStrandAnUnauthorizedReviewerAndRollsBack",
+          "rolesCanBeCreatedMergedDisabledButNotDeletedWhileAssigned",
+          "unauthorizedDutyRecipientRollsBackConfigurationAndNotices",
+          "dutyPreviewConflictsWhenCurrentConfigurationChangesWithoutChangingPendingStage",
+          "explicitTaskScopeSanitizesDirectoriesAndProtectsEveryDirectRead",
+          "configurationVersionAndGlobalRevisionRejectStaleWrites",
+          "yearLimitsApplyToListsAndDirectDetails",
+          "fillCapabilitiesAndDraftEditabilityFollowEffectivePermissions",
+          "overviewContainsOnlyPermittedTaskRowsAndNoBudgetOrRecordData",
+          "legacyMigrationPreservesDynamicDutiesAndDoesNotGrantExpert",
+          "taskAuditBatchMatchesPointChecksForScopesYearsAndGoalIdCollisions",
+          "readPermissionWithoutMaterialsCannotDownloadOrExport",
+          "migrationIsIdempotentAndDoesNotRewriteBusinessData",
+          "fourthLevelResponsibilityIncludesItsParentWithoutOpeningOtherTasks",
+          "pendingDutyTransferUpdatesActualConfigurationAndRejectsStaleOrUnauthorizedWrites",
+          "repeatedAuditRowScopeBenchmarkUsesOneRequestLocalGraph",
+          "adminAlwaysHasFullPermissionsAndCannotBeOverridden"
+        ]
+      },
+      {
+        "class": "org.example.ReviewBatchRegressionApiTest",
+        "tests": 63,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "weakPasswordGateAllowsLogoutHandlerButStatusRequiresAuthentication",
+          "passwordResetRejectsInvalidInputAndConcurrentOldCredentials",
+          "directValuesKeepDecimalZeroAndProgressCapSemantics",
+          "performanceRelationValidatesInputAndRequiresAdmin",
+          "departmentDistributionUsesActiveThirdLevelTasks",
+          "managedCreateRejectsInvalidFieldsWithoutWrites",
+          "employeeIdFirstLoginAndResetForAllRoles",
+          "passwordResetValidatesCredentialsAndPreservesProfile",
+          "performanceActiveReviewStagesStillAllowRejection",
+          "taskWithdrawalRollsBackOnDatabaseFailure",
+          "invalidDirectValuesAndResubmissionsLeaveDataUnchanged",
+          "quickFiltersTrackPerformanceYearAndExcludeAutomaticIndicators",
+          "performanceReviewRequiresExplicitDecision",
+          "flaggedPasswordsGateAllRolesAndExistingTokensUntilChanged",
+          "level4SubmissionAggregationRemainsCompatible",
+          "ownershipTransferBlocksActiveAuditsAndRecordsTheChange",
+          "concurrentPerformanceSubmissionsKeepOneActiveSubmission",
+          "concurrentTaskSubmissionsKeepOneActiveSubmission",
+          "managedCreateRejectsDeletedOptionsAndStaleAdminRole",
+          "taskHierarchyRejectsCyclesAndKeepsValidEdits",
+          "trendEmptyAndDatabaseFailureDoNotClaimSuccess",
+          "userDirectoryNeverReturnsPasswords",
+          "trendNullValuesRecordAndDuplicateIsReportedAsSkipped",
+          "deletedAchievementsNeverRemainPendingAndCompletedHistorySurvives",
+          "directSubmissionAndResubmissionStoreActualValuesThroughApproval",
+          "achievementQuantitiesRejectInvalidWithoutWrites",
+          "concurrentPerformanceYearsPreserveCombinedValue",
+          "archivedTasksCannotBeWithdrawn",
+          "failedConcurrentSubmissionRollsBackAndReleasesLock",
+          "passwordValidationPreservesExistingCredentials",
+          "performanceRelationAddsAndRemovesWithHistory",
+          "trendDataIsReturnedInChronologicalOrder",
+          "ownershipTransferValidatesInputAndRequiresAdmin",
+          "managedCreateInitializesValuesAndAllowsIndependentDepartment",
+          "noticeListHidesStaleRequestsPreservesOrdinaryMessagesAndIsolation",
+          "passwordStrengthDoesNotOverrideOnlineFlag",
+          "rejectedAchievementsStayInListWithLatestReasonAndOtherStatusesIgnoreOldReason",
+          "activeTaskWithdrawalRestoresValuesAtEveryReviewStage",
+          "remindersIncludeEachManagedDepartment",
+          "achievementReportDatesComeFromAuditEvidenceWithinExistingPermissions",
+          "budgetImportsCreateVersionsAndRestoreWithoutOverwritingHistory",
+          "dashboardComparisonsReflectStoredYearsAndLevels",
+          "annualActivationReportsDatabaseFailureWithoutPartialUpdates",
+          "ownershipTransferHandlesPerformanceAndRejectsActiveAudits",
+          "taskSubmissionRequiresExistingReviewerBeforeAnyWrite",
+          "financeAndOfficeCanImportBudgetWithoutAdministratorRole",
+          "performanceRollbackPreservesOtherYearsAndCurrentTargets",
+          "achievementQuantitiesPreserveCompatibleInputs",
+          "deletedUsersCannotLoginOrReuseTokens",
+          "taskManagementRequiresCurrentAdminRole",
+          "remindersSkipInvalidLeadersAndContinueValidDepartments",
+          "quickFiltersTrackRealTaskReturnResubmitAndVisibility",
+          "taskReviewNoticesRetireWithHandlerAndWithdraw",
+          "managedCreateConcurrentDuplicateHasExactlyOneWinner",
+          "accountStatusPreservesExplicitAndOmittedValues",
+          "annualActivationOnlyStartsPendingTasksInCurrentYear",
+          "performanceRelationBlocksActiveAuditsAndRejectsTaskMismatch",
+          "adminFinishRequiresEveryLevel4GoalAndKeepsRealValues",
+          "performanceReviewNoticesRetireButResultSurvives",
+          "achievementReviewRequiresExplicitDecision",
+          "performanceAuditRejectsArchivedAndReturnedSubmissions",
+          "achievementReviewNoticesRetireButResultSurvives",
+          "automaticAdminTraceDoesNotBlockLargeBatchTransfers"
+        ]
+      },
+      {
+        "class": "org.example.TaskAttributesApiTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "adminSavePreservesBusinessValuesAndRejectsStaleVersions",
+          "firstCompletionIsReadOnlyAndNeverOverwritten",
+          "migrationIsIdempotentAndRequiresArchiveEvidence"
+        ]
+      }
+    ],
+    "logSha256": "494f0744ae68a7c8335b3176814a8a1a95ea6f8b732a361d3362772025415865"
+  },
+  "records": {
+    "tests": 36,
+    "classes": [
+      {
+        "class": "org.example.WorkRecordApiTest",
+        "tests": 36,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "exportRequiresExplicitPermissionAndRejectsEntireInvalidSelection",
+          "submittedLegacySnapshotAndExportStayFrozenAfterQualificationAndTasksChange",
+          "professionalScopeIncludesAllReformsAndLevel4ResponsibilityWinsOverDepartment",
+          "newDraftAndSnapshotAreAtomicOnPersistenceFailure",
+          "ordinaryRolesDoNotGrantFillingAndLevel4ResponsibilitiesDeduplicateParents",
+          "statisticsUseSchoolAnnualTasksAndFirstQualifyingArchive",
+          "departmentScopeRejectsOtherReformsAndDoesNotUseFirstLevelDepartment",
+          "monthAndPayloadValidationRejectsInvalidWithoutWriting",
+          "textAndEntryValidationDoesNotPartiallyWrite",
+          "fourLevelArchivesNeverDoubleCountAndMissingParentEvidenceIsExplicit",
+          "adminDeleteRetainsContentAndSnapshotButBlocksEveryReadAndExport",
+          "draftRoundTripAndSubmitRecomputeThenFreezeAllContent",
+          "previousCompletedSnapshotPreventsInventingFirstCompletionMonth",
+          "concurrentSubmitCommitsExactlyOnceAndOldWindowCannotOverwrite",
+          "mergedWordSortsDeduplicatesAndSupportsLongTablesAndNarratives",
+          "missingEarlierArchiveTimeAndInvalidTargetRemainUnverified",
+          "wordUsesFrozenSnapshotRemovesExamplesAndPreservesFiveSections",
+          "refreshRechecksQualificationAndRaceAndRollsBackFailedSnapshot",
+          "permissionsFollowResponsibleUserAndProtectNewEndpoints",
+          "deletedMonthCanBeRecreatedConcurrentlyAndRepeatedHistoryIsRetained",
+          "pagedRecordFiltersMatchLegacyBeyondOneHundredRows",
+          "overviewExpectedAuthorsReusesScopeAndCountsEveryEligibleNormalDepartmentAccountOnce",
+          "deleteValidationAndStaleVersionLeaveRecordUntouched",
+          "failedDeleteRollsBackAndPreservesSubmittedRecord",
+          "failedSubmissionRollsBackTextEntriesVersionAndSnapshot",
+          "departmentChangesAndDisabledAccountsImmediatelyRecheckScopeWithExistingToken",
+          "concurrentCreateProducesOneDraftAndDoesNotAcceptSpoofedOwner",
+          "concurrentDeleteCommitsOnceAndCannotAffectReplacement",
+          "draftAndSubmittedVisibilityAndRevokedQualifications",
+          "deletedCrossProjectAndBrokenDirectoriesAndCrossYearGoalsAreExcluded",
+          "saveAndSubmitRequireOwnerAndCurrentAnnualQualification",
+          "listFiltersPaginationAndNoBusinessWritesFromStatistics",
+          "departmentScopeExpandsSiblingsAndActualLevel4ParentsWithoutChangingCoreEligibility",
+          "storedSnapshotOnlyChangesOnExplicitVersionedRefresh",
+          "deleteRequiresCurrentAdminAndDoesNotExposeOthersDrafts",
+          "secondLevelDepartmentIncludesWholeRootWithoutGivingItsLeaderProfessionalScope"
+        ]
+      }
+    ],
+    "logSha256": "4b4b11121ab5fd9f480cad8a2ab9dbef13c68943e7f82c0ecefdea804e4cb962"
+  },
+  "units": {
+    "tests": 46,
+    "classes": [
+      {
+        "class": "org.example.AdminOperationDetailTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "pageHydrationReadsOnlyVisibleAdminIdsAndPreservesMixedOrder",
+          "singleDetailDoesNotReadOrSortAnyLogLists"
+        ]
+      },
+      {
+        "class": "org.example.AdminOverviewQueryTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "ambiguousAnnualRowsOrNonstandardAncestryRetainOriginalProjection",
+          "budgetSummaryReadsOnlySelectedMonthAndDoesNotLoadAnnualTrend",
+          "adminAchievementSummaryUsesOneAggregateWithoutHistoryOrNames",
+          "coreOverviewProjectsOnlyNeededArchiveFieldsAndBatchesScope",
+          "adminPerformanceSummaryUsesOneAggregateWithoutFullProjectionOrNames",
+          "adminTaskSummaryUsesOneAggregateAndNoTaskTreeOrNameLists",
+          "nameLookupIsReusedOnlyInsideOneGetRequest"
+        ]
+      },
+      {
+        "class": "org.example.AuditCountScopeTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "invalidMaterialReferencesRetainTheOriginalReadFailure",
+          "unfilteredCountDoesNotReadObjectMetadata",
+          "groupedCountsUseTheSameObjectAndYearScopeAsListResponses"
+        ]
+      },
+      {
+        "class": "org.example.AuditReadScopeTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "groupedYearsDoNotGrantOtherYearsOrLoseUnknownYearSemantics",
+          "emptyInputsSkipAllPermissionReads",
+          "taskAndAchievementScopesIgnoreSuppliedYearExactlyAsCanReadDoes",
+          "auditResponseKeepsOrderDuplicateRowsMissingKeysAndEveryOriginalField"
+        ]
+      },
+      {
+        "class": "org.example.BizAuditBatchTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "batchPreservesProjectionAndReducesQueries"
+        ]
+      },
+      {
+        "class": "org.example.BudgetTrendBatchTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "emptyYearSkipsItemQueriesAndLegacyReadsMatchBatchValues",
+          "fullYearUsesThreeReadsAndSingleTaskSkipsSources",
+          "duplicateMonthRetainsOriginalSheetSelectionAndDuplicateTaskRetainsOriginalOrder"
+        ]
+      },
+      {
+        "class": "org.example.BudgetVersionListTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "yearChecksAreOncePerCallAndNeverCachedAcrossCalls"
+        ]
+      },
+      {
+        "class": "org.example.ListScopeBatchTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "performanceTreeRetainsAncestorOrderAndYearValueMaskingWithoutPerLeafSql",
+          "achievementsRetainSourceOrderDuplicatesAndReportFieldsWithOneBatchCheck"
+        ]
+      },
+      {
+        "class": "org.example.NoticeFilterProjectionTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "unrelatedNoticesKeepUnknownStateWithoutLookingUpNullOrQueryingBusinessRows"
+        ]
+      },
+      {
+        "class": "org.example.OperationFilterPageTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "tiedOrUnknownTimesFallBackWithoutReadingPageBodies",
+          "unsupportedPredicatesAndExportsKeepLegacyPath",
+          "pageFetchHydratesOnlySelectedKeys"
+        ]
+      },
+      {
+        "class": "org.example.PermissionAchievementBatchTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "scopeMetadataIsBoundedAndRelationshipsAreReadOncePerInvocation",
+          "emptyAndForbiddenReadsDoNotQueryObjects"
+        ]
+      },
+      {
+        "class": "org.example.PermissionListBatchTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "policyReadsAreBoundedAndCachedOnlyForThisGet"
+        ]
+      },
+      {
+        "class": "org.example.PermissionPerformanceBatchTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "emptyAndForbiddenReadsSkipObjectMetadata",
+          "boundsObjectReadsAndReusesDepartmentDutyWithinOnlyThisInvocation"
+        ]
+      },
+      {
+        "class": "org.example.PermissionRecordCoreBatchTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "ownerChecksReuseIdentityAndKeepSyntheticIdZeroSemantics",
+          "recordAndCoreMetadataAreBoundedAndRecordYearOverridesRequestedYear",
+          "recordListKeepsEncounterOrderWithOneIdentityAndLeadershipRead",
+          "draftChecksRequireOwnerOrCurrentServerValidatedAdminCapability"
+        ]
+      },
+      {
+        "class": "org.example.PermissionTaskBatchTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "oneGraphAndBoundedGoalsKeepCollisionsDeletedMainRowsAndLegacyChainResolution",
+          "noReadPermissionAndEmptyRequestDoNotReadTaskData"
+        ]
+      },
+      {
+        "class": "org.example.service.BizServiceLevel4ProgressTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "requiresTheExactSetOfActiveGoals",
+          "percentageGoalMayExceedOneHundredPercentOfItsOwnTarget",
+          "handlesZeroPartialAndAllCompleteGoals",
+          "usesEqualWeightsAndCapsEachGoalAtOneHundredPercent",
+          "floorsStoredProgressSoAlmostCompleteDoesNotBecomeComplete",
+          "rejectsNonPositiveTargets"
+        ]
+      },
+      {
+        "class": "org.example.WorkRecordEligibilityTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "cases": [
+          "eligibilityEqualsOriginalResolutionForDepartmentsGoalsAndInvalidStructure",
+          "eligibilityCalculationAtCurrentAndFiveTimesSyntheticScale"
+        ]
+      }
+    ],
+    "logSha256": "5babb5a7504de50ea12df49c0a2a10cecc4dbac9a81ec3b97634de51885a8807"
+  }
+}

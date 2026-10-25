@@ -1,0 +1,13 @@
+{
+  "checks": [
+    "first-load-does-not-show-false-empty",
+    "message-list-does-not-wait-for-user-directory",
+    "initial-filter-request-is-not-repeated",
+    "page-includes-sender-summary-without-account-directory",
+    "reading-a-message-refreshes-unread-filter-and-count",
+    "mark-all-read-keeps-api-count-and-successful-empty-result-consistent",
+    "failed-filter-refresh-retains-messages-and-retry-recovers",
+    "failed-first-list-read-is-distinct-from-empty-and-can-retry"
+  ],
+  "errors": []
+}

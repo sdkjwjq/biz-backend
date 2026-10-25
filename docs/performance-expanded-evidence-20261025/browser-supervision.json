@@ -1,0 +1,9 @@
+{
+  "checks": [
+    "authorized-task-options-do-not-wait-for-people-directory",
+    "single-tree-read-replaces-full-task-list-and-filter-chain",
+    "existing-task-details-remain-available",
+    "no-browser-runtime-errors"
+  ],
+  "errors": []
+}

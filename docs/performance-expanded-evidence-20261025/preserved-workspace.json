@@ -1,0 +1,18 @@
+[
+  {
+    "file": "src\\test\\java\\org\\example\\AchievementFlowApiTest.java",
+    "identicalToInitialSnapshot": true
+  },
+  {
+    "file": "src\\test\\java\\org\\example\\AuditFlowApiTest.java",
+    "identicalToInitialSnapshot": true
+  },
+  {
+    "file": "..\\biz\\src\\components\\ExpertReviewEditor.vue",
+    "identicalToInitialSnapshot": true
+  },
+  {
+    "file": "..\\biz\\vite.config.js",
+    "identicalToInitialSnapshot": true
+  }
+]

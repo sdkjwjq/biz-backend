@@ -1,23 +1,39 @@
 {
   "status": "partial",
-  "scope": "账号列表批量授权及当前请求内复用；查询请求合并；慢请求加载状态回归",
+  "scope": "扩大批次：审核分页、普通列表、树形查询、独立选项、管理批量读取、整页渲染及1/5倍规模验收",
   "measurements": {
-    "users": 55,
-    "baseline_ms": 101,
-    "optimized_ms": 13,
-    "method": "同一隔离数据库内逐账号角色与授权预览，对比批量预读；单次服务逻辑测量，非整页P95或生产环境基准"
+    "report": "docs/performance-expanded-20261025.json",
+    "scales": [
+      1,
+      5
+    ],
+    "interface_workloads": 26,
+    "concurrency": [
+      1,
+      10,
+      30
+    ],
+    "optimized_target_scenarios": 156,
+    "failed_targets": 0,
+    "method": "配对版本、同一隔离库、正式前端预览、30个独立账号；每接口每档30样本，页面首次与再次访问各一轮。"
   },
   "verification": {
-    "backend_tests": 61,
-    "browser_checks": 29,
-    "frontend_build": "passed"
+    "backend_tests": 296,
+    "isolated_api_cases": 250,
+    "pure_unit_cases": 46,
+    "browser_checks": 99,
+    "request_pool_tests": 5,
+    "compatibility_assertions": 128,
+    "frontend_static": "passed",
+    "frontend_build": "passed",
+    "backend_package": "passed"
   },
   "pending": [
-    "账号派生角色及活动职责筛选的数据库分页",
-    "大量人员候选的远程分页查询",
-    "其余业务模块数据库查询优化",
-    "全系统并发和5倍规模基准",
-    "看板聚合与索引分析"
+    "消息同时间或未知时间、特殊文本日期及关联状态继续走精确兼容查询，尚未全部转换为SQL分页。",
+    "账号派生授权/活动职责与部分大量选项仍需完整轻量候选匹配；不是纯数据库条件分页。",
+    "部分受限领导统计和分析仍先生成获准投影再分页；没有跨请求权限缓存。",
+    "五倍规模的任务与绩效树仍有约2.3—2.6秒浏览器渲染成本；接口已达标，原树表未改为虚拟列表，也未缩减数据或改变默认展开策略。",
+    "本轮为本地固定合成规模验证，不承诺线上相同毫秒值，也不是持续并发容量评估。"
   ],
   "production_changes": false,
   "accountPagination": {
@@ -452,5 +468,61 @@
     "browser_checks": 52,
     "status": "batch_complete_overall_plan_partial",
     "remaining": "审核中心前端逐条请求、全量主数据分页与全系统并发P95验收。"
+  },
+  "expandedBatch": {
+    "report": "docs/performance-expanded-20261025.json",
+    "workPackages": [
+      {
+        "name": "审核链路",
+        "status": "completed_with_projection_fallback",
+        "changes": "四类审核一次分页摘要、分页后材料补充、直接深链、连续审核跨页、原来源待办计数；处理历史只对当前页做返回格式转换。"
+      },
+      {
+        "name": "普通列表",
+        "status": "partial",
+        "changes": "消息、纪实、预算历史、操作记录的可等价条件先SQL筛选计数分页；复杂日期、文本、关联与同时间排序使用原匹配器覆盖全量候选后分页。"
+      },
+      {
+        "name": "树查询及渲染",
+        "status": "completed_with_remaining_large_tree_cost",
+        "changes": "融合任务、绩效、成果、督办列表与筛选；保留祖先、顺序、进度、展开记忆；名称只补充单元格，展开与数据同批更新。专家列表与历史按需加载。"
+      },
+      {
+        "name": "管理与选项",
+        "status": "partial",
+        "changes": "账号派生资格批量读取、部门统计聚合、当前请求内权限复用；字段定义与远程选项独立加载，关键词、分页、选中ID回显及失败保留。部分选项与派生筛选仍枚举权限内轻量候选。"
+      },
+      {
+        "name": "看板及SQL",
+        "status": "partial",
+        "changes": "六个分区及两个分析入口均参与并发测试；任务状态OR关联改为分组关联后查最新记录，执行计划约690ms降至7.65ms，657条结果集合和基数一致。部分领导范围分析仍用兼容投影。无需新增索引。"
+      }
+    ],
+    "apiWorkloads": 26,
+    "scaleFactors": [
+      1,
+      5
+    ],
+    "concurrency": [
+      1,
+      10,
+      30
+    ],
+    "failedTargets": [],
+    "backendCases": 296,
+    "browserChecks": 99,
+    "compatibilityAssertions": 128,
+    "status": "delivered_with_explicit_compatibility_paths"
+  },
+  "initialBatchMeasurements": {
+    "users": 55,
+    "baseline_ms": 101,
+    "optimized_ms": 13,
+    "method": "同一隔离数据库内逐账号角色与授权预览，对比批量预读；单次服务逻辑测量，非整页P95或生产环境基准"
+  },
+  "initialBatchVerification": {
+    "backend_tests": 61,
+    "browser_checks": 29,
+    "frontend_build": "passed"
   }
 }

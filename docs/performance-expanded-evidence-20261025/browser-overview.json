@@ -1,0 +1,31 @@
+{
+  "checks": [
+    "six-modules-and-all-summary-numbers-match-real-API",
+    "bounded-two-read-first-load-renders-ready-modules-without-waiting-for-slow-module",
+    "performance-aggregate-status-and-mode-numbers-match-chart-and-drilldown",
+    "pagination-real-chart-click-group-intersection-and-existing-task-detail",
+    "core-cutoff-excludes-future-and-obsolete-results-and-opens-history",
+    "achievement-aggregate-numbers-match-chart-and-drilldown-records-and-awards",
+    "achievement-rejection-reason-and-existing-detail-link",
+    "budget-missing-null-gaps-adjustments-three-trend-views-original-chart-hidden",
+    "work-record-eligibility-submitted-missing-and-historical-counts-match-chart-and-rows",
+    "work-record-current-eligibility-draft-privacy-and-frozen-record-link",
+    "leader-readonly-maintenance-current-scope-old-token-and-ordinary-user-denial",
+    "slow-old-year-response-cannot-replace-current-year",
+    "injected-module-failure-is-not-zero-and-independent-retry-recovers",
+    "failed-same-period-refresh-keeps-marked-old-results-and-retry-clears-stale-warning",
+    "scope-denial-clears-previous-module-values-and-overview-denial-clears-all-cards",
+    "account-change-during-read-discards-old-response-and-clears-old-cards",
+    "injected-analysis-failure-retry-and-close-cancels-old-response",
+    "narrow-screen-page-table-scroll-and-accessible-drawer-footer",
+    "zero-records-and-zero-denominators-show-empty-data-without-false-percentage"
+  ],
+  "errors": [],
+  "fixtures": "random isolated synthetic database",
+  "simulated": [
+    "delayed year response",
+    "module failure",
+    "analysis failure",
+    "closed analysis response"
+  ]
+}

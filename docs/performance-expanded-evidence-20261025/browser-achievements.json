@@ -1,0 +1,13 @@
+{
+  "checks": [
+    "first-load-no-false-empty-or-zero",
+    "initial-list-does-not-repeat-filter-request",
+    "slow-audit-shortcut-does-not-block-real-list",
+    "tree-and-rejection-details-preserved",
+    "failed-refresh-preserves-existing-tree",
+    "retry-restores-list-with-existing-filters",
+    "successful-empty-result-is-distinct-from-loading-and-failure",
+    "filter-failure-is-not-presented-as-empty-data"
+  ],
+  "errors": []
+}

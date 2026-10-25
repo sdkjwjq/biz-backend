@@ -1,0 +1,12 @@
+{
+  "checks": [
+    "initial-slow-request-does-not-show-empty-list-or-zero-total",
+    "authorized-real-results-load-after-gate",
+    "temporary-refresh-failure-retains-last-successful-results",
+    "retry-recovers-with-the-same-applied-query",
+    "permission-denial-clears-stale-results",
+    "formal-opinion-query-hides-zero-total-until-success",
+    "no-browser-runtime-errors"
+  ],
+  "errors": []
+}

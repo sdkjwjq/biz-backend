@@ -1,0 +1,822 @@
+[
+  {
+    "route": "admin/accounts",
+    "phase": "cold",
+    "firstContentMs": 986,
+    "firstSectionMs": 628,
+    "requests": 11,
+    "responseBytes": 165817,
+    "slowestApi": [
+      {
+        "path": "/api/list-filters/admin-users/filter-options",
+        "durationMs": 47,
+        "transferSize": 2469
+      },
+      {
+        "path": "/api/work-records/capabilities",
+        "durationMs": 32,
+        "transferSize": 464
+      },
+      {
+        "path": "/api/core-indicators/audit/todo",
+        "durationMs": 28,
+        "transferSize": 301
+      },
+      {
+        "path": "/api/achievement/audit/todo",
+        "durationMs": 27,
+        "transferSize": 303
+      },
+      {
+        "path": "/api/performance/audit/todo",
+        "durationMs": 25,
+        "transferSize": 303
+      },
+      {
+        "path": "/api/list-filters/admin-users",
+        "durationMs": 22,
+        "transferSize": 3387
+      }
+    ],
+    "errors": []
+  },
+  {
+    "route": "admin/accounts",
+    "phase": "warm",
+    "firstContentMs": 294,
+    "firstSectionMs": 287,
+    "requests": 11,
+    "responseBytes": 165817,
+    "slowestApi": [
+      {
+        "path": "/api/list-filters/admin-users/filter-options",
+        "durationMs": 46,
+        "transferSize": 2469
+      },
+      {
+        "path": "/api/work-records/capabilities",
+        "durationMs": 31,
+        "transferSize": 464
+      },
+      {
+        "path": "/api/core-indicators/audit/todo",
+        "durationMs": 26,
+        "transferSize": 301
+      },
+      {
+        "path": "/api/achievement/audit/todo",
+        "durationMs": 26,
+        "transferSize": 303
+      },
+      {
+        "path": "/api/performance/audit/todo",
+        "durationMs": 21,
+        "transferSize": 303
+      },
+      {
+        "path": "/api/list-filters/admin-users",
+        "durationMs": 21,
+        "transferSize": 3387
+      }
+    ],
+    "errors": []
+  },
+  {
+    "route": "audit",
+    "phase": "cold",
+    "firstContentMs": 820,
+    "firstSectionMs": 611,
+    "requests": 11,
+    "responseBytes": 168626,
+    "slowestApi": [
+      {
+        "path": "/api/list-filters/audits",
+        "durationMs": 112,
+        "transferSize": 7245
+      },
+      {
+        "path": "/api/work-records/capabilities",
+        "durationMs": 48,
+        "transferSize": 464
+      },
+      {
+        "path": "/api/core-indicators/audit/todo",
+        "durationMs": 37,
+        "transferSize": 301
+      },
+      {
+        "path": "/api/achievement/audit/todo",
+        "durationMs": 37,
+        "transferSize": 303
+      },
+      {
+        "path": "/api/system/allUsers",
+        "durationMs": 24,
+        "transferSize": 157238
+      },
+      {
+        "path": "/api/performance/audit/todo",
+        "durationMs": 24,
+        "transferSize": 303
+      }
+    ],
+    "errors": []
+  },
+  {
+    "route": "audit",
+    "phase": "warm",
+    "firstContentMs": 556,
+    "firstSectionMs": 296,
+    "requests": 11,
+    "responseBytes": 168626,
+    "slowestApi": [
+      {
+        "path": "/api/list-filters/audits",
+        "durationMs": 91,
+        "transferSize": 7245
+      },
+      {
+        "path": "/api/work-records/capabilities",
+        "durationMs": 37,
+        "transferSize": 464
+      },
+      {
+        "path": "/api/core-indicators/audit/todo",
+        "durationMs": 33,
+        "transferSize": 301
+      },
+      {
+        "path": "/api/achievement/audit/todo",
+        "durationMs": 24,
+        "transferSize": 303
+      },
+      {
+        "path": "/api/performance/audit/todo",
+        "durationMs": 20,
+        "transferSize": 303
+      },
+      {
+        "path": "/api/system/allUsers",
+        "durationMs": 20,
+        "transferSize": 157238
+      }
+    ],
+    "errors": []
+  },
+  {
+    "route": "works",
+    "phase": "cold",
+    "firstContentMs": 2788,
+    "firstSectionMs": 2785,
+    "requests": 16,
+    "responseBytes": 1095099,
+    "slowestApi": [
+      {
+        "path": "/api/list-filters/tasks",
+        "durationMs": 93,
+        "transferSize": 493023
+      },
+      {
+        "path": "/api/biz/tasks/quick-filters",
+        "durationMs": 60,
+        "transferSize": 77865
+      },
+      {
+        "path": "/api/core-indicators/audit/todo",
+        "durationMs": 54,
+        "transferSize": 301
+      },
+      {
+        "path": "/api/achievement/audit/todo",
+        "durationMs": 50,
+        "transferSize": 303
+      },
+      {
+        "path": "/api/performance/audit/todo",
+        "durationMs": 49,
+        "transferSize": 303
+      },
+      {
+        "path": "/api/biz/audit/todo",
+        "durationMs": 48,
+        "transferSize": 303
+      }
+    ],
+    "errors": []
+  },
+  {
+    "route": "works",
+    "phase": "warm",
+    "firstContentMs": 2557,
+    "firstSectionMs": 2551,
+    "requests": 15,
+    "responseBytes": 938161,
+    "slowestApi": [
+      {
+        "path": "/api/list-filters/tasks",
+        "durationMs": 106,
+        "transferSize": 493023
+      },
+      {
+        "path": "/api/core-indicators/audit/todo",
+        "durationMs": 73,
+        "transferSize": 301
+      },
+      {
+        "path": "/api/biz/tasks/quick-filters",
+        "durationMs": 67,
+        "transferSize": 77865
+      },
+      {
+        "path": "/api/achievement/audit/todo",
+        "durationMs": 54,
+        "transferSize": 303
+      },
+      {
+        "path": "/api/performance/audit/todo",
+        "durationMs": 53,
+        "transferSize": 303
+      },
+      {
+        "path": "/api/work-records/capabilities",
+        "durationMs": 52,
+        "transferSize": 464
+      }
+    ],
+    "errors": []
+  },
+  {
+    "route": "works/performance",
+    "phase": "cold",
+    "firstContentMs": 2500,
+    "firstSectionMs": 2492,
+    "requests": 17,
+    "responseBytes": 699642,
+    "slowestApi": [
+      {
+        "path": "/api/performance/quick-filters",
+        "durationMs": 259,
+        "transferSize": 44287
+      },
+      {
+        "path": "/api/list-filters/performance",
+        "durationMs": 130,
+        "transferSize": 335356
+      },
+      {
+        "path": "/api/core-indicators/audit/todo",
+        "durationMs": 48,
+        "transferSize": 301
+      },
+      {
+        "path": "/api/achievement/audit/todo",
+        "durationMs": 47,
+        "transferSize": 303
+      },
+      {
+        "path": "/api/work-records/capabilities",
+        "durationMs": 46,
+        "transferSize": 464
+      },
+      {
+        "path": "/api/performance/audit/todo",
+        "durationMs": 41,
+        "transferSize": 303
+      }
+    ],
+    "errors": []
+  },
+  {
+    "route": "works/performance",
+    "phase": "warm",
+    "firstContentMs": 2259,
+    "firstSectionMs": 2254,
+    "requests": 15,
+    "responseBytes": 542540,
+    "slowestApi": [
+      {
+        "path": "/api/performance/quick-filters",
+        "durationMs": 256,
+        "transferSize": 44287
+      },
+      {
+        "path": "/api/list-filters/performance",
+        "durationMs": 118,
+        "transferSize": 335356
+      },
+      {
+        "path": "/api/core-indicators/audit/todo",
+        "durationMs": 50,
+        "transferSize": 301
+      },
+      {
+        "path": "/api/achievement/audit/todo",
+        "durationMs": 49,
+        "transferSize": 303
+      },
+      {
+        "path": "/api/work-records/capabilities",
+        "durationMs": 47,
+        "transferSize": 464
+      },
+      {
+        "path": "/api/performance/audit/todo",
+        "durationMs": 47,
+        "transferSize": 303
+      }
+    ],
+    "errors": []
+  },
+  {
+    "route": "works/achievement",
+    "phase": "cold",
+    "firstContentMs": 3221,
+    "firstSectionMs": 3184,
+    "requests": 15,
+    "responseBytes": 855415,
+    "slowestApi": [
+      {
+        "path": "/api/list-filters/achievements",
+        "durationMs": 58,
+        "transferSize": 412777
+      },
+      {
+        "path": "/api/system/allUsers",
+        "durationMs": 46,
+        "transferSize": 157238
+      },
+      {
+        "path": "/api/work-records/capabilities",
+        "durationMs": 44,
+        "transferSize": 464
+      },
+      {
+        "path": "/api/core-indicators/audit/todo",
+        "durationMs": 35,
+        "transferSize": 301
+      },
+      {
+        "path": "/api/achievement/audit/todo",
+        "durationMs": 34,
+        "transferSize": 303
+      },
+      {
+        "path": "/api/performance/audit/todo",
+        "durationMs": 31,
+        "transferSize": 303
+      }
+    ],
+    "errors": []
+  },
+  {
+    "route": "works/achievement",
+    "phase": "warm",
+    "firstContentMs": 3122,
+    "firstSectionMs": 3118,
+    "requests": 15,
+    "responseBytes": 855415,
+    "slowestApi": [
+      {
+        "path": "/api/list-filters/achievements",
+        "durationMs": 70,
+        "transferSize": 412777
+      },
+      {
+        "path": "/api/system/allUsers",
+        "durationMs": 48,
+        "transferSize": 157238
+      },
+      {
+        "path": "/api/work-records/capabilities",
+        "durationMs": 46,
+        "transferSize": 464
+      },
+      {
+        "path": "/api/achievement/audit/todo",
+        "durationMs": 38,
+        "transferSize": 303
+      },
+      {
+        "path": "/api/core-indicators/audit/todo",
+        "durationMs": 37,
+        "transferSize": 301
+      },
+      {
+        "path": "/api/performance/audit/todo",
+        "durationMs": 33,
+        "transferSize": 303
+      }
+    ],
+    "errors": []
+  },
+  {
+    "route": "work-records",
+    "phase": "cold",
+    "firstContentMs": 1022,
+    "firstSectionMs": 720,
+    "requests": 11,
+    "responseBytes": 205661,
+    "slowestApi": [
+      {
+        "path": "/api/work-records/capabilities",
+        "durationMs": 64,
+        "transferSize": 464
+      },
+      {
+        "path": "/api/list-filters/records",
+        "durationMs": 55,
+        "transferSize": 45236
+      },
+      {
+        "path": "/api/work-records/capabilities",
+        "durationMs": 35,
+        "transferSize": 464
+      },
+      {
+        "path": "/api/core-indicators/audit/todo",
+        "durationMs": 27,
+        "transferSize": 301
+      },
+      {
+        "path": "/api/biz/audit/todo",
+        "durationMs": 20,
+        "transferSize": 303
+      },
+      {
+        "path": "/api/performance/audit/todo",
+        "durationMs": 19,
+        "transferSize": 303
+      }
+    ],
+    "errors": []
+  },
+  {
+    "route": "work-records",
+    "phase": "warm",
+    "firstContentMs": 789,
+    "firstSectionMs": 545,
+    "requests": 11,
+    "responseBytes": 205661,
+    "slowestApi": [
+      {
+        "path": "/api/work-records/capabilities",
+        "durationMs": 75,
+        "transferSize": 464
+      },
+      {
+        "path": "/api/list-filters/records",
+        "durationMs": 63,
+        "transferSize": 45236
+      },
+      {
+        "path": "/api/work-records/capabilities",
+        "durationMs": 41,
+        "transferSize": 464
+      },
+      {
+        "path": "/api/core-indicators/audit/todo",
+        "durationMs": 28,
+        "transferSize": 301
+      },
+      {
+        "path": "/api/system/allUsers",
+        "durationMs": 22,
+        "transferSize": 157238
+      },
+      {
+        "path": "/api/biz/audit/todo",
+        "durationMs": 16,
+        "transferSize": 303
+      }
+    ],
+    "errors": []
+  },
+  {
+    "route": "notice",
+    "phase": "cold",
+    "firstContentMs": 708,
+    "firstSectionMs": 469,
+    "requests": 11,
+    "responseBytes": 161930,
+    "slowestApi": [
+      {
+        "path": "/api/work-records/capabilities",
+        "durationMs": 41,
+        "transferSize": 464
+      },
+      {
+        "path": "/api/core-indicators/audit/todo",
+        "durationMs": 26,
+        "transferSize": 301
+      },
+      {
+        "path": "/api/achievement/audit/todo",
+        "durationMs": 23,
+        "transferSize": 303
+      },
+      {
+        "path": "/api/system/allUsers",
+        "durationMs": 23,
+        "transferSize": 157238
+      },
+      {
+        "path": "/api/biz/audit/todo",
+        "durationMs": 21,
+        "transferSize": 303
+      },
+      {
+        "path": "/api/performance/audit/todo",
+        "durationMs": 18,
+        "transferSize": 303
+      }
+    ],
+    "errors": []
+  },
+  {
+    "route": "notice",
+    "phase": "warm",
+    "firstContentMs": 527,
+    "firstSectionMs": 239,
+    "requests": 11,
+    "responseBytes": 161930,
+    "slowestApi": [
+      {
+        "path": "/api/work-records/capabilities",
+        "durationMs": 41,
+        "transferSize": 464
+      },
+      {
+        "path": "/api/achievement/audit/todo",
+        "durationMs": 33,
+        "transferSize": 303
+      },
+      {
+        "path": "/api/core-indicators/audit/todo",
+        "durationMs": 32,
+        "transferSize": 301
+      },
+      {
+        "path": "/api/system/allUsers",
+        "durationMs": 23,
+        "transferSize": 157238
+      },
+      {
+        "path": "/api/performance/audit/todo",
+        "durationMs": 23,
+        "transferSize": 303
+      },
+      {
+        "path": "/api/biz/audit/todo",
+        "durationMs": 20,
+        "transferSize": 303
+      }
+    ],
+    "errors": []
+  },
+  {
+    "route": "expert-reviews?view=tasks",
+    "phase": "cold",
+    "firstContentMs": 754,
+    "firstSectionMs": 562,
+    "requests": 11,
+    "responseBytes": 177882,
+    "slowestApi": [
+      {
+        "path": "/api/expert-reviews",
+        "durationMs": 84,
+        "transferSize": 14607
+      },
+      {
+        "path": "/api/expert-reviews/admin/experts",
+        "durationMs": 51,
+        "transferSize": 3314
+      },
+      {
+        "path": "/api/work-records/capabilities",
+        "durationMs": 37,
+        "transferSize": 464
+      },
+      {
+        "path": "/api/achievement/audit/todo",
+        "durationMs": 30,
+        "transferSize": 303
+      },
+      {
+        "path": "/api/core-indicators/audit/todo",
+        "durationMs": 29,
+        "transferSize": 301
+      },
+      {
+        "path": "/api/performance/audit/todo",
+        "durationMs": 25,
+        "transferSize": 303
+      }
+    ],
+    "errors": []
+  },
+  {
+    "route": "expert-reviews?view=tasks",
+    "phase": "warm",
+    "firstContentMs": 573,
+    "firstSectionMs": 338,
+    "requests": 11,
+    "responseBytes": 177882,
+    "slowestApi": [
+      {
+        "path": "/api/expert-reviews",
+        "durationMs": 89,
+        "transferSize": 14607
+      },
+      {
+        "path": "/api/expert-reviews/admin/experts",
+        "durationMs": 52,
+        "transferSize": 3314
+      },
+      {
+        "path": "/api/work-records/capabilities",
+        "durationMs": 35,
+        "transferSize": 464
+      },
+      {
+        "path": "/api/core-indicators/audit/todo",
+        "durationMs": 29,
+        "transferSize": 301
+      },
+      {
+        "path": "/api/achievement/audit/todo",
+        "durationMs": 28,
+        "transferSize": 303
+      },
+      {
+        "path": "/api/performance/audit/todo",
+        "durationMs": 25,
+        "transferSize": 303
+      }
+    ],
+    "errors": []
+  },
+  {
+    "route": "report",
+    "phase": "cold",
+    "firstContentMs": 649,
+    "firstSectionMs": 646,
+    "requests": 12,
+    "responseBytes": 813305,
+    "slowestApi": [
+      {
+        "path": "/api/list-filters/supervision",
+        "durationMs": 78,
+        "transferSize": 493023
+      },
+      {
+        "path": "/api/work-records/capabilities",
+        "durationMs": 42,
+        "transferSize": 464
+      },
+      {
+        "path": "/api/core-indicators/audit/todo",
+        "durationMs": 35,
+        "transferSize": 301
+      },
+      {
+        "path": "/api/achievement/audit/todo",
+        "durationMs": 31,
+        "transferSize": 303
+      },
+      {
+        "path": "/api/system/allUsers",
+        "durationMs": 24,
+        "transferSize": 157238
+      },
+      {
+        "path": "/api/biz/audit/todo",
+        "durationMs": 21,
+        "transferSize": 303
+      }
+    ],
+    "errors": []
+  },
+  {
+    "route": "report",
+    "phase": "warm",
+    "firstContentMs": 418,
+    "firstSectionMs": 416,
+    "requests": 12,
+    "responseBytes": 813305,
+    "slowestApi": [
+      {
+        "path": "/api/list-filters/supervision",
+        "durationMs": 79,
+        "transferSize": 493023
+      },
+      {
+        "path": "/api/work-records/capabilities",
+        "durationMs": 38,
+        "transferSize": 464
+      },
+      {
+        "path": "/api/core-indicators/audit/todo",
+        "durationMs": 29,
+        "transferSize": 301
+      },
+      {
+        "path": "/api/achievement/audit/todo",
+        "durationMs": 25,
+        "transferSize": 303
+      },
+      {
+        "path": "/api/performance/audit/todo",
+        "durationMs": 20,
+        "transferSize": 303
+      },
+      {
+        "path": "/api/system/allUsers",
+        "durationMs": 19,
+        "transferSize": 157238
+      }
+    ],
+    "errors": []
+  },
+  {
+    "route": "admin/overview",
+    "phase": "cold",
+    "firstContentMs": 747,
+    "firstSectionMs": 434,
+    "requests": 15,
+    "responseBytes": 165554,
+    "slowestApi": [
+      {
+        "path": "/api/work-records/capabilities",
+        "durationMs": 37,
+        "transferSize": 464
+      },
+      {
+        "path": "/api/admin/overview/summary",
+        "durationMs": 36,
+        "transferSize": 1131
+      },
+      {
+        "path": "/api/core-indicators/audit/todo",
+        "durationMs": 28,
+        "transferSize": 301
+      },
+      {
+        "path": "/api/system/allUsers",
+        "durationMs": 20,
+        "transferSize": 157238
+      },
+      {
+        "path": "/api/admin/overview/summary",
+        "durationMs": 20,
+        "transferSize": 1140
+      },
+      {
+        "path": "/api/admin/overview/summary",
+        "durationMs": 17,
+        "transferSize": 1049
+      }
+    ],
+    "errors": []
+  },
+  {
+    "route": "admin/overview",
+    "phase": "warm",
+    "firstContentMs": 396,
+    "firstSectionMs": 289,
+    "requests": 15,
+    "responseBytes": 165554,
+    "slowestApi": [
+      {
+        "path": "/api/admin/overview/summary",
+        "durationMs": 31,
+        "transferSize": 1131
+      },
+      {
+        "path": "/api/work-records/capabilities",
+        "durationMs": 30,
+        "transferSize": 464
+      },
+      {
+        "path": "/api/core-indicators/audit/todo",
+        "durationMs": 25,
+        "transferSize": 301
+      },
+      {
+        "path": "/api/admin/overview/summary",
+        "durationMs": 21,
+        "transferSize": 1140
+      },
+      {
+        "path": "/api/admin/overview/summary",
+        "durationMs": 18,
+        "transferSize": 1049
+      },
+      {
+        "path": "/api/admin/overview/summary",
+        "durationMs": 16,
+        "transferSize": 1265
+      }
+    ],
+    "errors": []
+  }
+]

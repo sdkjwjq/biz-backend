@@ -1,0 +1,12 @@
+{
+  "checks": [
+    "initial-list-is-one-paged-summary-without-four-source-reads",
+    "pending-list-uses-server-pagination",
+    "deep-link-locates-off-page-pending-record",
+    "processed-message-opens-authorized-readonly-history",
+    "slow-history-cannot-overwrite-current-todo-tab",
+    "double-click-produces-one-approval-and-advances-across-page-boundary",
+    "last-filtered-record-closes-without-reopening-earlier-records"
+  ],
+  "errors": []
+}
