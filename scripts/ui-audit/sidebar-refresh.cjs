@@ -2,8 +2,8 @@ const {chromium,request}=require('../../target/ui-audit-tools/node_modules/playw
 const {expect}=require('../../target/ui-audit-tools/node_modules/playwright/test');
 const fs=require('node:fs/promises'),path=require('node:path'),assert=require('node:assert/strict');
 (async()=>{
- const state=JSON.parse(await fs.readFile(path.resolve(__dirname,'../../target/ui-audit/state.json')));
- assert.match(state.schema,/^biz_review_test_[0-9a-f]{32}$/);assert.equal(state.frontend,'http://127.0.0.1:15173');
+ const state=JSON.parse(await fs.readFile(process.env.UI_AUDIT_STATE_FILE||path.resolve(__dirname,'../../target/ui-audit/state.json')));
+ assert.match(state.schema,/^biz_review_test_[0-9a-f]{32}$/);assert.equal(new URL(state.frontend).hostname,'127.0.0.1');
  const api=await request.newContext({baseURL:state.frontend});
  const login=await api.post('/api/system/login',{data:{user_id:110228,password:'review-fixture-password'}}),token=(await login.json()).token;assert.ok(token);
  const auditPaths=['/api/biz/audit/todo','/api/performance/audit/todo','/api/achievement/audit/todo','/api/core-indicators/audit/todo'];
@@ -69,7 +69,7 @@ const fs=require('node:fs/promises'),path=require('node:path'),assert=require('n
   checks.push('visible-page-immediately-refreshes-both-counts');
   if(expectedCount)await expect(badge).toHaveText(String(expectedCount));
   assert.deepEqual(errors,[]);assert.ok(countModes.length>0&&countModes.every(Boolean));checks.push('sidebar-uses-count-only-responses');
-  const out=path.resolve(__dirname,'../../target/ui-audit/sidebar-refresh');await fs.mkdir(out,{recursive:true});
+  const out=process.env.UI_AUDIT_STATE_FILE?path.join(path.dirname(process.env.UI_AUDIT_STATE_FILE),'sidebar-refresh'):path.resolve(__dirname,'../../target/ui-audit/sidebar-refresh');await fs.mkdir(out,{recursive:true});
   await page.screenshot({path:path.join(out,'counts.png'),fullPage:true});
   await fs.writeFile(path.join(out,'report.json'),JSON.stringify({checks,counts,expectedAuditCount:expectedCount,errors},null,2));
   console.log(checks.join('\n'));

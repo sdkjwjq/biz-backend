@@ -1,0 +1,171 @@
+{
+  "date": "2026-10-25",
+  "commits": {
+    "backend": "95c7aa7",
+    "frontend": "006c5e8"
+  },
+  "implementation": {
+    "records": "Overview and maintenance use bounded record metadata batches (at most 500 IDs) and synthetic-owner checks over preloaded current-account departments. The original global visible-record list now shares identity/leadership reads only within its invocation; source encounter order is retained. All use the original row matcher, including stored record year and draft owner/server capability checks.",
+    "core": "Overview archive query projects only indicator/report IDs, frozen name/target/value and month. Keeps original mapping join, cutoff and month/archive-time/report-ID ordering. Indicator access checks use bounded ID batches rather than per-row queries.",
+    "frontend": "Six module reads are scheduled with at most two in flight; same-generation duplicate reads share a promise, queued stale reads are skipped and active reads abort on year/month changes or unmount. A slow module does not block ready sections. Same-period refresh errors retain and explicitly mark old results. Year/month/account changes clear old context; permission denials clear corresponding data or all cards and the drawer.",
+    "error_metadata": "Common request errors retain Error type/messages/auth redirects and add responseCode. Summary keeps legacy error shape and adds accessDenied=true for caught module scope denials so denied values are not treated as stale data.",
+    "test_harness": "Named run directories and configurable frontend/backend ports avoid existing local services. Occupied ports fail before fixture creation; tests can select an independent state file and results directory."
+  },
+  "record_scope_measurements": {
+    "method": "Random isolated synthetic database; 120/600 submitted records, same read-only REPEATABLE_READ transaction wrapper for original individual canRead checks and the new batch. Common request permission state initialized outside timing. One warm-up discarded and median of five sequential samples. IDs equal. Metadata/scope phase only, not page latency, P95, concurrent users or full-system acceptance.",
+    "source": "target/performance-overview-final-regression.log",
+    "measurements": [
+      {
+        "records": 120,
+        "equalIds": true,
+        "legacy_median_us": 50344,
+        "batch_median_us": 5704
+      },
+      {
+        "records": 600,
+        "equalIds": true,
+        "legacy_median_us": 219653,
+        "batch_median_us": 12346
+      }
+    ]
+  },
+  "current_backend_loading_comparison": {
+    "method": "One synthetic administrator, current optimized backend, sequential paired runs, one warm-up discarded and median of five samples. API response timings only, not browser rendering, cold start, multi-account concurrency or full-system P95.",
+    "combined": {
+      "requests": 1,
+      "complete_median_ms": 32.85,
+      "bytes": 4195
+    },
+    "modules": {
+      "requests": 6,
+      "max_parallel": 2,
+      "first_response_median_ms": 22.31,
+      "complete_median_ms": 67.75,
+      "bytes": 4970
+    },
+    "equalModules": true
+  },
+  "loading_tradeoff": "On this small current-backend fixture, progressive loading produced an earlier first API response but increased full-set API duration and transferred bytes: six reads replace one combined call. It improves independent rendering under slow modules; it is not an unconditional whole-page latency win. The combined endpoint remains compatible. Multi-account/load acceptance is still required.",
+  "verification": {
+    "isolated_api_regressions": 205,
+    "work_record_regressions": 36,
+    "query_and_scope_unit_tests": 17,
+    "request_pool_node_tests": 5,
+    "overview_browser_checks": 19,
+    "list_browser_checks": 38,
+    "sidebar_browser_checks": 6,
+    "frontend_static_check": "passed",
+    "frontend_build": "passed",
+    "backend_package": "passed",
+    "audit_harness_syntax": "passed"
+  },
+  "scope_query_evidence": {
+    "record_or_core_unique_ids": 501,
+    "metadata_batches": 2,
+    "max_ids_per_batch": 500,
+    "owner_checks": "No per-owner metadata query; current-owner fields are supplied by the existing eligible-author result.",
+    "limits": "Query-count assertions use mocks, not a live SQL profiler."
+  },
+  "compatibility_cases": [
+    "Records: actual stored year overrides caller year; ALL/year-limited/OWN/BUSINESS/CUSTOM/LEADERSHIP scopes equal original checks",
+    "Deleted records absent; own drafts preserved; other drafts require current server-validated capability even for administrators",
+    "Owner counter keeps original synthetic object ID zero semantics; record list encounter order retained",
+    "Old Token after permission/scope/duty changes and stopped account remains checked against current database state",
+    "Core: cutoff excludes future/obsolete results, frozen name/target preserved, duplicate mapping warning and current ID scope preserved",
+    "Budget-year scope denial keeps status=error while distinguishing denied data for frontend clearing",
+    "Slow old year, failed first load, stale refresh retry, denied scope, account change mid-read, drawer close and narrow viewport",
+    "Existing filters, counts, paging, core, expert, budget and work-record flows unchanged"
+  ],
+  "browser": {
+    "overview": {
+      "checks": [
+        "six-modules-and-all-summary-numbers-match-real-API",
+        "bounded-two-read-first-load-renders-ready-modules-without-waiting-for-slow-module",
+        "performance-aggregate-status-and-mode-numbers-match-chart-and-drilldown",
+        "pagination-real-chart-click-group-intersection-and-existing-task-detail",
+        "core-cutoff-excludes-future-and-obsolete-results-and-opens-history",
+        "achievement-aggregate-numbers-match-chart-and-drilldown-records-and-awards",
+        "achievement-rejection-reason-and-existing-detail-link",
+        "budget-missing-null-gaps-adjustments-three-trend-views-original-chart-hidden",
+        "work-record-eligibility-submitted-missing-and-historical-counts-match-chart-and-rows",
+        "work-record-current-eligibility-draft-privacy-and-frozen-record-link",
+        "leader-readonly-maintenance-current-scope-old-token-and-ordinary-user-denial",
+        "slow-old-year-response-cannot-replace-current-year",
+        "injected-module-failure-is-not-zero-and-independent-retry-recovers",
+        "failed-same-period-refresh-keeps-marked-old-results-and-retry-clears-stale-warning",
+        "scope-denial-clears-previous-module-values-and-overview-denial-clears-all-cards",
+        "account-change-during-read-discards-old-response-and-clears-old-cards",
+        "injected-analysis-failure-retry-and-close-cancels-old-response",
+        "narrow-screen-page-table-scroll-and-accessible-drawer-footer",
+        "zero-records-and-zero-denominators-show-empty-data-without-false-percentage"
+      ],
+      "errors": []
+    },
+    "filters": {
+      "checks": [
+        "tasks-real-api",
+        "performance-real-api",
+        "achievements-real-api",
+        "core-real-api",
+        "records-real-api",
+        "supervision-real-api",
+        "budget-versions-real-api",
+        "account-data-does-not-wait-for-options",
+        "account-first-load-never-shows-false-empty-result",
+        "account-server-pagination-empty-and-reset",
+        "draft-query-and-empty-results",
+        "advanced-collapse-keeps-applied-condition",
+        "tag-removal-does-not-apply-other-draft-edits",
+        "reset-defaults",
+        "delayed-old-response-cannot-overwrite-new-query",
+        "failed-query-preserves-draft-and-applied-results",
+        "advanced-panel-and-table-remain-scroll-accessible",
+        "works/performance-basic-controls",
+        "works/achievement-basic-controls",
+        "core-indicators-basic-controls",
+        "work-records-basic-controls",
+        "notice-basic-controls",
+        "expert-reviews?view=tasks-basic-controls",
+        "works/budget-basic-controls",
+        "audit-basic-controls",
+        "admin/accounts-basic-controls",
+        "admin/permissions-basic-controls",
+        "record-first-load-no-false-empty-or-unused-author-request",
+        "record-list-uses-paged-response-without-losing-filter-controls",
+        "record-failed-refresh-retains-existing-rows",
+        "department-basic-and-advanced-controls",
+        "role-permission-basic-filters-load",
+        "budget-version-basic-controls",
+        "operation-log-basic-controls",
+        "operation-page-response-retains-filter-controls",
+        "operation-detail-preserves-before-after-values",
+        "audit-history-tab-keeps-handled-time-filter",
+        "overview-analysis-filters"
+      ],
+      "errors": []
+    },
+    "sidebar": {
+      "checks": [
+        "badge-matches-current-business-todos",
+        "30-events-coalesce-to-one-four-module-read",
+        "changes-during-slow-read-produce-one-follow-up",
+        "hidden-periodic-and-business-triggers-skip-network",
+        "visible-page-immediately-refreshes-both-counts",
+        "sidebar-uses-count-only-responses"
+      ],
+      "errors": []
+    }
+  },
+  "artifacts": {
+    "overview": "target/ui-audit-overview-progressive/overview-dashboard/result.json",
+    "filters": "target/ui-audit-permissions-progressive/list-filters/report.json",
+    "sidebar": "target/ui-audit-permissions-progressive/sidebar-refresh/report.json"
+  },
+  "remaining": [
+    "Task/performance/achievement/audit/message list projection and SQL pagination work remains partial.",
+    "Scoped summaries and record metadata enumeration still materialize their original source sets; no full-system aggregation or data cache was introduced.",
+    "Sustained multi-account 1/10/30-user and 5x-scale end-to-end P50/P95 acceptance, scan-row tracing and index acceptance remain unfinished."
+  ],
+  "deployment": "No update package or online deployment. When authorized, deploy backend before the matching frontend so module accessDenied metadata is available. Restore matching previous artifacts to roll back; no schema migration or business-data rollback is needed.",
+  "production_changes": false
+}

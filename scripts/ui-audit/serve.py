@@ -11,6 +11,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import socket
 import time
 import urllib.request
 import uuid
@@ -24,12 +25,20 @@ SPEC.loader.exec_module(RUNNER)
 
 
 def main():
+    global WORK
     parser = argparse.ArgumentParser()
     parser.add_argument("--fixture", choices=["base", "business", "review", "navigation", "convenience", "convenience2", "continuous", "customer", "work-records", "task-stats", "ownership-transfer", "ownership-transfer-scale", "performance-relation", "level4-equal-weight", "responsibility-filters", "leadership", "core", "budgettrends", "admintest", "work-record-scope", "presentation", "overview", "permissions"], default="base")
     parser.add_argument("--frontend-port", type=int, default=15173)
+    parser.add_argument("--backend-port", type=int, default=18080)
+    parser.add_argument("--run-id")
     args = parser.parse_args()
-    if not 1024 <= args.frontend_port <= 65535:
-        raise RuntimeError("Invalid frontend port")
+    if any(not 1024 <= port <= 65535 for port in (args.frontend_port,args.backend_port)) or args.frontend_port==args.backend_port:
+        raise RuntimeError("Invalid audit ports")
+    if args.run_id:
+        if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,47}",args.run_id):raise RuntimeError("Invalid audit run ID")
+        WORK=ROOT/("target/ui-audit-"+args.run_id)
+    for port in (args.frontend_port,args.backend_port):
+        with socket.socket() as probe:probe.bind(("127.0.0.1",port))
     frontend_url = "http://127.0.0.1:" + str(args.frontend_port)
     password = os.environ.get("SHUANGGAO_TEST_DB_PASSWORD")
     if password is None:
@@ -39,6 +48,7 @@ def main():
     if stop.exists():
         stop.unlink()
     env = os.environ.copy()
+    env["SHUANGGAO_UI_BACKEND_PORT"]=str(args.backend_port)
     env["MYSQL_PWD"] = password
     env["SHUANGGAO_TEST_DB_USER"] = env.get("SHUANGGAO_TEST_DB_USER", "root")
     schema = "biz_review_test_" + uuid.uuid4().hex
@@ -144,7 +154,7 @@ def main():
         vite = WORK / "vite-audit.mjs"
         vite.write_text("import { createServer } from " + json.dumps((frontend / "node_modules/vite/dist/node/index.js").as_uri())
                         + "; const server = await createServer({root:" + json.dumps(str(frontend))
-                        + ",server:{host:'127.0.0.1',port:" + str(args.frontend_port) + ",strictPort:true,proxy:{'/api':{target:'http://127.0.0.1:18080',changeOrigin:true}}}}); await server.listen();", encoding="utf-8")
+                        + ",server:{host:'127.0.0.1',port:" + str(args.frontend_port) + ",strictPort:true,proxy:{'/api':{target:'http://127.0.0.1:"+str(args.backend_port)+"',changeOrigin:true}}}}); await server.listen();", encoding="utf-8")
         frontend_log = open(WORK / "frontend.log", "w", encoding="utf-8")
         logs.append(frontend_log)
         children.append(subprocess.Popen([RUNNER.executable("node"), str(vite)], cwd=WORK,

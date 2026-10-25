@@ -374,5 +374,69 @@
       "Full-system P50/P95, sustained multi-account concurrency, scan-row tracing and index acceptance remain pending."
     ],
     "rollback": "Restore the previous backend artifact or revert this backend commit when authorized. No new schema, index, migration, business-data update or frontend runtime change."
+  },
+  "recordCoreScopeAndProgressiveLoading": {
+    "implementation": {
+      "records": "Overview and maintenance use bounded record metadata batches (at most 500 IDs) and synthetic-owner checks over preloaded current-account departments. The original global visible-record list now shares identity/leadership reads only within its invocation; source encounter order is retained. All use the original row matcher, including stored record year and draft owner/server capability checks.",
+      "core": "Overview archive query projects only indicator/report IDs, frozen name/target/value and month. Keeps original mapping join, cutoff and month/archive-time/report-ID ordering. Indicator access checks use bounded ID batches rather than per-row queries.",
+      "frontend": "Six module reads are scheduled with at most two in flight; same-generation duplicate reads share a promise, queued stale reads are skipped and active reads abort on year/month changes or unmount. A slow module does not block ready sections. Same-period refresh errors retain and explicitly mark old results. Year/month/account changes clear old context; permission denials clear corresponding data or all cards and the drawer.",
+      "error_metadata": "Common request errors retain Error type/messages/auth redirects and add responseCode. Summary keeps legacy error shape and adds accessDenied=true for caught module scope denials so denied values are not treated as stale data.",
+      "test_harness": "Named run directories and configurable frontend/backend ports avoid existing local services. Occupied ports fail before fixture creation; tests can select an independent state file and results directory."
+    },
+    "verification": {
+      "isolated_api_regressions": 205,
+      "work_record_regressions": 36,
+      "query_and_scope_unit_tests": 17,
+      "request_pool_node_tests": 5,
+      "overview_browser_checks": 19,
+      "list_browser_checks": 38,
+      "sidebar_browser_checks": 6,
+      "frontend_static_check": "passed",
+      "frontend_build": "passed",
+      "backend_package": "passed",
+      "audit_harness_syntax": "passed"
+    },
+    "record_scope_measurements": [
+      {
+        "records": 120,
+        "equalIds": true,
+        "legacy_median_us": 50344,
+        "batch_median_us": 5704
+      },
+      {
+        "records": 600,
+        "equalIds": true,
+        "legacy_median_us": 219653,
+        "batch_median_us": 12346
+      }
+    ],
+    "loading_comparison": {
+      "method": "One synthetic administrator, current optimized backend, sequential paired runs, one warm-up discarded and median of five samples. API response timings only, not browser rendering, cold start, multi-account concurrency or full-system P95.",
+      "combined": {
+        "requests": 1,
+        "complete_median_ms": 32.85,
+        "bytes": 4195
+      },
+      "modules": {
+        "requests": 6,
+        "max_parallel": 2,
+        "first_response_median_ms": 22.31,
+        "complete_median_ms": 67.75,
+        "bytes": 4970
+      },
+      "equalModules": true
+    },
+    "loading_tradeoff": "On this small current-backend fixture, progressive loading produced an earlier first API response but increased full-set API duration and transferred bytes: six reads replace one combined call. It improves independent rendering under slow modules; it is not an unconditional whole-page latency win. The combined endpoint remains compatible. Multi-account/load acceptance is still required.",
+    "evidence": "performance-overview-progressive-20261025.json",
+    "commits": {
+      "backend": "95c7aa7",
+      "frontend": "006c5e8"
+    },
+    "limits": [
+      "Task/performance/achievement/audit/message list projection and SQL pagination work remains partial.",
+      "Scoped summaries and record metadata enumeration still materialize their original source sets; no full-system aggregation or data cache was introduced.",
+      "Sustained multi-account 1/10/30-user and 5x-scale end-to-end P50/P95 acceptance, scan-row tracing and index acceptance remain unfinished."
+    ],
+    "rollback": "No update package or online deployment. When authorized, deploy backend before the matching frontend so module accessDenied metadata is available. Restore matching previous artifacts to roll back; no schema migration or business-data rollback is needed."
   }
 }

@@ -3,9 +3,9 @@ const { chromium, request } = require('../../target/ui-audit-tools/node_modules/
 const { expect } = require('../../target/ui-audit-tools/node_modules/playwright/test');
 const fs = require('node:fs/promises'), path = require('node:path'), assert = require('node:assert/strict');
 (async () => {
-  const state = JSON.parse(await fs.readFile(path.resolve(__dirname, '../../target/ui-audit/state.json')));
+  const state = JSON.parse(await fs.readFile(process.env.UI_AUDIT_STATE_FILE || path.resolve(__dirname, '../../target/ui-audit/state.json')));
   assert.match(state.schema, /^biz_review_test_[0-9a-f]{32}$/);
-  const output = path.resolve(__dirname, '../../target/ui-audit/overview-dashboard'); await fs.mkdir(output, { recursive: true });
+  const output = process.env.UI_AUDIT_STATE_FILE ? path.join(path.dirname(process.env.UI_AUDIT_STATE_FILE),'overview-dashboard') : path.resolve(__dirname, '../../target/ui-audit/overview-dashboard'); await fs.mkdir(output, { recursive: true });
   const api = await request.newContext({ baseURL: state.frontend }), browser = await chromium.launch({ channel: process.env.UI_AUDIT_BROWSER_CHANNEL || 'msedge', headless: true });
   const checks = [], errors = [], contexts = [], tokens = new Map(); let page;
   const done = name => { checks.push(name); console.log('PASS ' + name); };
@@ -40,6 +40,31 @@ const fs = require('node:fs/promises'), path = require('node:path'), assert = re
     }
     await page.screenshot({ path: path.join(output, 'dashboard-desktop.png'), fullPage: true });
     done('six-modules-and-all-summary-numbers-match-real-API');
+
+    let releaseFirst, releaseSlow;
+    const firstGate = new Promise(resolve => { releaseFirst = resolve; }), slowGate = new Promise(resolve => { releaseSlow = resolve; });
+    const started = []; let activeReads = 0, peakReads = 0;
+    await page.route('**/api/admin/overview/summary?**', async route => {
+      const module = new URL(route.request().url()).searchParams.get('module'); started.push(module); activeReads++; peakReads = Math.max(peakReads, activeReads);
+      try { const response = await route.fetch(); await firstGate; if (module === 'performance') await slowGate; try { await route.fulfill({ response }); } catch {} }
+      finally { activeReads--; }
+    });
+    try {
+      await page.reload({ waitUntil: 'domcontentloaded' }); await expect.poll(() => started.length).toBe(2);
+      await page.waitForTimeout(150); assert.equal(started.length, 2); assert.deepEqual(new Set(started), new Set(['tasks', 'performance']));
+      await expect(page.locator('[data-module="core"]')).toContainText('正在读取统计');
+      await expect(page.locator('[data-metric="tasks.total"]')).toHaveCount(0);
+      releaseFirst();
+      await expect(page.locator('[data-metric="tasks.total"] strong')).toContainText('12');
+      await expect(page.locator('[data-metric="records.expected"]')).toBeVisible();
+      await expect(page.locator('[data-metric="performance.total"]')).toHaveCount(0);
+      await expect(page.locator('[data-module="performance"]')).toContainText('正在读取统计');
+      assert.equal(started.length, 6); assert.equal(new Set(started).size, 6); assert.equal(peakReads, 2);
+      await page.screenshot({ path: path.join(output, 'dashboard-progressive-slow-module.png'), fullPage: true });
+      releaseSlow(); await expect(page.locator('[data-metric="performance.total"]')).toBeVisible();
+    } finally { releaseFirst(); releaseSlow(); await page.unroute('**/api/admin/overview/summary?**'); }
+    done('bounded-two-read-first-load-renders-ready-modules-without-waiting-for-slow-module');
+    await home();
 
     for (const key of ['total', 'attained', 'unattained', 'uncertain', 'manual', 'automatic']) {
       const metric = summary.modules.performance.metrics.find(item => item.key === key);
@@ -155,13 +180,56 @@ const fs = require('node:fs/promises'), path = require('node:path'), assert = re
     done('slow-old-year-response-cannot-replace-current-year');
 
     let failed = false;
-    await page.route('**/api/admin/overview/summary?**', async route => { if (!failed) { failed = true; const response = await route.fetch(), body = await response.json(); body.modules.achievements = { status: 'error', message: '模拟成果统计故障' }; await route.fulfill({ json: body }); } else await route.continue(); });
-    await page.getByRole('button', { name: '刷新', exact: true }).click();
+    await page.route('**/api/admin/overview/summary?**', async route => { if (!failed && new URL(route.request().url()).searchParams.get('module') === 'achievements') { failed = true; const response = await route.fetch(), body = await response.json(); body.modules.achievements = { status: 'error', message: '模拟成果统计故障' }; await route.fulfill({ json: body }); } else await route.continue(); });
+    await page.reload();
     await expect(page.locator('[data-module="achievements"]')).toContainText('模拟成果统计故障');
     await expect(page.locator('[data-metric="achievements.total"]')).toHaveCount(0); await expect(page.locator('[data-metric="tasks.total"]')).toBeVisible();
     await page.locator('[data-module="achievements"]').getByRole('button', { name: '重试本区' }).click(); await expect(page.locator('[data-metric="achievements.total"]')).toBeVisible();
     await page.unroute('**/api/admin/overview/summary?**');
     done('injected-module-failure-is-not-zero-and-independent-retry-recovers');
+
+    await expect(page.getByRole('button', { name: '刷新', exact: true })).toBeEnabled();
+    const previousAchievement = await page.locator('[data-metric="achievements.total"] strong').innerText(); let failRefresh = true;
+    await page.route('**/api/admin/overview/summary?**', async route => {
+      if (failRefresh && new URL(route.request().url()).searchParams.get('module') === 'achievements') { failRefresh = false; await route.fulfill({ status: 500, json: { code: 500, message: '模拟刷新失败' } }); }
+      else await route.continue();
+    });
+    await page.getByRole('button', { name: '刷新', exact: true }).click();
+    await expect(page.locator('[data-module="achievements"]')).toContainText('上次结果尚未更新');
+    await expect(page.locator('[data-metric="achievements.total"] strong')).toHaveText(previousAchievement);
+    await page.locator('[data-module="achievements"]').getByRole('button', { name: '重试本区' }).click();
+    await expect(page.locator('[data-module="achievements"]')).not.toContainText('上次结果尚未更新');
+    await page.unroute('**/api/admin/overview/summary?**');
+    done('failed-same-period-refresh-keeps-marked-old-results-and-retry-clears-stale-warning');
+
+    await expect(page.getByRole('button', { name: '刷新', exact: true })).toBeEnabled();
+    await page.route('**/api/admin/overview/summary?**', async route => {
+      if (new URL(route.request().url()).searchParams.get('module') === 'budget') { const response = await route.fetch(), body = await response.json(); body.modules.budget = { status: 'error', accessDenied: true, message: '模拟预算年度权限失效' }; await route.fulfill({ json: body }); }
+      else await route.continue();
+    });
+    await page.getByRole('button', { name: '刷新', exact: true }).click();
+    await expect(page.locator('[data-module="budget"]')).toContainText('模拟预算年度权限失效');
+    await expect(page.locator('[data-metric="budget.expense"]')).toHaveCount(0); await expect(page.locator('[data-metric="tasks.total"]')).toBeVisible();
+    await expect(page.getByRole('button', { name: '刷新', exact: true })).toBeEnabled(); await page.unroute('**/api/admin/overview/summary?**');
+    await page.route('**/api/admin/overview/summary?**', async route => {
+      if (new URL(route.request().url()).searchParams.get('module') === 'records') await route.fulfill({ status: 403, json: { code: 403, message: '模拟概览查阅权限失效' } });
+      else await route.continue();
+    });
+    await page.getByRole('button', { name: '刷新', exact: true }).click();
+    await expect(page.locator('.overview-page')).toContainText('模拟概览查阅权限失效'); await expect(page.locator('[data-metric]')).toHaveCount(0);
+    await page.unroute('**/api/admin/overview/summary?**'); await home();
+    done('scope-denial-clears-previous-module-values-and-overview-denial-clears-all-cards');
+
+    await expect(page.getByRole('button', { name: '刷新', exact: true })).toBeEnabled();
+    let releaseIdentity; const identityGate = new Promise(resolve => { releaseIdentity = resolve; });
+    await page.route('**/api/admin/overview/summary?**', async route => { const response = await route.fetch(); await identityGate; try { await route.fulfill({ response }); } catch {} });
+    try {
+      const pendingIdentity = page.waitForRequest(r => r.url().includes('/overview/summary?'));
+      await page.getByRole('button', { name: '刷新', exact: true }).click(); await pendingIdentity;
+      await page.evaluate(value => localStorage.setItem('token', value), await token(910001)); releaseIdentity();
+      await expect(page.locator('.overview-page')).toContainText('登录状态已变化'); await expect(page.locator('[data-metric]')).toHaveCount(0);
+    } finally { releaseIdentity(); await page.evaluate(value => localStorage.setItem('token', value), await token(110228)); await page.unroute('**/api/admin/overview/summary?**'); }
+    await home(); done('account-change-during-read-discards-old-response-and-clears-old-cards');
 
     let reject = true;
     await page.route('**/api/admin/overview/analysis?**', async route => { if (reject) { reject = false; await route.fulfill({ status: 500, json: { code: 500, message: '模拟分析故障' } }); } else await route.continue(); });

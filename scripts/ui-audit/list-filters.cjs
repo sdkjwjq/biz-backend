@@ -3,8 +3,8 @@ const {chromium,request}=require('../../target/ui-audit-tools/node_modules/playw
 const {expect}=require('../../target/ui-audit-tools/node_modules/playwright/test');
 const fs=require('node:fs/promises'),path=require('node:path'),assert=require('node:assert/strict');
 (async()=>{
- const state=JSON.parse(await fs.readFile(path.resolve(__dirname,'../../target/ui-audit/state.json')));assert.match(state.schema,/^biz_review_test_[0-9a-f]{32}$/);
- const out=path.resolve(__dirname,'../../target/ui-audit/list-filters');await fs.mkdir(out,{recursive:true});
+ const state=JSON.parse(await fs.readFile(process.env.UI_AUDIT_STATE_FILE||path.resolve(__dirname,'../../target/ui-audit/state.json')));assert.match(state.schema,/^biz_review_test_[0-9a-f]{32}$/);
+ const out=process.env.UI_AUDIT_STATE_FILE?path.join(path.dirname(process.env.UI_AUDIT_STATE_FILE),'list-filters'):path.resolve(__dirname,'../../target/ui-audit/list-filters');await fs.mkdir(out,{recursive:true});
  const api=await request.newContext({baseURL:state.frontend});
  const login=await api.post('/api/system/login',{data:{user_id:110228,password:'review-fixture-password'}}),token=(await login.json()).token;assert.ok(token);
  const checks=[],errors=[];const browser=await chromium.launch({channel:process.env.UI_AUDIT_BROWSER_CHANNEL||'msedge',headless:true}),context=await browser.newContext({viewport:{width:1536,height:864}});

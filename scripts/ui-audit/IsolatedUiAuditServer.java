@@ -14,7 +14,9 @@ public class IsolatedUiAuditServer {
         System.setProperty("spring.datasource.username", System.getenv("SHUANGGAO_TEST_DB_USER"));
         System.setProperty("spring.datasource.password", System.getenv("SHUANGGAO_TEST_DB_PASSWORD"));
         System.setProperty("server.address", "127.0.0.1");
-        System.setProperty("server.port", "18080");
+        String port=System.getenv().getOrDefault("SHUANGGAO_UI_BACKEND_PORT","18080");
+        if(!port.matches("[0-9]+")||Integer.parseInt(port)<1024||Integer.parseInt(port)>65535)throw new IllegalStateException("Invalid UI audit port");
+        System.setProperty("server.port", port);
         System.setProperty("logging.file.name", "logs/ui-audit.log");
         System.setProperty("logging.level.root", "WARN");
         SpringApplication app = new SpringApplication(BizApplication.class,
