@@ -10,6 +10,8 @@ import tarfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
+BUILD = Path(os.environ.get('RELEASE_BUILD_DIR', str(ROOT/'target/linux-release-build'))).resolve()
+assert BUILD.parent == (ROOT/'target').resolve() and BUILD.name.startswith('linux-release-build')
 OUT = ROOT.parent / ('releases/' + os.environ.get('RELEASE_NAME', 'shuanggao-update-20261015'))
 assert re.fullmatch(r'shuanggao-update-\d{8}(?:-r\d+)?', OUT.name)
 assert OUT.resolve().parent == (ROOT.parent/'releases').resolve()
@@ -55,7 +57,7 @@ def main():
         shutil.rmtree(OUT)
     for directory in ['backend','frontend','sql','templates']:
         (OUT/directory).mkdir(parents=True,exist_ok=True)
-    source = ROOT/'target/linux-release-build/target/biz_backend-1.0-SNAPSHOT.jar'
+    source = BUILD/'target/biz_backend-1.0-SNAPSHOT.jar'
     with zipfile.ZipFile(source) as jar:
         properties = jar.read('BOOT-INF/classes/application.properties').decode('utf-8')
         assert 'spring.datasource.password=${SPRING_DATASOURCE_PASSWORD:}' in properties
@@ -67,8 +69,11 @@ def main():
     for name in ['update.sh','schema-check.sh','database-restore.sh','README.md']:
         text=(Path(__file__).parent/name).read_text(encoding='utf-8')
         (OUT/name).write_text(text,encoding='utf-8',newline='\n')
-    verification=ROOT/'target/linux-release-build/verification.json'
+    verification=BUILD/'verification.json'
     if verification.exists(): shutil.copy2(verification,OUT/'verification.json')
+    manual = ROOT.parent/'docs/操作手册'
+    assert (manual/'index.html').is_file(), 'Updated operation manual is required'
+    shutil.copytree(manual, OUT/'manual')
 
     creates=[]
     added_tables=set()
@@ -130,6 +135,9 @@ DEALLOCATE PREPARE release_stmt;
     for suffix in ['', '-check', '-rollback']:
         source = ROOT / ('data/migrations/2026-10-24-permissions-expert-reviews'+suffix+'.sql')
         (OUT/'sql'/source.name).write_text(source.read_text(encoding='utf-8'),encoding='utf-8',newline='\n')
+    for suffix in ['', '-check', '-rollback']:
+        source = ROOT / ('data/migrations/2026-10-24-audit-history-index'+suffix+'.sql')
+        (OUT/'sql'/source.name).write_text(source.read_text(encoding='utf-8'),encoding='utf-8',newline='\n')
     data_update = ROOT/'data/migrations/2026-09-18-task-auditor-dept-principal-update.sql'
     data_sql = data_update.read_text(encoding='utf-8')
     assert data_sql.startswith('-- 2026-09-18 task update')
@@ -183,6 +191,17 @@ DEALLOCATE PREPARE release_stmt;
     }
     manifest['data_updates'].append('sql/2026-10-24-permissions-expert-reviews.sql')
     manifest['release_name'] = OUT.name
+    manifest['operation_manual'] = 'manual/index.html'
+    manifest['single_file_manual'] = 'manual/offline.html'
+    manifest['artifact_sha256'] = {
+        'backend': hashlib.sha256((OUT/'backend/biz_backend-1.0-SNAPSHOT.jar').read_bytes()).hexdigest(),
+        'frontend_index': hashlib.sha256((OUT/'frontend/index.html').read_bytes()).hexdigest(),
+    }
+    manifest['frontend_module_entries'] = re.findall(r'<script[^>]*type="module"[^>]*src="([^"]+)"', (OUT/'frontend/index.html').read_text(encoding='utf-8'))
+    snapshot = BUILD/'source-sha256.json'
+    if snapshot.exists(): manifest['backend_source_snapshot_sha256'] = hashlib.sha256(snapshot.read_bytes()).hexdigest()
+    manifest['index_updates'] = ['sql/2026-10-24-audit-history-index.sql']
+    manifest['performance_verification'] = 'Local isolated regression passed; high-concurrency tail optimization deferred, see verification.json'
     manifest['budget_trend_visible'] = False
     manifest['core_indicators_layout'] = 'table-with-expandable-recent-reports'
     manifest['core_indicator_fillers'] = ['active-admin', 'active-office-department-100', 'year-task-owner']

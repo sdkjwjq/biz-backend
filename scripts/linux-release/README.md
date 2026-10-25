@@ -1,13 +1,13 @@
-# 双高平台更新包 20261024
+# 双高平台更新包 20261025
 
 适用环境：Java 17、MySQL 8、Bash 4.2+。服务器不需要安装 Python 或 Node。
 
 ## 一键更新
 
-将完整文件夹 `shuanggao-update-20261024` 上传到 `/root/biz-backend/`，不要覆盖旧更新包，然后执行：
+将完整文件夹 `shuanggao-update-20261025` 上传到 `/root/biz-backend/`，不要覆盖旧更新包，然后执行：
 
 ```bash
-cd /root/biz-backend/shuanggao-update-20261024
+cd /root/biz-backend/shuanggao-update-20261025
 chmod -R go-rwx .
 sha256sum -c SHA256SUMS --quiet
 bash update.sh --check
@@ -36,6 +36,12 @@ bash update.sh --update
 
 ## 本次主要内容
 
+- 账号、审核、消息等列表的加载与分页优化，加载期间不再提前显示空结果。
+- 权限内候选远程搜索、看板读取及任务和绩效大树表渲染优化；不改变既有业务规则。
+- 核对审核历史的关联查询索引；有可复用索引时不重复新增，不修改审核日志。
+- 补充图文操作手册，离线打开 `manual/index.html` 即可查阅、打印。
+- `manual/offline.html` 为内嵌全部截图的单文件版，可单独复制给使用人员。
+- 五倍数据、30人并发下仍有督办尾延迟及部分最终压测延期，不宣称全部容量目标通过。
 - 统一角色与个人权限管理、专家评审及任务抽屉内评语。
 - 管理概览综合看板、领导查阅及财务预算填报权限。
 - 工作纪实填报范围调整、管理员直接填报和操作留痕。
@@ -69,7 +75,7 @@ bash update.sh --update
 本包包含数据迁移，成功后应使用脚本输出的数据库及应用完整回滚命令：
 
 ```bash
-bash /root/biz-backend/shuanggao-update-20261024/update.sh --rollback-database /root/biz-backend/backups/release-实际时间-PID
+bash /root/biz-backend/shuanggao-update-20261025/update.sh --rollback-database /root/biz-backend/backups/release-实际时间-PID
 ```
 
 回滚前脚本会额外保存当时的数据库到 `before-rollback-*.sql.gz`，再恢复更新前数据库、JAR 和前端。不要把回滚命令当作重启命令。

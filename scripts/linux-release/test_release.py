@@ -15,6 +15,8 @@ import shutil
 import gzip
 
 ROOT=Path(__file__).resolve().parents[2]
+BUILD=Path(os.environ.get('RELEASE_BUILD_DIR',str(ROOT/'target/linux-release-build'))).resolve()
+assert BUILD.parent==(ROOT/'target').resolve() and BUILD.name.startswith('linux-release-build')
 PACKAGE=ROOT.parent/('releases/'+os.environ.get('RELEASE_NAME','shuanggao-update-20261015'))
 ONLINE_BACKUP=ROOT/'data/20260920backup.sql'
 MYSQL=Path(os.environ.get('MYSQL_EXE') or shutil.which('mysql') or r'C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe')
@@ -176,7 +178,7 @@ def smoke_jar():
         directory=Path(temp); properties=directory/'release.properties'
         properties.write_text('spring.datasource.url=jdbc:mysql://127.0.0.1:3306/'+schema+'?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai\n'
                               +'spring.datasource.username=root\nspring.datasource.password='+env['MYSQL_PWD']+'\nschedule.enabled=false\n',encoding='utf-8')
-        with (ROOT/'target/linux-release-build/jar-smoke.log').open('wb') as log:
+        with (BUILD/'jar-smoke.log').open('wb') as log:
             process=subprocess.Popen(['java','-jar',str(PACKAGE/'backend/biz_backend-1.0-SNAPSHOT.jar'),
                                       '--server.port='+str(port),'--spring.config.additional-location='+properties.as_uri()],
                                      cwd=directory,stdout=log,stderr=subprocess.STDOUT,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
@@ -353,6 +355,16 @@ exit 17
         after=snapshot(before_columns)
         assert all(after[name]==data for name,data in before.items())
         checks.append('missing-work-record-tables-created-existing-rows-unchanged')
+        index_rows=snapshot()
+        for _ in range(2):
+            sql((PACKAGE/'sql/2026-10-24-audit-history-index.sql').read_bytes())
+            sql((PACKAGE/'sql/2026-10-24-audit-history-index-check.sql').read_bytes())
+        assert snapshot()==index_rows
+        sql((PACKAGE/'sql/2026-10-24-audit-history-index-rollback.sql').read_bytes())
+        assert snapshot()==index_rows
+        sql((PACKAGE/'sql/2026-10-24-audit-history-index.sql').read_bytes())
+        sql((PACKAGE/'sql/2026-10-24-audit-history-index-check.sql').read_bytes())
+        checks.append('audit-history-index-idempotent-and-safe-rollback-preserves-business-rows')
         for module in ['leadership-access','task-attributes','core-indicators']:
             migration=(PACKAGE/('sql/2026-10-12-'+module+'.sql')).read_bytes()
             sql(migration)
@@ -438,7 +450,7 @@ exit 17
     checks.append('isolated-database-removed')
     online_backup_migration_rehearsal()
     result={'checks':checks,'production_database_accessed':False,'linux_process_test':'not run on Windows'}
-    (ROOT/'target/linux-release-build/verification.json').write_text(json.dumps(result,indent=2),encoding='utf-8')
+    (BUILD/'verification.json').write_text(json.dumps(result,indent=2),encoding='utf-8')
     print(json.dumps(result,indent=2))
 
 if __name__=='__main__': main()

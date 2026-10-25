@@ -375,6 +375,10 @@ fi
 "${MYSQL[@]}" < "$PACKAGE/sql/2026-10-24-permissions-expert-reviews-check.sql" > "$BACKUP/permissions-expert-check.log"
 say '权限及专家评审结构已核对，既有授权和评语保留'
 
+"${MYSQL[@]}" < "$PACKAGE/sql/2026-10-24-audit-history-index.sql" > "$BACKUP/audit-history-index.log"
+"${MYSQL[@]}" < "$PACKAGE/sql/2026-10-24-audit-history-index-check.sql" > "$BACKUP/audit-history-index-check.log"
+say '审核历史查询索引已核对，复用已有索引，不修改审核记录'
+
 # The backend is stopped and the complete database has already been backed up.
 # Retire review requests only; preserve completed-result messages and audit history.
 "${MYSQL[@]}" < "$PACKAGE/sql/backup-stale-notices.sql" > "$BACKUP/restore-notice-flags.sql"

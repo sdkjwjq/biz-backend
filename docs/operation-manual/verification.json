@@ -1,0 +1,122 @@
+{
+  "brokenAnchors": 0,
+  "horizontalOverflow": false,
+  "images": [
+    {
+      "height": 720,
+      "loaded": true,
+      "src": "images/login.jpg",
+      "width": 1280
+    },
+    {
+      "height": 720,
+      "loaded": true,
+      "src": "images/task-filters.jpg",
+      "width": 1280
+    },
+    {
+      "height": 720,
+      "loaded": true,
+      "src": "images/tasks.jpg",
+      "width": 1280
+    },
+    {
+      "height": 720,
+      "loaded": true,
+      "src": "images/task-details.jpg",
+      "width": 1280
+    },
+    {
+      "height": 720,
+      "loaded": true,
+      "src": "images/core-indicators.jpg",
+      "width": 1280
+    },
+    {
+      "height": 720,
+      "loaded": true,
+      "src": "images/core-fill.jpg",
+      "width": 1280
+    },
+    {
+      "height": 720,
+      "loaded": true,
+      "src": "images/work-records.jpg",
+      "width": 1280
+    },
+    {
+      "height": 720,
+      "loaded": true,
+      "src": "images/work-record-edit.jpg",
+      "width": 1280
+    },
+    {
+      "height": 720,
+      "loaded": true,
+      "src": "images/work-record-entries.jpg",
+      "width": 1280
+    },
+    {
+      "height": 720,
+      "loaded": true,
+      "src": "images/achievements.jpg",
+      "width": 1280
+    },
+    {
+      "height": 720,
+      "loaded": true,
+      "src": "images/budget.jpg",
+      "width": 1280
+    },
+    {
+      "height": 720,
+      "loaded": true,
+      "src": "images/budget-versions.jpg",
+      "width": 1280
+    },
+    {
+      "height": 720,
+      "loaded": true,
+      "src": "images/expert-list.jpg",
+      "width": 1280
+    },
+    {
+      "height": 720,
+      "loaded": true,
+      "src": "images/expert-editor.jpg",
+      "width": 1280
+    },
+    {
+      "height": 720,
+      "loaded": true,
+      "src": "images/overview.jpg",
+      "width": 1280
+    },
+    {
+      "height": 720,
+      "loaded": true,
+      "src": "images/overview-analysis.jpg",
+      "width": 1280
+    },
+    {
+      "height": 720,
+      "loaded": true,
+      "src": "images/accounts.jpg",
+      "width": 1280
+    },
+    {
+      "height": 720,
+      "loaded": true,
+      "src": "images/roles.jpg",
+      "width": 1280
+    },
+    {
+      "height": 720,
+      "loaded": true,
+      "src": "images/personal-permissions.jpg",
+      "width": 1280
+    }
+  ],
+  "sections": 14,
+  "title": "鍙岄珮骞冲彴鎿嶄綔鎵嬪唽 20261025"
+}

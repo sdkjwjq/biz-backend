@@ -1,0 +1,84 @@
+{
+  "version": "20261025",
+  "format": "offline-html",
+  "screenshots": "in-app browser; isolated synthetic data",
+  "sections": [
+    {
+      "id": "start",
+      "title": "登录与账号安全"
+    },
+    {
+      "id": "search",
+      "title": "基础筛选与高级筛选"
+    },
+    {
+      "id": "tasks",
+      "title": "任务填报与任务管理"
+    },
+    {
+      "id": "performance",
+      "title": "绩效查看与填报"
+    },
+    {
+      "id": "core",
+      "title": "十大核心指标独立填报"
+    },
+    {
+      "id": "records",
+      "title": "工作纪实填报与导出"
+    },
+    {
+      "id": "achievements",
+      "title": "建设成果与驳回处理"
+    },
+    {
+      "id": "budget",
+      "title": "预算月报与版本记录"
+    },
+    {
+      "id": "audits",
+      "title": "消息 审核与督办"
+    },
+    {
+      "id": "expert",
+      "title": "专家评审与意见修订"
+    },
+    {
+      "id": "overview",
+      "title": "综合数据看板"
+    },
+    {
+      "id": "accounts",
+      "title": "账号与组织管理"
+    },
+    {
+      "id": "permissions",
+      "title": "角色与个人权限"
+    },
+    {
+      "id": "logs",
+      "title": "操作记录与常见问题"
+    }
+  ],
+  "images": {
+    "accounts.jpg": "a034d29038e5d4015ecb522e8a76f3067d9f11039f46b684a644b5ca75b14664",
+    "achievements.jpg": "f9dfab9434cbe27a4dbbae6e092b46cbd19839c5865c7fbbf85875688906da1a",
+    "budget-versions.jpg": "c2a4e04e4e47029535941ea23102c7c3c4dfc0af04f7d1db1d3fca183d350f35",
+    "budget.jpg": "d6314bccc08ebab502443be36b13fade1f7c5d9905bad87382622c6f70dfea6b",
+    "core-fill.jpg": "0f242e807b5c3c5958e5e649dc503a673b6031126f1f44776c125cc6130dfce1",
+    "core-indicators.jpg": "cf537dbcb591817283872a191103a244f257d836d1c442d6e9fdba368f5100d2",
+    "expert-editor.jpg": "5924b732c17d3d477db4352096ef653609b34fd493fa979101b783981539f06c",
+    "expert-list.jpg": "b5fafe1d4a7a3bc31e2fbdee9f4c71609ad5c307010734c9956bf87458520921",
+    "login.jpg": "b7ef64d9917e01b520862c1e668b017f88765ee99b4def52a99e85767c49ca7e",
+    "overview-analysis.jpg": "519d4358ccc9a7eb40bb6461b73c8552c2c537a29a8e84bf920d18939c3cc1fd",
+    "overview.jpg": "18606a718f23fc9aa3607b70e7c6c7719a27321184a6d02e8f31fcb4753a3312",
+    "personal-permissions.jpg": "1bea3d353943254597aa40909bca75e72cd722416aca3fe73620262097492dae",
+    "roles.jpg": "3239fa0227e008c697cfaa53052ef8ab04cc361fe7cd7cce3a021aa03e5e10e3",
+    "task-details.jpg": "288cb5ec212e5ccedf0a75b1052aae92dfcd6bbabc22878c1be03dd9ab2b9c5a",
+    "task-filters.jpg": "f38ae629e8644fae1c9eee8836339cb46a303b8b8ce02b93225fc68ee24590a1",
+    "tasks.jpg": "18a3725fa20223d94b132e53d8efd4eb52bbf87bdaf60f2a91cd9b5bc4ae7a36",
+    "work-record-edit.jpg": "83e4e2a0ec3c3e9a8d134f3c262c3fb8990683e94590715ce7f06ab87fffdcc9",
+    "work-record-entries.jpg": "80565c5a31ac400daf7dfeae5673ed8a1b363d3b24e904f1a7f9042ffdee23d3",
+    "work-records.jpg": "c1202607fb7a7ab6f2e330b88d51d1ece519e29d173e026a932681af12cb1e51"
+  }
+}
