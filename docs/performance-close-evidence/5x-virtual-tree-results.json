@@ -1,0 +1,39 @@
+{
+  "checks": [
+    "works:viewport-only-rendering",
+    "works:all-filtered-rows-selected",
+    "works:selection-survives-scroll",
+    "works:browse-anchor-restored",
+    "works:resize-and-narrow-width",
+    "works:unsaved-drawer-content-survives-row-unmount",
+    "works:deep-link-expands-ancestors-and-locates-virtual-row",
+    "works:long-name-wraps-with-variable-row-height",
+    "works/performance:viewport-only-rendering",
+    "works/performance:all-filtered-rows-selected",
+    "works/performance:selection-survives-scroll",
+    "works/performance:browse-anchor-restored",
+    "works/performance:resize-and-narrow-width",
+    "works/performance:deep-link-expands-ancestors-and-locates-virtual-row",
+    "works/performance:long-name-wraps-with-variable-row-height",
+    "no-browser-errors"
+  ],
+  "errors": [],
+  "metrics": [
+    {
+      "route": "works",
+      "modelRows": 659,
+      "mountedRows": 9,
+      "textHeight": 114,
+      "rowHeight": 137,
+      "contained": true
+    },
+    {
+      "route": "works/performance",
+      "modelRows": 669,
+      "mountedRows": 8,
+      "textHeight": 137,
+      "rowHeight": 160,
+      "contained": true
+    }
+  ]
+}

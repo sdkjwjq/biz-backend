@@ -1,0 +1,65 @@
+[
+  {
+    "workload": "permissionUsers",
+    "concurrency": 1,
+    "samples": 60,
+    "p50Ms": 14.05,
+    "p95Ms": 28.85
+  },
+  {
+    "workload": "permissionUsers",
+    "concurrency": 10,
+    "samples": 60,
+    "p50Ms": 28.26,
+    "p95Ms": 51.27
+  },
+  {
+    "workload": "permissionUsers",
+    "concurrency": 30,
+    "samples": 60,
+    "p50Ms": 57.71,
+    "p95Ms": 88.77
+  },
+  {
+    "workload": "taskUsers",
+    "concurrency": 1,
+    "samples": 60,
+    "p50Ms": 15.57,
+    "p95Ms": 33.9
+  },
+  {
+    "workload": "taskUsers",
+    "concurrency": 10,
+    "samples": 60,
+    "p50Ms": 34.7,
+    "p95Ms": 44.97
+  },
+  {
+    "workload": "taskUsers",
+    "concurrency": 30,
+    "samples": 60,
+    "p50Ms": 72.99,
+    "p95Ms": 99.05
+  },
+  {
+    "workload": "departmentLeaders",
+    "concurrency": 1,
+    "samples": 60,
+    "p50Ms": 16.15,
+    "p95Ms": 32.62
+  },
+  {
+    "workload": "departmentLeaders",
+    "concurrency": 10,
+    "samples": 60,
+    "p50Ms": 31.63,
+    "p95Ms": 45.55
+  },
+  {
+    "workload": "departmentLeaders",
+    "concurrency": 30,
+    "samples": 60,
+    "p50Ms": 64.99,
+    "p95Ms": 97.88
+  }
+]
