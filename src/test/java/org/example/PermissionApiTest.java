@@ -24,6 +24,60 @@ class PermissionApiTest {
     @DynamicPropertySource static void database(DynamicPropertyRegistry r){String url=System.getenv("SHUANGGAO_TEST_JDBC_URL");if(url==null||!url.matches("jdbc:mysql://127\\.0\\.0\\.1:3306/biz_review_test_[0-9a-f]{32}\\?.*"))throw new IllegalStateException("Isolated schema required");r.add("spring.datasource.url",()->url);r.add("spring.datasource.username",()->System.getenv("SHUANGGAO_TEST_DB_USER"));r.add("spring.datasource.password",()->System.getenv("SHUANGGAO_TEST_DB_PASSWORD"));}
     @LocalServerPort int port;@Autowired TestRestTemplate http;@Autowired JdbcTemplate jdbc;@Autowired ObjectMapper json;
     String admin,expert,owner,reviewer;
+    @Autowired org.example.service.PermissionService auditPermissions;
+    @Autowired org.example.service.AuditReadScopeService auditScopes;
+    @Autowired org.springframework.transaction.PlatformTransactionManager auditTransactions;
+    @Test void taskAuditBatchMatchesPointChecksForScopesYearsAndGoalIdCollisions() throws Exception {
+        jdbc.update("INSERT INTO biz_task(task_id,project_id,parent_id,phase,task_code,task_name,level,dept_id,leader_id,principal_id,auditor_id,is_delete) VALUES(105,1,2,2026,'COL105','Higher main collision',4,991001,90101,90102,90102,0),(106,1,2,2026,'COL106','Deleted main collision',3,991001,90101,90102,90102,1),(107,1,2,2026,'COL107','Legacy flag',3,991001,90101,90102,90102,2)");
+        for(long id=101;id<=112;id++){
+            long parent=id==102||id==107?4:id==103?5:id==104?101:id==110?999:id==111?1:id==112?106:3;
+            jdbc.update("INSERT INTO biz_level4_task(task_id,parent_id,task_name,leader_id,dept_id,target_value,current_value,progress,is_delete) VALUES(?,?,?,90103,991001,10,0,0,?)",id,parent,"Synthetic audit goal "+id,id==108?1:id==109?2:0);
+        }
+        var ids=new ArrayList<Long>(List.of(1L,2L,3L,4L,5L,105L,106L,107L,999L));
+        for(long id=101;id<=112;id++)ids.add(id);ids.add(3L);ids.add(null);
+        for(var rule:List.of(Map.<String,Object>of("mode","ALL"),Map.<String,Object>of("mode","ALL","years",List.of(2026)),
+                Map.<String,Object>of("mode","BUSINESS"),Map.<String,Object>of("mode","OWN"),
+                Map.<String,Object>of("mode","CUSTOM","departments",List.of(991002)),Map.<String,Object>of("mode","CUSTOM","directories",List.of(1)),
+                Map.<String,Object>of("mode","CUSTOM","items",List.of(4)),Map.<String,Object>of("mode","LEADERSHIP"))){
+            jdbc.update("INSERT INTO sys_user_permission(user_id,access_mode,permissions_json,scopes_json,version) VALUES(90103,'CUSTOM',?,?,1) ON DUPLICATE KEY UPDATE permissions_json=VALUES(permissions_json),scopes_json=VALUES(scopes_json),version=version+1",
+                    json.writeValueAsString(Map.of("tasks.read",true)),json.writeValueAsString(Map.of("tasks",rule)));
+            for(int pass=0;pass<("LEADERSHIP".equals(rule.get("mode"))?3:1);pass++){
+                jdbc.update("DELETE FROM sys_leadership_department");jdbc.update("DELETE FROM sys_leadership_access");
+                if(pass==0){jdbc.update("INSERT INTO sys_leadership_access(user_id,scope,version) VALUES(90103,'DEPARTMENTS',1)");jdbc.update("INSERT INTO sys_leadership_department(user_id,dept_id) VALUES(90103,991001)");}
+                if(pass==1)jdbc.update("INSERT INTO sys_leadership_access(user_id,scope,version) VALUES(90103,'ALL',1)");
+                for(long actor:List.of(90103L,110228L)){
+                    Set<Long> expected=new HashSet<>();for(Long id:ids)if(auditPermissions.canRead(actor,"tasks",id,2025))expected.add(id);
+                    assertEquals(expected,auditPermissions.readableTaskIds(actor,ids),actor+" "+rule+" leadership="+pass);
+                }
+            }
+        }
+        jdbc.update("UPDATE sys_user_permission SET permissions_json='{\"tasks.read\":false}' WHERE user_id=90103");
+        assertTrue(auditPermissions.readableTaskIds(90103L,ids).isEmpty());
+        jdbc.update("UPDATE sys_user SET status='0' WHERE user_id=90103");
+        assertThrows(org.example.service.AdminManagementException.class,()->auditPermissions.readableTaskIds(90103L,ids));
+    }
+    @Test void repeatedAuditRowScopeBenchmarkUsesOneRequestLocalGraph() throws Exception {
+        jdbc.update("INSERT INTO sys_user_permission(user_id,access_mode,permissions_json,scopes_json,version) VALUES(90103,'CUSTOM','{\"tasks.read\":true}','{\"tasks\":{\"mode\":\"ALL\"}}',1)");
+        var read=new org.springframework.transaction.support.TransactionTemplate(auditTransactions);read.setReadOnly(true);read.setIsolationLevel(org.springframework.transaction.TransactionDefinition.ISOLATION_REPEATABLE_READ);
+        for(int size:List.of(120,600)){
+            List<org.example.service.AuditReadScopeService.Ref> refs=new ArrayList<>();
+            for(int i=0;i<size;i++)refs.add(new org.example.service.AuditReadScopeService.Ref(3L+i%3,i%2==0?2026:2025));
+            List<Long> oldTimes=new ArrayList<>(),newTimes=new ArrayList<>();
+            try{
+                for(int run=0;run<6;run++){
+                    var request=new org.springframework.mock.web.MockHttpServletRequest("GET","/biz/audit/todo");request.addHeader("Authorization",expert);
+                    org.springframework.web.context.request.RequestContextHolder.setRequestAttributes(new org.springframework.web.context.request.ServletRequestAttributes(request));auditPermissions.state(90103L);
+                    long[] times=read.execute(status->{long start=System.nanoTime();Set<org.example.service.AuditReadScopeService.Ref> original=new HashSet<>();
+                        for(var ref:refs)if(auditPermissions.canRead(90103L,"tasks",ref.id(),ref.year()))original.add(ref);
+                        long middle=System.nanoTime();var batch=auditScopes.readable(90103L,"tasks",refs);long end=System.nanoTime();
+                        assertEquals(original,batch);return new long[]{(middle-start)/1000,(end-middle)/1000};});
+                    if(run>0){oldTimes.add(times[0]);newTimes.add(times[1]);}
+                }
+            }finally{org.springframework.web.context.request.RequestContextHolder.resetRequestAttributes();}
+            Collections.sort(oldTimes);Collections.sort(newTimes);
+            System.out.println("AUDIT_ROW_SCOPE_BENCH "+json.writeValueAsString(Map.of("auditRows",size,"distinctTasks",3,"taskGraphRows",5,"legacy_median_us",oldTimes.get(2),"batch_median_us",newTimes.get(2),"equalScope",true)));
+        }
+    }
     @BeforeEach void seed()throws Exception{
         jdbc.execute((ConnectionCallback<Void>)c->{assertTrue(c.getCatalog().matches("biz_review_test_[0-9a-f]{32}"));try(Statement s=c.createStatement()){List<String> tables=new ArrayList<>();try(ResultSet rs=s.executeQuery("SHOW FULL TABLES WHERE Table_type='BASE TABLE'")){while(rs.next())tables.add(rs.getString(1));}s.execute("SET FOREIGN_KEY_CHECKS=0");for(String t:tables)s.executeUpdate("DELETE FROM `"+t+"`");s.execute("SET FOREIGN_KEY_CHECKS=1");}return null;});
         jdbc.update("INSERT INTO sys_permission_revision VALUES(1,0)");

@@ -1,0 +1,64 @@
+// Dedicated permissions fixture. Only its synthetic reporter's own read flags are changed.
+const {chromium,request}=require('../../target/ui-audit-tools/node_modules/playwright');
+const {expect}=require('../../target/ui-audit-tools/node_modules/playwright/test');
+const fs=require('node:fs/promises'),path=require('node:path'),assert=require('node:assert/strict');
+(async()=>{
+ const stateFile=process.env.UI_AUDIT_STATE_FILE;assert.ok(stateFile,'A dedicated UI fixture is required');
+ const state=JSON.parse(await fs.readFile(stateFile));assert.match(state.schema,/^biz_review_test_[0-9a-f]{32}$/);
+ assert.equal(new URL(state.frontend).hostname,'127.0.0.1');
+ const out=path.join(path.dirname(stateFile),'notice-list-loading');await fs.mkdir(out,{recursive:true});
+ const api=await request.newContext({baseURL:state.frontend});
+ const auth=await api.post('/api/system/login',{data:{user_id:910001,password:'review-fixture-password'}});
+ const token=(await auth.json()).token;assert.ok(token);
+ const browser=await chromium.launch({channel:process.env.UI_AUDIT_BROWSER_CHANNEL||'chrome',headless:true});
+ const context=await browser.newContext({viewport:{width:1536,height:864}});
+ await context.addInitScript(t=>localStorage.setItem('token',t),token);
+ const page=await context.newPage();page.setDefaultTimeout(20000);const checks=[],errors=[];
+ page.on('pageerror',error=>errors.push(error.message));let filterRequests=0,failList=false;
+ page.on('request',r=>{if(new URL(r.url()).pathname==='/api/list-filters/notices')filterRequests++});
+ let releaseList,releaseUsers,listReleased=false,usersReleased=false;
+ const listGate=new Promise(resolve=>{releaseList=()=>{listReleased=true;resolve()}});
+ const userGate=new Promise(resolve=>{releaseUsers=()=>{usersReleased=true;resolve()}});
+ await page.route(url=>url.pathname==='/api/system/allUsers',async route=>{if(!usersReleased)await userGate;await route.continue().catch(()=>{})});
+ await page.route(url=>url.pathname==='/api/system/notice'&&!url.searchParams.has('countOnly'),async route=>{
+  if(failList)return route.fulfill({status:500,contentType:'application/json',body:JSON.stringify({code:500,message:'模拟消息加载失败'})});
+  if(!listReleased)await listGate;await route.continue().catch(()=>{});
+ });
+ try{
+  await page.goto(state.frontend+'/home/notice');
+  await expect(page.getByText('正在加载消息…',{exact:true})).toBeVisible();
+  await expect(page.getByText('暂无消息',{exact:true})).toHaveCount(0);
+  await page.screenshot({path:path.join(out,'first-loading.png'),fullPage:true});checks.push('first-load-does-not-show-false-empty');
+  releaseList();await expect(page.locator('.notice-item')).toHaveCount(10);
+  await expect(page.locator('.notice-list > .el-loading-mask:visible')).toHaveCount(0);assert.equal(usersReleased,false);
+  checks.push('message-list-does-not-wait-for-user-directory');
+  assert.equal(filterRequests,1);checks.push('initial-filter-request-is-not-repeated');
+  await page.locator('.notice-item').first().click();
+  await expect(page.getByRole('dialog',{name:'消息详情'})).toContainText('发送人信息加载中');
+  releaseUsers();await expect(page.getByRole('dialog',{name:'消息详情'})).toContainText('审计管理员');
+  await page.getByRole('dialog',{name:'消息详情'}).locator('.el-dialog__headerbtn').click();
+  checks.push('sender-labels-arrive-independently');
+  const bar=page.locator('[aria-label="消息筛选"]');
+  await bar.getByRole('combobox',{name:'消息阅读状态',exact:true}).click();await page.getByRole('option',{name:'未读',exact:true}).click();
+  await bar.getByRole('button',{name:'查询',exact:true}).click();await expect(page.locator('.notice-item')).toHaveCount(10);
+  await page.locator('.notice-item').first().click();await expect(page.locator('.notice-item')).toHaveCount(9);
+  await page.getByRole('dialog',{name:'消息详情'}).locator('.el-dialog__headerbtn').click();
+  await expect(page.locator('.notice-container .unread-badge')).toContainText('9');checks.push('reading-a-message-refreshes-unread-filter-and-count');
+  await page.getByRole('button',{name:'全部已读',exact:true}).click();
+  await expect(page.getByText('暂无消息',{exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'全部已读',exact:true})).toBeDisabled();
+  const count=await api.get('/api/system/notice?countOnly=true',{headers:{Authorization:token}});assert.equal(await count.json(),0);
+  checks.push('mark-all-read-keeps-api-count-and-successful-empty-result-consistent');
+  await bar.getByRole('button',{name:'重置全部',exact:true}).click();await expect(page.locator('.notice-item')).toHaveCount(10);
+  await page.route('**/api/list-filters/notices?**',route=>route.fulfill({status:500,contentType:'application/json',body:JSON.stringify({code:500,message:'模拟筛选失败'})}));
+  await bar.getByRole('button',{name:'查询',exact:true}).click();await expect(bar.locator('.el-alert')).toContainText('更新失败');
+  await expect(page.locator('.notice-item')).toHaveCount(10);await page.unroute('**/api/list-filters/notices?**');
+  await bar.getByRole('button',{name:'查询',exact:true}).click();await expect(bar.locator('.el-alert')).toHaveCount(0);
+  checks.push('failed-filter-refresh-retains-messages-and-retry-recovers');
+  failList=true;await page.reload();await expect(page.locator('.notice-container > .el-card > .el-card__body > .el-alert')).toContainText('消息加载失败');
+  await expect(page.getByText('暂无消息',{exact:true})).toHaveCount(0);
+  failList=false;await page.getByRole('button',{name:'重新加载消息',exact:true}).click();await expect(page.locator('.notice-item')).toHaveCount(10);
+  await expect(page.locator('.notice-list > .el-loading-mask:visible')).toHaveCount(0);
+  await page.screenshot({path:path.join(out,'recovered.png'),fullPage:true});checks.push('failed-first-list-read-is-distinct-from-empty-and-can-retry');
+  assert.deepEqual(errors,[]);await fs.writeFile(path.join(out,'report.json'),JSON.stringify({checks,errors},null,2));console.log(JSON.stringify({checks:checks.length,output:out}));
+ }finally{releaseList();releaseUsers();await context.close();await browser.close();await api.dispose()}
+})().catch(error=>{console.error(error);process.exitCode=1});

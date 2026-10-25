@@ -1,0 +1,87 @@
+{
+  "status": "batch_complete_overall_plan_partial",
+  "date": "2026-10-25",
+  "baseline": {
+    "backend": "27922c51b56f2f0617982545a98942bf558186cd",
+    "frontend": "f9edd5c798e3886861988ade29b6c3d06880283e"
+  },
+  "changes": [
+    "审核列表响应、审核筛选与侧栏计数共用批量范围交集；保留待办来源、记录顺序、重复审核行、缺少对象ID的既有响应及管理员计数规则。",
+    "每次任务批量校验读取一次任务树，保留必要祖先及主任务编号优先规则；四级目标元数据每批最多500条，异常多级引用复用原判定。",
+    "任务可见目录复用本次已读任务集合，领导范围关系仅在本次计算内复用；绩效、核心指标仍按每条记录的年度分组判断，成果仍用实际取得年度。",
+    "消息列表不再等待发送人账号目录；首次不再重复筛选；已读及全部已读仍刷新条件和计数；离开页面取消未完成读取。",
+    "消息加载、真实空结果及失败分别展示；筛选失败保留现有结果；旧消息关联业务ID为空时按已有“无关联／不可判定”分类处理，避免空指针导致整个筛选接口失败。"
+  ],
+  "audit_scope_benchmark": {
+    "method": "同一隔离MySQL库、同一只读重复读事务内比较逐行canRead与批量范围交集。请求内权限状态预先初始化；预热一次后取五次样本中位数，逐次比较可见Ref集合。",
+    "samples": [
+      {
+        "legacy_median_us": 40376,
+        "distinctTasks": 3,
+        "equalScope": true,
+        "taskGraphRows": 5,
+        "batch_median_us": 376,
+        "auditRows": 120
+      },
+      {
+        "legacy_median_us": 220717,
+        "distinctTasks": 3,
+        "equalScope": true,
+        "taskGraphRows": 5,
+        "batch_median_us": 594,
+        "auditRows": 600
+      }
+    ],
+    "limits": "任务树固定为5条，审核行引用其中3项任务并包含重复引用；120到600只扩展审核行数，不代表五倍任务规模。仅权限过滤服务时间，不含HTTP、VO装配、浏览器渲染或并发，不是整页P95验收。"
+  },
+  "verification": {
+    "main_api_regression": 208,
+    "post_null_fix_targeted_api_regression": 44,
+    "work_record_api_regression": 36,
+    "focused_units": 29,
+    "unique_backend_cases": 274,
+    "passing_final_test_executions": 317,
+    "test_count_note": "定向44包含全量中已执行的43项及新增1项空关联消息回归；空ID修复后定向44、纪实36和单元29均通过。",
+    "browser": {
+      "notice": 8,
+      "filters": 38,
+      "sidebar": 6,
+      "total": 52,
+      "runtime_errors": 0
+    },
+    "frontend_lint": "passed",
+    "frontend_build": "passed",
+    "backend_package": "passed",
+    "checks": [
+      "全校、部门、目录、指定任务、本人、业务职责及领导范围与旧逐条判定一致",
+      "跨年度与未知年度、主任务/四级编号冲突、逻辑删除及旧Token权限变更",
+      "列表重复行和顺序、审核数量与待办权限一致",
+      "空关联普通消息的本人归属、未知业务分类及已读筛选",
+      "慢账号目录、首次加载、单条/全部已读、加载失败及重试"
+    ],
+    "isolated_services_stopped": true,
+    "isolated_databases_removed": true,
+    "temporary_cache_cleanup": "删除本地临时Python缓存被工具策略拦截；保留未提交，不影响代码、数据和测试。"
+  },
+  "evidence": {
+    "main": "target/audit-scope-full-regression.log",
+    "post_fix_api": "target/notice-null-business-api.log",
+    "records": "target/audit-notice-work-record-regression.log",
+    "units": "target/audit-notice-final-units.log",
+    "notice_browser": "target/ui-audit-notice-fixed-87182c26/notice-list-loading/report.json",
+    "filters_browser": "target/ui-audit-notice-fixed-87182c26/list-filters/report.json",
+    "sidebar_browser": "target/ui-audit-notice-fixed-87182c26/sidebar-refresh/report.json",
+    "screenshots": "target/ui-audit-notice-fixed-87182c26/notice-list-loading",
+    "frontend_lint": "target/audit-notice-frontend-lint.log",
+    "frontend_build": "target/audit-notice-frontend-build.log",
+    "backend_package": "target/audit-notice-backend-package.log"
+  },
+  "remaining": [
+    "审核中心前端逐条任务详情和审批历史请求、业务VO装配及全量数据读取",
+    "消息与其余列表的数据库条件下推、兼容分页及选项查询",
+    "固定环境的多账号1/10/30并发、五倍数据规模、接口和整页P50/P95及执行计划验收"
+  ],
+  "rollback": "回退本轮前后端Git提交并重新构建；没有数据库迁移或业务数据修改，无需数据库回滚。",
+  "production_changes": false,
+  "update_package_created": false
+}

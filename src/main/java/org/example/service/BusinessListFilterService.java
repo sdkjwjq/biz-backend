@@ -29,6 +29,7 @@ public class BusinessListFilterService {
     @org.springframework.beans.factory.annotation.Autowired private BudgetService budget;
     @org.springframework.beans.factory.annotation.Autowired private WorkRecordFilterPageService recordPages;
     @org.springframework.beans.factory.annotation.Autowired private AuditHistoryTimeService auditHistoryTimes;
+    @org.springframework.beans.factory.annotation.Autowired private AuditReadScopeService auditReadScopes;
     @org.springframework.beans.factory.annotation.Autowired private BudgetVersionListService budgetVersions;
     @org.springframework.beans.factory.annotation.Autowired private OperationFilterPageService operationPages;
     public record Data(List<Map<String,Object>> rows,List<Field> fields){}
@@ -107,9 +108,11 @@ public class BusinessListFilterService {
             else if(domain.equals("achievements"))source=(List<?>)(todo?achievements.getTodoAchievementAudits(actor):achievements.getAchievementAuditRecords(actor));
             else source=core.audits(actor,todo);
             var projected=source.stream().map(this::row).toList();
+            String objectKey=domain.equals("tasks")?"taskId":domain.equals("performance")?"perfId":domain.equals("achievements")?"achId":"indicatorId";
+            var readable=auditReadScopes.readable(actor,domain,projected.stream().map(r->new AuditReadScopeService.Ref(id(r.get(objectKey)),r.get("year")==null?null:(int)id(r.get("year")))).toList());
             Map<Long,Object> handled=todo?Map.of():auditHistoryTimes.latest(domain,projected.stream().map(r->id(r.get(domain.equals("core")?"reportId":"subId"))).toList());
             for(var r:projected){long object=id(r.get(domain.equals("tasks")?"taskId":domain.equals("performance")?"perfId":domain.equals("achievements")?"achId":"indicatorId"));
-                if(!access.canRead(state,domain,object,r.get("year")==null?null:(int)id(r.get("year"))))continue;
+                if(!readable.contains(new AuditReadScopeService.Ref(object,r.get("year")==null?null:(int)id(r.get("year")))))continue;
                 int status=(int)id(r.get("flowStatus"));if(!todo&&status>=0&&status!=(domain.equals("tasks")?40:domain.equals("core")?30:30))continue;
                 String type=domain.equals("tasks")?"task":domain.equals("achievements")?"achievement":domain;Object record=r.get(domain.equals("core")?"reportId":"subId");
                 r.put("handledTime",handled.get(id(record)));r.put("id",type+":"+str(record));r.put("type",type);var person=people.get(id(r.get("submitBy")));if(r.get("submitDeptId")==null&&person!=null)r.put("submitDeptId",person.getDeptId());
@@ -297,7 +300,7 @@ public class BusinessListFilterService {
             states.put(source,byId);
         }
         List<Map<String,Object>> rows=new ArrayList<>();
-        for(var item:notices){var r=row(item);r.put("id",item.getNoticeId());r.put("keyword",str(item.getTitle())+" "+str(item.getContent()));String source=str(item.getSourceType());Long state=states.getOrDefault(source,Map.of()).get(item.getSourceId());r.put("pending",state==null?"unknown":flag((source.equals("0")||source.equals("1"))?Set.of(10L,20L,30L).contains(state):source.equals("3")?state==10:Set.of(10L,20L).contains(state)));r.put("sourceType",source.equals("1")?"0":source);rows.add(r);}
+        for(var item:notices){var r=row(item);r.put("id",item.getNoticeId());r.put("keyword",str(item.getTitle())+" "+str(item.getContent()));String source=str(item.getSourceType());Long state=item.getSourceId()==null?null:states.getOrDefault(source,Map.of()).get(item.getSourceId());r.put("pending",state==null?"unknown":flag((source.equals("0")||source.equals("1"))?Set.of(10L,20L,30L).contains(state):source.equals("3")?state==10:Set.of(10L,20L).contains(state)));r.put("sourceType",source.equals("1")?"0":source);rows.add(r);}
         return rows;
     }
     private void noticeFields(List<Field> f,List<Map<String,Object>> r,Map<String,String> p){select(f,"isRead","阅读状态",true,"0","未读","1","已读");multi(f,"type","消息类型",true,r,Map.of("1","系统通知","2","预警／驳回","3","待办事项"));plain(f,"createTime","发送时间","date",true,"基础");plain(f,"keyword","关键词","text",true,"基础");select(f,"sourceType","业务模块",false,"0","任务","2","绩效","3","成果","4","核心指标");multi(f,"fromUserId","发送人",false,r,p);plain(f,"sourceId","关联编号","text",false,"关联业务");select(f,"pending","关联业务待处理",false,"yes","待处理","no","已处理","unknown","无关联／不可判定");}

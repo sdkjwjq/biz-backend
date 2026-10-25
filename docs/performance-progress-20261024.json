@@ -445,5 +445,12 @@
     "browser_checks": 71,
     "status": "batch_complete_overall_plan_partial",
     "remaining": "主数据分页及全系统并发、5倍规模和P95验收继续推进。"
+  },
+  "auditScopesAndNoticeLoading": {
+    "report": "docs/performance-audit-notice-20261025.json",
+    "unique_backend_cases": 274,
+    "browser_checks": 52,
+    "status": "batch_complete_overall_plan_partial",
+    "remaining": "审核中心前端逐条请求、全量主数据分页与全系统并发P95验收。"
   }
 }

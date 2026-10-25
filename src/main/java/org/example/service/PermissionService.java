@@ -146,15 +146,19 @@ public class PermissionService {
     public Set<Long> taskIds(State s,Integer year){
         if(!s.permissions().contains("tasks.read"))return Set.of();
         List<BizTask> all=tasks.getAllTasks().stream().filter(t->!Integer.valueOf(1).equals(t.getIsDelete())).toList();
+        return taskIds(s,year,all);
+    }
+    private Set<Long> taskIds(State s,Integer year,List<BizTask> all){
+        if(!s.permissions().contains("tasks.read"))return Set.of();
         Map<Long,BizTask> byId=all.stream().collect(Collectors.toMap(BizTask::getTaskId,t->t));
         Set<Long> visible=new LinkedHashSet<>();Set<Long> business=tasks.getVisibleTasks(s.userId()).stream().map(BizTask::getTaskId).collect(Collectors.toSet());
         business.addAll(jdbc.queryForList("SELECT DISTINCT parent_id FROM biz_level4_task WHERE leader_id=? AND COALESCE(is_delete,0)=0",Long.class,s.userId()));
-        List<Map<String,Object>> rules=scopeRules(s,"tasks");
+        List<Map<String,Object>> rules=scopeRules(s,"tasks");RowAccess context=new RowAccess(s);
         for(var task:all)if(Integer.valueOf(3).equals(task.getLevel())&&(year==null||Objects.equals(year,task.getPhase()))) {
             for(var rule:rules) {
                 if(!yearMatches(rule,task.getPhase()))continue;String mode=str(rule.get("mode"));
                 boolean match=switch(mode){case "ALL"->true;case "BUSINESS"->business.contains(task.getTaskId());case "OWN"->Objects.equals(task.getLeaderId(),s.userId());
-                    case "LEADERSHIP"->leadershipAll(s.userId())||leadershipDepartments(s.userId()).contains(task.getDeptId())||Objects.equals(task.getLeaderId(),s.userId())||Objects.equals(task.getAuditorId(),s.userId())||Objects.equals(task.getPrincipalId(),s.userId());
+                    case "LEADERSHIP"->context.leadershipAll()||context.leadershipDepartments().contains(task.getDeptId())||Objects.equals(task.getLeaderId(),s.userId())||Objects.equals(task.getAuditorId(),s.userId())||Objects.equals(task.getPrincipalId(),s.userId());
                     case "CUSTOM"->ids(rule.get("departments")).contains(task.getDeptId())||ids(rule.get("items")).contains(task.getTaskId())||under(task,ids(rule.get("directories")),byId);default->false;};
                 if(match){visible.add(task.getTaskId());break;}
             }
@@ -164,7 +168,7 @@ public class PermissionService {
     public List<BizTask> visibleTasks(Long actor,Integer year){return visibleTasks(state(actor),year);}
     public List<BizTask> visibleTasks(State s,Integer year){
         List<BizTask> all=tasks.getAllTasks().stream().filter(t->!Integer.valueOf(1).equals(t.getIsDelete())).toList();Map<Long,BizTask> byId=all.stream().collect(Collectors.toMap(BizTask::getTaskId,t->t));
-        Set<Long> leaves=taskIds(s,year),allowed=new HashSet<>(leaves);
+        Set<Long> leaves=taskIds(s,year,all),allowed=new HashSet<>(leaves);
         for(Long id:leaves){BizTask cursor=byId.get(id);Set<Long> seen=new HashSet<>();while(cursor!=null&&seen.add(cursor.getTaskId())){allowed.add(cursor.getTaskId());cursor=byId.get(cursor.getParentId());}}
         List<BizTask> result=new ArrayList<>();for(BizTask task:all)if(allowed.contains(task.getTaskId())){
             BizTask copy=new BizTask();BeanUtils.copyProperties(task,copy);
@@ -185,6 +189,35 @@ public class PermissionService {
             return visibleTasks(s,null).stream().anyMatch(t->Objects.equals(t.getTaskId(),id));
         }
         List<Long> parent=jdbc.queryForList("SELECT parent_id FROM biz_level4_task WHERE task_id=? AND COALESCE(is_delete,0)=0",Long.class,id);return parent.size()==1&&canTask(s,parent.get(0));
+    }
+    /** One task graph per batch. Unusual chained goal references retain the legacy resolver. */
+    public Set<Long> readableTaskIds(Long actor,Collection<Long> requested){
+        var ids=requested.stream().filter(Objects::nonNull).distinct().toList();if(ids.isEmpty())return Set.of();
+        var state=state(actor);if(!state.permissions().contains("tasks.read"))return Set.of();
+        var all=tasks.getAllTasks().stream().filter(t->!Integer.valueOf(1).equals(t.getIsDelete())).toList();
+        var byId=all.stream().collect(Collectors.toMap(BizTask::getTaskId,t->t));
+        Set<Long> allowed=new HashSet<>(taskIds(state,null,all));
+        for(Long id:new ArrayList<>(allowed)){
+            var cursor=byId.get(id);Set<Long> seen=new HashSet<>();
+            while(cursor!=null&&seen.add(cursor.getTaskId())){allowed.add(cursor.getTaskId());cursor=byId.get(cursor.getParentId());}
+        }
+        Set<Long> result=new HashSet<>();List<Long> goals=new ArrayList<>();
+        for(Long id:ids)if(byId.containsKey(id)){if(allowed.contains(id))result.add(id);}else goals.add(id);
+        for(int start=0;start<goals.size();start+=500){
+            var batch=goals.subList(start,Math.min(start+500,goals.size()));
+            String marks=String.join(",",Collections.nCopies(batch.size(),"?"));
+            // canTask checks biz_task first, even when a numeric goal ID collides with another level.
+            Set<Long> activeMain=new HashSet<>();
+            for(var row:jdbc.queryForList("SELECT task_id,CAST(is_delete AS SIGNED) is_delete FROM biz_task WHERE task_id IN ("+marks+")",batch.toArray()))
+                if(number(row.get("is_delete"))!=1)activeMain.add(number(row.get("task_id")));
+            for(var row:jdbc.queryForList("SELECT task_id,parent_id FROM biz_level4_task WHERE task_id IN ("+marks+") AND COALESCE(is_delete,0)=0",batch.toArray())){
+                Long id=number(row.get("task_id"));if(activeMain.contains(id)||row.get("parent_id")==null)continue;
+                Long parent=number(row.get("parent_id"));
+                if(byId.containsKey(parent)){if(allowed.contains(parent))result.add(id);}
+                else if(canRead(state,"tasks",id,null))result.add(id);
+            }
+        }
+        return result;
     }
     public boolean canRead(Long actor,String domain,Long id,Integer year){return canRead(state(actor),domain,id,year);}
     public boolean canRead(State s,String domain,Long id,Integer year){

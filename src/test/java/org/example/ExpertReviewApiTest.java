@@ -236,6 +236,14 @@ class ExpertReviewApiTest {
   jdbc.update("UPDATE sys_user_permission SET permissions_json='{\"tasks.read\":true,\"tasks.audit\":false}' WHERE user_id=90103");
   assertEquals(403,get("/biz/audit/todo?countOnly=true",a).getStatusCode().value());
  }
+ @Test void noticesWithoutBusinessIdsKeepUnknownFiltersAndRecipientIsolation()throws Exception{
+  jdbc.update("UPDATE sys_user_permission SET permissions_json='{\"messages.read\":true}' WHERE user_id=90103");
+  jdbc.update("INSERT INTO sys_notice(notice_id,from_user_id,to_user_id,type,title,content,source_type,source_id,is_read,is_delete,create_time) VALUES(1,90101,110228,'1','Ordinary no business','Body','0',NULL,'0',0,NOW()),(2,90101,110228,'1','Unknown module','Body','9',NULL,'1',0,NOW()),(3,90101,90103,'1','Other recipient','Body','0',NULL,'0',0,NOW())");
+  var adminResult=body(get("/list-filters/notices?f.pending=unknown",admin));assertEquals(2,adminResult.path("total").asInt());
+  var own=body(get("/list-filters/notices?f.pending=unknown",a));assertEquals(1,own.path("total").asInt());assertEquals(3,own.path("ids").get(0).asInt());
+  assertEquals(0,body(get("/list-filters/notices?f.pending=yes",admin)).path("total").asInt());
+  assertEquals(1,body(get("/list-filters/notices?f.isRead=0",admin)).path("total").asInt());
+ }
  @Test void unreadCountOnlyUsesVisibleRecipientNoticesAndCurrentBusiness()throws Exception{
   jdbc.update("UPDATE sys_user_permission SET permissions_json='{\"messages.read\":true}' WHERE user_id=90103");
   jdbc.update("INSERT INTO sys_notice(notice_id,from_user_id,to_user_id,type,title,content,source_type,source_id,trigger_event,is_read,is_delete,create_time) VALUES(1,90101,110228,'1','Ordinary','Body','9',0,NULL,'0',0,NOW()),(2,90101,110228,'1','Read','Body','9',0,NULL,'1',0,NOW()),(3,90101,90103,'1','Other recipient','Body','9',0,NULL,'0',0,NOW()),(4,90101,110228,'1','Deleted','Body','9',0,NULL,'0',1,NOW()),(5,90101,110228,'1','任务审核','Body','0',999,'任务审核','0',0,NOW()),(6,90101,110228,'1','Result retained','Body','0',999,'结果通知','0',0,NOW())");
