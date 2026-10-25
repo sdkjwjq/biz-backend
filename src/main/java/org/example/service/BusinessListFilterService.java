@@ -36,6 +36,7 @@ public class BusinessListFilterService {
     @org.springframework.beans.factory.annotation.Autowired private AccountFilterPageService accountPages;
     @org.springframework.beans.factory.annotation.Autowired private FilterOptionReadService optionReads;
     @org.springframework.beans.factory.annotation.Autowired private AuditOptionReadService auditOptionReads;
+    @org.springframework.beans.factory.annotation.Autowired private ReadScopeSql readScopes;
     public record Data(List<Map<String,Object>> rows,List<Field> fields,List<Map<String,Object>> catalog){public Data(List<Map<String,Object>> rows,List<Field> fields){this(rows,fields,List.of());}}
     public Map<String,Object> query(String domain,Long actor,MultiValueMap<String,String> params){
         if(domain.equals("budget"))return budgetQuery(actor,params);
@@ -168,7 +169,7 @@ public class BusinessListFilterService {
         var accounts=users.getAllUsers();
         for(var u:accounts)person.put(str(u.getUserId()),u.getNickName()==null?str(u.getUserName()):u.getNickName());
         // Names are returned only for IDs encountered in authorized rows.
-        if(domain.equals("tasks")||domain.equals("supervision")){var source=access.visibleTasks(actor,null);source.forEach(t->catalog.add(wireRow(t)));rows=withinYear(tasks(actor,source),year);taskFields(fields,rows,person,dept);if(domain.equals("supervision"))plain(fields,"overdueDays","逾期天数","number",false,"进度与时间");}
+        if(domain.equals("tasks")||domain.equals("supervision")){var source=access.visibleTasks(actor,null);Map<Long,Map<String,Object>> snapshots=new HashMap<>();for(var task:source){var snapshot=row(task);snapshots.put(task.getTaskId(),snapshot);catalog.add(wireRow(task,snapshot));}rows=withinYear(tasks(actor,source,snapshots),year);taskFields(fields,rows,person,dept);if(domain.equals("supervision"))plain(fields,"overdueDays","逾期天数","number",false,"进度与时间");}
         else if(domain.equals("performance")){rows=performances(actor,y,catalog);performanceFields(fields,rows,person,dept);}
         else if(domain.equals("achievements")){rows=withinYear(achievementRows(actor),year);rows.forEach(r->catalog.add(wireRow(r.get("item"))));achievementFields(fields,rows,person,dept);}
         else if(domain.equals("core")){int selectedMonth=month==null||month.isBlank()?LocalDate.now(ZoneId.of("Asia/Shanghai")).getMonthValue():positive(month,1);if(selectedMonth>12)throw new AdminManagementException(400,"月份不正确");rows=coreRows(actor,y==null?2026:y,selectedMonth);coreFields(fields,rows,person);}
@@ -185,39 +186,48 @@ public class BusinessListFilterService {
     }
     private Data auditData(Long actor,String tab){return auditData(actor,tab,false);}
     public Data auditPageData(Long actor,String tab){return auditData(actor,tab,true);}
-    private Data auditData(Long actor,String tab,boolean pageMode){
+    public static final class AuditTaskWindow {final int page,size;long total;AuditTaskWindow(int page,int size){this.page=page;this.size=size;}}
+    public record AuditWindowData(Data data,long taskTotal){}
+    public AuditWindowData auditWindow(Long actor,int page,int size){var window=new AuditTaskWindow(page,size);var data=auditData(actor,"done",true,window);return new AuditWindowData(data,window.total);}
+    private Data auditData(Long actor,String tab,boolean pageMode){return auditData(actor,tab,pageMode,null);}
+    private Data auditData(Long actor,String tab,boolean pageMode,AuditTaskWindow window){
         if(tab!=null&&!Set.of("todo","done").contains(tab))throw new AdminManagementException(400,"审核页签不正确");
         boolean todo=!"done".equals(tab);var state=access.state(actor);var permissions=state.permissions();
         List<Map<String,Object>> rows=new ArrayList<>();Map<String,String> persons=new HashMap<>(),departments=new HashMap<>();Map<Long,SysUser> people=new HashMap<>();
-        for(var u:users.getAllUsers()){people.put(u.getUserId(),u);persons.put(str(u.getUserId()),u.getNickName());}
+        for(var u:pageMode?jdbc.query("SELECT user_id,nick_name,dept_id FROM sys_user",org.springframework.jdbc.core.BeanPropertyRowMapper.newInstance(SysUser.class)):users.getAllUsers()){people.put(u.getUserId(),u);persons.put(str(u.getUserId()),u.getNickName());}
         for(var d:administration.departmentNames())departments.put(str(d.get("deptId")),str(d.get("deptName")));
         Map<Long,Map<String,Object>> taskRows=new HashMap<>();
-        if(permissions.contains("tasks.read"))for(var t:tasks(actor))taskRows.put(id(t.get("id")),t);
-        Map<Long,Integer> taskOrder=new HashMap<>();if(pageMode){int order=0;for(var t:access.visibleTasks(actor,null))if(Integer.valueOf(3).equals(t.getLevel()))taskOrder.put(t.getTaskId(),order++);}
+        if(permissions.contains("tasks.read"))for(var t:pageMode?auditTaskCatalog(actor).values().stream().filter(r->id(r.get("level"))==3).toList():tasks(actor))taskRows.put(id(t.get("id")),t);
+        Map<Long,Integer> taskOrder=new HashMap<>();if(pageMode){int order=0;for(var t:auditTaskCatalog(actor).values())if(id(t.get("level"))==3)taskOrder.put(id(t.get("id")),order++);}
         boolean any=false;
         for(String domain:List.of("tasks","performance","achievements","core")){
             if(todo?!(permissions.contains(domain+".audit")||permissions.contains(domain+".archive")):!permissions.contains(domain+".history"))continue;any=true;
             List<?> source;
             if(domain.equals("tasks")){
                 if(pageMode){
-                    if(todo)source=org.example.utils.AdminTestContext.enabled(actor)?auditMapper.getAdminTestPendingAudits():auditMapper.getTodoAudits(actor);
-                    else if(taskOrder.isEmpty())source=List.of();
-                    else source=jdbc.query("SELECT * FROM biz_material_submission WHERE is_delete=0 AND task_id IN ("+String.join(",",Collections.nCopies(taskOrder.size(),"?"))+") ORDER BY sub_id DESC",org.springframework.jdbc.core.BeanPropertyRowMapper.newInstance(BizMaterialSubmission.class),taskOrder.keySet().toArray());
-                    // Preserve old task-history failure isolation: one broken material hides that task's history.
-                    var subs=source.stream().map(BizMaterialSubmission.class::cast).toList();Set<Long> files=new HashSet<>();var fileIds=subs.stream().map(BizMaterialSubmission::getFileId).filter(Objects::nonNull).distinct().toList();
-                    for(int start=0;start<fileIds.size();start+=500)for(var file:users.getFilesByIds(fileIds.subList(start,Math.min(start+500,fileIds.size()))))files.add(file.getFileId());
-                    Set<Long> broken=subs.stream().filter(v->!files.contains(v.getFileId())).map(BizMaterialSubmission::getTaskId).collect(Collectors.toSet());
-                    if(todo&&!broken.isEmpty())biz.getTodoAudits(actor);
-                    source=subs.stream().filter(v->todo||!broken.contains(v.getTaskId())).toList();
+                    String projection="SELECT s.sub_id subId,s.task_id taskId,s.file_id fileId,s.submit_by submitBy,s.submit_dept_id submitDeptId,s.submit_time submitTime,s.flow_status flowStatus"+(todo?",CASE WHEN EXISTS(SELECT 1 FROM sys_file f WHERE f.file_id=s.file_id) THEN 0 ELSE 1 END _missingFile":"")+" FROM biz_material_submission s ";
+                    List<Object> arguments=new ArrayList<>();String from;
+                    if(todo){
+                        boolean test=org.example.utils.AdminTestContext.enabled(actor);
+                        from=(test?"JOIN biz_task t ON t.task_id=s.task_id AND COALESCE(t.is_delete,0)=0 ":"")+"WHERE s.is_delete=0 AND s.flow_status IN(10,20,30) AND "+(test?"s.current_handler_id IS NOT NULL":"s.current_handler_id=?");if(!test)arguments.add(actor);
+                    }else{from="WHERE s.is_delete=0 AND (s.flow_status=40 OR s.flow_status<0) AND "+(taskOrder.isEmpty()?"0=1":"s.task_id IN ("+String.join(",",Collections.nCopies(taskOrder.size(),"?"))+")");arguments.addAll(taskOrder.keySet());}
+                    // Broken material hides only its task's history, exactly as before.
+                    if(!todo)from+=" AND NOT EXISTS(SELECT 1 FROM biz_material_submission broken LEFT JOIN sys_file f ON f.file_id=broken.file_id WHERE broken.task_id=s.task_id AND broken.is_delete=0 AND f.file_id IS NULL)";
+                    if(window!=null)window.total=jdbc.queryForObject("SELECT COUNT(*) FROM biz_material_submission s "+from,Long.class,arguments.toArray());
+                    String ordering=window==null?" ORDER BY s.submit_time DESC,s.sub_id DESC":" ORDER BY s.task_id,s.sub_id DESC LIMIT ? OFFSET ?";
+                    if(window!=null){arguments.add(window.size);arguments.add((long)(window.page-1)*window.size);}
+                    var projectionMapper=new org.springframework.jdbc.core.ColumnMapRowMapper();
+                    source=jdbc.query(projection+from+ordering,(rs,ordinal)->{var mapped=projectionMapper.mapRow(rs,ordinal);mapped.put("submitTime",JdbcProjectionStream.legacyDate(rs,"submitTime"));return mapped;},arguments.toArray());
+                    if(todo){var broken=((List<Map<String,Object>>)source).stream().filter(r->id(r.get("_missingFile"))==1).toList();if(!broken.isEmpty())biz.getTodoAudits(actor);}
                 }else if(todo)source=biz.getTodoAudits(actor);
                 else if(taskRows.isEmpty())source=List.of();
                 else source=jdbc.queryForList("SELECT sub_id subId,task_id taskId,submit_by submitBy,submit_dept_id submitDeptId,submit_time submitTime,flow_status flowStatus FROM biz_material_submission WHERE COALESCE(is_delete,0)=0 AND (flow_status=40 OR flow_status<0) AND task_id IN ("+String.join(",",Collections.nCopies(taskRows.size(),"?"))+")",taskRows.keySet().toArray());
             }else if(domain.equals("performance"))source=(List<?>)(todo?performance.getTodoPerformanceAudits(actor):performance.getPerformanceAuditRecords(actor));
             else if(domain.equals("achievements"))source=(List<?>)(todo?achievements.getTodoAchievementAudits(actor):achievements.getAchievementAuditRecords(actor));
             else source=core.audits(actor,todo);
-            var projected=new ArrayList<Map<String,Object>>();for(var value:source){var projectedRow=row(value);if(pageMode){projectedRow.put("_wireSource",value);if(value instanceof BizMaterialSubmission)projectedRow.put("_submission",value);}projected.add(projectedRow);}
+            var projected=new ArrayList<Map<String,Object>>();for(var value:source){var projectedRow=pageMode&&domain.equals("tasks")?new LinkedHashMap<>((Map<String,Object>)value):row(value);if(pageMode){if(domain.equals("tasks")){projectedRow.replaceAll((k,v)->v instanceof java.util.Date date?json.convertValue(new java.util.Date(date.getTime()),Object.class):v);projectedRow.remove("_missingFile");projectedRow.put("_taskProjection",true);}else projectedRow.put("_wireSource",value);}projected.add(projectedRow);}
             String objectKey=domain.equals("tasks")?"taskId":domain.equals("performance")?"perfId":domain.equals("achievements")?"achId":"indicatorId";
-            var readable=auditReadScopes.readable(actor,domain,projected.stream().map(r->new AuditReadScopeService.Ref(id(r.get(objectKey)),r.get("year")==null?null:(int)id(r.get("year")))).toList());
+            var refs=projected.stream().map(r->new AuditReadScopeService.Ref(id(r.get(objectKey)),r.get("year")==null?null:(int)id(r.get("year")))).toList();var readable=pageMode&&domain.equals("tasks")&&!todo?new HashSet<>(refs):auditReadScopes.readable(actor,domain,refs);
             Map<Long,Object> handled=todo?Map.of():auditHistoryTimes.latest(domain,projected.stream().map(r->id(r.get(domain.equals("core")?"reportId":"subId"))).toList());
             for(var r:projected){long object=id(r.get(domain.equals("tasks")?"taskId":domain.equals("performance")?"perfId":domain.equals("achievements")?"achId":"indicatorId"));
                 if(!readable.contains(new AuditReadScopeService.Ref(object,r.get("year")==null?null:(int)id(r.get("year")))))continue;
@@ -342,10 +352,16 @@ public class BusinessListFilterService {
         if(year==null||year.isBlank())return rows;
         return rows.stream().filter(r->year.equals(str(r.get("year")))||(year.equals("missing")&&str(r.get("year")).isBlank())).toList();
     }
-    public Map<String,Object> wireRow(Object object){
-        var result=row(object);
+    private static final ClassValue<List<java.lang.reflect.Method>> DATE_READERS=new ClassValue<>(){
+        protected List<java.lang.reflect.Method> computeValue(Class<?> type){
+            return Arrays.stream(org.springframework.beans.BeanUtils.getPropertyDescriptors(type)).filter(p->p.getReadMethod()!=null&&p.getPropertyType()!=null&&(java.util.Date.class.isAssignableFrom(p.getPropertyType())||p.getPropertyType().isAssignableFrom(java.util.Date.class))).map(p->{var method=p.getReadMethod();org.springframework.util.ReflectionUtils.makeAccessible(method);return method;}).toList();
+        }
+    };
+    public Map<String,Object> wireRow(Object object){return wireRow(object,row(object));}
+    private Map<String,Object> wireRow(Object object,Map<String,Object> snapshot){
+        var result=new LinkedHashMap<>(snapshot);
         if(object instanceof Map<?,?> map){for(var e:map.entrySet())if(e.getValue() instanceof java.util.Date)result.put(String.valueOf(e.getKey()),e.getValue());}
-        else {var bean=new org.springframework.beans.BeanWrapperImpl(object);for(var descriptor:bean.getPropertyDescriptors())if(result.containsKey(descriptor.getName())&&descriptor.getReadMethod()!=null){Object value=bean.getPropertyValue(descriptor.getName());if(value instanceof java.util.Date)result.put(descriptor.getName(),value);}}
+        else for(var method:DATE_READERS.get(object.getClass())){String name=org.springframework.beans.BeanUtils.findPropertyForMethod(method).getName();if(result.containsKey(name)){Object value=org.springframework.util.ReflectionUtils.invokeMethod(method,object);if(value instanceof java.util.Date)result.put(name,value);}}
         return result;
     }
     private Map<String,Object> row(Object object){return json.convertValue(object,new TypeReference<LinkedHashMap<String,Object>>(){});}
@@ -354,11 +370,32 @@ public class BusinessListFilterService {
     private String flag(boolean value){return value?"yes":"no";}
     private void kind(Map<String,Object> r){boolean p=yes(r.get("isPriority")),d=yes(r.get("isDifficult"));r.put("kind",p&&d?List.of("priority","difficult","both"):p?List.of("priority"):d?List.of("difficult"):List.of("normal"));}
     private List<Long> lineage(Map<String,Object> r,Map<Long,Map<String,Object>> all){List<Long> ids=new ArrayList<>();Set<Long> seen=new HashSet<>();for(var cur=all.get(id(r.get("parentId")));cur!=null&&seen.add(id(cur.get("id")));cur=all.get(id(cur.get("parentId"))))ids.add(id(cur.get("id")));return ids;}
+    @SuppressWarnings("unchecked")
+    private Map<Long,Map<String,Object>> auditTaskCatalog(Long actor){
+        String cacheKey=BusinessListFilterService.class.getName()+":auditTaskCatalog:"+actor;
+        var attributes=org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+        if(attributes instanceof org.springframework.web.context.request.ServletRequestAttributes a){Object previous=a.getRequest().getAttribute(cacheKey);if(previous!=null)return (Map<Long,Map<String,Object>>)previous;}
+        var range=readScopes.tasks(actor,"leaf",null,false);
+        String sql="WITH RECURSIVE allowed(task_id,parent_id,seen) AS (SELECT leaf.task_id,leaf.parent_id,JSON_ARRAY(leaf.task_id) FROM biz_task leaf WHERE leaf.level=3 AND (leaf.is_delete IS NULL OR leaf.is_delete<>1) AND ("+range.sql()+")), visible(task_id,parent_id,seen) AS (SELECT * FROM allowed UNION ALL SELECT p.task_id,p.parent_id,JSON_ARRAY_APPEND(v.seen,'$',p.task_id) FROM visible v JOIN biz_task p ON p.task_id=v.parent_id WHERE p.level<=3 AND (p.is_delete IS NULL OR p.is_delete<>1) AND NOT JSON_CONTAINS(v.seen,CAST(p.task_id AS JSON))) SELECT t.task_id id,t.task_id taskId,t.parent_id parentId,t.level,t.task_name taskName,t.task_code taskCode,t.phase,t.phase year FROM biz_task t JOIN (SELECT DISTINCT task_id FROM visible) v ON v.task_id=t.task_id ORDER BY t.task_id";
+        Map<Long,Map<String,Object>> all=new LinkedHashMap<>();for(var r:jdbc.queryForList(sql,range.args().toArray()))all.put(id(r.get("id")),r);
+        for(var r:all.values())if(id(r.get("level"))==3){var ancestors=lineage(r,all);r.put("root",ancestors.stream().filter(v->id(all.get(v).get("level"))==1).toList());r.put("rootOptions",((List<?>)r.get("root")).stream().map(v->Map.of("value",str(v),"label",str(all.get(id(v)).get("taskName")))).toList());}
+        if(attributes instanceof org.springframework.web.context.request.ServletRequestAttributes a)a.getRequest().setAttribute(cacheKey,all);return all;
+    }
+    public List<Map<String,Object>> auditTaskDetails(Long actor,Collection<Long> requested){
+        var all=new HashMap<Long,Map<String,Object>>();auditTaskCatalog(actor).forEach((key,value)->all.put(key,new LinkedHashMap<>(value)));
+        var ids=requested.stream().filter(all::containsKey).distinct().toList();if(ids.isEmpty())return List.of();
+        for(var task:jdbc.query("SELECT * FROM biz_task WHERE task_id IN ("+String.join(",",Collections.nCopies(ids.size(),"?"))+")",org.springframework.jdbc.core.BeanPropertyRowMapper.newInstance(BizTask.class),ids.toArray())){var r=row(task);r.put("id",task.getTaskId());all.put(task.getTaskId(),r);}
+        return decorateTasks(actor,all,ids);
+    }
     public List<Map<String,Object>> tasks(Long actor){return tasks(actor,access.visibleTasks(actor,null));}
-    private List<Map<String,Object>> tasks(Long actor,List<BizTask> visible){
+    private List<Map<String,Object>> tasks(Long actor,List<BizTask> visible){return tasks(actor,visible,null);}
+    private List<Map<String,Object>> tasks(Long actor,List<BizTask> visible,Map<Long,Map<String,Object>> snapshots){
         Map<Long,Map<String,Object>> all=new HashMap<>();
-        for(var t:visible){var r=row(t);r.put("id",t.getTaskId());all.put(t.getTaskId(),r);}
+        for(var t:visible){var r=snapshots==null?row(t):new LinkedHashMap<>(snapshots.get(t.getTaskId()));r.put("id",t.getTaskId());all.put(t.getTaskId(),r);}
         var ids=visible.stream().filter(t->Integer.valueOf(3).equals(t.getLevel())).map(t->t.getTaskId()).toList();
+        return decorateTasks(actor,all,ids);
+    }
+    private List<Map<String,Object>> decorateTasks(Long actor,Map<Long,Map<String,Object>> all,List<Long> ids){
         Map<Long,List<Map<String,Object>>> states=ids.isEmpty()?Map.of():shortcuts.taskStates(ids).stream().collect(Collectors.groupingBy(r->id(r.get("taskId"))));
         Set<Long> children=new HashSet<>(jdbc.queryForList("SELECT DISTINCT parent_id FROM biz_level4_task WHERE COALESCE(is_delete,0)=0",Long.class));
         List<Map<String,Object>> result=new ArrayList<>();
@@ -373,7 +410,7 @@ public class BusinessListFilterService {
     }
     private List<Map<String,Object>> performances(Long actor,Integer year,List<Map<String,Object>> catalog){
         Object source=year==null?performance.getAllPerformance(actor):performance.getPerformanceByYear(year,actor);
-        List<Map<String,Object>> all=((List<?>)source).stream().map(this::row).toList();((List<?>)source).forEach(value->catalog.add(wireRow(value)));Set<Long> parents=all.stream().map(r->id(r.get("parentId"))).collect(Collectors.toSet());
+        List<Map<String,Object>> all=new ArrayList<>();for(var value:(List<?>)source){var snapshot=row(value);all.add(snapshot);catalog.add(wireRow(value,snapshot));}Set<Long> parents=all.stream().map(r->id(r.get("parentId"))).collect(Collectors.toSet());
         var directories=year==null?all:((List<?>)performance.getAllPerformance(actor)).stream().map(this::row).toList();
         Map<String,String> categories=new HashMap<>();directories.forEach(r->categories.put(str(r.get("perfId")),str(r.get("perfName"))));
         var taskMap=access.visibleTasks(actor,year).stream().collect(Collectors.toMap(BizTask::getTaskId,t->t));

@@ -18,7 +18,7 @@ public class RemoteOptionPages {
         if(keyword.length()>300)throw new AdminManagementException(400,"筛选文字过长");
         var selected=params.getOrDefault("ids",List.of());if(selected.size()>100)throw new AdminManagementException(400,"已选项最多100项");
         int requested=positive(params.getFirst("page"),1),size=Math.min(100,positive(params.getFirst("pageSize"),50));
-        source="SELECT DISTINCT CAST(raw_options.value AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_bin value,CAST(raw_options.label AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_bin label FROM ("+source.replace("SELECT DISTINCT","SELECT")+") raw_options";
+        source="SELECT DISTINCT CAST(raw_options.value AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_bin value,CAST(raw_options.label AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_bin label FROM ("+withoutOuterDistinct(source)+") raw_options";
         String from=" FROM ("+source+") option_source WHERE value IS NOT NULL AND NOT REGEXP_LIKE(CAST(value AS CHAR),'^[\\\\x{0009}-\\\\x{000D}\\\\x{001C}-\\\\x{0020}\\\\x{1680}\\\\x{2000}-\\\\x{2006}\\\\x{2008}-\\\\x{200A}\\\\x{2028}\\\\x{2029}\\\\x{205F}\\\\x{3000}]*$','c')";
         String order=" ORDER BY "+ordering;
         long total;int page;List<Map<String,Object>> items;
@@ -33,6 +33,16 @@ public class RemoteOptionPages {
         if(!selected.isEmpty()){var args=new ArrayList<>(arguments);args.addAll(selected);echoed=jdbc.queryForList("SELECT value,label"+from+" AND BINARY value IN ("+String.join(",",Collections.nCopies(selected.size(),"?"))+")"+order,args.toArray());}
         items.forEach(this::strings);echoed.forEach(this::strings);
         return Map.of("items",items,"total",total,"page",page,"pageSize",size,"selected",echoed);
+    }
+    static String withoutOuterDistinct(String source){
+        int depth=0;boolean quoted=false;
+        for(int i=0;i<source.length();i++){
+            char c=source.charAt(i);
+            if(quoted){if(c=='\\'){i++;continue;}if(c=='\''){if(i+1<source.length()&&source.charAt(i+1)=='\'')i++;else quoted=false;}continue;}
+            if(c=='\''){quoted=true;continue;}if(c=='('){depth++;continue;}if(c==')'){depth--;continue;}
+            if(depth==0&&source.startsWith("SELECT DISTINCT",i))return source.substring(0,i)+"SELECT"+source.substring(i+15);
+        }
+        return source;
     }
     private String text(Object v){return Objects.toString(v,"").toLowerCase(Locale.ROOT);}
     private void strings(Map<String,Object> row){row.remove("_search");row.put("value",Objects.toString(row.get("value"),""));row.put("label",Objects.toString(row.get("label"),""));}

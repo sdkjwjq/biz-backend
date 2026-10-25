@@ -13,6 +13,7 @@ public class FilterOptionReadService {
     private final RemoteOptionPages pages;private final ReadScopeSql scopes;private final PermissionService permissions;private final AccountFilterPageService accounts;private final JdbcTemplate jdbc;
     public FilterOptionReadService(RemoteOptionPages pages,ReadScopeSql scopes,PermissionService permissions,AccountFilterPageService accounts,JdbcTemplate jdbc){this.pages=pages;this.scopes=scopes;this.permissions=permissions;this.accounts=accounts;this.jdbc=jdbc;}
     private record Source(String sql,List<Object> args){}
+    @org.springframework.transaction.annotation.Transactional(readOnly=true,isolation=org.springframework.transaction.annotation.Isolation.REPEATABLE_READ)
     public Map<String,Object> query(String domain,String key,Long actor,MultiValueMap<String,String> params){
         Source source=source(domain,key,actor,params);return source==null?null:pages.query(source.sql,source.args,params);
     }
@@ -35,9 +36,9 @@ public class FilterOptionReadService {
                 }return null;
             }
             case "performance":{
-                var range=scopes.row(actor,"performance","p",year);args.addAll(range.args());
-                String visible="WITH RECURSIVE leaves AS (SELECT p.perf_id,p.parent_id FROM biz_performance p WHERE COALESCE(p.is_delete,0)=0 AND NOT EXISTS(SELECT 1 FROM biz_performance child WHERE child.parent_id=p.perf_id AND (child.is_delete IS NULL OR child.is_delete<>1)) AND ("+range.sql()+")), visible(perf_id,parent_id,seen) AS (SELECT perf_id,parent_id,JSON_ARRAY(perf_id) FROM leaves UNION ALL SELECT p.perf_id,p.parent_id,JSON_ARRAY_APPEND(v.seen,'$',p.perf_id) FROM visible v JOIN biz_performance p ON p.perf_id=v.parent_id WHERE (p.is_delete IS NULL OR p.is_delete<>1) AND NOT JSON_CONTAINS(v.seen,CAST(p.perf_id AS JSON))), catalog AS (SELECT p.perf_id,p.parent_id FROM biz_performance p WHERE EXISTS(SELECT 1 FROM visible v WHERE v.perf_id=p.perf_id)"+(year==null?"":" AND EXISTS(SELECT 1 FROM biz_performance_year y WHERE y.perf_id=p.perf_id AND y.year="+year+")")+") SELECT c.perf_id FROM catalog c WHERE NOT EXISTS(SELECT 1 FROM catalog child WHERE child.parent_id=c.perf_id)";
-                base=" FROM biz_performance p WHERE p.perf_id IN ("+visible+")";
+                var range=scopes.row(actor,"performance","p",year);
+                var visible=performanceOptionIds(range,year);
+                base=" FROM biz_performance p WHERE "+ReadScopeSql.in("p.perf_id",visible,args);
                 if(Set.of("deptId","leaderId","auditorId","category").contains(key)){
                     expr=switch(key){case "deptId"->"p.dept_id";case "leaderId"->"p.leader_id";case "auditorId"->"p.auditor_id";default->"p.parent_id";};label=key.equals("deptId")?dept(expr):key.equals("category")?"COALESCE((SELECT d.perf_name FROM biz_performance d WHERE d.perf_id=p.parent_id AND (d.is_delete IS NULL OR d.is_delete<>1)), '')":person(expr);
                     return new Source("SELECT DISTINCT "+id(expr)+" value,"+label+" label"+base,args);
@@ -75,6 +76,24 @@ public class FilterOptionReadService {
             }
             default:return null;
         }
+    }
+    private record Link(Long parent,boolean leafEligible){}
+    /** The original leaf/ancestor/year rules over ID-only batches; no performance bodies. */
+    private Set<Long> performanceOptionIds(ReadScopeSql.Clause range,Integer year){
+        if(range.sql().equals("0=1"))return Set.of();
+        Map<Long,Link> graph=new LinkedHashMap<>();Set<Long> parents=new HashSet<>();
+        for(int offset=0;;offset+=500){
+            var batch=jdbc.queryForList("SELECT perf_id id,parent_id parentId,CASE WHEN COALESCE(is_delete,0)=0 THEN 1 ELSE 0 END eligible FROM biz_performance WHERE is_delete IS NULL OR is_delete<>1 ORDER BY perf_id LIMIT 500 OFFSET ?",offset);
+            for(var row:batch){Long parent=row.get("parentId")==null?null:number(row.get("parentId"));graph.put(number(row.get("id")),new Link(parent,number(row.get("eligible"))==1));if(parent!=null)parents.add(parent);}
+            if(batch.size()<500)break;
+        }
+        var leaves=graph.entrySet().stream().filter(e->e.getValue().leafEligible&&!parents.contains(e.getKey())).map(Map.Entry::getKey).toList();
+        Set<Long> allowed=new LinkedHashSet<>();
+        if(Set.of("1=1","(1=1)").contains(range.sql())&&range.args().isEmpty())allowed.addAll(leaves);
+        else for(int start=0;start<leaves.size();start+=500){var batch=leaves.subList(start,Math.min(start+500,leaves.size()));var values=new ArrayList<Object>(batch);values.addAll(range.args());allowed.addAll(jdbc.queryForList("SELECT p.perf_id FROM biz_performance p WHERE p.perf_id IN ("+String.join(",",Collections.nCopies(batch.size(),"?"))+") AND ("+range.sql()+")",Long.class,values.toArray()));}
+        Set<Long> visible=new LinkedHashSet<>();for(Long leaf:allowed){Set<Long> seen=new HashSet<>();for(Long cursor=leaf;cursor!=null&&graph.containsKey(cursor)&&seen.add(cursor);cursor=graph.get(cursor).parent)visible.add(cursor);}
+        if(year!=null){var ids=new ArrayList<>(visible);Set<Long> annual=new HashSet<>();for(int start=0;start<ids.size();start+=500){var batch=ids.subList(start,Math.min(start+500,ids.size()));var values=new ArrayList<Object>();values.add(year);values.addAll(batch);annual.addAll(jdbc.queryForList("SELECT perf_id FROM biz_performance_year WHERE year=? AND perf_id IN ("+String.join(",",Collections.nCopies(batch.size(),"?"))+")",Long.class,values.toArray()));}visible.retainAll(annual);}
+        Set<Long> catalogParents=new HashSet<>();for(Long id:visible)if(graph.get(id).parent!=null)catalogParents.add(graph.get(id).parent);visible.removeAll(catalogParents);return visible;
     }
     private Source taskRoots(String from,List<Object> args){return new Source("WITH RECURSIVE allowed AS (SELECT t.task_id,t.parent_id"+from+"), path_nodes(task_id,parent_id,level,task_name,seen) AS (SELECT t.task_id,t.parent_id,t.level,t.task_name,JSON_ARRAY(t.task_id) FROM biz_task t JOIN allowed a ON a.task_id=t.task_id UNION ALL SELECT p.task_id,p.parent_id,p.level,p.task_name,JSON_ARRAY_APPEND(n.seen,'$',p.task_id) FROM path_nodes n JOIN biz_task p ON p.task_id=n.parent_id AND p.level<=3 AND (p.is_delete IS NULL OR p.is_delete<>1) WHERE NOT JSON_CONTAINS(n.seen,CAST(p.task_id AS JSON))) SELECT DISTINCT CAST(task_id AS CHAR) value,task_name label FROM path_nodes WHERE level=1",args);}
 }

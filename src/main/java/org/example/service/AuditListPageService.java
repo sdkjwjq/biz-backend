@@ -21,6 +21,7 @@ public class AuditListPageService {
     private final CoreIndicatorService core;
     private final SysMapper users;
     private final ObjectMapper json;
+    @org.springframework.beans.factory.annotation.Autowired private org.springframework.jdbc.core.JdbcTemplate jdbc;
     public AuditListPageService(BusinessListFilterService filters,PermissionService permissions,BizService tasks,
             PerformanceService performance,AchievementService achievements,CoreIndicatorService core,SysMapper users,ObjectMapper json){
         this.filters=filters;this.permissions=permissions;this.tasks=tasks;this.performance=performance;
@@ -29,6 +30,7 @@ public class AuditListPageService {
     @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
     public Map<String,Object> query(Long actor,MultiValueMap<String,String> params){
         String tab=params.getFirst("tab");boolean todo=!"done".equals(tab);
+        if(!todo&&"false".equals(params.getFirst("includeFields"))&&params.entrySet().stream().noneMatch(e->e.getKey().startsWith("f.")&&e.getValue().stream().anyMatch(v->v!=null&&!v.isBlank())))return historyWindow(actor,params);
         var data=filters.auditPageData(actor,tab);var query=new ListFilterQuery(params,data.fields());
         var rows=data.rows().stream().filter(r->pending(r)||!todo).filter(r->query.matches(r,data.fields())).toList();
         if(!todo){rows=new ArrayList<>(rows);rows.sort(Comparator.comparingInt(this::historyType)
@@ -36,11 +38,23 @@ public class AuditListPageService {
                 .thenComparing((a,b)->"task".equals(a.get("type"))&&"task".equals(b.get("type"))?Long.compare(number(b.get("subId")),number(a.get("subId"))):0));}
         int size=Math.min(100,positive(params.getFirst("pageSize"),10)),page=Math.min(positive(params.getFirst("page"),1),Math.max(1,(rows.size()+size-1)/size));
         var result=new LinkedHashMap<String,Object>();
-        result.put("items",hydrate(rows.subList((page-1)*size,Math.min(page*size,rows.size()))));
+        result.put("items",hydrate(rows.subList((page-1)*size,Math.min(page*size,rows.size())),actor));
         result.put("total",rows.size());result.put("page",page);result.put("pageSize",size);
         result.put("summary",Map.of("todoCount",todoCount(actor)));
         if(!"false".equals(params.getFirst("includeFields")))result.put("fields",data.fields());
         return result;
+    }
+    private Map<String,Object> historyWindow(Long actor,MultiValueMap<String,String> params){
+        new ListFilterQuery(params,filters.definitions("audits",actor,params));
+        int size=Math.min(100,positive(params.getFirst("pageSize"),10)),requested=positive(params.getFirst("page"),1);
+        var window=filters.auditWindow(actor,requested,size);var others=window.data().rows().stream().filter(r->!"task".equals(r.get("type"))).collect(java.util.stream.Collectors.toCollection(ArrayList::new));others.sort(Comparator.comparingInt(this::historyType));
+        long total=window.taskTotal()+others.size();int page=(int)Math.min(requested,Math.max(1,(total+size-1)/size));if(page!=requested)window=filters.auditWindow(actor,page,size);
+        long offset=(long)(page-1)*size;List<Map<String,Object>> selected=new ArrayList<>();
+        if(offset<window.taskTotal()){
+            selected.addAll(window.data().rows().stream().filter(r->"task".equals(r.get("type"))).sorted(Comparator.comparingInt((Map<String,Object> r)->(int)number(r.get("_taskOrder"))).thenComparing((a,b)->Long.compare(number(b.get("subId")),number(a.get("subId"))))).toList());
+            selected.addAll(others.subList(0,Math.min(size-selected.size(),others.size())));
+        }else{int start=(int)Math.min(others.size(),offset-window.taskTotal());selected.addAll(others.subList(start,Math.min(others.size(),start+size)));}
+        return Map.of("items",hydrate(selected,actor),"total",total,"page",page,"pageSize",size,"summary",Map.of("todoCount",todoCount(actor)));
     }
     private int historyType(Map<String,Object> row){return switch(str(row.get("type"))){case "task"->0;case "core"->1;case "performance"->2;default->3;};}
     private boolean pending(Map<String,Object> row){long status=number(row.get("flowStatus"));return "task".equals(row.get("type"))?Set.of(10L,20L,30L).contains(status):"achievement".equals(row.get("type"))?status==10:status==10||status==20;}
@@ -62,12 +76,17 @@ public class AuditListPageService {
         if(canPending(p,"core"))total+=core.countTodoAudits(actor);return total;
     }
     private boolean canPending(Set<String> p,String domain){return p.contains(domain+".audit")||p.contains(domain+".archive");}
-    private List<Map<String,Object>> hydrate(List<Map<String,Object>> rows){
-        var submissions=rows.stream().map(r->r.get("_submission")).filter(BizMaterialSubmission.class::isInstance).map(BizMaterialSubmission.class::cast).toList();
+    private List<Map<String,Object>> hydrate(List<Map<String,Object>> rows,Long actor){
+        var submissions=new ArrayList<>(rows.stream().map(r->r.get("_submission")).filter(BizMaterialSubmission.class::isInstance).map(BizMaterialSubmission.class::cast).toList());
+        var projected=rows.stream().filter(r->Boolean.TRUE.equals(r.get("_taskProjection"))).map(r->number(r.get("subId"))).toList();
+        if(!projected.isEmpty())submissions.addAll(jdbc.query("SELECT * FROM biz_material_submission WHERE sub_id IN ("+String.join(",",Collections.nCopies(projected.size(),"?"))+")",org.springframework.jdbc.core.BeanPropertyRowMapper.newInstance(BizMaterialSubmission.class),projected.toArray()));
+        var taskDetails=new HashMap<Long,Map<String,Object>>();
+        if(actor!=null&&!projected.isEmpty())for(var task:filters.auditTaskDetails(actor,rows.stream().filter(r->Boolean.TRUE.equals(r.get("_taskProjection"))).map(r->number(r.get("taskId"))).toList()))taskDetails.put(number(task.get("taskId")),task);
         Map<Long,Map<String,Object>> byId=new HashMap<>();
         for(var vo:tasks.auditListToAuditVoList(submissions))byId.put(vo.getSubId(),map(vo));
         List<Map<String,Object>> result=new ArrayList<>();
-        for(var row:rows){var item=new LinkedHashMap<>(row);item.remove("_submission");item.remove("_wireSource");
+        for(var row:rows){var item=new LinkedHashMap<>(row);item.remove("_submission");item.remove("_wireSource");item.remove("_taskProjection");
+            if(taskDetails.containsKey(number(row.get("taskId")))&&Boolean.TRUE.equals(row.get("_taskProjection")))item.put("_task",taskDetails.get(number(row.get("taskId"))));
             if(row.get("_wireSource")!=null)item.putAll(filters.wireRow(row.get("_wireSource")));
             if(byId.containsKey(number(row.get("subId"))))item.putAll(byId.get(number(row.get("subId"))));
             result.add(item);
@@ -106,7 +125,7 @@ public class AuditListPageService {
                 Integer year=type.equals("performance")?(int)number(row.get("year")):null;
                 Long objectId=number(row.get(type.equals("performance")?"perfId":"achId"));
                 if(!state.permissions().contains(domain+".read")||!permissions.canRead(actor,domain,objectId,year))continue;
-                row.put("type",type);selected=hydrate(List.of(row)).get(0);pending=tab.equals("todo")&&pending(selected);break;
+                row.put("type",type);selected=hydrate(List.of(row),actor).get(0);pending=tab.equals("todo")&&pending(selected);break;
             }
             if(selected==null)missing();
         }else throw new AdminManagementException(400,"业务定位参数不正确");
