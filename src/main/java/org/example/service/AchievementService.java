@@ -111,7 +111,13 @@ public class AchievementService {
 
     public List<BizAchievement> listAllAchievements(Long userId) {
         try {
-            if (permissions.enforced(userId)) return achievementMapper.listAllAchievements().stream().filter(a -> permissions.canRead(userId,"achievements",a.getAchId(),null)).toList();
+            if (permissions.enforced(userId)) {
+                var all = achievementMapper.listAllAchievements();
+                var readable = permissions.readableAchievementIds(userId,
+                        all.stream().map(BizAchievement::getAchId).toList());
+                // Filter the original list to retain its order and all report fields.
+                return all.stream().filter(a -> readable.contains(a.getAchId())).toList();
+            }
             SysUser user = getActiveUser(userId);
             SysDept dept = getActiveDept(user);
             if (!leadershipAccess.isLeader(userId) && !AchievementPermissionUtil.canViewAchievement(user, dept)) {

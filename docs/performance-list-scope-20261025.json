@@ -1,0 +1,74 @@
+{
+  "status": "batch_complete_overall_plan_partial",
+  "date": "2026-10-25",
+  "baseline": {
+    "backend": "221f2a7c1a6154bcc1319b7ea70b600fc093b56d",
+    "frontend": "006c5e8c7c3c331b911db1eab950b28e125a098c"
+  },
+  "changes": [
+    "成果主列表复用批量可见ID校验，保持原始对象顺序、完整字段和过滤结果。对象元数据每批最多500条读取，不跨请求缓存权限。",
+    "绩效可见目录对叶子批量校验，保留原有必要祖先、目录顺序及按年度的数值隐藏规则。",
+    "纪实可选分页模式支持提交及更新时间条件：读取轻量ID/日期投影并复用原始JSON日期匹配，再分页读取正文；正文和改革任务条件继续兼容原路径。",
+    "成果列表与待办独立并行加载；首次不再重复查询筛选。保存、审核等后续业务刷新继续更新筛选结果。",
+    "成果首次加载、真实空结果、筛选失败、刷新失败及重试分别展示；失败时保留旧结果，拒绝访问时清除数据；重入和离开页面取消旧列表请求。"
+  ],
+  "achievement_list_benchmark": {
+    "method": "同一随机隔离MySQL数据库、合成数据、请求内权限状态预先初始化；同一只读重复读事务内顺序比较旧逐条查权列表与批量列表。预热一次后取五次样本中位数，逐次比较完整有序JSON。包含列表读取及服务查权，不包含HTTP、浏览器渲染、冷启动或并发。",
+    "samples": [
+      {
+        "records": 120,
+        "equalOrderedPayload": true,
+        "batch_median_us": 2994,
+        "legacy_median_us": 93114
+      },
+      {
+        "records": 600,
+        "equalOrderedPayload": true,
+        "batch_median_us": 5632,
+        "legacy_median_us": 347057
+      }
+    ],
+    "limits": "仅证明所测合成列表的服务读取改进；不能视为线上整页P95或全系统并发验收。成果主数据仍读取完整列表。"
+  },
+  "verification": {
+    "backend_main_api_tests": 206,
+    "work_record_api_tests": 36,
+    "focused_unit_tests": 19,
+    "backend_total": 261,
+    "browser": {
+      "achievement_loading": 8,
+      "overview": 19,
+      "list_filters": 38,
+      "sidebar_refresh": 6,
+      "total": 71,
+      "runtime_errors": 0
+    },
+    "frontend_lint": "passed",
+    "frontend_build": "passed",
+    "backend_package": "passed",
+    "compatibility": "权限规则组合、旧Token变更、目录与对象顺序、驳回字段、纪实日期缺失和跨日边界、分页总数与结果一致性通过；全部沿用原业务口径。",
+    "isolated_services_stopped": true,
+    "isolated_databases_removed": true
+  },
+  "evidence": {
+    "backend_main": "target/list-scope-full-regression.log",
+    "records": "target/record-date-regression.log",
+    "units": "target/list-scope-final-units.log",
+    "frontend_lint": "target/list-scope-frontend-lint.log",
+    "frontend_build": "target/list-scope-frontend-build.log",
+    "backend_package": "target/list-scope-backend-package.log",
+    "achievement_screenshots": "target/ui-audit-list-loading-e7e7ac9c/achievement-list-loading",
+    "overview_screenshots": "target/ui-audit-list-loading-e7e7ac9c/overview-dashboard",
+    "filters": "target/ui-audit-list-regression-b8d2471a/list-filters/report.json",
+    "sidebar": "target/ui-audit-list-regression-b8d2471a/sidebar-refresh/report.json"
+  },
+  "remaining": [
+    "成果、绩效等主数据列表和树结构继续进行投影、数据库条件下推及兼容分页。",
+    "纪实正文和改革任务等复杂条件、首次筛选选项仍需进一步优化。",
+    "审核、消息与运行维护等剩余逐对象查询和全量读取路径。",
+    "固定环境下多账号1/10/30并发、五倍规模、接口及整页P50/P95、执行计划和索引验收。"
+  ],
+  "rollback": "分别回退本轮前后端Git提交后重新构建；本轮没有数据库结构或业务数据变更，无需数据库回滚。",
+  "production_changes": false,
+  "update_package_created": false
+}

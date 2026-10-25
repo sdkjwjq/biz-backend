@@ -48,6 +48,9 @@ class AdminOverviewApiTest {
     @Autowired private org.example.service.BudgetService budgets;
     @Autowired private org.example.service.AdminOverviewService overview;
     @Autowired private org.example.service.PermissionService overviewPermissions;
+    @Autowired private org.example.service.AchievementService achievementLists;
+    @Autowired private org.example.mapper.AchievementMapper achievementListMapper;
+    @Autowired private org.example.mapper.PerformanceMapper performanceListMapper;
     @Autowired private org.example.service.WorkRecordScopeService overviewRecordScopes;
     @Autowired private org.springframework.transaction.PlatformTransactionManager transactionManager;
 
@@ -237,6 +240,9 @@ class AdminOverviewApiTest {
                     if(leadershipPass==1)jdbc.update("INSERT INTO sys_leadership_access(user_id,scope,version) VALUES(?,'ALL',1)",VIEWER);
                     Set<Long> expected=new HashSet<>();for(Long id:requested)if(overviewPermissions.canRead(VIEWER,"achievements",id,2026))expected.add(id);
                     assertEquals(expected,overviewPermissions.readableAchievementIds(VIEWER,requested),rule.toString());
+                    var oldList=achievementListMapper.listAllAchievements().stream().filter(a->expected.contains(a.getAchId())).toList();
+                    assertEquals(json.valueToTree(oldList),json.valueToTree(achievementLists.listAllAchievements(VIEWER)),
+                            "Achievement list must keep order, rejection and archive fields: "+rule);
                     var details=analysis(token,"achievements.total","category");
                     Set<Long> actual=new HashSet<>();details.path("rows").forEach(row->actual.add(row.path("id").asLong()));
                     Set<Long> selected=new HashSet<>(expected);selected.retainAll(Set.of(970001L,970002L));assertEquals(selected,actual);
@@ -391,6 +397,9 @@ class AdminOverviewApiTest {
                 for(int year:List.of(2025,2026)){
                     Set<Long> expected=new HashSet<>();for(Long id:ids)if(overviewPermissions.canRead(VIEWER,"performance",id,year))expected.add(id);
                     assertEquals(expected,overviewPermissions.readablePerformanceIds(VIEWER,ids,year),rule+" year="+year);
+                    var original=performanceListMapper.getAllPerformance().stream().filter(p->expected.contains(p.getPerfId())).toList();
+                    assertEquals(json.valueToTree(original),json.valueToTree(overviewPermissions.visiblePerformances(VIEWER,year)),
+                            "Leaf-only fixture must keep original order and values: "+rule+" year="+year);
                 }
                 var detail=analysis(token,"performance.total","department");Set<Long> actual=new HashSet<>();detail.path("rows").forEach(row->actual.add(row.path("id").asLong()));
                 assertEquals(overviewPermissions.readablePerformanceIds(VIEWER,ids,2026),actual);
@@ -531,6 +540,35 @@ class AdminOverviewApiTest {
             }finally{org.springframework.web.context.request.RequestContextHolder.resetRequestAttributes();}
             Collections.sort(oldTimes);Collections.sort(newTimes);
             System.out.println("RECORD_SCOPE_READ_BENCH "+json.writeValueAsString(Map.of("records",size,"legacy_median_us",oldTimes.get(2),"batch_median_us",newTimes.get(2),"equalIds",true)));
+        }
+    }
+    @Test void achievementListBatchReadBenchmarkPreservesCompleteOrderedPayload() throws Exception {
+        jdbc.update("INSERT INTO sys_user_permission(user_id,access_mode,permissions_json,scopes_json,version) VALUES(?,'CUSTOM',?,?,1)",
+                VIEWER,json.writeValueAsString(Map.of("achievements.read",true)),json.writeValueAsString(Map.of("achievements",Map.of("mode","LEADERSHIP"))));
+        jdbc.update("INSERT INTO sys_leadership_access(user_id,scope,version) VALUES(?,'ALL',1)",VIEWER);
+        String token=login(VIEWER);var read=new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+        read.setReadOnly(true);read.setIsolationLevel(org.springframework.transaction.TransactionDefinition.ISOLATION_REPEATABLE_READ);
+        for(int size:List.of(120,600)) {
+            jdbc.update("DELETE FROM biz_achievement");List<Object[]> rows=new ArrayList<>();
+            for(int i=0;i<size;i++)rows.add(new Object[]{9970000+i,OWNER});
+            jdbc.batchUpdate("INSERT INTO biz_achievement(ach_id,category,level,ach_name,department,got_time,comment,dept_id,create_by,is_delete) VALUES(?,1,'省级','Synthetic achievement','Synthetic','2026-04-01','',920001,?,0)",rows);
+            List<Long> oldTimes=new ArrayList<>(),newTimes=new ArrayList<>();
+            try {
+                for(int run=0;run<6;run++) {
+                    var request=new org.springframework.mock.web.MockHttpServletRequest("GET","/achievement/");request.addHeader("Authorization",token);
+                    org.springframework.web.context.request.RequestContextHolder.setRequestAttributes(new org.springframework.web.context.request.ServletRequestAttributes(request));
+                    overviewPermissions.state(VIEWER);
+                    long[] times=read.execute(status->{
+                        long start=System.nanoTime();
+                        var original=achievementListMapper.listAllAchievements().stream().filter(a->overviewPermissions.canRead(VIEWER,"achievements",a.getAchId(),null)).toList();
+                        long middle=System.nanoTime();var optimized=achievementLists.listAllAchievements(VIEWER);long end=System.nanoTime();
+                        assertEquals(json.valueToTree(original),json.valueToTree(optimized));return new long[]{(middle-start)/1000,(end-middle)/1000};
+                    });
+                    if(run>0){oldTimes.add(times[0]);newTimes.add(times[1]);}
+                }
+            } finally { org.springframework.web.context.request.RequestContextHolder.resetRequestAttributes(); }
+            Collections.sort(oldTimes);Collections.sort(newTimes);
+            System.out.println("ACHIEVEMENT_LIST_SCOPE_BENCH "+json.writeValueAsString(Map.of("records",size,"legacy_median_us",oldTimes.get(2),"batch_median_us",newTimes.get(2),"equalOrderedPayload",true)));
         }
     }
     @Test void recordDenominatorIntersectionAndDraftPrivacy() throws Exception {

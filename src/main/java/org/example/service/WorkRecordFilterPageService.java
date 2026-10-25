@@ -1,5 +1,7 @@
 package org.example.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.entity.BizWorkRecord;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -13,15 +15,18 @@ import static org.example.service.ListFilterQuery.*;
 /** Optional paged projection; complex narrative predicates retain their original path. */
 @Service
 public class WorkRecordFilterPageService {
-    private static final Set<String> SUPPORTED = Set.of("year", "month", "ownerId", "status", "deptId", "mine");
+    private static final Set<String> SUPPORTED = Set.of("year", "month", "ownerId", "status", "deptId", "mine",
+            "submitTime", "submitTimeFrom", "submitTimeTo", "updateTime", "updateTimeFrom", "updateTimeTo");
     private final PermissionService permissions;
     private final WorkRecordService records;
     private final JdbcTemplate jdbc;
+    private final ObjectMapper json;
 
-    public WorkRecordFilterPageService(PermissionService permissions, WorkRecordService records, JdbcTemplate jdbc) {
+    public WorkRecordFilterPageService(PermissionService permissions, WorkRecordService records, JdbcTemplate jdbc, ObjectMapper json) {
         this.permissions = permissions;
         this.records = records;
         this.jdbc = jdbc;
+        this.json = json;
     }
 
     public boolean supports(MultiValueMap<String,String> params) {
@@ -39,7 +44,8 @@ public class WorkRecordFilterPageService {
                 field("year","select", List.of("2025","2026","2027","2028","2029")),
                 field("month","select", java.util.stream.IntStream.rangeClosed(1,12).mapToObj(String::valueOf).toList()),
                 field("ownerId","multi", List.of()), field("deptId","multi", List.of()),
-                field("status","select", List.of("0","1")), field("mine","select", List.of("yes","no")));
+                field("status","select", List.of("0","1")), field("mine","select", List.of("yes","no")),
+                field("submitTime","date",List.of()), field("updateTime","date",List.of()));
         ListFilterQuery query = new ListFilterQuery(params,fields);
         int size = Math.min(100,positive(params.getFirst("pageSize"),10));
         int requestedPage = positive(params.getFirst("page"),1);
@@ -65,7 +71,25 @@ public class WorkRecordFilterPageService {
         }
         // Match existing current-account department lookup, including deleted accounts.
         String from = " FROM biz_work_record r LEFT JOIN sys_user u ON u.user_id=r.owner_id";
-        long total = jdbc.queryForObject("SELECT COUNT(*)"+from+where,Long.class,args.toArray());
+        long total;
+        var dateFields=fields.stream().filter(f -> f.type().equals("date")).toList();
+        boolean dates=params.keySet().stream().anyMatch(k -> k.startsWith("f.submitTime") || k.startsWith("f.updateTime"));
+        if (dates) {
+            // Retain the legacy JSON/date matcher, including its timezone and direct-equality semantics.
+            // Reading only IDs and dates avoids every narrative and reform-entry body on this path.
+            var metadata=jdbc.query("SELECT r.record_id,r.submit_time,r.update_time"+from+where,
+                    BeanPropertyRowMapper.newInstance(BizWorkRecord.class),args.toArray());
+            var matching=metadata.stream().filter(r -> {
+                if(r.getSubmitTime()!=null)r.setSubmitTime(new java.util.Date(r.getSubmitTime().getTime()));
+                if(r.getUpdateTime()!=null)r.setUpdateTime(new java.util.Date(r.getUpdateTime().getTime()));
+                Map<String,Object> row=json.convertValue(r,new TypeReference<LinkedHashMap<String,Object>>(){});
+                return query.matches(row,dateFields);
+            }).map(BizWorkRecord::getRecordId).toList();
+            if(matching.isEmpty())return result(List.of(),0,1,size);
+            total=matching.size();
+            where.append(" AND r.record_id IN (").append(String.join(",",Collections.nCopies(matching.size(),"?"))).append(")");
+            args.addAll(matching);
+        } else total = jdbc.queryForObject("SELECT COUNT(*)"+from+where,Long.class,args.toArray());
         int page = (int)Math.min(requestedPage,Math.max(1,(total+size-1)/size));
         args.add(size); args.add((long)(page-1)*size);
         var items = jdbc.query("SELECT r.*"+from+where

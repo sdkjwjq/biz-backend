@@ -438,5 +438,12 @@
       "Sustained multi-account 1/10/30-user and 5x-scale end-to-end P50/P95 acceptance, scan-row tracing and index acceptance remain unfinished."
     ],
     "rollback": "No update package or online deployment. When authorized, deploy backend before the matching frontend so module accessDenied metadata is available. Restore matching previous artifacts to roll back; no schema migration or business-data rollback is needed."
+  },
+  "listScopeBatchAndAchievementLoading": {
+    "report": "docs/performance-list-scope-20261025.json",
+    "backend_tests": 261,
+    "browser_checks": 71,
+    "status": "batch_complete_overall_plan_partial",
+    "remaining": "主数据分页及全系统并发、5倍规模和P95验收继续推进。"
   }
 }

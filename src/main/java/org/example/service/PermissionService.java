@@ -215,7 +215,10 @@ public class PermissionService {
     public Set<Long> readablePerformanceIds(Long actor,Collection<Long> requested,Integer year){
         List<Long> ids=requested.stream().filter(Objects::nonNull).distinct().toList();
         if(ids.isEmpty())return Set.of();
-        State state=state(actor);if(!state.permissions().contains("performance.read"))return Set.of();
+        return readablePerformanceIds(state(actor),ids,year);
+    }
+    private Set<Long> readablePerformanceIds(State state,List<Long> ids,Integer year){
+        if(!state.permissions().contains("performance.read"))return Set.of();
         Set<Long> result=new HashSet<>();RowAccess context=new RowAccess(state);
         for(int start=0;start<ids.size();start+=500){
             var batch=ids.subList(start,Math.min(start+500,ids.size()));
@@ -287,7 +290,9 @@ public class PermissionService {
     public List<Long> recordIds(Long actor){State s=state(actor);if(!s.permissions().contains("records.read"))return List.of();RowAccess context=new RowAccess(s);return jdbc.queryForList("SELECT r.record_id id,r.owner_id,r.status,r.record_year,u.dept_id FROM biz_work_record r LEFT JOIN sys_user u ON u.user_id=r.owner_id WHERE r.delete_marker=0").stream().filter(r->matchesRow(s,"records",number(r.get("id")),null,r,context)).map(r->number(r.get("id"))).toList();}
     public boolean canRecordOwner(Long actor,Long owner,Long department,int year){Map<String,Object> row=new HashMap<>();row.put("owner_id",owner);row.put("dept_id",department);row.put("record_year",year);row.put("status",1);var state=state(actor);return state.permissions().contains("records.read")&&matchesRow(state,"records",0L,year,row);}
     public List<BizPerformance> visiblePerformances(Long actor,Integer year){State s=state(actor);List<BizPerformance> all=performances.getAllPerformance().stream().filter(p->!Integer.valueOf(1).equals(p.getIsDelete())).toList();Map<Long,BizPerformance> map=all.stream().collect(Collectors.toMap(BizPerformance::getPerfId,p->p));Set<Long> parents=all.stream().map(BizPerformance::getParentId).collect(Collectors.toSet());Set<Long> ids=new HashSet<>();
-        for(var p:all)if(!parents.contains(p.getPerfId())&&canRead(s,"performance",p.getPerfId(),year)){Set<Long> visited=new HashSet<>();for(var cursor=p;cursor!=null&&visited.add(cursor.getPerfId());cursor=map.get(cursor.getParentId()))ids.add(cursor.getPerfId());}
+        var leaves=all.stream().filter(p->!parents.contains(p.getPerfId())).map(BizPerformance::getPerfId).toList();
+        var readable=readablePerformanceIds(s,leaves,year);
+        for(var p:all)if(!parents.contains(p.getPerfId())&&readable.contains(p.getPerfId())){Set<Long> visited=new HashSet<>();for(var cursor=p;cursor!=null&&visited.add(cursor.getPerfId());cursor=map.get(cursor.getParentId()))ids.add(cursor.getPerfId());}
         return all.stream().filter(p->ids.contains(p.getPerfId())).map(p->{BizPerformance copy=new BizPerformance();BeanUtils.copyProperties(p,copy);if(parents.contains(copy.getPerfId())||year==null&&scopeRules(s,"performance").stream().allMatch(r->!ids(r.get("years")).isEmpty())){copy.setCurrentValue(null);copy.setTargetValue(null);}return copy;}).toList();
     }
     public boolean budgetScope(Long actor,Integer year){State s=state(actor);return s.permissions().contains("budget.read")&&scopeRules(s,"budget").stream().anyMatch(r->yearMatches(r,year)&&"ALL".equals(r.get("mode")));}
