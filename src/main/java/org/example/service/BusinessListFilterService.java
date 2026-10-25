@@ -214,7 +214,7 @@ public class BusinessListFilterService {
             }else if(domain.equals("performance"))source=(List<?>)(todo?performance.getTodoPerformanceAudits(actor):performance.getPerformanceAuditRecords(actor));
             else if(domain.equals("achievements"))source=(List<?>)(todo?achievements.getTodoAchievementAudits(actor):achievements.getAchievementAuditRecords(actor));
             else source=core.audits(actor,todo);
-            var projected=new ArrayList<Map<String,Object>>();for(var value:source){var projectedRow=row(value);if(pageMode){projectedRow.put("_wireSource",wireRow(value));if(value instanceof BizMaterialSubmission)projectedRow.put("_submission",value);}projected.add(projectedRow);}
+            var projected=new ArrayList<Map<String,Object>>();for(var value:source){var projectedRow=row(value);if(pageMode){projectedRow.put("_wireSource",value);if(value instanceof BizMaterialSubmission)projectedRow.put("_submission",value);}projected.add(projectedRow);}
             String objectKey=domain.equals("tasks")?"taskId":domain.equals("performance")?"perfId":domain.equals("achievements")?"achId":"indicatorId";
             var readable=auditReadScopes.readable(actor,domain,projected.stream().map(r->new AuditReadScopeService.Ref(id(r.get(objectKey)),r.get("year")==null?null:(int)id(r.get("year")))).toList());
             Map<Long,Object> handled=todo?Map.of():auditHistoryTimes.latest(domain,projected.stream().map(r->id(r.get(domain.equals("core")?"reportId":"subId"))).toList());

@@ -68,7 +68,7 @@ public class AuditListPageService {
         for(var vo:tasks.auditListToAuditVoList(submissions))byId.put(vo.getSubId(),map(vo));
         List<Map<String,Object>> result=new ArrayList<>();
         for(var row:rows){var item=new LinkedHashMap<>(row);item.remove("_submission");item.remove("_wireSource");
-            if(row.get("_wireSource") instanceof Map<?,?> wire)wire.forEach((key,value)->item.put(String.valueOf(key),value));
+            if(row.get("_wireSource")!=null)item.putAll(filters.wireRow(row.get("_wireSource")));
             if(byId.containsKey(number(row.get("subId"))))item.putAll(byId.get(number(row.get("subId"))));
             result.add(item);
         }
