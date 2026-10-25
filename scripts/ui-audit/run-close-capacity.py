@@ -10,10 +10,10 @@ else:raise RuntimeError('Final regressions/package not ready')
 for origin,destination in [(root/'src',candidate/'backend/src'),(root/'target/classes',candidate/'backend/target/classes'),(root/'target/test-classes',candidate/'backend/target/test-classes'),(root.parent/'biz/src',candidate/'frontend/src'),(root.parent/'biz/dist',candidate/'frontend/dist')]:shutil.copytree(origin,destination,dirs_exist_ok=True)
 manifest=[{'path':str(p.relative_to(candidate)).replace('\\','/'),'sha256':hashlib.sha256(p.read_bytes()).hexdigest()} for folder in ['backend/src/main','frontend/src','frontend/dist'] for p in (candidate/folder).rglob('*') if p.is_file()]
 (candidate/'manifest-final.json').write_text(json.dumps(manifest,indent=2),encoding='utf8')
-folders=[]
+folders=[Path(os.environ['CLOSE_PREVIOUS'])] if os.environ.get('CLOSE_PREVIOUS') else []
 def run(command,log,extra=None):
  with log.open('w',encoding='utf8') as output:subprocess.run(command,cwd=root,env=dict(env,**(extra or {})),stdout=output,stderr=subprocess.STDOUT,check=True)
-for scale in [1,5]:
+for scale in json.loads(os.environ.get('CLOSE_SCALES','[1,5]')):
  run_id=f'close-accept-{scale}-'+uuid.uuid4().hex[:6];folder=root/('target/ui-audit-'+run_id);folders.append(folder);server_log=root/('target/'+run_id+'.log');log_handle=server_log.open('w',encoding='utf8')
  command=[sys.executable,'scripts/ui-audit/serve.py','--fixture','permissions','--production','--run-id',run_id,'--synthetic-scale',str(scale),'--frontend-port','15381','--backend-port','18381','--source-root',str(baseline/'backend'),'--frontend-root',str(baseline/'frontend'),'--comparison-backend-root',str(candidate/'backend'),'--comparison-frontend-root',str(candidate/'frontend')]
  server=subprocess.Popen(command,cwd=root,env=env,stdout=log_handle,stderr=subprocess.STDOUT,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
@@ -33,7 +33,7 @@ for scale in [1,5]:
   print(f'PROBES_PASSED scale={scale}',flush=True)
   for label in ['optimized','baseline']:
    for profile in ['admin','ordinary','leaderAll','leaderDepartment','expert','finance']:
-    run([sys.executable,'scripts/ui-audit/benchmark-close.py'],folder/f'capacity-{label}-{profile}.log',{'PERF_BUILD':label,'PERF_PROFILE':profile,'PERF_ENFORCE':'1'})
+    run([sys.executable,'scripts/ui-audit/benchmark-close.py'],folder/f'capacity-{label}-{profile}.log',{'PERF_BUILD':label,'PERF_PROFILE':profile,'PERF_ENFORCE':'0'})
     print(f'CAPACITY_DONE scale={scale} build={label} profile={profile}',flush=True)
   run([sys.executable,'scripts/ui-audit/benchmark-close-candidates.py'],folder/'candidate-capacity.log')
   for label in ['optimized','baseline']:

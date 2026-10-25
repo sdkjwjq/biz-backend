@@ -20,6 +20,7 @@ for domain,filters in {
   assert old["total"]==current["total"],(domain,condition,"total")
   checks.append(domain+":"+condition)
 for domain,filters in {
+ "audits":["tab=todo","tab=done","tab=done&f.type=task","tab=done&f.submitBy=5000000","tab=done&f.submitTimeFrom=2026-09-01"],
  "records":["","f.year=2026&f.keyword=Distinct","f.root=930000","f.updateTimeFrom=2026-09-01"],
  "admin-users":["","f.roles=USER&f.duties=yes","f.personal=yes","f.expert=no","f.keyword=Synthetic"],
  "admin-operations":["","f.module=TASK","f.keyword=Synthetic","f.createTimeFrom=2026-09-01"],
@@ -30,6 +31,10 @@ for domain,filters in {
    old=call(base,path+"&responseMode=page&includeFields=false&separateOptions=true",token);current=call(new,path+"&responseMode=page&includeFields=false&separateOptions=true",token)
    for key in ("items","total","page","pageSize"):assert old[key]==current[key],(domain,condition,page,key)
    checks.append(domain+":"+condition+":page"+str(page))
+for field in ['leaderId','deptId','auditorId','category','root']:
+ path='/list-filters/performance/filter-options?field='+field+'&f.year=2026&pageSize=50'
+ assert call(base,path,token)==call(new,path,token),('performance-options',field)
+ checks.append('performance-options:'+field)
 for actor in (5000000,5200000,5300000,5400000,5500000):
  token=call(base,"/system/login",data={"user_id":actor,"password":"review-fixture-password"})["token"]
  domains=["tasks","performance"] if actor<5400000 else ["tasks"] if actor<5500000 else ["budget-versions"]
@@ -39,6 +44,18 @@ for actor in (5000000,5200000,5300000,5400000,5500000):
   a=call(base,path,token);b=call(new,path,token)
   assert a==b,(actor,domain,"authorized results")
   checks.append(str(actor)+":"+domain)
+ audit_path='/list-filters/audits?responseMode=page&includeFields=false&tab=done&pageSize=10'
+ try:previous=call(base,audit_path,token)
+ except urllib.error.HTTPError as old_error:
+  assert old_error.code==403
+  try:call(new,audit_path,token);raise AssertionError('Unauthorized audit history became visible')
+  except urllib.error.HTTPError as new_error:assert new_error.code==403
+ else:assert previous==call(new,audit_path,token),(actor,'audit history scope and wire fields')
+ checks.append(str(actor)+':audit-history-scope')
+ if actor<5400000:
+  option_path='/list-filters/performance/filter-options?field=leaderId&f.year=2026&pageSize=50'
+  assert call(base,option_path,token)==call(new,option_path,token),(actor,'performance options scope')
+  checks.append(str(actor)+':performance-options-scope')
  if actor in (5200000,5300000):
   for module in ("tasks","performance","records"):
    a=call(base,"/admin/overview/summary?year=2026&month=10&module="+module,token);b=call(new,"/admin/overview/summary?year=2026&month=10&module="+module,token)

@@ -160,7 +160,7 @@ def main():
         # 所有文件写入留在独立工作目录，避免测试上传和日志覆盖本地业务文件。
         backend_log = open(WORK / "backend.log", "w", encoding="utf-8")
         logs.append(backend_log)
-        children.append(subprocess.Popen([RUNNER.executable("java"), "-cp", cp, "org.example.IsolatedUiAuditServer"],
+        children.append(subprocess.Popen([RUNNER.executable("java"), *(["-Xms256m","-Xmx768m","-Xlog:gc:file=baseline-gc.log:time,uptime"] if env.get("SHUANGGAO_PERF_METRICS")=="1" else []), "-cp", cp, "org.example.IsolatedUiAuditServer"],
                                           cwd=WORK, env=env, stdout=backend_log, stderr=subprocess.STDOUT,
                                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)))
         frontend = (args.frontend_root or ROOT.parent / "biz").resolve()
@@ -188,7 +188,7 @@ def main():
             if not (second_front/"dist/index.html").is_file():raise RuntimeError("Comparison frontend must be built")
             second_env=dict(env,SHUANGGAO_UI_BACKEND_PORT=str(args.comparison_backend_port));second_cp=os.pathsep.join([str(WORK),str(second/"target/classes"),str(second/"target/test-classes"),(ROOT/"target/ui-audit-classpath.txt").read_text().strip()])
             second_log=open(WORK/"comparison-backend.log","w",encoding="utf-8");logs.append(second_log)
-            children.append(subprocess.Popen([RUNNER.executable("java"),"-cp",second_cp,"org.example.IsolatedUiAuditServer"],cwd=WORK,env=second_env,stdout=second_log,stderr=subprocess.STDOUT,creationflags=getattr(subprocess,"CREATE_NO_WINDOW",0)))
+            children.append(subprocess.Popen([RUNNER.executable("java"),*(["-Xms256m","-Xmx768m","-Xlog:gc:file=comparison-gc.log:time,uptime"] if env.get("SHUANGGAO_PERF_METRICS")=="1" else []),"-cp",second_cp,"org.example.IsolatedUiAuditServer"],cwd=WORK,env=second_env,stdout=second_log,stderr=subprocess.STDOUT,creationflags=getattr(subprocess,"CREATE_NO_WINDOW",0)))
             second_vite=WORK/"comparison-vite.mjs";second_vite.write_text("import {preview} from "+json.dumps((ROOT.parent/"biz/node_modules/vite/dist/node/index.js").as_uri())+";await preview({root:"+json.dumps(str(second_front))+",preview:{host:'127.0.0.1',port:"+str(args.comparison_frontend_port)+",strictPort:true,proxy:{'/api':{target:'http://127.0.0.1:"+str(args.comparison_backend_port)+"',changeOrigin:true}}}});",encoding="utf-8")
             second_front_log=open(WORK/"comparison-frontend.log","w",encoding="utf-8");logs.append(second_front_log)
             children.append(subprocess.Popen([RUNNER.executable("node"),str(second_vite)],cwd=WORK,stdout=second_front_log,stderr=subprocess.STDOUT,creationflags=getattr(subprocess,"CREATE_NO_WINDOW",0)))
