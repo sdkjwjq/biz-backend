@@ -1,0 +1,121 @@
+{
+  "date": "2026-10-25",
+  "implementation": {
+    "budget_trend": "Reads selected-year active month headers and projected task/source numeric fields in batches. Empty years skip item reads; single-task mode skips source reads. Duplicate active month headers use original per-month sheet selection; duplicate valid task indexes use the original task query/order. No cross-request cache.",
+    "budget_overview": "Selected-month summary/detail reuse already-loaded task/source values and original precision rules; do not load the entire year trend. Trend charts remain in overview only; the original budget page stays hidden.",
+    "record_eligibility": "Build selected-year valid task IDs, professional IDs and participating department IDs once from the original validated catalog. Filter original account order using the same active-user, valid-department and professional rules. Existing task resolution, read-scope filtering, submitted records and frozen snapshots remain unchanged. Existing catalog/department caches stay request-local."
+  },
+  "budget_service_measurements": {
+    "method": "Random isolated synthetic database. Original read projection and optimized service both run inside identical read-only REPEATABLE_READ TransactionTemplate scopes. One warm-up discarded; median of five sequential samples including transaction setup. Database stores 1 then 5 years; selected year remains 2026 with 12 months and 10 task rows per month. The 5-year fixture increases stored data, not selected response size. Not HTTP, page latency, concurrent-user testing or full-system P95.",
+    "source": "target/performance-budget-benchmark-regression.log",
+    "measurements": [
+      {
+        "storedYears": 1,
+        "optimized_median_us": 7030,
+        "equalPoints": true,
+        "selectedYear": 2026,
+        "selectedSheets": 12,
+        "legacy_median_us": 35963
+      },
+      {
+        "storedYears": 5,
+        "optimized_median_us": 7951,
+        "equalPoints": true,
+        "selectedYear": 2026,
+        "selectedSheets": 12,
+        "legacy_median_us": 32795
+      }
+    ]
+  },
+  "record_eligibility_cpu_measurements": {
+    "method": "Mock mapper fixtures, 200/1000 accounts and 120/600 valid annual tasks. Compare original per-account resolve against new eligibility calculation, including catalog processing. One warm-up discarded, median of five sequential samples. IDs and order equal. CPU-only: excludes real SQL, HTTP, rendering and concurrency.",
+    "source": "target/performance-budget-record-unit.log",
+    "measurements": [
+      {
+        "users": 200,
+        "tasks": 120,
+        "legacy_median_us": 27450,
+        "optimized_median_us": 1187,
+        "equalIdsAndOrder": true
+      },
+      {
+        "users": 1000,
+        "tasks": 600,
+        "legacy_median_us": 170720,
+        "optimized_median_us": 1383,
+        "equalIdsAndOrder": true
+      }
+    ]
+  },
+  "query_evidence": {
+    "applies_to": "Normal unique active month/reform keys. Legacy ambiguous-key fallbacks intentionally issue extra reads. Overview count assumes the selected month exists.",
+    "complete_school_year": {
+      "original_reads": 36,
+      "optimized_reads": 3
+    },
+    "single_task_complete_year": {
+      "original_reads": 24,
+      "optimized_reads": 2
+    },
+    "empty_year": {
+      "original_reads": 12,
+      "optimized_reads": 1
+    },
+    "budget_overview_selected_month_reads": 3,
+    "source": "BudgetTrendBatchTest and AdminOverviewQueryTest; mapper-call assertions with one SELECT per mapper method, not live SQL profiling."
+  },
+  "verification": {
+    "isolated_api_regressions": 201,
+    "work_record_regressions": 36,
+    "query_and_eligibility_unit_tests": 11,
+    "budget_regressions_repeated_after_benchmark_transaction_alignment": 8,
+    "overview_browser_checks": 15,
+    "browser_script_syntax": "passed",
+    "backend_package": "passed",
+    "frontend_runtime_changes": false
+  },
+  "compatibility_cases": [
+    "All 11 task selections for 2025/2026/2029 equal original year trend maps",
+    "Zero, missing components, missing/zero budget denominator, skipped months and negative adjustments",
+    "Deleted sheets excluded; out-of-range reform indexes ignored; duplicate sheet/task keys preserve original selection",
+    "Version restoration changes current trend while retaining history; no raw import rewrite",
+    "Selected-month overview cumulative value and execution rate equal original trend month",
+    "Eligibility equals original resolution across departments, tertiary/fourth-level duties, goal phases, invalid project ancestry, inactive/deleted users, unavailable departments and empty years",
+    "Professional eligibility does not require an available own department, matching existing rules; admin testing does not enlarge expected authors",
+    "Existing draft privacy, frozen snapshots, admin delete, scope checks and ordinary task/performance/expert workflow regressions"
+  ],
+  "browser": {
+    "checks": [
+      "six-modules-and-all-summary-numbers-match-real-API",
+      "performance-aggregate-status-and-mode-numbers-match-chart-and-drilldown",
+      "pagination-real-chart-click-group-intersection-and-existing-task-detail",
+      "core-cutoff-excludes-future-and-obsolete-results-and-opens-history",
+      "achievement-aggregate-numbers-match-chart-and-drilldown-records-and-awards",
+      "achievement-rejection-reason-and-existing-detail-link",
+      "budget-missing-null-gaps-adjustments-three-trend-views-original-chart-hidden",
+      "work-record-eligibility-submitted-missing-and-historical-counts-match-chart-and-rows",
+      "work-record-current-eligibility-draft-privacy-and-frozen-record-link",
+      "leader-readonly-maintenance-current-scope-old-token-and-ordinary-user-denial",
+      "slow-old-year-response-cannot-replace-current-year",
+      "injected-module-failure-is-not-zero-and-independent-retry-recovers",
+      "injected-analysis-failure-retry-and-close-cancels-old-response",
+      "narrow-screen-page-table-scroll-and-accessible-drawer-footer",
+      "zero-records-and-zero-denominators-show-empty-data-without-false-percentage"
+    ],
+    "errors": [],
+    "fixtures": "random isolated synthetic database",
+    "simulated": [
+      "delayed year response",
+      "module failure",
+      "analysis failure",
+      "closed analysis response"
+    ]
+  },
+  "remaining": [
+    "Record summaries still perform original owner/record scope checks and materialize submitted-row details.",
+    "Core overview reads, other list projection/pagination work, initial multi-module loading and scoped summary aggregation remain unfinished.",
+    "Full-system P50/P95, sustained multi-account concurrency, scan-row tracing and index acceptance remain pending."
+  ],
+  "rollback": "Restore the previous backend artifact or revert this backend commit when authorized. No new schema, index, migration, business-data update or frontend runtime change.",
+  "production_changes": false
+}

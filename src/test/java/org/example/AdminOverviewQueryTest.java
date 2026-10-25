@@ -3,6 +3,8 @@ package org.example;
 import org.example.service.*;
 import org.example.mapper.AchievementMapper;
 import org.example.mapper.PerformanceMapper;
+import org.example.mapper.BudgetMapper;
+import org.example.entity.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -14,6 +16,18 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class AdminOverviewQueryTest {
+    @Test void budgetSummaryReadsOnlySelectedMonthAndDoesNotLoadAnnualTrend(){
+        var access=mock(LeadershipAccessService.class);when(access.isAdmin(1L)).thenReturn(true);
+        var budgets=mock(BudgetMapper.class);var jdbc=mock(JdbcTemplate.class);var sheet=new BizBudgetSheet();sheet.setSheetId(10L);
+        when(budgets.getSheet(2026,4)).thenReturn(sheet);
+        var source=new BizBudgetSourceItem();source.setAnnualPlan(new BigDecimal("100"));when(budgets.getSources(10L)).thenReturn(List.of(source));
+        List<BizBudgetTaskItem> tasks=new ArrayList<>();for(int i=1;i<=10;i++){var t=new BizBudgetTaskItem();t.setTaskIndex(i);t.setGoods(BigDecimal.ONE);t.setCapital(BigDecimal.ZERO);t.setOther(BigDecimal.ZERO);tasks.add(t);}
+        when(budgets.getTasks(10L)).thenReturn(tasks);
+        var service=new AdminOverviewService(access,null,null,null,budgets,new BudgetTrendService(budgets),jdbc);ReflectionTestUtils.setField(service,"permissions",mock(PermissionService.class));
+        @SuppressWarnings("unchecked") var sections=(Map<String,Object>)service.summary(2026,4,"budget",1L).get("modules");
+        assertEquals("ok",((Map<?,?>)sections.get("budget")).get("status"));
+        verify(budgets).getSheet(2026,4);verify(budgets).getSources(10L);verify(budgets).getTasks(10L);verifyNoMoreInteractions(budgets);verifyNoInteractions(jdbc);
+    }
     @Test void adminPerformanceSummaryUsesOneAggregateWithoutFullProjectionOrNames(){
         var access=mock(LeadershipAccessService.class);var jdbc=mock(JdbcTemplate.class);var performance=mock(PerformanceMapper.class);var permissions=mock(PermissionService.class);
         when(access.isAdmin(1L)).thenReturn(true);when(permissions.enforced(1L)).thenReturn(true);when(permissions.allowed(1L,"performance.read")).thenReturn(true);

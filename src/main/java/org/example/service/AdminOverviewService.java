@@ -305,19 +305,20 @@ public class AdminOverviewService {
     }
     private Data budget(int year,int month) {
         var sheet=budgets.getSheet(year,month);List<Map<String,Object>> rows=new ArrayList<>();
-        Map<String,Object> point=sheet==null?Map.of():trend(year,month).get(month-1);
+        BudgetTrendService.MonthValues values=null;
         BigDecimal annual=null;
         if(sheet!=null) {
             var sources=budgets.getSources(sheet.getSheetId());
             if(!sources.isEmpty()&&sources.stream().allMatch(s->s.getAnnualPlan()!=null))annual=sources.stream().map(BizBudgetSourceItem::getAnnualPlan).reduce(BigDecimal.ZERO,BigDecimal::add);
-            for(var t:budgets.getTasks(sheet.getSheetId())) if(t.getTaskIndex()!=null&&t.getTaskIndex()>=1&&t.getTaskIndex()<=10) {
+            var tasks=budgets.getTasks(sheet.getSheetId());values=trends.monthValues(tasks,sources,0);
+            for(var t:tasks) if(t.getTaskIndex()!=null&&t.getTaskIndex()>=1&&t.getTaskIndex()<=10) {
                 BigDecimal expense=t.getGoods()==null||t.getCapital()==null||t.getOther()==null?null:t.getGoods().add(t.getCapital()).add(t.getOther());
                 rows.add(map("id",t.getTaskIndex(),"name",t.getTaskName(),"reformKey",str(t.getTaskIndex()),"reform",t.getTaskName(),"kind","budget","target",t.getAmount(),"value",expense,"ratio",ratio(expense,t.getAmount()),"goods",t.getGoods(),"capital",t.getCapital(),"other",t.getOther()));
             }
         }
         return new Data("预算执行","所选月份","金额单位：万元。只读所选年月当前有效版本；年度预算安排按资金来源汇总，改革任务对比使用各任务分项预算。累计支出为商品和服务、资本性及其他支出之和。缺月留空、不跨月相减，负增长可能为财务调账。",List.of(
-            metric("annualPlan","年度预算安排",annual,"万元"),metric("expense","累计支出",point.get("cumulative"),"万元"),metric("executionRate","执行率",point.get("executionRate"),"%")),rows,
-            map("missing",sheet==null,"dataMonth",sheet==null?null:month,"importTime",sheet==null?null:sheet.getImportTime(),"warning",sheet==null?"尚未导入":point.get("cumulative")==null?"预算字段缺失，支出待核实":""));
+            metric("annualPlan","年度预算安排",annual,"万元"),metric("expense","累计支出",values==null?null:values.cumulative(),"万元"),metric("executionRate","执行率",values==null?null:values.executionRate(),"%")),rows,
+            map("missing",sheet==null,"dataMonth",sheet==null?null:month,"importTime",sheet==null?null:sheet.getImportTime(),"warning",sheet==null?"尚未导入":values.cumulative()==null?"预算字段缺失，支出待核实":""));
     }
     private Data records(int year,int month,Names n,Long actor) {
         List<SysUser> eligible=scopes.eligibleAuthors(year).stream().filter(u->!permissions.enforced(actor)||permissions.canRecordOwner(actor,u.getUserId(),u.getDeptId(),year)).toList();

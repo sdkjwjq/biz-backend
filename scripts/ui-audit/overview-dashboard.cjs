@@ -116,7 +116,18 @@ const fs = require('node:fs/promises'), path = require('node:path'), assert = re
     await close(); await page.goto(state.frontend + '/home/works/budget'); await expect(page.locator('.budget-trend')).toHaveCount(0);
     done('budget-missing-null-gaps-adjustments-three-trend-views-original-chart-hidden');
 
-    await home(); await open('records.missing'); await expect(drawer()).not.toContainText('SECRET-DRAFT');
+    await home();
+    for (const key of ['expected', 'submitted', 'missing', 'historical']) {
+      const metric = summary.modules.records.metrics.find(item => item.key === key);
+      await open('records.' + key);
+      const detail = await get('/admin/overview/analysis?year=2026&month=4&metric=records.' + key + '&dimension=department');
+      assert.equal(detail.value, metric.value); assert.equal(detail.total, metric.value);
+      assert.equal(detail.chart.reduce((sum, row) => sum + row.value, 0), metric.value);
+      await expect(drawer().locator('.analysis-table .el-table__body .el-table__row')).toHaveCount(detail.rows.length);
+      await close();
+    }
+    done('work-record-eligibility-submitted-missing-and-historical-counts-match-chart-and-rows');
+    await open('records.missing'); await expect(drawer()).not.toContainText('SECRET-DRAFT');
     assert.equal((await get('/admin/overview/analysis?year=2026&month=4&metric=records.missing')).rows.some(r => r.recordId), false);
     await close(); await open('records.submitted'); await drawer().getByRole('button', { name: '详情', exact: true }).click();
     await expect(page).toHaveURL(/recordId=992001/); await expect(page.getByRole('heading', { name: /工作纪实/ }).first()).toBeVisible(); await expect(page.getByText('合成冻结快照')).toBeVisible();

@@ -20,6 +20,17 @@ public interface BudgetMapper {
     @Select("SELECT * FROM biz_budget_sheet WHERE year = #{year} AND month = #{month} AND is_delete = 0 LIMIT 1")
     BizBudgetSheet getSheet(Integer year, Integer month);
 
+    @Select("SELECT sheet_id,month FROM biz_budget_sheet WHERE year=#{year} AND month BETWEEN 1 AND 12 AND is_delete=0")
+    List<BizBudgetSheet> trendSheets(Integer year);
+
+    @Select("<script>SELECT sheet_id,task_index,amount,goods,capital,other FROM biz_budget_task_item WHERE sheet_id IN "
+            +"<foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach> ORDER BY sheet_id,task_index</script>")
+    List<BizBudgetTaskItem> trendTasks(@Param("ids") List<Long> ids);
+
+    @Select("<script>SELECT sheet_id,annual_plan FROM biz_budget_source_item WHERE sheet_id IN "
+            +"<foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach> ORDER BY sheet_id,display_order</script>")
+    List<BizBudgetSourceItem> trendSources(@Param("ids") List<Long> ids);
+
     @Select("SELECT * FROM biz_budget_sheet WHERE year = #{year} AND month = #{month} AND is_delete = 0 LIMIT 1 FOR UPDATE")
     BizBudgetSheet getSheetForUpdate(@Param("year") Integer year, @Param("month") Integer month);
 

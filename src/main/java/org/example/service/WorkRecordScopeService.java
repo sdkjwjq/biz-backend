@@ -66,9 +66,26 @@ public class WorkRecordScopeService {
     /** 返回同一资格集合供概览计算分子、分母；调用者只可输出必要的人员信息。 */
     public List<SysUser> eligibleAuthors(int year) {
         Catalog catalog = catalog();
+        List<Task> annual=catalog.tasks().stream().filter(task->Objects.equals(task.getPhase(),year)).toList();
+        if(annual.isEmpty())return List.of();
+        Set<Long> taskIds=annual.stream().map(Task::getTaskId).collect(Collectors.toSet());
+        Set<Long> professionals=new LinkedHashSet<>(),participatingDepartments=new LinkedHashSet<>();
+        for(var task:annual){
+            professionals.add(task.getLeaderId());participatingDepartments.add(task.getDeptId());
+            participatingDepartments.add(catalog.directoryDepartments().get(task.getTaskId()));
+        }
+        for(var goal:catalog.goals())if(taskIds.contains(goal.getParentId())&&(goal.getPhase()==null||Objects.equals(goal.getPhase(),year))){
+            professionals.add(goal.getLeaderId());participatingDepartments.add(goal.getDeptId());
+        }
         Map<Long, SysDept> departments = requestDepartments();
         return users.getAllUsers().stream().filter(this::active)
-                .filter(owner -> !resolve(owner, year, catalog, departments, false).tasks().isEmpty()).toList();
+                .filter(owner->professionals.contains(owner.getUserId())||eligibleDepartment(owner.getDeptId(),participatingDepartments,departments)).toList();
+    }
+    private boolean eligibleDepartment(Long id,Set<Long> participating,Map<Long,SysDept> departments){
+        if(id==null||!participating.contains(id))return false;
+        if(!departments.containsKey(id))departments.put(id,users.getDeptById(id));
+        var department=departments.get(id);
+        return department!=null&&!Integer.valueOf(1).equals(department.getIsDelete())&&!"1".equals(department.getStatus());
     }
 
     private Scope resolve(SysUser owner, int year, Catalog catalog, Map<Long, SysDept> departments) {

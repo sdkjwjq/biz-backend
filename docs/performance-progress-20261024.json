@@ -316,5 +316,63 @@
       "Sustained multi-account load, full-system P50/P95, SQL scan counts and index acceptance remain pending."
     ],
     "rollback": "Restore the previous backend artifact or revert this backend commit when authorized. No schema migration, business-data change or frontend runtime change."
+  },
+  "budgetAndRecordReadBatch": {
+    "implementation": {
+      "budget_trend": "Reads selected-year active month headers and projected task/source numeric fields in batches. Empty years skip item reads; single-task mode skips source reads. Duplicate active month headers use original per-month sheet selection; duplicate valid task indexes use the original task query/order. No cross-request cache.",
+      "budget_overview": "Selected-month summary/detail reuse already-loaded task/source values and original precision rules; do not load the entire year trend. Trend charts remain in overview only; the original budget page stays hidden.",
+      "record_eligibility": "Build selected-year valid task IDs, professional IDs and participating department IDs once from the original validated catalog. Filter original account order using the same active-user, valid-department and professional rules. Existing task resolution, read-scope filtering, submitted records and frozen snapshots remain unchanged. Existing catalog/department caches stay request-local."
+    },
+    "verification": {
+      "isolated_api_regressions": 201,
+      "work_record_regressions": 36,
+      "query_and_eligibility_unit_tests": 11,
+      "budget_regressions_repeated_after_benchmark_transaction_alignment": 8,
+      "overview_browser_checks": 15,
+      "browser_script_syntax": "passed",
+      "backend_package": "passed",
+      "frontend_runtime_changes": false
+    },
+    "budget_measurements": [
+      {
+        "storedYears": 1,
+        "optimized_median_us": 7030,
+        "equalPoints": true,
+        "selectedYear": 2026,
+        "selectedSheets": 12,
+        "legacy_median_us": 35963
+      },
+      {
+        "storedYears": 5,
+        "optimized_median_us": 7951,
+        "equalPoints": true,
+        "selectedYear": 2026,
+        "selectedSheets": 12,
+        "legacy_median_us": 32795
+      }
+    ],
+    "eligibility_cpu_measurements": [
+      {
+        "users": 200,
+        "tasks": 120,
+        "legacy_median_us": 27450,
+        "optimized_median_us": 1187,
+        "equalIdsAndOrder": true
+      },
+      {
+        "users": 1000,
+        "tasks": 600,
+        "legacy_median_us": 170720,
+        "optimized_median_us": 1383,
+        "equalIdsAndOrder": true
+      }
+    ],
+    "evidence": "performance-budget-records-20261025.json",
+    "limits": [
+      "Record summaries still perform original owner/record scope checks and materialize submitted-row details.",
+      "Core overview reads, other list projection/pagination work, initial multi-module loading and scoped summary aggregation remain unfinished.",
+      "Full-system P50/P95, sustained multi-account concurrency, scan-row tracing and index acceptance remain pending."
+    ],
+    "rollback": "Restore the previous backend artifact or revert this backend commit when authorized. No new schema, index, migration, business-data update or frontend runtime change."
   }
 }

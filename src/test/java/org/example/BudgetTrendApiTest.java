@@ -46,6 +46,9 @@ class BudgetTrendApiTest {
     @MockBean(name="workRecordClock") private Clock clock;
     @Autowired private org.example.service.CoreIndicatorService core;
     @Autowired private org.example.service.BudgetService budgets;
+    @Autowired private org.example.mapper.BudgetMapper budgetMapper;
+    @Autowired private org.example.service.BudgetTrendService trendService;
+    @Autowired private org.springframework.transaction.PlatformTransactionManager transactionManager;
 
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
@@ -167,6 +170,67 @@ class BudgetTrendApiTest {
     }
     private JsonNode trend(int index) throws Exception {
         return ok(request(HttpMethod.GET,"/budget/trends?year=2026&taskIndex="+index,login(ADMIN),null)).path("points");
+    }
+    private Map<String,Object> originalTrend(int year,int index){
+        List<Map<String,Object>> points=new ArrayList<>();java.math.BigDecimal previous=null;
+        for(int month=1;month<=12;month++){
+            var sheet=budgetMapper.getSheet(year,month);java.math.BigDecimal value=null,denominator=null;
+            if(sheet!=null){
+                var tasks=budgetMapper.getTasks(sheet.getSheetId());List<org.example.entity.BizBudgetTaskItem> selected;
+                if(index==0){
+                    Map<Integer,org.example.entity.BizBudgetTaskItem> distinct=new HashMap<>();for(var t:tasks)if(t.getTaskIndex()!=null&&t.getTaskIndex()>=1&&t.getTaskIndex()<=10)distinct.put(t.getTaskIndex(),t);
+                    selected=distinct.size()==10?new ArrayList<>(distinct.values()):null;
+                    var sources=budgetMapper.getSources(sheet.getSheetId());if(!sources.isEmpty()&&sources.stream().allMatch(s->s.getAnnualPlan()!=null))denominator=sources.stream().map(org.example.entity.BizBudgetSourceItem::getAnnualPlan).reduce(java.math.BigDecimal.ZERO,java.math.BigDecimal::add);
+                }else{
+                    selected=tasks.stream().filter(t->Integer.valueOf(index).equals(t.getTaskIndex())).toList();
+                    if(selected.size()!=1)selected=null;else denominator=selected.get(0).getAmount();
+                }
+                if(selected!=null){value=java.math.BigDecimal.ZERO;for(var t:selected){if(t.getGoods()==null||t.getCapital()==null||t.getOther()==null){value=null;break;}value=value.add(t.getGoods()).add(t.getCapital()).add(t.getOther());}}
+            }
+            var delta=value==null?null:month==1?value:previous==null?null:value.subtract(previous);
+            Map<String,Object> point=new LinkedHashMap<>();point.put("month",month);point.put("cumulative",value);point.put("incremental",delta);
+            point.put("executionRate",value==null||denominator==null||denominator.signum()<=0?null:value.multiply(java.math.BigDecimal.valueOf(100)).divide(denominator,4,java.math.RoundingMode.HALF_UP));
+            point.put("adjustment",delta!=null&&delta.signum()<0);points.add(point);previous=value;
+        }
+        return Map.of("year",year,"taskIndex",index,"points",points);
+    }
+    @Test void batchTrendMatchesOriginalProjectionForEveryTaskAndYear() throws Exception {
+        month(1,0);month(2,3);month(4,5);month(5,4);month(12,12);
+        jdbc.update("UPDATE biz_budget_task_item SET goods=NULL WHERE sheet_id=970004 AND task_index=1");
+        jdbc.update("UPDATE biz_budget_task_item SET amount=0 WHERE sheet_id=970002 AND task_index=2");
+        jdbc.update("UPDATE biz_budget_source_item SET annual_plan=NULL WHERE sheet_id=970005");
+        jdbc.update("INSERT INTO biz_budget_task_item(sheet_id,task_index,task_name,amount,goods,capital,other) VALUES(970002,0,'Ignored total',999,999,999,999),(970002,11,'Ignored extra',999,999,999,999)");
+        jdbc.update("UPDATE biz_budget_sheet SET is_delete=1 WHERE sheet_id=970012");
+        String before=jdbc.queryForList("SELECT * FROM biz_budget_task_item ORDER BY item_id").toString();
+        for(int year:List.of(2025,2026,2029))for(int index=0;index<=10;index++)assertEquals(originalTrend(year,index),trendService.trends(year,index),"year="+year+" index="+index);
+        assertEquals(before,jdbc.queryForList("SELECT * FROM biz_budget_task_item ORDER BY item_id").toString());
+        String token=login(ADMIN);
+        for(int month:List.of(1,2,3,4,5,12)){
+            var summary=ok(request(HttpMethod.GET,"/admin/overview/summary?year=2026&month="+month+"&module=budget",token,null)).path("modules").path("budget");
+            @SuppressWarnings("unchecked") var points=(List<Map<String,Object>>)originalTrend(2026,0).get("points");
+            var metrics=summary.path("metrics");assertEquals(json.readTree(json.writeValueAsString(points.get(month-1).get("cumulative"))),metrics.get(1).path("value"));
+            assertEquals(json.readTree(json.writeValueAsString(points.get(month-1).get("executionRate"))),metrics.get(2).path("value"));
+        }
+    }
+    @Test void budgetTrendReadsAtCurrentAndFiveTimesStoredYearScale() throws Exception {
+        var read=new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+        read.setReadOnly(true);read.setIsolationLevel(org.springframework.transaction.TransactionDefinition.ISOLATION_REPEATABLE_READ);
+        for(int month=1;month<=12;month++)month(month,month);
+        for(int scale:List.of(1,5)){
+            if(scale==5)for(int year:List.of(2025,2027,2028,2029))for(int month=1;month<=12;month++){
+                long sheet=980000+year*100+month;
+                jdbc.update("INSERT INTO biz_budget_sheet(sheet_id,year,month,locked,is_delete) VALUES(?,?,?,1,0)",sheet,year,month);
+                jdbc.update("INSERT INTO biz_budget_source_item(sheet_id,source_key,source_name,display_order,annual_plan) VALUES(?,'school','Synthetic',1,120)",sheet);
+                for(int index=1;index<=10;index++)jdbc.update("INSERT INTO biz_budget_task_item(sheet_id,task_index,task_name,amount,goods,capital,other) VALUES(?,?,'Synthetic',10,?,0,0)",sheet,index,month);
+            }
+            List<Long> before=new ArrayList<>(),after=new ArrayList<>();
+            for(int run=0;run<6;run++){
+                long start=System.nanoTime();var old=read.execute(status->originalTrend(2026,0));long middle=System.nanoTime();var result=read.execute(status->trendService.trends(2026,0));long end=System.nanoTime();
+                assertEquals(old,result);if(run>0){before.add((middle-start)/1000);after.add((end-middle)/1000);}
+            }
+            Collections.sort(before);Collections.sort(after);
+            System.out.println("BUDGET_TREND_READ_BENCH "+json.writeValueAsString(Map.of("storedYears",scale,"selectedYear",2026,"selectedSheets",12,"legacy_median_us",before.get(2),"optimized_median_us",after.get(2),"equalPoints",true)));
+        }
     }
     @Test void continuousMonthsGapsAndNegativeAdjustments() throws Exception {
         month(1,1);month(2,3);month(4,5);month(5,4);
