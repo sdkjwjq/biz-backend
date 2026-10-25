@@ -31,6 +31,14 @@ def main():
     parser.add_argument("--frontend-port", type=int, default=15173)
     parser.add_argument("--backend-port", type=int, default=18080)
     parser.add_argument("--run-id")
+    parser.add_argument("--production",action="store_true")
+    parser.add_argument("--source-root",type=Path)
+    parser.add_argument("--frontend-root",type=Path)
+    parser.add_argument("--synthetic-scale",type=int,choices=[1,5])
+    parser.add_argument("--comparison-backend-root",type=Path)
+    parser.add_argument("--comparison-frontend-root",type=Path)
+    parser.add_argument("--comparison-backend-port",type=int,default=18382)
+    parser.add_argument("--comparison-frontend-port",type=int,default=15382)
     args = parser.parse_args()
     if any(not 1024 <= port <= 65535 for port in (args.frontend_port,args.backend_port)) or args.frontend_port==args.backend_port:
         raise RuntimeError("Invalid audit ports")
@@ -139,10 +147,15 @@ def main():
             sql((ROOT / "scripts/ui-audit/fixture-level4-equal-weight.sql").read_text(encoding="utf-8"), schema)
         if args.fixture == "responsibility-filters":
             sql((ROOT / "scripts/ui-audit/fixture-responsibility-filters.sql").read_text(encoding="utf-8"), schema)
-        cp = os.pathsep.join([str(WORK), str(ROOT / "target/classes"), str(ROOT / "target/test-classes"),
+        if args.synthetic_scale:
+            spec=importlib.util.spec_from_file_location("expanded_fixture",ROOT/"scripts/ui-audit/expanded-fixture.py")
+            fixture=importlib.util.module_from_spec(spec);spec.loader.exec_module(fixture)
+            for statement in fixture.statements(args.synthetic_scale):sql(statement,schema)
+        source=(args.source_root or ROOT).resolve()
+        cp = os.pathsep.join([str(WORK), str(source / "target/classes"), str(source / "target/test-classes"),
                               (ROOT / "target/ui-audit-classpath.txt").read_text().strip()])
         subprocess.run([RUNNER.executable("javac"), "-encoding", "UTF-8", "-cp", cp, "-d", str(WORK),
-                        str(ROOT / "scripts/ui-audit/IsolatedUiAuditServer.java")], check=True)
+                        str(ROOT / "scripts/ui-audit/IsolatedUiAuditServer.java"),str(ROOT / "scripts/ui-audit/PerformanceProbeConfig.java")], check=True)
         env["SHUANGGAO_TEST_JDBC_URL"] = "jdbc:mysql://127.0.0.1:3306/" + schema + "?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai"
         # 所有文件写入留在独立工作目录，避免测试上传和日志覆盖本地业务文件。
         backend_log = open(WORK / "backend.log", "w", encoding="utf-8")
@@ -150,18 +163,38 @@ def main():
         children.append(subprocess.Popen([RUNNER.executable("java"), "-cp", cp, "org.example.IsolatedUiAuditServer"],
                                           cwd=WORK, env=env, stdout=backend_log, stderr=subprocess.STDOUT,
                                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)))
-        frontend = ROOT.parent / "biz"
+        frontend = (args.frontend_root or ROOT.parent / "biz").resolve()
         vite = WORK / "vite-audit.mjs"
-        vite.write_text("import { createServer } from " + json.dumps((frontend / "node_modules/vite/dist/node/index.js").as_uri())
-                        + "; const server = await createServer({root:" + json.dumps(str(frontend))
-                        + ",server:{host:'127.0.0.1',port:" + str(args.frontend_port) + ",strictPort:true,proxy:{'/api':{target:'http://127.0.0.1:"+str(args.backend_port)+"',changeOrigin:true}}}}); await server.listen();", encoding="utf-8")
+        if args.production:
+            if not (frontend/"dist/index.html").is_file():raise RuntimeError("Production build required")
+            vite.write_text("import { preview } from "+json.dumps((ROOT.parent/"biz/node_modules/vite/dist/node/index.js").as_uri())
+                +";await preview({root:"+json.dumps(str(frontend))+",preview:{host:'127.0.0.1',port:"+str(args.frontend_port)+",strictPort:true,proxy:{'/api':{target:'http://127.0.0.1:"+str(args.backend_port)+"',changeOrigin:true}}}});",encoding="utf-8")
+        else:
+            vite.write_text("import { createServer } from " + json.dumps((frontend / "node_modules/vite/dist/node/index.js").as_uri())
+                            + "; const server = await createServer({root:" + json.dumps(str(frontend))
+                            + ",server:{host:'127.0.0.1',port:" + str(args.frontend_port) + ",strictPort:true,proxy:{'/api':{target:'http://127.0.0.1:"+str(args.backend_port)+"',changeOrigin:true}}}}); await server.listen();", encoding="utf-8")
         frontend_log = open(WORK / "frontend.log", "w", encoding="utf-8")
         logs.append(frontend_log)
         children.append(subprocess.Popen([RUNNER.executable("node"), str(vite)], cwd=WORK,
                                           stdout=frontend_log, stderr=subprocess.STDOUT,
                                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)))
+        comparison=None
+        if args.comparison_backend_root:
+            if not args.production or not args.comparison_frontend_root:raise RuntimeError("Comparison requires two production builds")
+            for port in (args.comparison_backend_port,args.comparison_frontend_port):
+                if port in (args.frontend_port,args.backend_port) or not 1024<=port<=65535:raise RuntimeError("Invalid comparison ports")
+                with socket.socket() as probe:probe.bind(("127.0.0.1",port))
+            second=args.comparison_backend_root.resolve();second_front=args.comparison_frontend_root.resolve()
+            if not (second_front/"dist/index.html").is_file():raise RuntimeError("Comparison frontend must be built")
+            second_env=dict(env,SHUANGGAO_UI_BACKEND_PORT=str(args.comparison_backend_port));second_cp=os.pathsep.join([str(WORK),str(second/"target/classes"),str(second/"target/test-classes"),(ROOT/"target/ui-audit-classpath.txt").read_text().strip()])
+            second_log=open(WORK/"comparison-backend.log","w",encoding="utf-8");logs.append(second_log)
+            children.append(subprocess.Popen([RUNNER.executable("java"),"-cp",second_cp,"org.example.IsolatedUiAuditServer"],cwd=WORK,env=second_env,stdout=second_log,stderr=subprocess.STDOUT,creationflags=getattr(subprocess,"CREATE_NO_WINDOW",0)))
+            second_vite=WORK/"comparison-vite.mjs";second_vite.write_text("import {preview} from "+json.dumps((ROOT.parent/"biz/node_modules/vite/dist/node/index.js").as_uri())+";await preview({root:"+json.dumps(str(second_front))+",preview:{host:'127.0.0.1',port:"+str(args.comparison_frontend_port)+",strictPort:true,proxy:{'/api':{target:'http://127.0.0.1:"+str(args.comparison_backend_port)+"',changeOrigin:true}}}});",encoding="utf-8")
+            second_front_log=open(WORK/"comparison-frontend.log","w",encoding="utf-8");logs.append(second_front_log)
+            children.append(subprocess.Popen([RUNNER.executable("node"),str(second_vite)],cwd=WORK,stdout=second_front_log,stderr=subprocess.STDOUT,creationflags=getattr(subprocess,"CREATE_NO_WINDOW",0)))
+            comparison="http://127.0.0.1:"+str(args.comparison_frontend_port)
         (WORK / "state.json").write_text(json.dumps({"schema": schema, "pids": [p.pid for p in children],
-                                                   "frontend": frontend_url}), encoding="utf-8")
+                                                   "frontend": frontend_url,"comparison":comparison}), encoding="utf-8")
         deadline = time.monotonic() + 90
         while time.monotonic() < deadline:
             if any(p.poll() is not None for p in children):
@@ -171,6 +204,12 @@ def main():
                     pass
             except urllib.error.HTTPError as e:
                 if e.code == 405:
+                    if comparison:
+                        try:
+                            urllib.request.urlopen(comparison+"/api/system/login",timeout=2)
+                        except urllib.error.HTTPError as second_error:
+                            if second_error.code!=405:continue
+                        except (OSError,urllib.error.URLError):continue
                     print("UI_AUDIT_READY " + frontend_url + " schema=" + schema, flush=True)
                     break
             except (OSError, urllib.error.URLError):

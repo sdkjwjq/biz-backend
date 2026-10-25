@@ -38,6 +38,65 @@ class ExpertReviewApiTest {
  JsonNode detail(long task,String actor)throws Exception{return body(get("/expert-reviews/tasks/"+task+"?year=2026",actor));}
  Map<String,Object> input(long task,String text,JsonNode detail){return new LinkedHashMap<>(Map.of("taskId",task,"year",2026,"version",detail.path("version").asLong(),"text",text,"scopeToken",detail.path("scopeToken").asText()));}
  JsonNode submit(long task,String text,String actor)throws Exception{return body(call(HttpMethod.POST,"/expert-reviews/submit",actor,input(task,text,detail(task,actor)),false));}
+ @Autowired org.example.mapper.PerformanceMapper performanceAuditMapper;
+ @Autowired org.example.mapper.AchievementMapper achievementAuditMapper;
+ @Autowired org.example.service.PerformanceService performanceAuditService;
+ @Autowired org.example.service.AchievementService achievementAuditService;
+ @Test void batchJoinedAuditSummariesMatchExistingSingleRecordProjection()throws Exception{
+  jdbc.update("INSERT INTO biz_performance(perf_id,project_id,perf_code,perf_name,leader_id,auditor_id,principal_id,dept_id,target_value,is_delete) VALUES(21,1,'2.1.test','Joined performance',90101,90102,90102,991001,10,0)");
+  jdbc.update("INSERT INTO biz_performance_year(year_id,perf_id,year,target_value) VALUES(22,21,2026,10)");
+  jdbc.update("INSERT INTO biz_performance_submission(sub_id,perf_id,year_id,year,actual_value,submit_by,flow_status,current_handler_id,is_delete) VALUES(101,21,22,2026,1,90101,10,90102,0),(102,21,22,2026,2,90101,20,90102,0),(103,21,22,2026,3,90101,30,90102,0)");
+  var source=performanceAuditMapper.getTodoPerformanceSubmissions(90102L);var old=source.stream().map(row->performanceAuditMapper.getPerformanceAuditVO(row.getSubId())).filter(Objects::nonNull).toList();
+  assertEquals(json.valueToTree(old),json.valueToTree(performanceAuditService.getTodoPerformanceAudits(90102L)));
+  jdbc.update("INSERT INTO biz_achievement(ach_id,category,level,ach_name,department,got_time,dept_id,create_by,audit_status,comment,is_competition,is_delete) VALUES(31,1,'Province','Joined achievement','Synthetic','2026-10-01',991001,90101,10,'Test',0,0)");
+  jdbc.update("INSERT INTO biz_achievement_submission(sub_id,ach_id,submit_by,flow_status,current_handler_id,is_delete) VALUES(111,31,90101,10,110228,0),(112,31,90101,10,110228,0)");
+  var submissions=achievementAuditMapper.getAllTodoAchievementSubmissions();var expected=submissions.stream().map(row->achievementAuditMapper.getAchievementAuditVO(row.getSubId())).filter(Objects::nonNull).toList();
+  assertEquals(json.valueToTree(expected),json.valueToTree(achievementAuditService.getTodoAchievementAudits(110228L)));
+ }
+ @Autowired org.example.mapper.WorkShortcutMapper shortcutProjection;
+ @Test void joinedTaskStateProjectionPreservesLatestDeletedGoalsAndIdCollisions(){
+  jdbc.update("INSERT INTO sys_file(file_id,file_name,file_path,file_url,file_suffix,upload_by,is_delete) VALUES(41,'projection.pdf','/target/projection','/uploads/projection','pdf',90101,0)");
+  for(int id:List.of(101,102,103,104))jdbc.update("INSERT INTO biz_task(task_id,project_id,parent_id,phase,task_code,task_name,level,dept_id,leader_id,auditor_id,principal_id,target_value,is_delete) VALUES(?,1,3,2026,?, 'Legacy fourth-level reference',4,991001,90101,90102,90102,10,0)",id,"LEGACY"+id);
+  jdbc.update("INSERT INTO biz_level4_task(task_id,parent_id,phase,task_name,leader_id,dept_id,data_type,target_value,is_delete) VALUES(101,3,2026,'Returned',90101,991001,'1',10,0),(102,3,2026,'Deleted last submission',90101,991001,'1',10,0),(103,4,2026,'Deleted goal',90101,991001,'1',10,1),(3,4,2026,'Id collision',90101,991001,'1',10,0),(104,3,2026,'Duplicate state',90101,991001,'1',10,0)");
+  jdbc.update("INSERT INTO biz_material_submission(sub_id,task_id,file_id,submit_by,submit_dept_id,manage_dept_id,file_suffix,flow_status,current_handler_id,is_delete) VALUES(21,102,41,90101,991001,991001,'pdf',30,90102,0),(31,3,41,90101,991001,991001,'pdf',10,90102,0),(32,101,41,90101,991001,991001,'pdf',-10,90102,1),(33,102,41,90101,991001,991001,'pdf',30,90102,1),(34,103,41,90101,991001,991001,'pdf',20,90102,0),(35,4,41,90101,991001,991001,'pdf',20,90102,0),(36,104,41,90101,991001,991001,'pdf',-10,90102,1),(37,5,41,90101,991001,991001,'pdf',35,NULL,0)");
+  var old=jdbc.queryForList("SELECT DISTINCT t.task_id AS taskId, s.flow_status AS flowStatus, s.current_handler_id AS handlerId, d.dept_id AS handlerDeptId, d.dept_name AS handlerDeptName FROM biz_task t JOIN biz_material_submission s ON (s.task_id=t.task_id OR s.task_id IN (SELECT c.task_id FROM biz_level4_task c WHERE c.parent_id=t.task_id AND COALESCE(c.is_delete,0)=0)) LEFT JOIN sys_user u ON u.user_id=s.current_handler_id AND u.is_delete=0 LEFT JOIN sys_dept d ON d.dept_id=u.dept_id AND d.is_delete=0 WHERE t.level=3 AND COALESCE(t.is_delete,0)=0 AND (s.is_delete=0 OR s.flow_status < 0) AND s.sub_id=(SELECT MAX(n.sub_id) FROM biz_material_submission n WHERE n.task_id=s.task_id) AND t.task_id IN (3,4,5)");
+  old.forEach(row->row.values().removeIf(Objects::isNull));
+  var current=shortcutProjection.taskStates(List.of(3L,4L,5L));
+  assertEquals(new HashSet<>(old),new HashSet<>(current));assertEquals(old.size(),current.size());
+ }
+ @Test void treeResponsesPreserveMatchesAndOnlyNecessaryAncestors()throws Exception{
+  for(String token:List.of(admin,a,b,owner))for(String predicate:List.of("f.year=2026","f.year=2026&f.deptId=991002","f.year=2025","f.year=2026&f.progressFrom=10&f.progressTo=10")){
+   var old=body(get("/list-filters/tasks?"+predicate,token));var tree=body(get("/list-filters/tasks?responseMode=tree&separateOptions=true&"+predicate,token));
+   assertEquals(old.path("ids"),tree.path("matchedIds"),predicate);assertEquals(old.path("total"),tree.path("total"));assertFalse(tree.has("ids"));assertFalse(tree.has("fields"));
+   var expected=new LinkedHashSet<Long>();for(var id:old.path("ids")){expected.add(id.asLong());expected.add(1L);expected.add(2L);}
+   var actual=new LinkedHashSet<Long>();for(var item:tree.path("items"))actual.add(item.path("taskId").asLong());assertEquals(expected,actual);
+  }
+  assertEquals(0,body(get("/list-filters/tasks?responseMode=tree&focusId=4&f.year=2026",a)).path("total").asInt());
+  assertEquals(1,body(get("/list-filters/tasks?responseMode=tree&focusId=3&f.year=2026&f.deptId=991002",a)).path("total").asInt());
+ }
+ @Test void independentFilterDefinitionsAndRemoteOptionsPreserveScopeAndSelection()throws Exception{
+  var definitions=body(get("/list-filters/tasks/filter-options?definitions=true",a));assertTrue(definitions.path("fields").size()>=4);assertTrue(definitions.has("permissionVersion"));
+  var options=body(get("/list-filters/tasks/filter-options?field=deptId&f.year=2026&pageSize=1&ids=991001&ids=991002",a));
+  assertEquals(1,options.path("total").asInt());assertEquals(1,options.path("items").size());assertEquals(1,options.path("selected").size());assertEquals("991001",options.path("selected").get(0).path("value").asText());
+  assertEquals(400,get("/list-filters/tasks/filter-options?field=password",admin).getStatusCode().value());
+  assertEquals(403,get("/list-filters/admin-roles/filter-options?definitions=true",owner).getStatusCode().value());
+ }
+ @Test void noticePageMatchesStableDisplayedOrderWithTiesDatesTextAndMissingSources()throws Exception{
+  jdbc.update("INSERT INTO sys_notice(notice_id,to_user_id,from_user_id,type,title,content,source_type,source_id,is_read,is_delete,create_time) VALUES(11,110228,90101,'1','Mixed %_','alpha','x',NULL,'0',0,'2026-10-01'),(12,110228,90102,'2','Second','beta','x',99,'1',0,'2026-10-03'),(13,110228,90101,'1','Third','beta','x',NULL,'0',0,'2026-10-03'),(14,110228,90101,'1','Unknown','gamma','x',NULL,'0',0,NULL),(15,90103,90101,'1','Private','alpha','x',NULL,'0',0,'2026-10-05')");
+  jdbc.update("UPDATE sys_user SET nick_name='' WHERE user_id=90101");
+  for(String token:List.of(admin,owner))for(String predicate:List.of("","f.isRead=0","f.fromUserId=90102","f.type=1&f.type=2","f.keyword=%25_","f.createTimeFrom=2026-10-02","f.createTime=missing","f.pending=unknown","f.sourceId=99")){
+   var old=body(get("/list-filters/notices?pageSize=100&"+predicate,token));var selected=new HashSet<Long>();for(var id:old.path("ids"))selected.add(id.asLong());
+   var source=body(get("/system/notice",token));
+   var ordered=new ArrayList<JsonNode>();for(var n:source)if(selected.contains(n.path("noticeId").asLong()))ordered.add(n);
+   ordered.sort((x,y)->Long.compare(noticeMillis(y),noticeMillis(x)));
+   var actual=new ArrayList<Long>();for(int page=1;page<=Math.max(1,(ordered.size()+1)/2);page++){
+    var result=body(get("/list-filters/notices?responseMode=page&includeFields=false&pageSize=2&page="+page+"&"+predicate,token));assertEquals(ordered.size(),result.path("total").asInt(),predicate);assertFalse(result.has("ids"));
+    for(var n:result.path("items")){actual.add(n.path("noticeId").asLong());if(n.path("fromUserId").asLong()==90101)assertEquals("expert-test-90101",n.path("senderName").asText());}
+   }
+   assertEquals(ordered.stream().map(n->n.path("noticeId").asLong()).toList(),actual,predicate);
+  }
+ }
+ private long noticeMillis(JsonNode notice){if(notice.path("createTime").isNull()||notice.path("createTime").isMissingNode())return 0;return java.time.LocalDateTime.parse(notice.path("createTime").asText(),java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")).atZone(java.time.ZoneId.of("Asia/Shanghai")).toInstant().toEpochMilli();}
  @Autowired org.example.service.PermissionService permissionService;
  @Autowired org.example.mapper.SysMapper accountMapper;
  @Test void accountOptionEndpointMatchesExistingFieldsAndProtectsAccess()throws Exception{
@@ -209,6 +268,52 @@ class ExpertReviewApiTest {
   assertEquals(403,get("/list-filters/budget-versions",a).getStatusCode().value());
   var all=body(get("/list-filters/budget-versions?f.effective=yes&pageSize=1",admin));assertEquals(2,all.path("total").asInt());assertEquals(1,all.path("items").size());assertTrue(all.path("items").get(0).path("current").asBoolean());
   assertEquals(1,body(get("/list-filters/budget-versions?f.month=10&f.effective=no",admin)).path("total").asInt());
+  for(String filter:List.of("","f.month=10","f.effective=no","f.operationType=IMPORT","f.createTimeFrom=2026-01-01"))for(int page:List.of(1,2)){
+   String url="/list-filters/budget-versions?pageSize=1&page="+page+"&"+filter;var old=body(get(url,admin));var optimized=body(get(url+"&responseMode=page&separateOptions=true",admin));
+   assertEquals(old.path("total"),optimized.path("total"),filter);assertEquals(old.path("page"),optimized.path("page"),filter);assertEquals(old.path("items"),optimized.path("items"),filter);
+  }
+
+ }
+ private List<String> legacyAuditRows(String token,String tab,Set<String> matched)throws Exception{
+  List<String> result=new ArrayList<>();
+  if(tab.equals("done")){
+   var taskResponse=get("/biz/tasks",token);
+   if(taskResponse.getStatusCode().value()==200)for(var task:body(taskResponse))if(task.path("level").asInt()==3){
+    var history=get("/biz/audit/task/"+task.path("taskId").asLong(),token);if(history.getStatusCode().value()!=200)continue;
+    for(var r:body(history)){int status=r.path("flowStatus").asInt();String key="task:"+r.path("subId").asText();if((status==40||status<0)&&matched.contains(key))result.add(key);}
+   }
+  }
+  var types=tab.equals("todo")?List.of("task","performance","achievement","core"):List.of("core","performance","achievement");
+  for(String type:types){String prefix=type.equals("task")?"/biz":type.equals("achievement")?"/achievement":type.equals("core")?"/core-indicators":"/performance";
+   var response=get(prefix+"/audit/"+(tab.equals("todo")?"todo":"records"),token);if(response.getStatusCode().value()!=200)continue;
+   for(var r:body(response)){int status=r.path("flowStatus").asInt();String key=type+":"+r.path(type.equals("core")?"reportId":"subId").asText();
+    boolean include=tab.equals("todo")?(type.equals("task")?Set.of(10,20,30).contains(status):type.equals("achievement")?status==10:status==10||status==20):status==30||status<0;
+    if(include&&matched.contains(key))result.add(key);
+   }
+  }return result;
+ }
+ private void assertConsolidatedAuditPages(String token)throws Exception{
+  long todo=0;
+  for(String prefix:List.of("/biz","/performance","/achievement","/core-indicators")){
+   var count=get(prefix+"/audit/todo?countOnly=true",token);if(count.getStatusCode().value()==200){var value=json.readTree(count.getBody());if(value.isIntegralNumber())todo+=value.asLong();}
+  }
+  for(String tab:List.of("todo","done")){
+   var legacy=get("/list-filters/audits?tab="+tab,token);
+   var first=get("/list-filters/audits?responseMode=page&includeFields=false&pageSize=2&tab="+tab,token);
+   assertEquals(legacy.getStatusCode(),first.getStatusCode(),tab+" "+first.getBody());if(legacy.getStatusCode().value()!=200)continue;
+   Set<String> matched=new HashSet<>();for(var id:body(legacy).path("ids"))matched.add(id.asText());
+   List<String> expected=legacyAuditRows(token,tab,matched);
+   List<String> actual=new ArrayList<>();var firstBody=body(first);int pages=Math.max(1,(expected.size()+1)/2);
+   for(int page=1;page<=pages;page++){
+    var value=page==1?firstBody:body(get("/list-filters/audits?responseMode=page&includeFields=false&pageSize=2&tab="+tab+"&page="+page,token));
+    assertEquals(expected.size(),value.path("total").asInt(),tab+" total");assertFalse(value.has("ids"));assertFalse(value.has("fields"));
+    assertEquals(todo,value.path("summary").path("todoCount").asLong(),tab+" summary");
+    for(var row:value.path("items")){actual.add(row.path("type").asText()+":"+row.path(row.path("type").asText().equals("core")?"reportId":"subId").asText());assertFalse(row.has("_submission"));
+     if(Set.of("performance","achievement").contains(row.path("type").asText())){var located=body(get("/list-filters/audits/locate?type="+row.path("type").asText()+"&subId="+row.path("subId").asText(),token));assertEquals(row.path("subId"),located.path("item").path("subId"));assertEquals(!tab.equals("todo"),located.path("isViewMode").asBoolean());}
+    }
+   }
+   assertEquals(expected,actual,tab+" ordered UI intersection");
+  }
  }
  @Test void countOnlyAuditResponsesMatchOriginalSidebarPredicates()throws Exception{
   jdbc.update("UPDATE sys_user_permission SET permissions_json='{\"tasks.read\":true,\"tasks.audit\":true,\"performance.read\":true,\"performance.audit\":true,\"achievements.read\":true,\"achievements.audit\":true,\"core.read\":true,\"core.audit\":true}' WHERE user_id=90103");
@@ -233,6 +338,9 @@ class ExpertReviewApiTest {
    for(var item:list)if(statuses.contains((item.hasNonNull("flowStatus")?item.path("flowStatus"):item.path("flow_status")).asInt()))expected++;
    var count=body(counted);assertTrue(count.isNumber());assertEquals(expected,count.asLong(),paths.get(i)+" original="+list);
   }
+  for(String actor:List.of(admin,a,b,owner))assertConsolidatedAuditPages(actor);
+  assertEquals(200,get("/list-filters/audits/locate?taskId=3",admin).getStatusCode().value());
+  assertEquals(400,get("/list-filters/audits/locate?type=raw-sql&subId=1",admin).getStatusCode().value());
   jdbc.update("UPDATE sys_user_permission SET permissions_json='{\"tasks.read\":true,\"tasks.audit\":false}' WHERE user_id=90103");
   assertEquals(403,get("/biz/audit/todo?countOnly=true",a).getStatusCode().value());
  }

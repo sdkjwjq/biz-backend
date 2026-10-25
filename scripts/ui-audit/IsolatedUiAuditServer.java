@@ -19,8 +19,9 @@ public class IsolatedUiAuditServer {
         System.setProperty("server.port", port);
         System.setProperty("logging.file.name", "logs/ui-audit.log");
         System.setProperty("logging.level.root", "WARN");
+        if("1".equals(System.getenv("SHUANGGAO_PERF_METRICS")))System.setProperty("isolated.performance.probe","true");
         SpringApplication app = new SpringApplication(BizApplication.class,
-                ReviewBatchRegressionApiTest.NoAutomaticSchedules.class);
+                ReviewBatchRegressionApiTest.NoAutomaticSchedules.class,PerformanceProbeConfig.class);
         app.run(args);
     }
 }

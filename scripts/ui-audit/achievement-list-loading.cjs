@@ -18,7 +18,7 @@ const fs=require('node:fs/promises'),path=require('node:path'),assert=require('n
  page.on('request',request=>{if(new URL(request.url()).pathname==='/api/list-filters/achievements')filterRequests++});
  const listGate=new Promise(resolve=>{releaseList=()=>{listReleased=true;resolve()}});
  const todoGate=new Promise(resolve=>{releaseTodo=()=>{todoReleased=true;resolve()}});
- const listUrl=url=>url.pathname==='/api/achievement/';
+ const listUrl=url=>url.pathname==='/api/list-filters/achievements';
  await page.route(listUrl,async route=>{if(failNext){failNext=false;return route.fulfill({status:500,contentType:'application/json',body:JSON.stringify({code:500,message:'模拟成果列表失败'})})}if(!listReleased)await listGate;await route.continue().catch(()=>{})});
  await page.route(url=>url.pathname==='/api/achievement/audit/todo',async route=>{if(!todoReleased)await todoGate;await route.continue().catch(()=>{})});
  try {
@@ -40,10 +40,10 @@ const fs=require('node:fs/promises'),path=require('node:path'),assert=require('n
   await page.screenshot({path:path.join(out,'loaded.png'),fullPage:true});checks.push('tree-and-rejection-details-preserved');
   await rows.filter({hasText:'合成已归档成果'}).getByRole('button',{name:'查看',exact:true}).click();
   failNext=true;await page.getByRole('button',{name:'返回列表并定位',exact:true}).click();
-  await expect(page.locator('.table-card > .el-alert')).toContainText('更新失败，当前保留上次成果');
+  await expect(page.locator('[aria-label="成果筛选"] .el-alert')).toContainText('更新失败');
   await expect(rows).toHaveCount(count);await page.screenshot({path:path.join(out,'failed-refresh.png'),fullPage:true});checks.push('failed-refresh-preserves-existing-tree');
-  await page.getByRole('button',{name:'重新加载成果',exact:true}).click();
-  await expect(page.locator('.table-card > .el-alert')).toHaveCount(0);
+  await page.getByRole('button',{name:'重新查询',exact:true}).click();
+  await expect(page.locator('[aria-label="成果筛选"] .el-alert')).toHaveCount(0);
   await expect(page.locator('.table-wrapper > .el-loading-mask')).toBeHidden();
   await expect(page.locator('.table-card')).toContainText('合成已归档成果');checks.push('retry-restores-list-with-existing-filters');
   const bar=page.locator('[aria-label="成果筛选"]');

@@ -738,13 +738,15 @@ class WorkRecordApiTest {
         }
         jdbc.update("UPDATE biz_work_record SET submit_time=CASE MOD(record_id,3) WHEN 0 THEN NULL WHEN 1 THEN '2026-10-24 23:59:59' ELSE '2026-10-25 00:00:00' END,"
                 +"update_time=CASE MOD(record_id,2) WHEN 0 THEN '2026-10-24 00:00:00' ELSE '2026-10-25 23:59:59' END");
+        jdbc.update("UPDATE biz_work_record SET problems=CASE MOD(record_id,2) WHEN 0 THEN 'Narrative Mixed %_ text' ELSE 'Other' END");
+        jdbc.update("INSERT INTO biz_work_record_entry(record_id,reform_task_id,reform_task_name,key_progress,stage_results,typical_practices) SELECT record_id,930000,'Root','Frozen entry Mixed','Result','Practice' FROM biz_work_record WHERE MOD(record_id,3)=0");
         String token=login(ADMIN);
         for (String filters:List.of("", "&f.year=2026", "&f.deptId=920001&f.deptId=920002", "&f.ownerId="+OTHER, "&f.mine=&f.mine=no",
                 "&f.submitTime=missing", "&f.submitTimeFrom=2026-10-25", "&f.submitTimeTo=2026-10-24",
                 "&f.submitTimeFrom=2026-10-25&f.submitTimeTo=2026-10-25",
                 "&f.updateTimeFrom=2026-10-24&f.updateTimeTo=2026-10-24",
                 "&f.year=2026&f.submitTimeFrom=2026-10-24&f.updateTimeTo=2026-10-24",
-                "&f.submitTimeFrom=2026-10-26", "&f.updateTime=missing", "&f.submitTime=2026-10-25")) {
+                "&f.submitTimeFrom=2026-10-26", "&f.updateTime=missing", "&f.submitTime=2026-10-25", "&f.root=930000", "&f.keyword=Mixed", "&f.keyword=%25_", "&f.root=930000&f.keyword=Frozen&f.submitTimeFrom=2026-10-24")) {
             for(int page:List.of(1,2,12,99)) {
                 String path="/list-filters/records?pageSize=10&page="+page+filters;
                 JsonNode legacy=ok(request(HttpMethod.GET,path,token,null));
