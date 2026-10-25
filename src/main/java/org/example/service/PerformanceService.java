@@ -722,6 +722,19 @@ public class PerformanceService {
         return toPerformanceAuditVOs(AdminTestContext.enabled(userId) ? performanceMapper.getAllPendingPerformanceSubmissions() : performanceMapper.getTodoPerformanceSubmissions(userId));
     }
 
+    /** Same membership as the existing list, bounded to one deep-linked submission. */
+    public org.example.entity.vo.PerformanceAuditVO locateAuditSummary(Long actor,Long subId,boolean todo){
+        var submission=performanceMapper.getPerformanceSubmissionById(subId);
+        if(submission==null||!Integer.valueOf(0).equals(submission.getIsDelete())||submission.getFlowStatus()==null)return null;
+        int status=submission.getFlowStatus();
+        if(todo){
+            if(!java.util.Set.of(10,20).contains(status))return null;
+            if(AdminTestContext.enabled(actor)){var object=performanceMapper.getPerformanceById(submission.getPerfId());if(object==null||Integer.valueOf(1).equals(object.getIsDelete()))return null;}
+            else if(!java.util.Objects.equals(actor,submission.getCurrentHandlerId()))return null;
+        }else if(!(status==30||status<0)||!(java.util.Objects.equals(actor,submission.getSubmitBy())||java.util.Objects.equals(actor,submission.getCurrentHandlerId())))return null;
+        return performanceMapper.getPerformanceAuditVO(subId);
+    }
+
     public Object getPerformanceAuditRecords(Long userId) {
         return toPerformanceAuditVOs(performanceMapper.getPerformanceSubmissionRecords(userId));
     }
@@ -751,12 +764,10 @@ public class PerformanceService {
         if (submissions == null) {
             return result;
         }
-        for (BizPerformanceSubmission submission : submissions) {
-            PerformanceAuditVO vo = performanceMapper.getPerformanceAuditVO(submission.getSubId());
-            if (vo != null) {
-                result.add(vo);
-            }
-        }
+        var ids=submissions.stream().map(BizPerformanceSubmission::getSubId).filter(java.util.Objects::nonNull).distinct().toList();
+        java.util.Map<Long,PerformanceAuditVO> values=new java.util.HashMap<>();
+        for(int start=0;start<ids.size();start+=500)for(var value:performanceMapper.getPerformanceAuditVOs(ids.subList(start,Math.min(start+500,ids.size()))))values.put(value.getSubId(),value);
+        for(var submission:submissions){var value=values.get(submission.getSubId());if(value!=null)result.add(value);}
         return result;
     }
 

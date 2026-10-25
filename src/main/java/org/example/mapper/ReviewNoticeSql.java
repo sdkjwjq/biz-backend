@@ -22,6 +22,8 @@ public final class ReviewNoticeSql {
                 + "AND COALESCE(n.is_delete, 0) = 0 AND NOT (COALESCE((" + STALE + "), 0))";
     }
 
+    public static String jdbcVisibleFrom() { return visibleFrom().replace("#{userId}","?"); }
+
     public static String visible() { return "SELECT n.*" + visibleFrom(); }
 
     public static String unreadCount() {

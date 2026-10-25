@@ -19,6 +19,8 @@ public class PermissionRequestGuard {
         if(path.startsWith("/system/password")||path.equals("/system/logout")||path.equals("/system/login"))return;
         var state=access.state(actor);boolean get="GET".equals(request.getMethod());
         if(path.equals("/system/access")||path.endsWith("/capabilities"))return;
+        if(get&&path.equals("/list-filters/audits/locate"))return; // The locate service checks its exact business source and scope.
+        if(get&&path.matches("/list-filters/(tasks|performance|achievements|core|records|notices|supervision|budget|budget-versions|admin-users|admin-departments|admin-roles|admin-operations|audits)/filter-options"))return;
         if(get && Set.of("/list-filters/admin-users/filter-options","/list-filters/tasks/export","/list-filters/admin-users","/list-filters/admin-roles","/list-filters/audits","/list-filters/budget","/list-filters/admin-operations","/list-filters/admin-departments","/list-filters/budget-versions","/list-filters/tasks","/list-filters/performance","/list-filters/achievements","/list-filters/core","/list-filters/records","/list-filters/notices","/list-filters/supervision").contains(path)){return;} // Controller resolves the exact module permission before reading any rows.
         if(path.startsWith("/system/download/")||path.startsWith("/uploads/")){
             Long file=path.startsWith("/system/download/")?last(path):jdbc.queryForList("SELECT file_id FROM sys_file WHERE (file_path=? OR file_url=?) AND COALESCE(is_delete,0)=0",Long.class,path,path).stream().findFirst().orElse(null);

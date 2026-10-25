@@ -381,6 +381,17 @@ public class AchievementService {
         return toAchievementAuditVOs(achievementMapper.getAllTodoAchievementSubmissions());
     }
 
+    /** Uses existing reviewer eligibility and source predicates without loading the history list. */
+    public org.example.entity.vo.AchievementAuditVO locateAuditSummary(Long actor,Long subId,boolean todo){
+        if(!canAuditAchievement(actor))return null;
+        var submission=achievementMapper.getAchievementSubmissionById(subId);
+        if(submission==null||!Integer.valueOf(0).equals(submission.getIsDelete())||submission.getFlowStatus()==null)return null;
+        int status=submission.getFlowStatus();
+        if(todo){var object=achievementMapper.getAchievementById(submission.getAchId());if(status!=10||object==null||!Integer.valueOf(0).equals(object.getIsDelete()))return null;}
+        else if(!(status==30||status<0))return null;
+        return achievementMapper.getAchievementAuditVO(subId);
+    }
+
     public Object getAchievementAuditRecords(Long userId) {
         if (canAuditAchievement(userId)) {
             return toAchievementAuditVOs(achievementMapper.getAllAchievementSubmissionRecords());
@@ -428,12 +439,10 @@ public class AchievementService {
         if (submissions == null) {
             return result;
         }
-        for (BizAchievementSubmission submission : submissions) {
-            AchievementAuditVO vo = achievementMapper.getAchievementAuditVO(submission.getSubId());
-            if (vo != null) {
-                result.add(vo);
-            }
-        }
+        var ids=submissions.stream().map(BizAchievementSubmission::getSubId).filter(java.util.Objects::nonNull).distinct().toList();
+        java.util.Map<Long,AchievementAuditVO> values=new java.util.HashMap<>();
+        for(int start=0;start<ids.size();start+=500)for(var value:achievementMapper.getAchievementAuditVOs(ids.subList(start,Math.min(start+500,ids.size()))))values.put(value.getSubId(),value);
+        for(var submission:submissions){var value=values.get(submission.getSubId());if(value!=null)result.add(value);}
         return result;
     }
 

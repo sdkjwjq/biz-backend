@@ -147,6 +147,9 @@ public interface AchievementMapper {
             "WHERE s.sub_id = #{subId}")
     AchievementAuditVO getAchievementAuditVO(Long subId);
 
+    @Select("<script>SELECT s.sub_id AS subId, s.ach_id AS achId, a.category, a.level, a.ach_name AS achName, a.department, a.got_time AS gotTime, a.dept_id AS deptId, a.file_id AS fileId, a.comment AS achievementComment, s.submit_by AS submitBy, s.submit_time AS submitTime, s.flow_status AS flowStatus, s.current_handler_id AS currentHandlerId, s.comment, s.is_delete AS isDelete FROM biz_achievement_submission s JOIN biz_achievement a ON s.ach_id = a.ach_id WHERE s.sub_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach></script>")
+    List<AchievementAuditVO> getAchievementAuditVOs(@org.apache.ibatis.annotations.Param("ids") List<Long> ids);
+
     @Insert("INSERT INTO biz_achievement_audit_log(sub_id, operator_id, action_type, pre_status, post_status, comment, create_time) " +
             "VALUES(#{subId}, #{operatorId}, #{actionType}, #{preStatus}, #{postStatus}, #{comment}, #{createTime})")
     @Options(useGeneratedKeys = true, keyProperty = "logId", keyColumn = "log_id")

@@ -16,7 +16,7 @@ import static org.example.service.ListFilterQuery.*;
 @Service
 public class WorkRecordFilterPageService {
     private static final Set<String> SUPPORTED = Set.of("year", "month", "ownerId", "status", "deptId", "mine",
-            "submitTime", "submitTimeFrom", "submitTimeTo", "updateTime", "updateTimeFrom", "updateTimeTo");
+            "root", "keyword", "submitTime", "submitTimeFrom", "submitTimeTo", "updateTime", "updateTimeFrom", "updateTimeTo");
     private final PermissionService permissions;
     private final WorkRecordService records;
     private final JdbcTemplate jdbc;
@@ -45,7 +45,7 @@ public class WorkRecordFilterPageService {
                 field("month","select", java.util.stream.IntStream.rangeClosed(1,12).mapToObj(String::valueOf).toList()),
                 field("ownerId","multi", List.of()), field("deptId","multi", List.of()),
                 field("status","select", List.of("0","1")), field("mine","select", List.of("yes","no")),
-                field("submitTime","date",List.of()), field("updateTime","date",List.of()));
+                field("root","multi",List.of()), field("keyword","text",List.of()), field("submitTime","date",List.of()), field("updateTime","date",List.of()));
         ListFilterQuery query = new ListFilterQuery(params,fields);
         int size = Math.min(100,positive(params.getFirst("pageSize"),10));
         int requestedPage = positive(params.getFirst("page"),1);
@@ -72,18 +72,29 @@ public class WorkRecordFilterPageService {
         // Match existing current-account department lookup, including deleted accounts.
         String from = " FROM biz_work_record r LEFT JOIN sys_user u ON u.user_id=r.owner_id";
         long total;
-        var dateFields=fields.stream().filter(f -> f.type().equals("date")).toList();
+        var projectedFields=fields.stream().filter(f -> f.type().equals("date") || Set.of("root","keyword").contains(f.key())).toList();
         boolean dates=params.keySet().stream().anyMatch(k -> k.startsWith("f.submitTime") || k.startsWith("f.updateTime"));
-        if (dates) {
+        boolean narrative = query.first("keyword") != null && !query.first("keyword").isBlank();
+        boolean roots = params.getOrDefault("f.root",List.of()).stream().anyMatch(v->v!=null&&!v.isBlank());
+        if (dates || narrative || roots) {
             // Retain the legacy JSON/date matcher, including its timezone and direct-equality semantics.
             // Reading only IDs and dates avoids every narrative and reform-entry body on this path.
-            var metadata=jdbc.query("SELECT r.record_id,r.submit_time,r.update_time"+from+where,
+            var metadata=jdbc.query("SELECT r.record_id,r.submit_time,r.update_time"+(narrative?",r.problems,r.next_focus,r.other_matters":"")+from+where,
                     BeanPropertyRowMapper.newInstance(BizWorkRecord.class),args.toArray());
+            Map<Long,List<Map<String,Object>>> entries=new HashMap<>();
+            if(narrative||roots)for(int offset=0;offset<metadata.size();offset+=500){
+                var batch=metadata.subList(offset,Math.min(offset+500,metadata.size())).stream().map(BizWorkRecord::getRecordId).toList();
+                for(var entry:jdbc.queryForList("SELECT record_id,reform_task_id,key_progress,stage_results,typical_practices FROM biz_work_record_entry WHERE record_id IN ("+String.join(",",Collections.nCopies(batch.size(),"?"))+")",batch.toArray()))
+                    entries.computeIfAbsent(((Number)entry.get("record_id")).longValue(),k->new ArrayList<>()).add(entry);
+            }
             var matching=metadata.stream().filter(r -> {
                 if(r.getSubmitTime()!=null)r.setSubmitTime(new java.util.Date(r.getSubmitTime().getTime()));
                 if(r.getUpdateTime()!=null)r.setUpdateTime(new java.util.Date(r.getUpdateTime().getTime()));
                 Map<String,Object> row=json.convertValue(r,new TypeReference<LinkedHashMap<String,Object>>(){});
-                return query.matches(row,dateFields);
+                var written=entries.getOrDefault(r.getRecordId(),List.of()).stream().filter(e->List.of("key_progress","stage_results","typical_practices").stream().anyMatch(k->!text(e.get(k)).isBlank())).toList();
+                row.put("root",written.stream().map(e->e.get("reform_task_id")).toList());
+                row.put("keyword",text(r.getProblems())+" "+text(r.getNextFocus())+" "+text(r.getOtherMatters())+" "+written.stream().map(e->text(e.get("key_progress"))+" "+text(e.get("stage_results"))+" "+text(e.get("typical_practices"))).collect(java.util.stream.Collectors.joining(" ")));
+                return query.matches(row,projectedFields);
             }).map(BizWorkRecord::getRecordId).toList();
             if(matching.isEmpty())return result(List.of(),0,1,size);
             total=matching.size();
@@ -98,6 +109,7 @@ public class WorkRecordFilterPageService {
         return result(items,total,page,size);
     }
 
+    private static String text(Object value){return value==null?"":String.valueOf(value);}
     private Field field(String key,String type,List<String> values) {
         return new Field(key,key,type,true,"",values.stream()
                 .map(v -> Map.<String,Object>of("value",v,"label",v)).toList());

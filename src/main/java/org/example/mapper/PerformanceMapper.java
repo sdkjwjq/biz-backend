@@ -160,6 +160,9 @@ public interface PerformanceMapper {
             "WHERE s.sub_id = #{subId}")
     PerformanceAuditVO getPerformanceAuditVO(@Param("subId") Long subId);
 
+    @Select("<script>SELECT s.sub_id AS subId, s.perf_id AS perfId, s.year_id AS yearId, s.year, p.perf_code AS perfCode, p.perf_name AS perfName, s.actual_value AS actualValue, s.submit_by AS submitBy, s.submit_time AS submitTime, s.flow_status AS flowStatus, s.current_handler_id AS currentHandlerId, s.comment, s.is_delete AS isDelete, p.leader_id AS leaderId, p.auditor_id AS auditorId, p.principal_id AS principalId FROM biz_performance_submission s JOIN biz_performance p ON s.perf_id = p.perf_id WHERE s.sub_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach></script>")
+    List<PerformanceAuditVO> getPerformanceAuditVOs(@Param("ids") List<Long> ids);
+
     @Insert("INSERT INTO biz_performance_audit_snapshot(" +
             "sub_id, perf_id, year_id, previous_performance_value, previous_performance_update_time, " +
             "previous_year_actual_value, previous_year_target_value, create_time" +

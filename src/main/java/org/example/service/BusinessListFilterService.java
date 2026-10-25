@@ -30,16 +30,21 @@ public class BusinessListFilterService {
     @org.springframework.beans.factory.annotation.Autowired private WorkRecordFilterPageService recordPages;
     @org.springframework.beans.factory.annotation.Autowired private AuditHistoryTimeService auditHistoryTimes;
     @org.springframework.beans.factory.annotation.Autowired private AuditReadScopeService auditReadScopes;
+    @org.springframework.beans.factory.annotation.Autowired private BizMapper auditMapper;
     @org.springframework.beans.factory.annotation.Autowired private BudgetVersionListService budgetVersions;
     @org.springframework.beans.factory.annotation.Autowired private OperationFilterPageService operationPages;
-    public record Data(List<Map<String,Object>> rows,List<Field> fields){}
+    public record Data(List<Map<String,Object>> rows,List<Field> fields,List<Map<String,Object>> catalog){public Data(List<Map<String,Object>> rows,List<Field> fields){this(rows,fields,List.of());}}
     public Map<String,Object> query(String domain,Long actor,MultiValueMap<String,String> params){
         if(domain.equals("budget"))return budgetQuery(actor,params);
         if(domain.equals("admin-users")&&!"export".equals(params.getFirst("purpose"))&&"page".equals(params.getFirst("responseMode"))&&"false".equals(params.getFirst("includeFields"))){
             access.requireAdmin(actor);
             Set<String> supported=Set.of("f.keyword","f.deptId","f.status","f.role","f.force","f.leadership");
-            if(params.keySet().stream().filter(k->k.startsWith("f.")).allMatch(supported::contains))return accountPage(params);
+            if(params.keySet().stream().filter(k->k.startsWith("f.")).allMatch(supported::contains)&&str(params.getFirst("f.keyword")).codePoints().allMatch(c->c<128))return accountPage(params);
+            var data=userData();var predicate=new ListFilterQuery(params,data.fields());var matching=data.rows().stream().filter(r->predicate.matches(r,data.fields())).toList();
+            int size=Math.min(100,positive(params.getFirst("pageSize"),10)),page=Math.min(positive(params.getFirst("page"),1),Math.max(1,(matching.size()+size-1)/size));
+            return Map.of("items",matching.subList((page-1)*size,Math.min(page*size,matching.size())).stream().map(r->r.get("item")).toList(),"total",matching.size(),"page",page,"pageSize",size);
         }
+        if(domain.equals("budget-versions")&&"page".equals(params.getFirst("responseMode"))&&"true".equals(params.getFirst("separateOptions")))return budgetVersions.page(actor,params,definitions(domain,actor,params));
         if(domain.equals("records") && recordPages.supports(params)) return recordPages.query(actor,params);
         if(domain.equals("admin-operations")&&operationPages.supports(params)){
             var page=operationPages.query(actor,params);if(page!=null)return page;
@@ -48,13 +53,27 @@ public class BusinessListFilterService {
         if(exporting){if(domain.equals("admin-operations"))access.requireAdmin(actor);else if(domain.equals("achievements"))access.require(actor,"achievements.export");else throw new AdminManagementException(400,"该模块不支持此导出方式");}
         Data data=domain.equals("audits")?auditData(actor,params.getFirst("tab")):domain.equals("admin-operations")?operationData(actor,!exporting):data(domain,actor,params.getFirst("f.year"),params.getFirst("f.month"));var query=new ListFilterQuery(params,data.fields());
         var matched=data.rows().stream().filter(row->query.matches(row,data.fields())).filter(row->auditMatches(row,query,data.fields())).toList();
+        if("tree".equals(params.getFirst("responseMode")))return treeResult(domain,data,matched,params);
         int page=positive(params.getFirst("page"),1),size=Math.min(100,positive(params.getFirst("pageSize"),10));int safe=Math.min(page,Math.max(1,(matched.size()+size-1)/size));
-        Map<String,Object> result=new LinkedHashMap<>();if(!"page".equals(params.getFirst("responseMode")))result.put("ids",matched.stream().map(r->r.get("id")).toList());result.put("total",matched.size());result.put("fields",data.fields());result.put("page",safe);result.put("pageSize",size);
+        Map<String,Object> result=new LinkedHashMap<>();if(!"page".equals(params.getFirst("responseMode")))result.put("ids",matched.stream().map(r->r.get("id")).toList());result.put("total",matched.size());if(!"true".equals(params.getFirst("separateOptions")))result.put("fields",data.fields());result.put("page",safe);result.put("pageSize",size);
         var items=(exporting?matched:matched.subList((safe-1)*size,Math.min(safe*size,matched.size()))).stream().map(r->r.getOrDefault("item",Map.of())).toList();
         if(domain.equals("admin-operations")&&!exporting){
             var pageRows=items.stream().map(item->(Map<String,Object>)item).toList();
             result.put("items",management.completeOperationPage(pageRows,actor));
         }else result.put("items",items);
+        return result;
+    }
+    private Map<String,Object> treeResult(String domain,Data data,List<Map<String,Object>> matches,MultiValueMap<String,String> params){
+        if(!Set.of("tasks","supervision","performance","achievements").contains(domain))throw new AdminManagementException(400,"该模块不支持树形响应");
+        if(params.getFirst("focusId")!=null){long focus;try{focus=Long.parseLong(params.getFirst("focusId"));if(focus<=0)throw new NumberFormatException();}catch(NumberFormatException e){throw new AdminManagementException(400,"业务编号不正确");}matches=data.rows().stream().filter(r->id(r.get("id"))==focus).toList();}
+        String key=domain.equals("performance")?"perfId":domain.equals("achievements")?"achId":"taskId";
+        Map<Long,Map<String,Object>> source=data.catalog().stream().collect(Collectors.toMap(r->id(r.get(key)),r->r,(first,duplicate)->first));
+        Set<Long> wanted=matches.stream().map(r->id(r.get("id"))).collect(Collectors.toSet());
+        if(!domain.equals("achievements"))for(Long id:new ArrayList<>(wanted)){
+            var cursor=source.get(id);Set<Long> visited=new HashSet<>();while(cursor!=null&&visited.add(id(cursor.get(key)))){wanted.add(id(cursor.get(key)));cursor=source.get(id(cursor.get("parentId")));}
+        }
+        var result=new LinkedHashMap<String,Object>();result.put("items",data.catalog().stream().filter(r->wanted.contains(id(r.get(key)))).toList());result.put("matchedIds",matches.stream().map(r->r.get("id")).toList());result.put("total",matches.size());result.put("page",1);
+        if(!"true".equals(params.getFirst("separateOptions")))result.put("fields",data.fields());
         return result;
     }
     @SuppressWarnings("unchecked")
@@ -64,6 +83,74 @@ public class BusinessListFilterService {
         var rows=(List<Map<String,Object>>)row.get("auditRows");
         if(rows.isEmpty())return query.matches(Map.of(),relevant);
         return rows.stream().anyMatch(r->{Map<String,Object> value=new HashMap<>();value.put("stage",r.get("flowStatus"));value.put("handler",r.get("handlerId"));value.put("handlerDept",r.get("handlerDeptId"));return query.matches(value,relevant);});
+    }
+
+    public List<Field> definitions(String domain,Long actor,MultiValueMap<String,String> params){
+        if(domain.startsWith("admin-"))access.requireAdmin(actor);
+        else if(domain.equals("audits")){
+            var p=access.state(actor).permissions();boolean todo=!"done".equals(params.getFirst("tab"));
+            if(List.of("tasks","performance","achievements","core").stream().noneMatch(d->todo?p.contains(d+".audit")||p.contains(d+".archive"):p.contains(d+".history")))throw new AdminManagementException(403,"没有审核中心查阅权限");
+        }else access.require(actor,switch(domain){case "tasks","supervision"->"tasks.read";case "performance"->"performance.read";case "achievements"->"achievements.read";case "records"->"records.read";case "core"->"core.read";case "notices"->"messages.read";case "budget-versions"->"budget.versions";case "budget"->"budget.read";default->throw new AdminManagementException(400,"不支持的查询模块");});
+        List<Map<String,Object>> rows=List.of();Map<String,String> names=Map.of(),persons=Map.of(),departments=Map.of();
+        switch(domain){
+            case "admin-users":return accountFields(rows,Map.of(),Map.of());
+            case "admin-operations":{List<Field> f=new ArrayList<>();multi(f,"module","模块",true,rows,Map.of());multi(f,"operatorId","操作人",true,rows,names);plain(f,"createTime","操作时间","date",true,"基础");plain(f,"keyword","对象关键词","text",true,"基础");multi(f,"action","动作",false,rows,Map.of());multi(f,"targetType","对象类型",false,rows,Map.of());plain(f,"targetId","对象编号","text",false,"操作对象");plain(f,"batchId","批次号","text",false,"操作对象");plain(f,"reason","原因关键词","text",false,"操作说明");return f;}
+            case "admin-roles":{List<Field> f=new ArrayList<>();plain(f,"keyword","角色名称","text",true,"基础");select(f,"enabled","启停状态",true,"yes","启用","no","停用");select(f,"builtin","模板来源",true,"yes","内置","no","自定义");select(f,"assigned","已分配人员",true,"yes","是","no","否");multi(f,"permissions","包含功能权限",false,rows,PermissionCatalog.ACTIONS);multi(f,"modules","业务模块",false,rows,PermissionCatalog.MODULES);multi(f,"scopeTypes","数据范围类型",false,rows,Map.of("ALL","全校","OWN","本人","NONE","无","CUSTOM","自定义"));return f;}
+            case "admin-departments":{List<Field> f=new ArrayList<>();plain(f,"keyword","名称／编号","text",true,"基础");multi(f,"leaderId","负责人",true,rows,names);select(f,"status","启停状态",true,"0","正常","1","停用");select(f,"missingLeader","缺少负责人",false,"yes","是","no","否");select(f,"hasUsers","有正常账号",false,"yes","是","no","否");select(f,"hasBusiness","有有效任务／绩效",false,"yes","是","no","否");select(f,"mismatch","审核人与部门负责人不一致",false,"yes","是","no","否");return f;}
+            case "budget-versions":{List<Field> f=new ArrayList<>();years(f,false);months(f);multi(f,"createdBy","导入人",true,rows,names);plain(f,"createTime","导入时间","date",true,"基础");select(f,"operationType","版本来源",false,"IMPORT","导入","RESTORE","恢复","INITIAL","初始版本");select(f,"effective","当前有效版本",false,"yes","是","no","否");return f;}
+            case "audits":{boolean todo=!"done".equals(params.getFirst("tab"));List<Field> f=new ArrayList<>();multi(f,"type","业务类型",true,rows,Map.of("task","任务佐证","performance","绩效填报","achievement","成果归档","core","核心指标"));multi(f,"submitDeptId","提交部门",true,rows,departments);multi(f,"submitBy","提交人",true,rows,persons);plain(f,"keyword","编号／名称","text",true,"基础");
+        multi(f,"year","业务年度",false,rows,Map.of());plain(f,"submitTime","提交时间","date",false,"时间");
+        if(todo){Map<String,String> stages=new HashMap<>();for(String d:List.of("tasks","performance","achievements","core"))for(int n:List.of(10,20,30))stages.put(d+":"+n,(d.equals("tasks")?"任务":d.equals("performance")?"绩效":d.equals("achievements")?"成果":"核心指标")+" · "+(d.equals("tasks")?(n==10?"专业群审核":n==20?"归口审核":"归档"):d.equals("performance")?(n==10?"专业群审核":"归档"):d.equals("core")?(n==10?"归口审核":"归档"):"归档"));multi(f,"stage","待审阶段",false,rows,stages);plain(f,"waitingDays","等待天数","number",false,"时间");}
+        else {select(f,"result","处理结果",false,"passed","通过","rejected","驳回");plain(f,"handledTime","最近处理时间","date",false,"时间");}
+        Map<String,String> roots=new HashMap<>();for(var r:rows)if(r.get("rootOptions") instanceof List<?> options)for(var value:options){var o=(Map<?,?>)value;roots.put(str(o.get("value")),str(o.get("label")));}multi(f,"root","一级改革任务",false,rows,roots);return f;}
+            default:{List<Field> f=new ArrayList<>();
+                switch(domain){
+                    case "tasks","supervision":taskFields(f,rows,names,names);if(domain.equals("supervision"))plain(f,"overdueDays","逾期天数","number",false,"进度与时间");break;
+                    case "performance":performanceFields(f,rows,names,names);break;
+                    case "achievements":achievementFields(f,rows,names,names);break;
+                    case "records":recordFields(f,rows,names,names);break;
+                    case "core":coreFields(f,rows,names);break;
+                    case "notices":noticeFields(f,rows,names);break;
+                    case "budget":years(f,false);months(f);multi(f,"task","改革任务",true,rows,names);multi(f,"source","资金来源",true,rows,names);add(f,"expense","支出类别","multi",false,"执行情况",opts("goods","商品和服务支出","capital","资本性支出","other","其他支出"));select(f,"hasExpense","有无支出",false,"yes","有","no","无","unknown","缺值");plain(f,"ratio","年度执行率（%）","number",false,"执行情况");break;
+                    default:throw new AdminManagementException(400,"不支持的查询模块");
+                }return f;
+            }
+        }
+    }
+    public Map<String,Object> filterOptions(String domain,Long actor,MultiValueMap<String,String> params){
+        var definitions=definitions(domain,actor,params);String key=params.getFirst("field");
+        if(key==null||key.isBlank())return Map.of("permissionVersion",access.state(actor).revision(),"fields",definitions.stream().map(f->{var map=row(f);map.put("remote",f.type().equals("multi")&&f.options().isEmpty());return map;}).toList());
+        var definition=definitions.stream().filter(f->f.key().equals(key)).findFirst().orElseThrow(()->new AdminManagementException(400,"不支持的选项字段"));
+        if(!Set.of("multi","select").contains(definition.type()))throw new AdminManagementException(400,"该字段不支持选项查询");
+        List<Field> fields;
+        if(!definition.options().isEmpty())fields=definitions;
+        else if(domain.equals("admin-users"))fields=(List<Field>)accountOptions(actor).get("fields");
+        else if(domain.equals("notices"))fields=noticeOptionFields(actor);
+        else if(domain.equals("records"))fields=recordOptionFields(actor,params.getFirst("f.year"));
+        else if(domain.equals("audits"))fields=auditPageData(actor,params.getFirst("tab")).fields();
+        else if(domain.equals("budget"))fields=(List<Field>)budgetQuery(actor,params).get("fields");
+        else fields=data(domain,actor,params.getFirst("f.year"),params.getFirst("f.month")).fields();
+        var options=fields.stream().filter(f->f.key().equals(key)).findFirst().orElseThrow().options();
+        String keyword=str(params.getFirst("keyword")).trim().toLowerCase(Locale.ROOT);if(keyword.length()>300)throw new AdminManagementException(400,"筛选文字过长");
+        var selected=params.getOrDefault("ids",List.of());if(selected.size()>100)throw new AdminManagementException(400,"已选项最多100项");
+        var matched=options.stream().filter(o->str(o.get("label")).toLowerCase(Locale.ROOT).contains(keyword)||str(o.get("value")).toLowerCase(Locale.ROOT).contains(keyword)).toList();
+        int size=Math.min(100,positive(params.getFirst("pageSize"),50)),page=Math.min(positive(params.getFirst("page"),1),Math.max(1,(matched.size()+size-1)/size));
+        return Map.of("items",matched.subList((page-1)*size,Math.min(page*size,matched.size())),"total",matched.size(),"page",page,"pageSize",size,"selected",options.stream().filter(o->selected.contains(str(o.get("value")))).toList());
+    }
+    private List<Field> noticeOptionFields(Long actor){
+        var rows=jdbc.queryForList("SELECT n.type,n.from_user_id fromUserId"+ReviewNoticeSql.jdbcVisibleFrom(),actor);
+        Map<String,String> names=new HashMap<>();var ids=rows.stream().map(r->r.get("fromUserId")).filter(Objects::nonNull).distinct().toList();
+        for(int start=0;start<ids.size();start+=500){var batch=ids.subList(start,Math.min(start+500,ids.size()));for(var u:jdbc.queryForList("SELECT user_id,nick_name,user_name FROM sys_user WHERE user_id IN ("+String.join(",",Collections.nCopies(batch.size(),"?"))+")",batch.toArray()))names.put(str(u.get("user_id")),u.get("nick_name")==null?str(u.get("user_name")):str(u.get("nick_name")));}
+        List<Field> fields=new ArrayList<>();noticeFields(fields,rows,names);return fields;
+    }
+    private List<Field> recordOptionFields(Long actor,String year){
+        var visible=records.visibleFilterIds(actor);List<Map<String,Object>> rows=new ArrayList<>();Map<String,String> names=new HashMap<>(),departments=new HashMap<>();
+        for(int start=0;start<visible.size();start+=500){var batch=visible.subList(start,Math.min(start+500,visible.size()));String marks=String.join(",",Collections.nCopies(batch.size(),"?"));
+            var metadata=jdbc.queryForList("SELECT r.record_id id,r.record_year year,r.owner_id ownerId,u.dept_id deptId,COALESCE(u.nick_name,u.user_name) ownerName,d.dept_name deptName FROM biz_work_record r LEFT JOIN sys_user u ON u.user_id=r.owner_id LEFT JOIN sys_dept d ON d.dept_id=u.dept_id WHERE r.record_id IN ("+marks+")",batch.toArray());
+            Map<Long,List<Map<String,Object>>> written=new HashMap<>();for(var e:jdbc.queryForList("SELECT record_id,reform_task_id,reform_task_name,key_progress,stage_results,typical_practices FROM biz_work_record_entry WHERE record_id IN ("+marks+")",batch.toArray()))if(List.of("key_progress","stage_results","typical_practices").stream().anyMatch(k->!str(e.get(k)).isBlank()))written.computeIfAbsent(id(e.get("record_id")),k->new ArrayList<>()).add(e);
+            for(var r:metadata){if(year!=null&&!year.isBlank()&&!year.equals(str(r.get("year"))))continue;names.put(str(r.get("ownerId")),str(r.get("ownerName")));departments.put(str(r.get("deptId")),str(r.get("deptName")));var entries=written.getOrDefault(id(r.get("id")),List.of());r.put("root",entries.stream().map(e->e.get("reform_task_id")).toList());r.put("rootOptions",entries.stream().map(e->Map.of("value",str(e.get("reform_task_id")),"label",str(e.get("reform_task_name")))).toList());rows.add(r);}
+        }
+        List<Field> fields=new ArrayList<>();recordFields(fields,rows,names,departments);return fields;
     }
     private int positive(String value,int fallback){if(value==null||value.isBlank())return fallback;try{int n=Integer.parseInt(value);if(n>0)return n;}catch(Exception ignored){}throw new AdminManagementException(400,"分页参数不正确");}
     public Data data(String domain,Long actor,String year){return data(domain,actor,year,null);}
@@ -75,20 +162,29 @@ public class BusinessListFilterService {
         if(domain.equals("budget-versions")){access.require(actor,"budget.versions");return versionData(actor);}
         access.require(actor,switch(domain){case "tasks"->"tasks.read";case "performance"->"performance.read";case "achievements"->"achievements.read";case "core"->"core.read";case "records"->"records.read";case "notices"->"messages.read";case "supervision"->"tasks.read";default->throw new AdminManagementException(400,"不支持的查询模块");});
         Integer y=null;if(year!=null&&!year.isBlank()&&!year.equals("missing")){try{y=Integer.valueOf(year);}catch(Exception e){throw new AdminManagementException(400,"年度不正确");}if(y<2025||y>2029)throw new AdminManagementException(400,"请选择2025—2029年度");}
-        List<Map<String,Object>> rows;List<Field> fields=new ArrayList<>();
+        List<Map<String,Object>> rows;List<Field> fields=new ArrayList<>();List<Map<String,Object>> catalog=new ArrayList<>();
         Map<String,String> person=new HashMap<>(),dept=new HashMap<>();
         var accounts=users.getAllUsers();
         for(var u:accounts)person.put(str(u.getUserId()),u.getNickName()==null?str(u.getUserName()):u.getNickName());
         // Names are returned only for IDs encountered in authorized rows.
-        if(domain.equals("tasks")||domain.equals("supervision")){rows=withinYear(tasks(actor),year);taskFields(fields,rows,person,dept);if(domain.equals("supervision"))plain(fields,"overdueDays","逾期天数","number",false,"进度与时间");}
-        else if(domain.equals("performance")){rows=performances(actor,y);performanceFields(fields,rows,person,dept);}
-        else if(domain.equals("achievements")){rows=withinYear(achievementRows(actor),year);achievementFields(fields,rows,person,dept);}
+        if(domain.equals("tasks")||domain.equals("supervision")){var source=access.visibleTasks(actor,null);source.forEach(t->catalog.add(wireRow(t)));rows=withinYear(tasks(actor,source),year);taskFields(fields,rows,person,dept);if(domain.equals("supervision"))plain(fields,"overdueDays","逾期天数","number",false,"进度与时间");}
+        else if(domain.equals("performance")){rows=performances(actor,y,catalog);performanceFields(fields,rows,person,dept);}
+        else if(domain.equals("achievements")){rows=withinYear(achievementRows(actor),year);rows.forEach(r->catalog.add(wireRow(r.get("item"))));achievementFields(fields,rows,person,dept);}
         else if(domain.equals("core")){int selectedMonth=month==null||month.isBlank()?LocalDate.now(ZoneId.of("Asia/Shanghai")).getMonthValue():positive(month,1);if(selectedMonth>12)throw new AdminManagementException(400,"月份不正确");rows=coreRows(actor,y==null?2026:y,selectedMonth);coreFields(fields,rows,person);}
         else if(domain.equals("records")){rows=withinYear(recordRows(actor,y,accounts),year);recordFields(fields,rows,person,dept);}
         else{rows=noticeRows(actor);noticeFields(fields,rows,person);}
-        return new Data(rows,fields);
+        if(!catalog.isEmpty()){
+            Map<String,String> departmentNames=new HashMap<>();for(var d:administration.departmentNames())departmentNames.put(str(d.get("deptId")),str(d.get("deptName")));
+            for(var item:catalog){
+                for(String role:List.of("leader","auditor","principal"))if(item.get(role+"Id")!=null&&str(item.get(role+"Name")).isBlank())item.put(role+"Name",person.getOrDefault(str(item.get(role+"Id")),""));
+                if(item.get("deptId")!=null&&str(item.get("deptName")).isBlank())item.put("deptName",departmentNames.getOrDefault(str(item.get("deptId")),""));
+            }
+        }
+        return new Data(rows,fields,catalog);
     }
-    private Data auditData(Long actor,String tab){
+    private Data auditData(Long actor,String tab){return auditData(actor,tab,false);}
+    public Data auditPageData(Long actor,String tab){return auditData(actor,tab,true);}
+    private Data auditData(Long actor,String tab,boolean pageMode){
         if(tab!=null&&!Set.of("todo","done").contains(tab))throw new AdminManagementException(400,"审核页签不正确");
         boolean todo=!"done".equals(tab);var state=access.state(actor);var permissions=state.permissions();
         List<Map<String,Object>> rows=new ArrayList<>();Map<String,String> persons=new HashMap<>(),departments=new HashMap<>();Map<Long,SysUser> people=new HashMap<>();
@@ -96,18 +192,29 @@ public class BusinessListFilterService {
         for(var d:administration.departmentNames())departments.put(str(d.get("deptId")),str(d.get("deptName")));
         Map<Long,Map<String,Object>> taskRows=new HashMap<>();
         if(permissions.contains("tasks.read"))for(var t:tasks(actor))taskRows.put(id(t.get("id")),t);
+        Map<Long,Integer> taskOrder=new HashMap<>();if(pageMode){int order=0;for(var t:access.visibleTasks(actor,null))if(Integer.valueOf(3).equals(t.getLevel()))taskOrder.put(t.getTaskId(),order++);}
         boolean any=false;
         for(String domain:List.of("tasks","performance","achievements","core")){
             if(todo?!(permissions.contains(domain+".audit")||permissions.contains(domain+".archive")):!permissions.contains(domain+".history"))continue;any=true;
             List<?> source;
             if(domain.equals("tasks")){
-                if(todo)source=biz.getTodoAudits(actor);
+                if(pageMode){
+                    if(todo)source=org.example.utils.AdminTestContext.enabled(actor)?auditMapper.getAdminTestPendingAudits():auditMapper.getTodoAudits(actor);
+                    else if(taskOrder.isEmpty())source=List.of();
+                    else source=jdbc.query("SELECT * FROM biz_material_submission WHERE is_delete=0 AND task_id IN ("+String.join(",",Collections.nCopies(taskOrder.size(),"?"))+") ORDER BY sub_id DESC",org.springframework.jdbc.core.BeanPropertyRowMapper.newInstance(BizMaterialSubmission.class),taskOrder.keySet().toArray());
+                    // Preserve old task-history failure isolation: one broken material hides that task's history.
+                    var subs=source.stream().map(BizMaterialSubmission.class::cast).toList();Set<Long> files=new HashSet<>();var fileIds=subs.stream().map(BizMaterialSubmission::getFileId).filter(Objects::nonNull).distinct().toList();
+                    for(int start=0;start<fileIds.size();start+=500)for(var file:users.getFilesByIds(fileIds.subList(start,Math.min(start+500,fileIds.size()))))files.add(file.getFileId());
+                    Set<Long> broken=subs.stream().filter(v->!files.contains(v.getFileId())).map(BizMaterialSubmission::getTaskId).collect(Collectors.toSet());
+                    if(todo&&!broken.isEmpty())biz.getTodoAudits(actor);
+                    source=subs.stream().filter(v->todo||!broken.contains(v.getTaskId())).toList();
+                }else if(todo)source=biz.getTodoAudits(actor);
                 else if(taskRows.isEmpty())source=List.of();
                 else source=jdbc.queryForList("SELECT sub_id subId,task_id taskId,submit_by submitBy,submit_dept_id submitDeptId,submit_time submitTime,flow_status flowStatus FROM biz_material_submission WHERE COALESCE(is_delete,0)=0 AND (flow_status=40 OR flow_status<0) AND task_id IN ("+String.join(",",Collections.nCopies(taskRows.size(),"?"))+")",taskRows.keySet().toArray());
             }else if(domain.equals("performance"))source=(List<?>)(todo?performance.getTodoPerformanceAudits(actor):performance.getPerformanceAuditRecords(actor));
             else if(domain.equals("achievements"))source=(List<?>)(todo?achievements.getTodoAchievementAudits(actor):achievements.getAchievementAuditRecords(actor));
             else source=core.audits(actor,todo);
-            var projected=source.stream().map(this::row).toList();
+            var projected=new ArrayList<Map<String,Object>>();for(var value:source){var projectedRow=row(value);if(pageMode){projectedRow.put("_wireSource",wireRow(value));if(value instanceof BizMaterialSubmission)projectedRow.put("_submission",value);}projected.add(projectedRow);}
             String objectKey=domain.equals("tasks")?"taskId":domain.equals("performance")?"perfId":domain.equals("achievements")?"achId":"indicatorId";
             var readable=auditReadScopes.readable(actor,domain,projected.stream().map(r->new AuditReadScopeService.Ref(id(r.get(objectKey)),r.get("year")==null?null:(int)id(r.get("year")))).toList());
             Map<Long,Object> handled=todo?Map.of():auditHistoryTimes.latest(domain,projected.stream().map(r->id(r.get(domain.equals("core")?"reportId":"subId"))).toList());
@@ -121,6 +228,12 @@ public class BusinessListFilterService {
                 if(domain.equals("achievements")&&r.get("gotTime")!=null)r.put("year",LocalDate.parse(ListFilterQuery.date(r.get("gotTime"))).getYear());
                 r.put("keyword",code+" "+name+" "+str(record));r.put("stage",domain+":"+status);r.put("result",status<0?"rejected":"passed");
                 LocalDate submitted=r.get("submitTime")==null?null:LocalDate.parse(ListFilterQuery.date(r.get("submitTime")));r.put("waitingDays",todo&&submitted!=null?Math.max(0,java.time.temporal.ChronoUnit.DAYS.between(submitted,LocalDate.now(ZoneId.of("Asia/Shanghai")))):null);
+                if(pageMode){
+                    r.put("_task",task==null?Map.of():task);r.put("_taskOrder",taskOrder.getOrDefault(object,Integer.MAX_VALUE));
+                    r.put("_submitName",persons.getOrDefault(str(r.get("submitBy")),"用户"+str(r.get("submitBy"))));
+                    Object department=r.get(domain.equals("achievements")?"deptId":"submitDeptId");
+                    r.put("_deptName",departments.getOrDefault(str(department),""));
+                }
                 rows.add(r);
             }
         }
@@ -178,8 +291,9 @@ public class BusinessListFilterService {
         for(var item:items){item.values().removeIf(Objects::isNull);var account=users.getUserById(id(item.get("userId")));var department=access.department(account.getDeptId());item.put("canViewAchievement",org.example.utils.AchievementPermissionUtil.canViewAchievement(account,department));item.put("canUploadAchievement",org.example.utils.AchievementPermissionUtil.canUploadAchievement(account,department));}
         Map<String,Object> result=new LinkedHashMap<>();result.put("items",items);result.put("total",total);result.put("page",page);result.put("pageSize",size);return result;
     }
+    private List<SysUser> accountCandidates(){return jdbc.query("SELECT user_id,dept_id,user_name,nick_name,role,status,is_delete FROM sys_user",org.springframework.jdbc.core.BeanPropertyRowMapper.newInstance(SysUser.class));}
     private Data userData(){
-        var rows=new ArrayList<Map<String,Object>>();Map<Long,SysUser> accounts=users.getAllUsers().stream().collect(Collectors.toMap(SysUser::getUserId,u->u));Map<String,String> roles=new LinkedHashMap<>(),departments=new LinkedHashMap<>();access.roles().forEach(r->roles.put(r.code(),r.name()));administration.departments().forEach(d->departments.put(str(d.get("deptId")),str(d.get("deptName"))));
+        var rows=new ArrayList<Map<String,Object>>();Map<Long,SysUser> accounts=accountCandidates().stream().collect(Collectors.toMap(SysUser::getUserId,u->u));Map<String,String> roles=new LinkedHashMap<>(),departments=new LinkedHashMap<>();access.roles().forEach(r->roles.put(r.code(),r.name()));administration.departmentNames().forEach(d->departments.put(str(d.get("deptId")),str(d.get("deptName"))));
         access.prepareAccountList(accounts.values());
         Map<Long,String> leadership=new HashMap<>();for(var r:jdbc.queryForList("SELECT user_id,scope FROM sys_leadership_access"))leadership.put(id(r.get("user_id")),str(r.get("scope")));
         Set<Long> extraDuties=new HashSet<>(jdbc.queryForList("SELECT c.leader_id FROM biz_level4_task c JOIN biz_task t ON t.task_id=c.parent_id WHERE COALESCE(c.is_delete,0)=0 AND COALESCE(t.is_delete,0)=0 AND c.leader_id IS NOT NULL UNION SELECT current_handler_id FROM biz_core_report WHERE flow_status IN(10,20) AND current_handler_id IS NOT NULL",Long.class));
@@ -197,14 +311,14 @@ public class BusinessListFilterService {
     }
     public Map<String,Object> accountOptions(Long actor){
         access.requireAdmin(actor);
-        var accounts=users.getAllUsers().stream().filter(u->!Integer.valueOf(1).equals(u.getIsDelete())).toList();access.prepareAccountList(accounts);
+        var accounts=accountCandidates().stream().filter(u->!Integer.valueOf(1).equals(u.getIsDelete())).toList();access.prepareAccountList(accounts);
         Map<String,String> roles=new LinkedHashMap<>(),departments=new LinkedHashMap<>();access.roles().forEach(r->roles.put(r.code(),r.name()));
         for(var department:jdbc.queryForList("SELECT dept_id,dept_name FROM sys_dept WHERE COALESCE(is_delete,0)=0"))departments.put(str(department.get("dept_id")),str(department.get("dept_name")));
         List<Map<String,Object>> rows=new ArrayList<>();for(var account:accounts){Map<String,Object> row=new HashMap<>();row.put("deptId",account.getDeptId());row.put("roles",access.assignedRoleCodes(account));rows.add(row);}
         return Map.of("fields",accountFields(rows,roles,departments));
     }
     private Data roleData(){
-        var rows=new ArrayList<Map<String,Object>>();var accounts=users.getAllUsers().stream().filter(u->!Integer.valueOf(1).equals(u.getIsDelete())).toList();access.prepareAccountList(accounts);Set<String> assigned=new HashSet<>();for(var account:accounts)assigned.addAll(access.assignedRoleCodes(account));
+        var rows=new ArrayList<Map<String,Object>>();var accounts=accountCandidates().stream().filter(u->!Integer.valueOf(1).equals(u.getIsDelete())).toList();access.prepareAccountList(accounts);Set<String> assigned=new HashSet<>();for(var account:accounts)assigned.addAll(access.assignedRoleCodes(account));
         for(var role:access.roles()){var r=row(role);r.put("id",role.code());r.put("keyword",role.name()+" "+role.code());r.put("enabled",flag(role.enabled()));r.put("builtin",flag(role.builtin()));r.put("assigned",flag(assigned.contains(role.code())));r.put("modules",role.permissions().stream().map(p->p.split("\\.")[0]).distinct().toList());List<String> modes=new ArrayList<>();for(var scope:role.scopes().values())if(scope instanceof Map<?,?> m)modes.add(str(m.get("mode")));r.put("scopeTypes",modes);rows.add(r);}
         List<Field> f=new ArrayList<>();plain(f,"keyword","角色名称","text",true,"基础");select(f,"enabled","启停状态",true,"yes","启用","no","停用");select(f,"builtin","模板来源",true,"yes","内置","no","自定义");select(f,"assigned","已分配人员",true,"yes","是","no","否");multi(f,"permissions","包含功能权限",false,rows,PermissionCatalog.ACTIONS);multi(f,"modules","业务模块",false,rows,PermissionCatalog.MODULES);multi(f,"scopeTypes","数据范围类型",false,rows,Map.of("ALL","全校","OWN","本人","NONE","无","CUSTOM","自定义"));return new Data(rows,f);
     }
@@ -227,14 +341,21 @@ public class BusinessListFilterService {
         if(year==null||year.isBlank())return rows;
         return rows.stream().filter(r->year.equals(str(r.get("year")))||(year.equals("missing")&&str(r.get("year")).isBlank())).toList();
     }
+    public Map<String,Object> wireRow(Object object){
+        var result=row(object);
+        if(object instanceof Map<?,?> map){for(var e:map.entrySet())if(e.getValue() instanceof java.util.Date)result.put(String.valueOf(e.getKey()),e.getValue());}
+        else {var bean=new org.springframework.beans.BeanWrapperImpl(object);for(var descriptor:bean.getPropertyDescriptors())if(result.containsKey(descriptor.getName())&&descriptor.getReadMethod()!=null){Object value=bean.getPropertyValue(descriptor.getName());if(value instanceof java.util.Date)result.put(descriptor.getName(),value);}}
+        return result;
+    }
     private Map<String,Object> row(Object object){return json.convertValue(object,new TypeReference<LinkedHashMap<String,Object>>(){});}
     private long id(Object value){try{return Long.parseLong(str(value));}catch(Exception e){return 0;}}
     private boolean yes(Object value){return Boolean.TRUE.equals(value)||"1".equals(str(value));}
     private String flag(boolean value){return value?"yes":"no";}
     private void kind(Map<String,Object> r){boolean p=yes(r.get("isPriority")),d=yes(r.get("isDifficult"));r.put("kind",p&&d?List.of("priority","difficult","both"):p?List.of("priority"):d?List.of("difficult"):List.of("normal"));}
     private List<Long> lineage(Map<String,Object> r,Map<Long,Map<String,Object>> all){List<Long> ids=new ArrayList<>();Set<Long> seen=new HashSet<>();for(var cur=all.get(id(r.get("parentId")));cur!=null&&seen.add(id(cur.get("id")));cur=all.get(id(cur.get("parentId"))))ids.add(id(cur.get("id")));return ids;}
-    public List<Map<String,Object>> tasks(Long actor){
-        var visible=access.visibleTasks(actor,null);Map<Long,Map<String,Object>> all=new HashMap<>();
+    public List<Map<String,Object>> tasks(Long actor){return tasks(actor,access.visibleTasks(actor,null));}
+    private List<Map<String,Object>> tasks(Long actor,List<BizTask> visible){
+        Map<Long,Map<String,Object>> all=new HashMap<>();
         for(var t:visible){var r=row(t);r.put("id",t.getTaskId());all.put(t.getTaskId(),r);}
         var ids=visible.stream().filter(t->Integer.valueOf(3).equals(t.getLevel())).map(t->t.getTaskId()).toList();
         Map<Long,List<Map<String,Object>>> states=ids.isEmpty()?Map.of():shortcuts.taskStates(ids).stream().collect(Collectors.groupingBy(r->id(r.get("taskId"))));
@@ -249,23 +370,25 @@ public class BusinessListFilterService {
             List<String> scope=new ArrayList<>();if(Objects.equals(id(r.get("leaderId")),actor))scope.add("mine");if(((List<?>)r.get("handler")).stream().anyMatch(v->id(v)==actor))scope.add("todo");if(pending.stream().anyMatch(v->id(v.get("flowStatus"))<0))scope.add("returned");r.put("scope",scope);result.add(r);
         }return result;
     }
-    private List<Map<String,Object>> performances(Long actor,Integer year){
+    private List<Map<String,Object>> performances(Long actor,Integer year,List<Map<String,Object>> catalog){
         Object source=year==null?performance.getAllPerformance(actor):performance.getPerformanceByYear(year,actor);
-        List<Map<String,Object>> all=((List<?>)source).stream().map(this::row).toList();Set<Long> parents=all.stream().map(r->id(r.get("parentId"))).collect(Collectors.toSet());
-        var directories=((List<?>)performance.getAllPerformance(actor)).stream().map(this::row).toList();
+        List<Map<String,Object>> all=((List<?>)source).stream().map(this::row).toList();((List<?>)source).forEach(value->catalog.add(wireRow(value)));Set<Long> parents=all.stream().map(r->id(r.get("parentId"))).collect(Collectors.toSet());
+        var directories=year==null?all:((List<?>)performance.getAllPerformance(actor)).stream().map(this::row).toList();
         Map<String,String> categories=new HashMap<>();directories.forEach(r->categories.put(str(r.get("perfId")),str(r.get("perfName"))));
         var taskMap=access.visibleTasks(actor,year).stream().collect(Collectors.toMap(BizTask::getTaskId,t->t));
         Map<Long,Long> roots=new HashMap<>();Map<Long,String> rootNames=new HashMap<>();
         for(var t:taskMap.values()){var current=t;Set<Long> seen=new HashSet<>();while(current!=null&&seen.add(current.getTaskId())){if(Integer.valueOf(1).equals(current.getLevel())){roots.put(t.getTaskId(),current.getTaskId());rootNames.put(current.getTaskId(),current.getTaskName());break;}current=taskMap.get(current.getParentId());}}
         var result=new ArrayList<Map<String,Object>>();var ids=all.stream().map(r->id(r.get("perfId"))).toList();var states=ids.isEmpty()?List.<Map<String,Object>>of():shortcuts.performanceStates(ids);
         var relations=jdbc.queryForList("SELECT r.perf_id,r.task_id,y.year FROM rel_task_performance r JOIN biz_performance_year y ON y.year_id=r.year_id JOIN biz_task t ON t.task_id=r.task_id WHERE COALESCE(r.is_delete,0)=0 AND COALESCE(t.is_delete,0)=0 AND t.level=3 AND t.phase=y.year");
+        var statesById=states.stream().filter(v->year==null||id(v.get("year"))==year).collect(Collectors.groupingBy(v->id(v.get("perfId"))));
+        var relationsById=relations.stream().filter(v->year==null||id(v.get("year"))==year).collect(Collectors.groupingBy(v->id(v.get("perf_id"))));
         for(var r:all){long pid=id(r.get("perfId"));if(parents.contains(pid))continue;r.put("id",pid);r.put("year",year);r.put("keyword",str(r.get("perfCode"))+" "+str(r.get("perfName")));r.put("category",r.get("parentId"));r.put("categoryName",categories.get(str(r.get("parentId"))));r.put("mode",(str(r.get("perfCode")).startsWith("1.1.")||str(r.get("perfCode")).startsWith("1.2."))?"auto":"manual");
             Object target=r.get("targetValue"),actual=r.get("currentValue");BigDecimal t=target==null?null:new BigDecimal(str(target)),a=actual==null?null:new BigDecimal(str(actual));boolean valid=t!=null&&t.signum()>0&&a!=null;r.put("attainment",valid?(a.compareTo(t)>=0?"met":"unmet"):"unknown");r.put("ratio",valid?a.multiply(BigDecimal.valueOf(100)).divide(t,8,RoundingMode.HALF_UP):null);r.put("missingTarget",flag(t==null||t.signum()<=0));r.put("missingActual",flag(a==null));
-            var pending=states.stream().filter(s->id(s.get("perfId"))==pid&&(year==null||id(s.get("year"))==year)).toList();r.put("stage",pending.stream().filter(s->Set.of(10L,20L).contains(id(s.get("flowStatus")))).map(s->str(s.get("flowStatus"))).toList());r.put("auditStatus",pending.isEmpty()?List.of("none"):pending.stream().map(s->{long status=id(s.get("flowStatus"));return status<0?"returned":status==30?"archived":status==10||status==20?"pending":"none";}).distinct().toList());
+            var pending=statesById.getOrDefault(pid,List.of());r.put("stage",pending.stream().filter(s->Set.of(10L,20L).contains(id(s.get("flowStatus")))).map(s->str(s.get("flowStatus"))).toList());r.put("auditStatus",pending.isEmpty()?List.of("none"):pending.stream().map(s->{long status=id(s.get("flowStatus"));return status<0?"returned":status==30?"archived":status==10||status==20?"pending":"none";}).distinct().toList());
             List<String> scope=new ArrayList<>();if(id(r.get("leaderId"))==actor)scope.add("mine");if(pending.stream().anyMatch(s->id(s.get("handlerId"))==actor&&Set.of(10L,20L).contains(id(s.get("flowStatus")))))scope.add("todo");if(pending.stream().anyMatch(s->id(s.get("flowStatus"))<0))scope.add("returned");r.put("scope",scope);
-            var related=relations.stream().filter(v->id(v.get("perf_id"))==pid&&(year==null||id(v.get("year"))==year)).toList();
+            var related=relationsById.getOrDefault(pid,List.of());
             r.put("root",related.stream().map(v->roots.get(id(v.get("task_id")))).filter(Objects::nonNull).distinct().toList());r.put("rootNames",rootNames);
-            r.put("linked",flag(relations.stream().anyMatch(v->id(v.get("perf_id"))==pid&&(year==null||id(v.get("year"))==year))));result.add(r);
+            r.put("linked",flag(!related.isEmpty()));result.add(r);
         }return result;
     }
     private List<Map<String,Object>> achievementRows(Long actor){var result=new ArrayList<Map<String,Object>>();for(var a:achievements.listAllAchievements(actor)){var r=row(a);r.put("id",a.getAchId());r.put("item",a);String date=date(a.getGotTime());r.put("year",date.isEmpty()?null:date.substring(0,4));r.put("keyword",a.getAchName());r.put("material",flag(a.getFileId()!=null));r.put("competition",str(a.getIsCompetition()));r.put("professionalReview","unknown");r.put("grade",List.of("teDengJiang","yiDengJiang","erDengJiang","sanDengJiang","jinJiang","yinJiang","tongJiang","youShengJiang","budDengDengCi").stream().filter(k->id(r.get(k))>0).toList());result.add(r);}return result;}
@@ -286,7 +409,10 @@ public class BusinessListFilterService {
         for(var item:visible){var r=row(item);r.put("id",item.getRecordId());r.put("year",item.getRecordYear());r.put("month",item.getRecordMonth());r.put("mine",flag(Objects.equals(actor,item.getOwnerId())));var owner=accounts.get(item.getOwnerId());r.put("deptId",owner==null?null:owner.getDeptId());var written=entries.getOrDefault(item.getRecordId(),List.of()).stream().filter(e->List.of("key_progress","stage_results","typical_practices").stream().anyMatch(k->!str(e.get(k)).isBlank())).toList();r.put("root",written.stream().map(e->e.get("reform_task_id")).toList());r.put("rootOptions",written.stream().map(e->Map.of("value",str(e.get("reform_task_id")),"label",str(e.get("reform_task_name")))).toList());r.put("keyword",str(item.getProblems())+" "+str(item.getNextFocus())+" "+str(item.getOtherMatters())+" "+written.stream().map(e->str(e.get("key_progress"))+" "+str(e.get("stage_results"))+" "+str(e.get("typical_practices"))).collect(Collectors.joining(" ")));r.put("item",item);rows.add(r);}return rows;}
     private void recordFields(List<Field> f,List<Map<String,Object>> r,Map<String,String> p,Map<String,String> d){years(f,false);months(f);multi(f,"ownerId","填报人",true,r,p);select(f,"status","状态",true,"0","草稿","1","已提交");departments(f,"deptId","填报人当前部门",false,r,d);select(f,"mine","本人记录",false,"yes","是","no","否");Map<String,String> names=new HashMap<>();for(var row:r)for(var o:(List<Map<String,Object>>)row.get("rootOptions"))names.put(str(o.get("value")),str(o.get("label")));multi(f,"root","正文涉及改革任务",false,r,names);plain(f,"keyword","正文关键词","text",false,"正文");plain(f,"submitTime","提交时间","date",false,"时间");plain(f,"updateTime","更新时间","date",false,"时间");}
     private List<Map<String,Object>> noticeRows(Long actor){
-        var notices=system.getNotices(actor);Map<String,Map<Long,Long>> states=new HashMap<>();
+        return noticeRows(system.getNotices(actor));
+    }
+    public List<Map<String,Object>> noticeRows(List<SysNotice> notices){
+        Map<String,Map<Long,Long>> states=new HashMap<>();
         for(String source:List.of("0","1","2","3","4")){
             var ids=notices.stream().filter(n->source.equals(str(n.getSourceType()))&&n.getSourceId()!=null).map(SysNotice::getSourceId).distinct().toList();
             if(ids.isEmpty())continue;
