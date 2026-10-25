@@ -28,15 +28,14 @@ public interface AdminManagementMapper {
     List<Map<String, Object>> users();
 
     @Select("SELECT d.dept_id deptId,d.dept_name deptName,d.leader_id leaderId,d.status,d.create_time createTime,"
-            + "d.update_time updateTime,u.nick_name leaderName,"
-            + "(SELECT COUNT(*) FROM sys_user x WHERE x.dept_id=d.dept_id AND COALESCE(x.is_delete,0)=0 AND x.status='1') activeUsers,"
-            + "(SELECT COUNT(*) FROM biz_task t WHERE t.level=3 AND COALESCE(t.is_delete,0)=0 AND t.dept_id=d.dept_id) activeTasks,"
-            + "(SELECT COUNT(*) FROM biz_performance p WHERE COALESCE(p.is_delete,0)=0 AND p.dept_id=d.dept_id) activePerformances,"
-            + "(SELECT COUNT(*) FROM biz_task t WHERE t.level=3 AND COALESCE(t.is_delete,0)=0 AND t.dept_id=d.dept_id "
-            + " AND NOT (t.principal_id <=> d.leader_id)) taskLeaderMismatches,"
-            + "(SELECT COUNT(*) FROM biz_performance p WHERE COALESCE(p.is_delete,0)=0 AND p.dept_id=d.dept_id "
-            + " AND NOT (p.principal_id <=> d.leader_id)) performanceLeaderMismatches "
-            + "FROM sys_dept d LEFT JOIN sys_user u ON u.user_id=d.leader_id WHERE COALESCE(d.is_delete,0)=0 ORDER BY d.dept_id")
+            + "d.update_time updateTime,u.nick_name leaderName,COALESCE(x.activeUsers,0) activeUsers,"
+            + "COALESCE(t.activeTasks,0) activeTasks,COALESCE(p.activePerformances,0) activePerformances,"
+            + "COALESCE(t.mismatches,0) taskLeaderMismatches,COALESCE(p.mismatches,0) performanceLeaderMismatches "
+            + "FROM sys_dept d LEFT JOIN sys_user u ON u.user_id=d.leader_id "
+            + "LEFT JOIN (SELECT dept_id,COUNT(*) activeUsers FROM sys_user WHERE COALESCE(is_delete,0)=0 AND status='1' GROUP BY dept_id) x ON x.dept_id=d.dept_id "
+            + "LEFT JOIN (SELECT t.dept_id,COUNT(*) activeTasks,SUM(NOT (t.principal_id <=> d.leader_id)) mismatches FROM biz_task t JOIN sys_dept d ON d.dept_id=t.dept_id WHERE t.level=3 AND COALESCE(t.is_delete,0)=0 GROUP BY t.dept_id) t ON t.dept_id=d.dept_id "
+            + "LEFT JOIN (SELECT p.dept_id,COUNT(*) activePerformances,SUM(NOT (p.principal_id <=> d.leader_id)) mismatches FROM biz_performance p JOIN sys_dept d ON d.dept_id=p.dept_id WHERE COALESCE(p.is_delete,0)=0 GROUP BY p.dept_id) p ON p.dept_id=d.dept_id "
+            + "WHERE COALESCE(d.is_delete,0)=0 ORDER BY d.dept_id")
     List<Map<String, Object>> departments();
 
     @Select("SELECT dept_id deptId,dept_name deptName FROM sys_dept WHERE COALESCE(is_delete,0)=0 ORDER BY dept_id")

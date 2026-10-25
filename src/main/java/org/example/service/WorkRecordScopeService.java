@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -81,6 +82,19 @@ public class WorkRecordScopeService {
         return users.getAllUsers().stream().filter(this::active)
                 .filter(owner->professionals.contains(owner.getUserId())||eligibleDepartment(owner.getDeptId(),participatingDepartments,departments)).toList();
     }
+    /** Assignment previews reuse qualification membership without constructing every person's full task scope. */
+    public Set<Long> fillableAccountIds(java.util.Collection<SysUser> accounts){
+        Catalog catalog=catalog();Map<Long,SysDept> departments=requestDepartments();Set<Long> result=new HashSet<>();
+        for(int year=2025;year<=2029;year++){
+            int selected=year;var annual=catalog.tasks().stream().filter(t->Objects.equals(t.getPhase(),selected)).toList();if(annual.isEmpty())continue;
+            Set<Long> ids=annual.stream().map(Task::getTaskId).collect(Collectors.toSet());Set<Long> professionals=new HashSet<>(),participating=new HashSet<>();
+            for(var task:annual){professionals.add(task.getLeaderId());participating.add(task.getDeptId());participating.add(catalog.directoryDepartments().get(task.getTaskId()));}
+            for(var goal:catalog.goals())if(ids.contains(goal.getParentId())&&(goal.getPhase()==null||Objects.equals(goal.getPhase(),selected))){professionals.add(goal.getLeaderId());participating.add(goal.getDeptId());}
+            for(var account:accounts)if(active(account)&&(professionals.contains(account.getUserId())||eligibleDepartment(account.getDeptId(),participating,departments)))result.add(account.getUserId());
+        }
+        return result;
+    }
+
     private boolean eligibleDepartment(Long id,Set<Long> participating,Map<Long,SysDept> departments){
         if(id==null||!participating.contains(id))return false;
         if(!departments.containsKey(id))departments.put(id,users.getDeptById(id));

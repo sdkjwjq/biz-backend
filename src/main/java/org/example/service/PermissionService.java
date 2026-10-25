@@ -32,7 +32,7 @@ public class PermissionService {
         recordViewers=Arrays.stream(viewers.split(",")).map(String::trim).filter(s->!s.isEmpty()).map(Long::valueOf).collect(Collectors.toSet());
     }
     public Long actor(){if(!(RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes a))return null;String token=a.getRequest().getHeader("Authorization");if(token==null||token.isBlank())return null;try{return org.example.utils.JWTUtil.getUserIdFromToken(token);}catch(RuntimeException error){return null;}}
-    public SysUser user(Long id){SysUser u=id==null?null:users.getUserById(id);if(u==null||!"1".equals(u.getStatus())||Integer.valueOf(1).equals(u.getIsDelete()))throw new AdminManagementException(403,"账号已停用或不存在");return u;}
+    public SysUser user(Long id){SysUser u=id==null?null:cached("account:"+id,()->Optional.ofNullable(users.getUserById(id))).orElse(null);if(u==null||!"1".equals(u.getStatus())||Integer.valueOf(1).equals(u.getIsDelete()))throw new AdminManagementException(403,"账号已停用或不存在");return u;}
     public boolean admin(Long id){try{return "0".equals(user(id).getRole());}catch(AdminManagementException e){return false;}}
     public boolean installed(){return cached("installed",this::loadInstalled);}
     private boolean loadInstalled(){Integer count=jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name IN('sys_permission_role','sys_user_permission','sys_user_permission_role','sys_permission_revision')",Integer.class);if(count!=0&&count!=4)throw new AdminManagementException(503,"权限数据结构不完整，请联系管理员完成迁移");return count==4;}
@@ -71,6 +71,7 @@ public class PermissionService {
         }
         a.getRequest().setAttribute(PermissionService.class.getName()+":coreReporters",new HashSet<>(jdbc.queryForList("SELECT t.leader_id FROM biz_task t WHERE t.level=3 AND t.phase BETWEEN 2025 AND 2029 AND COALESCE(t.is_delete,0)=0 UNION SELECT c.leader_id FROM biz_level4_task c JOIN biz_task t ON t.task_id=c.parent_id WHERE t.level=3 AND t.phase BETWEEN 2025 AND 2029 AND COALESCE(t.is_delete,0)=0 AND COALESCE(c.is_delete,0)=0",Long.class)));
         a.getRequest().setAttribute(PermissionService.class.getName()+":coreReviewers",new HashSet<>(jdbc.queryForList("SELECT p.principal_id FROM biz_performance p JOIN biz_core_indicator c ON BINARY c.indicator_code=BINARY p.perf_code WHERE COALESCE(p.is_delete,0)=0 UNION SELECT r.current_handler_id FROM biz_core_report r JOIN biz_core_indicator c ON c.indicator_id=r.indicator_id AND BINARY c.indicator_code=BINARY r.performance_code WHERE r.flow_status IN(10,20)",Long.class)));
+        a.getRequest().setAttribute(PermissionService.class.getName()+":recordReporters",records.fillableAccountIds(accounts));
         for(var account:accounts)a.getRequest().setAttribute(PermissionService.class.getName()+":policy:"+account.getUserId(),policies.getOrDefault(account.getUserId(),new Policy("LEGACY",Map.of(),Map.of(),List.of(),0)));
     }
     public SysDept department(Long id){return id==null?null:cached("department:"+id,()->Optional.ofNullable(users.getDeptById(id))).orElse(null);}
@@ -118,7 +119,7 @@ public class PermissionService {
         if(AchievementPermissionUtil.isAchievementAuditor(u))result.add("ACHIEVEMENT_REVIEWER");
         if(recordViewers.contains(id))result.add("RECORD_VIEWER");
         if(cached("recordOwnerIds",()->new HashSet<>(jdbc.queryForList("SELECT DISTINCT owner_id FROM biz_work_record WHERE delete_marker=0",Long.class))).contains(id))result.add("RECORD_OWNER");
-        if(!records.fillableYears(u).isEmpty())result.add("RECORD_REPORTER");
+        if(accountMembership("recordReporters",id,()->!records.fillableYears(u).isEmpty()))result.add("RECORD_REPORTER");
         if(accountMembership("coreReporters",id,()->jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM biz_task t WHERE t.level=3 AND t.phase BETWEEN 2025 AND 2029 AND COALESCE(t.is_delete,0)=0 AND (t.leader_id=? OR EXISTS(SELECT 1 FROM biz_level4_task c WHERE c.parent_id=t.task_id AND c.leader_id=? AND COALESCE(c.is_delete,0)=0)))",Integer.class,id,id)==1))result.add("CORE_REPORTER");
         if(accountMembership("coreReviewers",id,()->jdbc.queryForObject("SELECT (EXISTS(SELECT 1 FROM biz_performance p JOIN biz_core_indicator c ON BINARY c.indicator_code=BINARY p.perf_code WHERE p.principal_id=? AND COALESCE(p.is_delete,0)=0) OR EXISTS(SELECT 1 FROM biz_core_report r JOIN biz_core_indicator c ON c.indicator_id=r.indicator_id AND BINARY c.indicator_code=BINARY r.performance_code WHERE r.current_handler_id=? AND r.flow_status IN(10,20)))",Integer.class,id,id)==1))result.add("CORE_REVIEWER");
         return result;
@@ -165,7 +166,7 @@ public class PermissionService {
         }
         return visible;
     }
-    public List<BizTask> visibleTasks(Long actor,Integer year){return visibleTasks(state(actor),year);}
+    public List<BizTask> visibleTasks(Long actor,Integer year){return cached("visibleTasks:"+actor+":"+year,()->visibleTasks(state(actor),year));}
     public List<BizTask> visibleTasks(State s,Integer year){
         List<BizTask> all=tasks.getAllTasks().stream().filter(t->!Integer.valueOf(1).equals(t.getIsDelete())).toList();Map<Long,BizTask> byId=all.stream().collect(Collectors.toMap(BizTask::getTaskId,t->t));
         Set<Long> leaves=taskIds(s,year,all),allowed=new HashSet<>(leaves);
@@ -342,8 +343,8 @@ public class PermissionService {
         return linkedTasks.isEmpty()&&linkedAchievements.isEmpty()&&linkedBudgets.isEmpty()&&linkedPerformance.isEmpty()&&jdbc.queryForObject("SELECT COUNT(*) FROM sys_file WHERE file_id=? AND upload_by=? AND COALESCE(is_delete,0)=0",Integer.class,fileId,actor)>0&&s.permissions().stream().anyMatch(p->p.endsWith(".materials"));
     }
     public Map<String,Object> description(Long actor){State s=state(actor);Map<String,Object> result=new LinkedHashMap<>();result.put("permissions",s.permissions());result.put("permissionVersion",s.revision());result.put("permissionConfigured",s.configured());result.put("permissionEnforced",installed());result.put("permissionRoles",s.roles());Map<String,Object> ranges=new LinkedHashMap<>();for(String module:List.of("tasks","performance","achievements","core","records","budget"))ranges.put(module,scopeRules(s,module));result.put("dataScopes",ranges);return result;}
-    public boolean leadershipAll(Long id){return jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM sys_leadership_access WHERE user_id=? AND scope='ALL')",Integer.class,id)==1;}
-    public Set<Long> leadershipDepartments(Long id){return new HashSet<>(jdbc.queryForList("SELECT d.dept_id FROM sys_leadership_department d JOIN sys_leadership_access a ON a.user_id=d.user_id AND a.scope='DEPARTMENTS' WHERE d.user_id=?",Long.class,id));}
+    public boolean leadershipAll(Long id){return cached("leadershipAll:"+id,()->jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM sys_leadership_access WHERE user_id=? AND scope='ALL')",Integer.class,id)==1);}
+    public Set<Long> leadershipDepartments(Long id){return cached("leadershipDepartments:"+id,()->new HashSet<>(jdbc.queryForList("SELECT d.dept_id FROM sys_leadership_department d JOIN sys_leadership_access a ON a.user_id=d.user_id AND a.scope='DEPARTMENTS' WHERE d.user_id=?",Long.class,id)));}
     private boolean under(BizTask task,Set<Long> roots,Map<Long,BizTask> byId){Set<Long> seen=new HashSet<>();for(BizTask p=task;p!=null&&seen.add(p.getTaskId());p=byId.get(p.getParentId()))if(roots.contains(p.getTaskId()))return true;return false;}
     public static Set<Long> ids(Object value){if(!(value instanceof Collection<?> values))return Set.of();return values.stream().filter(Objects::nonNull).map(PermissionService::number).collect(Collectors.toSet());}
     public static long number(Object value){return value==null?0:Long.parseLong(value.toString());}
