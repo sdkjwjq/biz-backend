@@ -226,6 +226,39 @@ public class PermissionService {
         }
         return result;
     }
+    public Set<Long> readableRecordIds(Long actor,Collection<Long> requested,Integer year){
+        List<Long> ids=requested.stream().filter(Objects::nonNull).distinct().toList();
+        if(ids.isEmpty())return Set.of();
+        State state=state(actor);if(!state.permissions().contains("records.read"))return Set.of();
+        Set<Long> result=new HashSet<>();RowAccess context=new RowAccess(state);
+        for(int start=0;start<ids.size();start+=500){
+            var batch=ids.subList(start,Math.min(start+500,ids.size()));
+            String marks=String.join(",",Collections.nCopies(batch.size(),"?"));
+            for(var row:jdbc.queryForList("SELECT r.record_id id,r.owner_id,r.status,r.record_year,u.dept_id FROM biz_work_record r LEFT JOIN sys_user u ON u.user_id=r.owner_id WHERE r.record_id IN ("+marks+") AND r.delete_marker=0",batch.toArray())){
+                Long id=number(row.get("id"));if(matchesRow(state,"records",id,year,row,context))result.add(id);
+            }
+        }
+        return result;
+    }
+    public Set<Long> readableRecordOwners(Long actor,Collection<SysUser> owners,int year){
+        if(owners.isEmpty())return Set.of();State state=state(actor);if(!state.permissions().contains("records.read"))return Set.of();
+        Set<Long> result=new HashSet<>();RowAccess context=new RowAccess(state);
+        for(var owner:owners){Map<String,Object> row=new HashMap<>();row.put("owner_id",owner.getUserId());row.put("dept_id",owner.getDeptId());row.put("record_year",year);row.put("status",1);
+            if(matchesRow(state,"records",0L,year,row,context))result.add(owner.getUserId());}
+        return result;
+    }
+    public Set<Long> readableCoreIds(Long actor,Collection<Long> requested,Integer year){
+        List<Long> ids=requested.stream().filter(Objects::nonNull).distinct().toList();if(ids.isEmpty())return Set.of();
+        State state=state(actor);if(!state.permissions().contains("core.read"))return Set.of();
+        Set<Long> result=new HashSet<>();RowAccess context=new RowAccess(state);
+        for(int start=0;start<ids.size();start+=500){
+            var batch=ids.subList(start,Math.min(start+500,ids.size()));String marks=String.join(",",Collections.nCopies(batch.size(),"?"));
+            for(var row:jdbc.queryForList("SELECT indicator_id id FROM biz_core_indicator WHERE indicator_id IN ("+marks+")",batch.toArray())){
+                Long id=number(row.get("id"));if(matchesRow(state,"core",id,year,row,context))result.add(id);
+            }
+        }
+        return result;
+    }
     /** Invocation-local relationship reads; discarded when this batch returns, including on writes. */
     private class RowAccess {
         private final State state;private SysUser account;private Boolean all;private Set<Long> departments;
@@ -251,7 +284,7 @@ public class PermissionService {
                 case "BUSINESS"->"performance".equals(domain)?duty||context.leadsDepartment(row.get("dept_id")):own||Objects.equals(number(row.get("dept_id")),u.getDeptId());default->false;})return true;
         }return false;
     }
-    public List<Long> recordIds(Long actor){State s=state(actor);if(!s.permissions().contains("records.read"))return List.of();return jdbc.queryForList("SELECT r.record_id id,r.owner_id,r.status,r.record_year,u.dept_id FROM biz_work_record r LEFT JOIN sys_user u ON u.user_id=r.owner_id WHERE r.delete_marker=0").stream().filter(r->matchesRow(s,"records",number(r.get("id")),null,r)).map(r->number(r.get("id"))).toList();}
+    public List<Long> recordIds(Long actor){State s=state(actor);if(!s.permissions().contains("records.read"))return List.of();RowAccess context=new RowAccess(s);return jdbc.queryForList("SELECT r.record_id id,r.owner_id,r.status,r.record_year,u.dept_id FROM biz_work_record r LEFT JOIN sys_user u ON u.user_id=r.owner_id WHERE r.delete_marker=0").stream().filter(r->matchesRow(s,"records",number(r.get("id")),null,r,context)).map(r->number(r.get("id"))).toList();}
     public boolean canRecordOwner(Long actor,Long owner,Long department,int year){Map<String,Object> row=new HashMap<>();row.put("owner_id",owner);row.put("dept_id",department);row.put("record_year",year);row.put("status",1);var state=state(actor);return state.permissions().contains("records.read")&&matchesRow(state,"records",0L,year,row);}
     public List<BizPerformance> visiblePerformances(Long actor,Integer year){State s=state(actor);List<BizPerformance> all=performances.getAllPerformance().stream().filter(p->!Integer.valueOf(1).equals(p.getIsDelete())).toList();Map<Long,BizPerformance> map=all.stream().collect(Collectors.toMap(BizPerformance::getPerfId,p->p));Set<Long> parents=all.stream().map(BizPerformance::getParentId).collect(Collectors.toSet());Set<Long> ids=new HashSet<>();
         for(var p:all)if(!parents.contains(p.getPerfId())&&canRead(s,"performance",p.getPerfId(),year)){Set<Long> visited=new HashSet<>();for(var cursor=p;cursor!=null&&visited.add(cursor.getPerfId());cursor=map.get(cursor.getParentId()))ids.add(cursor.getPerfId());}

@@ -74,7 +74,9 @@ public class AdminOverviewService {
                 sections.put(key,map("status","ok","title",d.title,"period",d.period,"note",d.note,"metrics",d.metrics,"extra",d.extra));
             } catch(Exception error) {
                 org.slf4j.LoggerFactory.getLogger(getClass()).error("Overview module failed: {}",key,error);
-                sections.put(key,map("status","error","message","统计加载失败，请重试"));
+                var failure=map("status","error","message","统计加载失败，请重试");
+                if(error instanceof AdminManagementException denied&&denied.getCode()==403)failure.put("accessDenied",true);
+                sections.put(key,failure);
             }
         }
         return map("year",year,"month",month,"generatedAt",Instant.now().toString(),"readOnly",!administrator,
@@ -237,12 +239,13 @@ public class AdminOverviewService {
     private Data core(int year,int month,Long actor) {
         // 整批读取映射及有效归档；与 CoreIndicatorService.effective 使用相同映射、月份和排序条件。
         List<Map<String,Object>> mappings=jdbc.queryForList("SELECT c.indicator_id id,c.indicator_code code,c.sort_order,p.perf_id,p.perf_name,p.target_value FROM biz_core_indicator c LEFT JOIN biz_performance p ON BINARY p.perf_code=BINARY c.indicator_code AND COALESCE(p.is_delete,0)=0 ORDER BY c.sort_order,p.perf_id");
-        List<Map<String,Object>> archived=jdbc.queryForList("SELECT * FROM (SELECT r.*,ROW_NUMBER() OVER(PARTITION BY r.indicator_id ORDER BY r.record_month DESC,r.archive_time DESC,r.report_id DESC) rn FROM biz_core_report r JOIN biz_core_indicator c ON c.indicator_id=r.indicator_id AND BINARY c.indicator_code=BINARY r.performance_code WHERE r.flow_status=30 AND r.record_year=? AND r.record_month<=?) x WHERE rn=1",year,month);
+        List<Map<String,Object>> archived=jdbc.queryForList("SELECT indicator_id,report_id,indicator_name,target_value,actual_value,record_month FROM (SELECT r.indicator_id,r.report_id,r.indicator_name,r.target_value,r.actual_value,r.record_month,ROW_NUMBER() OVER(PARTITION BY r.indicator_id ORDER BY r.record_month DESC,r.archive_time DESC,r.report_id DESC) rn FROM biz_core_report r JOIN biz_core_indicator c ON c.indicator_id=r.indicator_id AND BINARY c.indicator_code=BINARY r.performance_code WHERE r.flow_status=30 AND r.record_year=? AND r.record_month<=?) x WHERE rn=1",year,month);
         Map<String,Map<String,Object>> effective=new HashMap<>();archived.forEach(r->effective.put(str(r.get("indicator_id")),r));
         Map<String,List<Map<String,Object>>> distinct=mappings.stream().collect(Collectors.groupingBy(m->str(m.get("id")),LinkedHashMap::new,Collectors.toList()));
+        Set<Long> visible=permissions.enforced(actor)?permissions.readableCoreIds(actor,distinct.values().stream().map(group->((Number)group.get(0).get("id")).longValue()).toList(),year):null;
         List<Map<String,Object>> rows=new ArrayList<>();long invalid=0;
         for(var group:distinct.values()) {
-            var m=group.get(0);if(permissions.enforced(actor)&&!permissions.canRead(actor,"core",((Number)m.get("id")).longValue(),year))continue;String id=str(m.get("id"));var e=effective.get(id);
+            var m=group.get(0);if(visible!=null&&!visible.contains(((Number)m.get("id")).longValue()))continue;String id=str(m.get("id"));var e=effective.get(id);
             boolean valid=group.size()==1&&m.get("perf_id")!=null&&(!id.equals("10")||"发布《工程机械产业发展报告》数量".equals(m.get("perf_name")));
             if(!valid)invalid++;
             Object target=e==null?m.get("target_value"):e.get("target_value"),value=e==null?null:e.get("actual_value");
@@ -321,8 +324,10 @@ public class AdminOverviewService {
             map("missing",sheet==null,"dataMonth",sheet==null?null:month,"importTime",sheet==null?null:sheet.getImportTime(),"warning",sheet==null?"尚未导入":values.cumulative()==null?"预算字段缺失，支出待核实":""));
     }
     private Data records(int year,int month,Names n,Long actor) {
-        List<SysUser> eligible=scopes.eligibleAuthors(year).stream().filter(u->!permissions.enforced(actor)||permissions.canRecordOwner(actor,u.getUserId(),u.getDeptId(),year)).toList();
-        List<Map<String,Object>> submitted=jdbc.queryForList("SELECT record_id,owner_id,owner_name,submit_time FROM biz_work_record WHERE record_year=? AND record_month=? AND status=1 AND delete_marker=0 ORDER BY owner_id,record_id",year,month).stream().filter(r->!permissions.enforced(actor)||permissions.canRead(actor,"records",((Number)r.get("record_id")).longValue(),year)).toList();
+        List<SysUser> eligible=scopes.eligibleAuthors(year);boolean enforced=permissions.enforced(actor);
+        if(enforced){Set<Long> owners=permissions.readableRecordOwners(actor,eligible,year);eligible=eligible.stream().filter(u->owners.contains(u.getUserId())).toList();}
+        List<Map<String,Object>> submitted=jdbc.queryForList("SELECT record_id,owner_id,owner_name,submit_time FROM biz_work_record WHERE record_year=? AND record_month=? AND status=1 AND delete_marker=0 ORDER BY owner_id,record_id",year,month);
+        if(enforced){Set<Long> visible=permissions.readableRecordIds(actor,submitted.stream().map(r->((Number)r.get("record_id")).longValue()).toList(),year);submitted=submitted.stream().filter(r->visible.contains(((Number)r.get("record_id")).longValue())).toList();}
         Map<String,Map<String,Object>> byOwner=new LinkedHashMap<>();submitted.forEach(r->byOwner.put(str(r.get("owner_id")),r));
         Set<String> ids=eligible.stream().map(u->str(u.getUserId())).collect(Collectors.toSet());List<Map<String,Object>> rows=new ArrayList<>();
         for(SysUser u:eligible) {

@@ -48,6 +48,8 @@ class AdminOverviewApiTest {
     @Autowired private org.example.service.BudgetService budgets;
     @Autowired private org.example.service.AdminOverviewService overview;
     @Autowired private org.example.service.PermissionService overviewPermissions;
+    @Autowired private org.example.service.WorkRecordScopeService overviewRecordScopes;
+    @Autowired private org.springframework.transaction.PlatformTransactionManager transactionManager;
 
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
@@ -454,6 +456,82 @@ class AdminOverviewApiTest {
         JsonNode a=analysis(login(ADMIN),"achievements.awards","category");assertEquals(1,a.path("total").asInt());assertEquals(3,a.path("chart").get(0).path("value").asInt());
         jdbc.update("DELETE FROM biz_achievement WHERE got_time IS NULL");
         jdbc.execute("ALTER TABLE biz_achievement MODIFY got_time datetime NOT NULL");
+    }
+    @Test void recordBatchesAndOverviewMatchOriginalScopeChecksAcrossYearsAndDrafts() throws Exception {
+        jdbc.update("INSERT INTO sys_dept(dept_id,dept_name,is_delete) VALUES(920002,'Other synthetic',0)");jdbc.update("UPDATE sys_user SET dept_id=920002 WHERE user_id=?",OWNER);
+        jdbc.update("INSERT INTO biz_work_record(record_id,owner_id,owner_name,record_year,record_month,status,delete_marker,create_time,update_time) VALUES(993001,910001,'One',2026,4,1,0,NOW(),NOW()),(993002,910002,'Two',2026,4,1,0,NOW(),NOW()),(993003,999999,'Former',2026,4,1,0,NOW(),NOW()),(993004,910005,'Old year',2025,4,1,0,NOW(),NOW()),(993005,910002,'SECRET-DRAFT',2026,5,0,0,NOW(),NOW()),(993006,910001,'Deleted',2026,5,1,993006,NOW(),NOW()),(993007,910005,'Own draft',2026,4,0,0,NOW(),NOW())");
+        var ids=List.of(993001L,993002L,993003L,993004L,993005L,993006L,993007L,999999L);
+        var rules=List.of(Map.<String,Object>of("mode","ALL"),Map.<String,Object>of("mode","ALL","years",List.of(2025)),Map.<String,Object>of("mode","OWN"),Map.<String,Object>of("mode","BUSINESS"),Map.<String,Object>of("mode","CUSTOM","departments",List.of(920001)),Map.<String,Object>of("mode","CUSTOM","items",List.of(993001,993004)),Map.<String,Object>of("mode","LEADERSHIP"));
+        String token=login(VIEWER);
+        for(var rule:rules){
+            jdbc.update("INSERT INTO sys_user_permission(user_id,access_mode,permissions_json,scopes_json,version) VALUES(?,'CUSTOM',?,?,1) ON DUPLICATE KEY UPDATE permissions_json=VALUES(permissions_json),scopes_json=VALUES(scopes_json),version=version+1",VIEWER,json.writeValueAsString(Map.of("overview.read",true,"records.read",true)),json.writeValueAsString(Map.of("records",rule)));
+            for(int pass=0;pass<("LEADERSHIP".equals(rule.get("mode"))?3:1);pass++){
+                jdbc.update("DELETE FROM sys_leadership_department");jdbc.update("DELETE FROM sys_leadership_access");
+                if(pass==0){jdbc.update("INSERT INTO sys_leadership_access(user_id,scope,version) VALUES(?,'DEPARTMENTS',1)",VIEWER);jdbc.update("INSERT INTO sys_leadership_department(user_id,dept_id) VALUES(?,920001)",VIEWER);}
+                if(pass==1)jdbc.update("INSERT INTO sys_leadership_access(user_id,scope,version) VALUES(?,'ALL',1)",VIEWER);
+                var request=new org.springframework.mock.web.MockHttpServletRequest("GET","/admin/overview/summary");request.addHeader("Authorization",token);
+                org.springframework.web.context.request.RequestContextHolder.setRequestAttributes(new org.springframework.web.context.request.ServletRequestAttributes(request));
+                try{
+                    Set<Long> expected=new HashSet<>();for(Long id:ids)if(overviewPermissions.canRead(VIEWER,"records",id,2026))expected.add(id);
+                    assertEquals(expected,overviewPermissions.readableRecordIds(VIEWER,ids,2026),rule.toString());
+                    var candidates=overviewRecordScopes.eligibleAuthors(2026);Set<Long> owners=new HashSet<>();
+                    for(var u:candidates)if(overviewPermissions.canRecordOwner(VIEWER,u.getUserId(),u.getDeptId(),2026))owners.add(u.getUserId());
+                    assertEquals(owners,overviewPermissions.readableRecordOwners(VIEWER,candidates,2026));
+                    var all=jdbc.queryForList("SELECT r.record_id id,r.owner_id,r.status,r.record_year,u.dept_id FROM biz_work_record r LEFT JOIN sys_user u ON u.user_id=r.owner_id WHERE r.delete_marker=0");
+                    List<Long> original=new ArrayList<>();for(var row:all){long id=((Number)row.get("id")).longValue();if(overviewPermissions.canRead(VIEWER,"records",id,null))original.add(id);}
+                    assertEquals(original,overviewPermissions.recordIds(VIEWER));
+                    long done=owners.stream().filter(owner->expected.stream().anyMatch(id->id==993001&&owner==OWNER||id==993002&&owner==OTHER||id==993003&&owner==999999)).count();
+                    long historical=0;for(long[] pair:new long[][]{{993001,OWNER},{993002,OTHER},{993003,999999}})if(expected.contains(pair[0])&&!owners.contains(pair[1]))historical++;
+                    var result=summary(token,4);assertEquals(owners.size(),value(result,"records","expected").asLong());assertEquals(done,value(result,"records","submitted").asLong());assertEquals(owners.size()-done,value(result,"records","missing").asLong());assertEquals(historical,value(result,"records","historical").asLong());
+                    var details=analysis(token,"records.submitted","department");assertEquals(done,details.path("total").asLong());assertFalse(details.toString().contains("SECRET-DRAFT"));
+                }finally{org.springframework.web.context.request.RequestContextHolder.resetRequestAttributes();}
+            }
+        }
+        jdbc.update("UPDATE sys_user_permission SET permissions_json=? WHERE user_id=?",json.writeValueAsString(Map.of("overview.read",true,"records.read",false)),VIEWER);
+        assertEquals("forbidden",summary(token,4).path("modules").path("records").path("status").asText());assertTrue(overviewPermissions.recordIds(VIEWER).isEmpty());
+        jdbc.update("UPDATE sys_user SET status='0' WHERE user_id=?",VIEWER);assertEquals(403,request(HttpMethod.GET,"/admin/overview/summary?year=2026&month=4",token,null).getStatusCode().value());
+    }
+    @Test void coreScopeBatchPreservesCutoffSnapshotAndMappingWarnings() throws Exception {
+        coreResult(2,"1.1.5",5);coreResult(4,"1.1.5",8);coreResult(5,"1.1.5",999);coreResult(3,"obsolete",888);
+        jdbc.update("UPDATE biz_core_report SET indicator_name='Frozen snapshot',target_value=7,comment=REPEAT('X',500) WHERE record_month=4");
+        jdbc.update("INSERT INTO sys_user_permission(user_id,access_mode,permissions_json,scopes_json,version) VALUES(?,'CUSTOM',?,?,1)",VIEWER,json.writeValueAsString(Map.of("overview.read",true,"core.read",true)),json.writeValueAsString(Map.of("core",Map.of("mode","CUSTOM","items",List.of(1),"years",List.of(2026)))));
+        String token=login(VIEWER);var ids=new ArrayList<Long>();for(long id=1;id<=11;id++)ids.add(id);
+        for(int year:List.of(2025,2026)){
+            Set<Long> expected=new HashSet<>();for(Long id:ids)if(overviewPermissions.canRead(VIEWER,"core",id,year))expected.add(id);
+            assertEquals(expected,overviewPermissions.readableCoreIds(VIEWER,ids,year));
+        }
+        var detail=analysis(token,"core.total","indicator");assertEquals(1,detail.path("total").asInt());var row=detail.path("rows").get(0);
+        assertEquals("Frozen snapshot",row.path("name").asText());assertEquals(8,row.path("value").asInt());assertEquals(7,row.path("target").asInt());assertEquals(4,row.path("month").asInt());assertFalse(detail.toString().contains("XXXXX"));
+        assertEquals(1,value(summary(token,4),"core","attained").asInt());
+        jdbc.update("INSERT INTO biz_performance(perf_id,project_id,parent_id,perf_code,perf_name,dept_id,leader_id,auditor_id,principal_id,target_value,current_value,data_type,is_delete) VALUES(999001,1,0,'1.1.5','Duplicate',920001,910001,910005,910003,1,0,'1',0)");
+        assertEquals(1,value(summary(token,4),"core","invalid").asInt());assertEquals(0,value(summary(token,4),"core","archived").asInt());
+        jdbc.update("UPDATE sys_user_permission SET scopes_json=? WHERE user_id=?",json.writeValueAsString(Map.of("core",Map.of("mode","CUSTOM","items",List.of(2),"years",List.of(2026)))),VIEWER);
+        detail=analysis(token,"core.total","indicator");assertEquals(2,detail.path("rows").get(0).path("id").asInt());assertTrue(detail.path("rows").get(0).path("value").isNull());
+    }
+    @Test void deniedBudgetYearMarksAccessFailureWithoutChangingLegacyErrorShape() throws Exception {
+        jdbc.update("INSERT INTO sys_user_permission(user_id,access_mode,permissions_json,scopes_json,version) VALUES(?,'CUSTOM',?,?,1)",VIEWER,json.writeValueAsString(Map.of("overview.read",true,"budget.read",true)),json.writeValueAsString(Map.of("budget",Map.of("mode","ALL","years",List.of(2025)))));
+        var section=summary(login(VIEWER),4).path("modules").path("budget");
+        assertEquals("error",section.path("status").asText());assertTrue(section.path("accessDenied").asBoolean());assertFalse(section.has("metrics"));
+    }
+    @Test void recordScopeReadsAtCurrentAndFiveTimesSyntheticScale() throws Exception {
+        jdbc.update("INSERT INTO sys_user_permission(user_id,access_mode,permissions_json,scopes_json,version) VALUES(?,'CUSTOM',?,?,1)",VIEWER,json.writeValueAsString(Map.of("overview.read",true,"records.read",true)),json.writeValueAsString(Map.of("records",Map.of("mode","ALL"))));
+        String token=login(VIEWER);var read=new org.springframework.transaction.support.TransactionTemplate(transactionManager);read.setReadOnly(true);read.setIsolationLevel(org.springframework.transaction.TransactionDefinition.ISOLATION_REPEATABLE_READ);
+        for(int size:List.of(120,600)){
+            jdbc.update("DELETE FROM biz_work_record");List<Object[]> rows=new ArrayList<>();List<Long> ids=new ArrayList<>();
+            for(int i=0;i<size;i++){long id=9940000+i;ids.add(id);rows.add(new Object[]{id,id});}
+            jdbc.batchUpdate("INSERT INTO biz_work_record(record_id,owner_id,owner_name,record_year,record_month,status,create_time,update_time) VALUES(?,?,'Synthetic',2026,4,1,NOW(),NOW())",rows);
+            List<Long> oldTimes=new ArrayList<>(),newTimes=new ArrayList<>();
+            try{
+                for(int run=0;run<6;run++){
+                    var req=new org.springframework.mock.web.MockHttpServletRequest("GET","/admin/overview/summary");req.addHeader("Authorization",token);org.springframework.web.context.request.RequestContextHolder.setRequestAttributes(new org.springframework.web.context.request.ServletRequestAttributes(req));overviewPermissions.state(VIEWER);
+                    long start=System.nanoTime();Set<Long> old=read.execute(status->{Set<Long> result=new HashSet<>();for(Long id:ids)if(overviewPermissions.canRead(VIEWER,"records",id,2026))result.add(id);return result;});
+                    long middle=System.nanoTime();var batch=read.execute(status->overviewPermissions.readableRecordIds(VIEWER,ids,2026));long end=System.nanoTime();assertEquals(old,batch);
+                    if(run>0){oldTimes.add((middle-start)/1000);newTimes.add((end-middle)/1000);}
+                }
+            }finally{org.springframework.web.context.request.RequestContextHolder.resetRequestAttributes();}
+            Collections.sort(oldTimes);Collections.sort(newTimes);
+            System.out.println("RECORD_SCOPE_READ_BENCH "+json.writeValueAsString(Map.of("records",size,"legacy_median_us",oldTimes.get(2),"batch_median_us",newTimes.get(2),"equalIds",true)));
+        }
     }
     @Test void recordDenominatorIntersectionAndDraftPrivacy() throws Exception {
         jdbc.update("INSERT INTO biz_work_record(owner_id,owner_name,record_year,record_month,status,problems,create_time,update_time,submit_time) VALUES(?,'Current',2026,4,1,'submitted',NOW(),NOW(),NOW()),(999999,'Former',2026,4,1,'historical',NOW(),NOW(),NOW()),(?,'Draft',2026,4,0,'SECRET-DRAFT',NOW(),NOW(),NULL)",OWNER,OTHER);

@@ -16,6 +16,17 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class AdminOverviewQueryTest {
+    @Test void coreOverviewProjectsOnlyNeededArchiveFieldsAndBatchesScope(){
+        var access=mock(LeadershipAccessService.class);when(access.isAdmin(1L)).thenReturn(true);var jdbc=mock(JdbcTemplate.class);var permissions=mock(PermissionService.class);
+        when(permissions.enforced(1L)).thenReturn(true);when(permissions.allowed(1L,"core.read")).thenReturn(true);when(permissions.readableCoreIds(eq(1L),anyCollection(),eq(2026))).thenReturn(Set.of(1L));
+        when(jdbc.queryForList(anyString())).thenReturn(List.of(Map.of("id",1L,"code","1.1.5","perf_id",9L,"perf_name","Current name","target_value",10)));
+        when(jdbc.queryForList(anyString(),any(Object[].class))).thenReturn(List.of(Map.of("indicator_id",1L,"report_id",10L,"indicator_name","Frozen name","target_value",10,"actual_value",15,"record_month",2)));
+        var service=new AdminOverviewService(access,null,null,null,null,null,jdbc);ReflectionTestUtils.setField(service,"permissions",permissions);
+        @SuppressWarnings("unchecked") var sections=(Map<String,Object>)service.summary(2026,4,"core",1L).get("modules");assertEquals("ok",((Map<?,?>)sections.get("core")).get("status"));
+        verify(permissions).readableCoreIds(1L,List.of(1L),2026);verify(permissions,never()).canRead(anyLong(),anyString(),anyLong(),anyInt());
+        var archiveQuery=mockingDetails(jdbc).getInvocations().stream().map(i->i.getArguments()[0].toString()).filter(sql->sql.contains("ROW_NUMBER")).findFirst().orElseThrow();
+        assertFalse(archiveQuery.contains("SELECT *"));assertFalse(archiveQuery.contains("r.*"));assertTrue(archiveQuery.contains("BINARY c.indicator_code=BINARY r.performance_code"));
+    }
     @Test void budgetSummaryReadsOnlySelectedMonthAndDoesNotLoadAnnualTrend(){
         var access=mock(LeadershipAccessService.class);when(access.isAdmin(1L)).thenReturn(true);
         var budgets=mock(BudgetMapper.class);var jdbc=mock(JdbcTemplate.class);var sheet=new BizBudgetSheet();sheet.setSheetId(10L);

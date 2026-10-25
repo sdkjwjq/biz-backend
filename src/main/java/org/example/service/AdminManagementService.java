@@ -86,8 +86,8 @@ public class AdminManagementService {
         result.put("performanceIssueCount", performanceIssues.size());
         result.put("invalidPendingCount", leadershipAccess.restricted(operatorId) ? scopedPendingCount(operatorId) : mapper.invalidPendingCount());
         result.put("budget", !permissions.enforced(operatorId)||permissions.budgetScope(operatorId,year)?mapper.budgetSummary(year, month):null);
-        result.put("expectedWorkRecordAuthors", !permissions.enforced(operatorId)?workRecordScopes.expectedAuthors(year):workRecordScopes.eligibleAuthors(year).stream().filter(u->permissions.canRecordOwner(operatorId,u.getUserId(),u.getDeptId(),year)).count());
-        result.put("submittedWorkRecordAuthors", !permissions.enforced(operatorId)?mapper.submittedWorkRecordAuthors(year, month):jdbc.queryForList("SELECT record_id FROM biz_work_record WHERE status=1 AND delete_marker=0 AND record_year=? AND record_month=?",Long.class,year,month).stream().filter(id->permissions.canRead(operatorId,"records",id,year)).count());
+        result.put("expectedWorkRecordAuthors", !permissions.enforced(operatorId)?workRecordScopes.expectedAuthors(year):(long)permissions.readableRecordOwners(operatorId,workRecordScopes.eligibleAuthors(year),year).size());
+        result.put("submittedWorkRecordAuthors", !permissions.enforced(operatorId)?mapper.submittedWorkRecordAuthors(year, month):(long)permissions.readableRecordIds(operatorId,jdbc.queryForList("SELECT record_id FROM biz_work_record WHERE status=1 AND delete_marker=0 AND record_year=? AND record_month=?",Long.class,year,month),year).size());
         result.put("taskIssues", taskIssues.stream().limit(100).toList());
         result.put("performanceIssues", performanceIssues.stream().limit(100).toList());
         result.put("readOnly", !leadershipAccess.isAdmin(operatorId));
