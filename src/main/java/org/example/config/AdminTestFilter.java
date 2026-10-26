@@ -50,8 +50,9 @@ public class AdminTestFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws IOException, ServletException {
         String path = request.getRequestURI().substring(request.getContextPath().length());
+        boolean auditRead=Set.of("GET","HEAD").contains(request.getMethod())&&path.matches("/list-filters/audits(?:/(?:filter-options|locate|export))?/?");
         if ("OPTIONS".equals(request.getMethod())
-                || !path.matches("/(system|biz|achievement|dashboard|performance|budget|scheduled|work-records|manage|admin|core-indicators|expert-reviews)(/.*)?")
+                || (!auditRead&&!path.matches("/(system|biz|achievement|dashboard|performance|budget|scheduled|work-records|manage|admin|core-indicators|expert-reviews)(/.*)?"))
                 || path.matches("/system/(login|password.*|logout)/?") || path.startsWith("/admin/permissions/")) {
             chain.doFilter(request, response); return;
         }

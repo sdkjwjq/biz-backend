@@ -59,13 +59,7 @@ public class AuditListPageService {
     private int historyType(Map<String,Object> row){return switch(str(row.get("type"))){case "task"->0;case "core"->1;case "performance"->2;default->3;};}
     private boolean pending(Map<String,Object> row){long status=number(row.get("flowStatus"));return "task".equals(row.get("type"))?Set.of(10L,20L,30L).contains(status):"achievement".equals(row.get("type"))?status==10:status==10||status==20;}
     private long todoCount(Long actor){
-        // Existing HTTP source endpoints establish the current administrator context before counting.
-        // Reproduce that header count only; page membership still intersects the legacy filter scope.
-        if(permissions.admin(actor)&&org.springframework.web.context.request.RequestContextHolder.getRequestAttributes() instanceof org.springframework.web.context.request.ServletRequestAttributes attributes){
-            var request=attributes.getRequest();Object previous=request.getAttribute(org.example.utils.AdminTestContext.ACTOR);
-            request.setAttribute(org.example.utils.AdminTestContext.ACTOR,actor);
-            try{return sourceTodoCount(actor);}finally{if(previous==null)request.removeAttribute(org.example.utils.AdminTestContext.ACTOR);else request.setAttribute(org.example.utils.AdminTestContext.ACTOR,previous);}
-        }
+        // The validated filter establishes the same actor scope for list, count and locate.
         return sourceTodoCount(actor);
     }
     private long sourceTodoCount(Long actor){

@@ -64,7 +64,9 @@ def main():
         env["SHUANGGAO_TEST_DB_USER"] = user
         env["SHUANGGAO_TEST_JDBC_URL"] = ("jdbc:mysql://127.0.0.1:3306/" + database
                                          + "?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai")
-        if method == "admindrawer":
+        if method == "auditscope":
+            selector = "AuditScopeConsistencyApiTest"
+        elif method == "admindrawer":
             selector = "AdminTestApiTest,CoreIndicatorApiTest,ExpertReviewApiTest,ReviewBatchRegressionApiTest#automaticAdminTraceDoesNotBlockLargeBatchTransfers"
         elif method == "expert":
             selector = "ExpertReviewApiTest"
