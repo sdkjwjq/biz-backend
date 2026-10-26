@@ -1,0 +1,12 @@
+{
+  "release": "shuanggao-update-20261026-r3",
+  "archive": "D:\\college\\2026\\shuanggao\\releases\\shuanggao-update-20261026-r3.tar.gz",
+  "bytes": 62864736,
+  "sha256": "cf4f051ffe7381691165081bacd233d22ee5db708e433ed51e6298f19e8b57e6",
+  "fileChecksumsVerified": 143,
+  "archiveMatchesDirectory": true,
+  "backendTests": 16,
+  "browserChecks": 18,
+  "packagedDeploymentChecks": 27,
+  "productionDeployed": false
+}

@@ -47,12 +47,27 @@ def check_schema(mode,success=True):
 def snapshot(projection=None):
     """Row snapshot per table. projection keeps only the columns known before a schema update,
     so approved column additions do not look like data changes."""
-    values={}
-    for line in sql('SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_TYPE="BASE TABLE"').decode().splitlines():
+    tables=sql('SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_TYPE="BASE TABLE"').decode().splitlines()
+    marker=('release_snapshot_'+uuid.uuid4().hex+'_').encode('ascii')
+    statements=[]
+    for line in tables:
         assert re.fullmatch('[A-Za-z0-9_]+',line)
         columns=None if projection is None else projection.get(line)
         select='*' if not columns else ','.join('`'+column+'`' for column in columns)
-        values[line]=sql('SELECT '+select+' FROM `'+line+'`')
+        statements.extend(["SELECT '"+marker.decode()+line+"'",'SELECT '+select+' FROM `'+line+'`'])
+    statements.append("SELECT '"+marker.decode()+"END'")
+    frames={marker+name.encode():name for name in tables}
+    frames[marker+b'END']=None
+    values={};current=None;parts=[]
+    for line in sql(';\n'.join(statements)+';').splitlines(keepends=True):
+        frame=line.rstrip(b'\r\n')
+        if frame in frames:
+            if current is not None:values[current]=b''.join(parts)
+            current=frames[frame];parts=[]
+        else:
+            assert current is not None,'Unexpected snapshot framing'
+            parts.append(line)
+    assert set(values)==set(tables)
     return values
 
 def current_columns():
@@ -188,7 +203,10 @@ def smoke_jar():
                     headers={'Content-Type':'application/json'}
                     if token: headers['Authorization']=token
                     request=urllib.request.Request(address+path,data=json.dumps(data).encode() if data is not None else None,headers=headers)
-                    with urllib.request.urlopen(request,timeout=3) as response:return json.load(response)
+                    with urllib.request.urlopen(request,timeout=3) as response:
+                        body=response.read()
+                        try:return json.loads(body)
+                        except json.JSONDecodeError:return body.decode('utf-8')
                 for attempt in range(60):
                     assert process.poll() is None,'Release JAR stopped; inspect target/linux-release-build/jar-smoke.log'
                     try:
@@ -207,6 +225,33 @@ def smoke_jar():
                     assert call('/system/access',token=selected)['canViewCoreIndicators'] is True
                     draft=call('/core-indicators/1/draft',{'year':2026,'month':1},selected)
                     assert draft['submitBy']==actor and draft['flowStatus']==0
+                if 'browser_bug_fixes_included' in json.loads((PACKAGE/'manifest.json').read_text(encoding='utf-8')):
+                    sql("INSERT INTO biz_budget_sheet(sheet_id,year,month,locked,is_delete) VALUES(998801,2028,2,0,0);")
+                    sql("INSERT INTO biz_budget_source_item(sheet_id,source_key,source_name,annual_plan,available) VALUES(998801,'central','Synthetic source',0,123.4567);")
+                    original=call('/budget?year=2028&month=2',token=token)
+                    saved=call('/budget/save',{'year':2028,'month':2,'baseVersionNo':original['currentVersionNo'],
+                               'sources':[{'sourceKey':'central','annualPlan':222.22}],'lockAfterSave':True},token)
+                    assert saved['sources'][0]['annualPlan']==222.22 and saved['sources'][0]['available']==123.4567
+                    assert saved['sheet']['locked']==1 and saved['currentVersionNo']==1
+                    assert call('/budget?year=2028&month=2',token=token)['sources'][0]['annualPlan']==222.22
+                    assert call('/budget/versions?year=2028&month=2',token=token)[0]['operationType']=='EDIT'
+                    sql("INSERT INTO biz_achievement(ach_id,category,level,ach_name,department,got_time,dept_id,comment,is_competition,create_by,audit_status,is_delete,create_time,update_time) VALUES(998810,1,'省级','Packaged resubmit smoke','Synthetic','2026-01-01',920001,'Corrected',0,1910001,-10,0,NOW(),NOW());")
+                    sql("INSERT INTO biz_achievement_submission(sub_id,ach_id,submit_by,submit_time,flow_status,comment,is_delete) VALUES(998811,998810,1910001,NOW(),-10,'Original submission',0);")
+                    sql("INSERT INTO biz_achievement_audit_log(sub_id,operator_id,action_type,pre_status,post_status,comment,create_time) VALUES(998811,110228,'reject',10,-10,'Original rejection',NOW());")
+                    resubmitted=call('/achievement/998810/resubmit',{},token)
+                    next_id=int(resubmitted['subId'])
+                    assert next_id>998811 and sql('SELECT submit_by FROM biz_achievement_submission WHERE sub_id='+str(next_id)).strip()==b'1910001'
+                    assert sql('SELECT operator_id FROM biz_achievement_audit_log WHERE sub_id='+str(next_id)+" AND action_type='submit'").strip()==b'110228'
+                    assert sql('SELECT flow_status FROM biz_achievement_submission WHERE sub_id=998811').strip()==b'-10'
+                    try:
+                        call('/achievement/998810/resubmit',{},token)
+                        raise AssertionError('Duplicate resubmission succeeded')
+                    except urllib.error.HTTPError as conflict:
+                        assert conflict.code==409
+                    call('/achievement/audit',{'sub_id':next_id,'is_pass':True,'content':'Smoke archive'},token)
+                    assert sql('SELECT audit_status FROM biz_achievement WHERE ach_id=998810').strip()==b'30'
+                    checks.append('packaged-jar-budget-save-lock-exact-precision-and-edit-version')
+                    checks.append('packaged-jar-achievement-resubmit-archive-original-evidence-and-duplicate-guard')
             finally:
                 process.terminate(); process.wait(timeout=30)
     checks.append('packaged-jar-real-start-external-password-login-and-new-module-apis')
@@ -320,7 +365,9 @@ exit 17
         assert 'spring.datasource.password=${SPRING_DATASOURCE_PASSWORD:}' in p
         assert not re.search(r'^\s*#?\s*spring.datasource.password=(?!\$\{)',p,re.M)
         assert 'BOOT-INF/classes/templates/work-record.docx' in jar.namelist()
-        predicate = jar.read('BOOT-INF/classes/sql/stale-review-notices.sql').decode('utf-8').strip()
+        # Git exports may retain CRLF inside JAR resources; compare SQL text using
+        # the same universal newline handling as Path.read_text below.
+        predicate = jar.read('BOOT-INF/classes/sql/stale-review-notices.sql').decode('utf-8').replace('\r\n','\n').strip()
         assert predicate == (ROOT/'src/main/resources/sql/stale-review-notices.sql').read_text(encoding='utf-8').strip()
         assert predicate in (PACKAGE/'sql/retire-stale-notices.sql').read_text(encoding='utf-8')
     assert (PACKAGE/'frontend/templates/budget-template.xlsx').read_bytes()==(PACKAGE/'templates/budget-template.xlsx').read_bytes()
