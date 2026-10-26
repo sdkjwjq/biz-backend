@@ -44,6 +44,11 @@ def main():
     assert len(original_proof['packaged_jar_and_deployment_checks']['checks']) == 27
     ux = json.loads((EVIDENCE / 'usability-evidence/results.json').read_text(encoding='utf-8'))
     assert len(ux['checks']) >= 18 and not ux['errors']
+    for measurement in ux['measurements']:
+        before, after = measurement['before']['scroll'], measurement['after']['scroll']
+        assert before['rowKey'] and before['rowKey'] == after['rowKey']
+        assert abs(before['offset'] - after['offset']) < 2
+    assert len(ux['measurements']) == 8
     regression = [json.loads((EVIDENCE / 'browser-repair-evidence' / (mode + '-results.json')).read_text(encoding='utf-8'))
                   for mode in ['budget','performance','achievement','audit','finance','admin-tabs','logout','admin-scroll']]
     assert sum(len(row['checks']) for row in regression) == 30 and all(not row['errors'] for row in regression)
