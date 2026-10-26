@@ -1,0 +1,14 @@
+{
+  "release": "shuanggao-update-20261026",
+  "archive": "D:\\college\\2026\\shuanggao\\releases\\shuanggao-update-20261026.tar.gz",
+  "bytes": 60771984,
+  "sha256": "8c2f697c7cff92ddf4867eea70ee29f6e627ed651ad5bf8b36d9b00631c2324f",
+  "fileChecksumsVerified": 141,
+  "archiveMatchesDirectory": true,
+  "runtimeUnchangedFrom": "shuanggao-update-20261025",
+  "pendingBugFixesIncluded": false,
+  "backendCommit": "1896b4d14ae3308c7785be72d2565e0bab81083f",
+  "frontendCommit": "77b74df2f9f3fcd777234b7ea2a6c909c3bb8302",
+  "inheritedDeploymentChecks": 25,
+  "productionDeployed": false
+}
