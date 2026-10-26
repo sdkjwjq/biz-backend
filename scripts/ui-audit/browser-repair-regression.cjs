@@ -7,6 +7,7 @@ const {chromium,request}=playwright;
 let expect;
 try { ({expect}=require('../../target/ui-audit-tools/node_modules/playwright/test')); }
 catch { ({expect}=require('playwright/test')); }
+expect=expect.configure({timeout:15000});
 const ROOT=path.resolve(__dirname,'../../..');
 const statePath=process.env.SHUANGGAO_UI_STATE_FILE;
 assert(statePath,'Set SHUANGGAO_UI_STATE_FILE to the disposable serve.py state.json');
@@ -16,14 +17,14 @@ const origin=new URL(state.frontend);
 assert(origin.protocol==='http:'&&origin.hostname==='127.0.0.1'&&origin.port,'Refusing non-local UI');
 const OUT=path.join(path.dirname(path.resolve(statePath)),'browser-repair-evidence'),BASE=origin.origin;
 const mode=process.argv[2],errors=[],checks=[];
-assert(['budget','performance','achievement','audit','finance','admin-tabs'].includes(mode),'Choose budget, performance, achievement, audit, finance or admin-tabs');
+assert(['budget','performance','achievement','audit','finance','admin-tabs','logout','admin-scroll'].includes(mode),'Choose a browser repair scenario');
 let browser,context,page,api;
 const settle=()=>page.waitForFunction(()=>[...document.querySelectorAll('.el-loading-mask')].filter(e=>e.getBoundingClientRect().width&&e.getBoundingClientRect().height).length===0);
 async function show(user=110228,url='/home/works/budget'){
  if(context)await context.close();
  context=await browser.newContext({viewport:{width:1680,height:1050},reducedMotion:'reduce'});
  await context.route('**/*',r=>new URL(r.request().url()).hostname==='127.0.0.1'?r.continue():r.abort());
- page=await context.newPage();page.setDefaultTimeout(15000);page.on('pageerror',e=>errors.push(e.message));if(mode==='performance')await page.clock.install();
+ page=await context.newPage();page.setDefaultTimeout(30000);page.on('pageerror',e=>errors.push(e.message));if(mode==='performance')await page.clock.install();
  await page.goto(BASE+'/login');await page.getByPlaceholder('账号',{exact:true}).fill(String(user));await page.getByPlaceholder('密码',{exact:true}).fill('review-fixture-password');
  await page.getByRole('button',{name:/登\s*录/}).click();await page.waitForURL('**/home/**');
  await page.goto(BASE+url);await page.locator('.query-filter-bar').first().waitFor({state:'visible'});await expect(page.locator('.query-filter-bar').first().locator('p[role=status]')).toBeHidden();await settle();
@@ -56,6 +57,27 @@ const perfDrawer=()=>page.getByRole('dialog',{name:'绩效指标详情',exact:tr
 const perfHeader=()=>perfDrawer().locator('.info-row').filter({hasText:'当前完成值'}).locator('.value');
 async function openPerf(){await page.getByText('审计手动绩效',{exact:true}).click();await expect(perfDrawer()).toBeVisible();await settle();}
 async function closePerf(){await perfDrawer().locator('.el-drawer__close-btn').click();await expect(perfDrawer()).toBeHidden();}
+async function requestLogout(confirm=true){
+ await page.locator('.user-trigger').click();await page.getByRole('menuitem',{name:'退出登录',exact:true}).click();
+ const dialog=page.getByRole('dialog',{name:'提示',exact:true});
+ await dialog.getByRole('button',{name:confirm?'确定':'取消',exact:true}).click();
+}
+async function juneBudget(url='/home/works/budget'){
+ await show(110228,url);if(!url.includes('month=6'))await budgetMonth(6);
+ const unlock=page.getByRole('button',{name:'解锁',exact:true});if(await unlock.count())await unlock.click();
+ await expect(amount()).not.toHaveAttribute('disabled','');
+}
+async function wheelTo(root,target){
+ for(let i=0;i<24;i++){
+  const r=await target.boundingBox(),box=await root.boundingBox();
+  const top=box.y+2,bottom=Math.min(box.y+box.height,await page.evaluate(()=>innerHeight))-2,h=r?Math.min(r.height,bottom-top-4):0;
+  if(r&&r.y>=top-1&&r.y+h<=bottom+1)return;
+  const delta=!r?180:r.y<top?Math.max(-180,r.y-top):Math.min(180,r.y+h-bottom),old=await root.evaluate(e=>e.scrollTop);
+  await page.mouse.move(box.x+5,box.y+box.height/2);await page.mouse.wheel(0,delta);
+  await page.waitForFunction(({old,selector})=>document.querySelector(selector)?.scrollTop!==old,{old,selector:'.admin-data'},{timeout:300}).catch(()=>{});
+ }
+ throw Error('Target cannot be reached by normal outer scrolling '+JSON.stringify(await page.evaluate(()=>({root:[...document.querySelectorAll('.admin-data,.budget-sheet-scroll')].map(e=>({class:e.className,top:e.scrollTop,height:e.clientHeight,scroll:e.scrollHeight,left:e.scrollLeft,rect:e.getBoundingClientRect().toJSON()})),last:document.querySelector('.lower-sheet tr:last-child')?.getBoundingClientRect().toJSON()}))));
+}
 
 (async()=>{
  await fs.mkdir(path.join(OUT,'evidence'),{recursive:true});browser=await chromium.launch({channel:'msedge',headless:true});api=await request.newContext({baseURL:BASE});
@@ -67,7 +89,7 @@ async function closePerf(){await perfDrawer().locator('.el-drawer__close-btn').c
    await expect(history.locator('.applied-tags')).toContainText('5月');await history.locator('.el-dialog__headerbtn').click();
    await budgetMonth(6);await page.getByRole('button',{name:'导入',exact:true}).click();let upload=page.getByRole('dialog',{name:'导入预算数据',exact:true});
    await upload.locator('input[type=file]').setInputFiles(path.join(ROOT,'biz/public/templates/budget-template.xlsx'));
-   await upload.getByRole('button',{name:'确认导入并锁定',exact:true}).click();await expect(upload).toBeHidden();await settle();
+   const imported=page.waitForResponse(r=>r.url().includes('/api/budget/import')&&r.request().method()==='POST');await upload.getByRole('button',{name:'确认导入并锁定',exact:true}).click();assert.equal((await imported).status(),200);await expect(upload).toBeHidden();await settle();
    await page.getByRole('button',{name:'版本记录',exact:true}).click();history=page.getByRole('dialog',{name:'预算版本记录',exact:true});
    await expect(history.locator('.applied-tags')).toContainText('6月');await expect(history.locator('.el-table__body')).toContainText('2026年6月');
    await shot('budget-history-current-month');await history.locator('.el-dialog__headerbtn').click();checks.push('May history then June import opens June history immediately');
@@ -100,7 +122,8 @@ async function closePerf(){await perfDrawer().locator('.el-drawer__close-btn').c
    await performance(2027);await openPerf();await expect(perfHeader()).toHaveText('4.00');await shot('performance-2027-header-and-form');checks.push('Reverse year change returns current 2027 values');
    const form=perfDrawer().getByPlaceholder('请输入完成值',{exact:true});
    if(await form.count()){await form.fill('9',{force:true});const response=page.waitForResponse(r=>r.url().includes('/api/list-filters/performance?'));await page.clock.fastForward(31000);await response;await expect(form).toHaveValue('9');checks.push('Background refresh retains unsaved manual value');}
-   await page.goto(BASE+'/home/works/performance?perfId=950011&year=2027');await settle();await expect(perfDrawer()).toBeVisible();await expect(perfHeader()).toHaveText('4.00');await expect(page.locator('[aria-label="绩效筛选"] .applied-tags')).toContainText('2027年');await expect(perfDrawer()).toContainText('2027');await shot('performance-deep-link-keeps-year');checks.push('Direct performance link uses requested year in header, form and applied filters');
+   const annualRead=page.waitForRequest(r=>{const u=new URL(r.url());return u.pathname==='/api/performance/audit/perf/950011'&&u.searchParams.get('year')==='2027'});
+   await page.goto(BASE+'/home/works/performance?perfId=950011&year=2027');await settle();await expect(perfDrawer()).toBeVisible();await expect(perfHeader()).toHaveText('4.00');await expect(page.locator('[aria-label="绩效筛选"] .applied-tags')).toContainText('2027年');await annualRead;await shot('performance-deep-link-keeps-year');checks.push('Direct performance link uses requested year in header, applied filters and history request');
    let releaseLink,enteredLink;const linkGate=new Promise(r=>releaseLink=r),linkReached=new Promise(r=>enteredLink=r);let linkHeld=false;
    await page.route('**/api/list-filters/performance?*',async route=>{if(linkHeld||new URL(route.request().url()).searchParams.get('f.year')!=='2026')return route.continue();linkHeld=true;const real=await route.fetch();enteredLink();await linkGate;await route.fulfill({response:real}).catch(()=>{});});
    await page.evaluate(()=>document.querySelector('#app').__vue_app__.config.globalProperties.$router.push('/home/works/performance?perfId=950011&year=2026'));await linkReached;
@@ -129,6 +152,32 @@ async function closePerf(){await perfDrawer().locator('.el-drawer__close-btn').c
    await show(910003,'/home/audit');const bar=page.locator('[aria-label="审核筛选"]');await bar.getByLabel('审核编号／名称',{exact:true}).fill('审计手动绩效');await bar.getByRole('button',{name:'查询',exact:true}).click();await settle();
    const row=page.locator('.audit-container .el-table__body tbody tr.el-table__row').first();await row.getByRole('button',{name:'审批',exact:true}).click();const dialog=page.getByRole('dialog',{name:'业务审批',exact:true});await dialog.getByText('驳回',{exact:true}).click();await dialog.locator('textarea').fill('请补充年度完成情况');await dialog.getByRole('button',{name:'确认提交',exact:true}).click();await expect(dialog).toBeHidden();
    await page.getByText('审批记录',{exact:true}).click();await settle();await expect(page.locator('.audit-container .el-table__body')).toContainText('审计手动绩效');await shot('reviewer-can-find-rejected-performance-history');checks.push('Actual reviewer rejection remains visible in completed records');
+  }else if(mode==='logout'){
+   await juneBudget();let token=await page.evaluate(()=>localStorage.getItem('token'));let requests=[];
+   const track=request=>{if(/\/api\/(budget\/save|system\/logout)$/.test(request.url()))requests.push(new URL(request.url()).pathname)};
+   page.on('request',track);await requestLogout(false);assert.equal(await page.evaluate(()=>localStorage.getItem('token')),token);assert.deepEqual(requests,[]);checks.push('Cancel logout confirmation keeps the session');
+   await edit('777.77');await requestLogout();let decision=page.getByRole('dialog',{name:'未保存修改',exact:true});await expect(decision).toBeVisible();assert.equal(await page.evaluate(()=>localStorage.getItem('token')),token);assert.deepEqual(requests,[]);
+   await decision.getByRole('button',{name:'取消',exact:true}).click();await expect(decision).toBeHidden();await expect(amount()).toHaveValue('777.77');assert.equal((await call('get','/api/budget?year=2026&month=6')).status,200);checks.push('Cancel budget leave keeps login, valid token and unsaved values');
+   await page.route('**/api/budget/save',r=>r.fulfill({status:503,contentType:'application/json',body:JSON.stringify({message:'合成保存失败，请重试'})}),{times:1});
+   await requestLogout();await decision.getByRole('button',{name:'保存后继续',exact:true}).click();await expect(page.getByText('合成保存失败，请重试',{exact:true})).toBeVisible();await expect(decision).toBeVisible();assert.equal(await page.evaluate(()=>localStorage.getItem('token')),token);assert.ok(!requests.includes('/api/system/logout'));await expect(amount()).toHaveValue('777.77');await shot('logout-save-failure-keeps-session');checks.push('Save failure during logout preserves session and draft without sending logout');
+   const ordered=[];page.on('response',r=>{if(r.url().endsWith('/api/budget/save')&&r.status()===200)ordered.push('saved')});page.on('request',r=>{if(r.url().endsWith('/api/system/logout'))ordered.push('logout')});
+   const loggedOut=page.waitForResponse(r=>r.url().endsWith('/api/system/logout'));await decision.getByRole('button',{name:'保存后继续',exact:true}).click();await page.waitForURL('**/login');assert.equal((await loggedOut).status(),200);assert.deepEqual(ordered,['saved','logout']);assert.equal(await page.evaluate(()=>localStorage.getItem('token')),null);assert.equal(requests.filter(p=>p==='/api/system/logout').length,1);checks.push('Successful retry saves before one logout request and reaches login without a second draft prompt');
+   await juneBudget();assert.equal((await call('get','/api/budget?year=2026&month=6')).value.sources[0].annualPlan,777.77);requests=[];page.on('request',track);await edit('888.12');await requestLogout();decision=page.getByRole('dialog',{name:'未保存修改',exact:true});const discardedLogout=page.waitForResponse(r=>r.url().endsWith('/api/system/logout'));await decision.getByRole('button',{name:'放弃修改',exact:true}).click();await page.waitForURL('**/login');assert.equal((await discardedLogout).status(),200);assert.deepEqual(requests,['/api/system/logout']);checks.push('Explicit discard logs out without saving');
+   await juneBudget();assert.equal((await call('get','/api/budget?year=2026&month=6')).value.sources[0].annualPlan,777.77);const cleanLogout=page.waitForResponse(r=>r.url().endsWith('/api/system/logout'));await requestLogout();await page.waitForURL('**/login');assert.equal((await cleanLogout).status(),200);checks.push('Unmodified budget logout needs only the normal confirmation');
+   await juneBudget();token=await page.evaluate(()=>localStorage.getItem('token'));await page.route('**/api/system/logout',r=>r.fulfill({status:401,contentType:'application/json',body:JSON.stringify({message:'Synthetic expired logout session'})}),{times:1});await requestLogout();await page.waitForURL('**/login');assert.equal(await page.evaluate(()=>localStorage.getItem('token')),null);assert.equal((await api.post('/api/system/logout',{headers:{Authorization:token}})).status(),200);checks.push('Logout endpoint failure preserves the existing local-signout behavior without a second auth redirect');
+   await juneBudget('/home/admin/data?tab=budget&year=2026&month=6');await edit('555.55');await requestLogout();decision=page.getByRole('dialog',{name:'未保存修改',exact:true});await decision.getByRole('button',{name:'取消',exact:true}).click();await expect(decision).toBeHidden();assert.ok(page.url().includes('/home/admin/data'));assert.equal((await call('get','/api/budget?year=2026&month=6')).status,200);await requestLogout();const nestedLogout=page.waitForResponse(r=>r.url().endsWith('/api/system/logout'));await decision.getByRole('button',{name:'保存后继续',exact:true}).click();await page.waitForURL('**/login');assert.equal((await nestedLogout).status(),200);checks.push('Nested management budget supports cancel then save-and-logout');
+   await juneBudget();await page.goto(BASE+'/login');await page.waitForURL('**/home/**');assert.ok(await page.evaluate(()=>!!localStorage.getItem('token')));checks.push('Ordinary authenticated login-page visits still redirect to the work page');
+  }else if(mode==='admin-scroll'){
+   await juneBudget('/home/admin/data?tab=budget&year=2026&month=6');
+   for(const size of [{width:1280,height:720},{width:960,height:540},{width:1920,height:1080}]){
+    await page.setViewportSize(size);await settle();const root=page.locator('.admin-data'),box=await root.boundingBox();
+    assert.ok(box.height>100&&box.y+box.height<=size.height+1);await page.mouse.move(box.x+5,box.y+30);await page.mouse.wheel(0,-5000);
+    await wheelTo(root,page.getByRole('button',{name:'保存修改',exact:true}));await shot('admin-data-actions-'+size.width);
+    const pane=page.locator('.budget-sheet-scroll');await wheelTo(root,pane);let visible=await pane.boundingBox();
+    await page.mouse.move(visible.x+visible.width/2,Math.min(size.height-40,visible.y+visible.height/2));await page.mouse.wheel(1500,0);await expect.poll(()=>pane.evaluate(e=>e.scrollLeft)).toBeGreaterThan(0);await page.mouse.wheel(0,4000);await expect.poll(()=>pane.evaluate(e=>e.scrollHeight-e.scrollTop-e.clientHeight)).toBeLessThanOrEqual(1);
+    const last=page.locator('.lower-sheet tr').last();await wheelTo(root,last);const end=await last.boundingBox();assert.ok(end.y>=box.y-1&&end.y+end.height<=size.height+1);
+    assert.ok(await pane.evaluate(e=>e.scrollLeft>0));assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await shot('admin-data-complete-table-'+size.width);checks.push(size.width+'x'+size.height+' outer mouse scrolling reaches actions and final table row; inner horizontal scrolling works');
+   }
   }else if(mode==='admin-tabs'){
    await show(110228,'/home/admin/data?tab=budget&year=2026&month=6');await settle();
    await expect(amount()).not.toHaveAttribute('disabled','');const previous=await amount().inputValue();await edit('999.99');
