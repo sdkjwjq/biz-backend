@@ -1,0 +1,14 @@
+{
+  "release": "shuanggao-update-20261027",
+  "archive": "D:\\college\\2026\\shuanggao\\releases\\shuanggao-update-20261027.tar.gz",
+  "sha256": "771199a4d288c033e0bcd6344663cee68ff30b56da8b91a6a1f468d383560f13",
+  "bytes": 62867211,
+  "fileChecksumsVerified": 145,
+  "archiveMatchesDirectory": true,
+  "backendUnchangedFrom": "shuanggao-update-20261026-r3",
+  "unitTests": 12,
+  "browserWorkflowChecks": 30,
+  "usabilityChecks": 18,
+  "inheritedBackendDeploymentChecks": 27,
+  "productionDeployed": false
+}
