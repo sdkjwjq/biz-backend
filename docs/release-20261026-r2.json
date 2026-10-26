@@ -1,0 +1,13 @@
+{
+  "release": "shuanggao-update-20261026-r2",
+  "sha256": "1854a22a97c1e8b5465d94fb3d89dac254881e508915b2e26a4d72b057e9b170",
+  "bytes": 60770195,
+  "fileChecksumsVerified": 141,
+  "runtimeSourceChanges": [
+    "src/main/java/org/example/config/AdminTestFilter.java",
+    "src/main/java/org/example/service/AuditListPageService.java"
+  ],
+  "httpRegressionCases": 13,
+  "browserChecks": 7,
+  "productionDeployed": false
+}
