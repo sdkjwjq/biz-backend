@@ -88,6 +88,12 @@ public class AchievementController {
      * @param achievement 成果实体（含成果ID，JSON请求体）
      * @return 操作结果/错误信息
      */
+    @PostMapping("/{achId}/resubmit")
+    public Object resubmit(@PathVariable("achId") Long achId, HttpServletRequest request) {
+        try { return java.util.Map.of("subId",achievementService.resubmitAchievement(achId,currentUserId(request)),"message","成果已重新提交审核"); }
+        catch(Exception e){var error=org.example.config.PermissionErrors.response(e);return error!=null?error:new ErrorVO(e.getMessage(),500);}
+    }
+
     @PostMapping("/update/{id}")
     public Object updateAchievement(@PathVariable("id") Long id,@RequestBody BizAchievement achievement, HttpServletRequest request) {
         try {

@@ -62,6 +62,7 @@ public class BudgetService {
 
     private final DataFormatter formatter = new DataFormatter(Locale.CHINA);
 
+    @Transactional(readOnly = true)
     public BudgetSheetVO getBudget(Integer year, Integer month) {
         validateYearMonth(year, month);
         BizBudgetSheet sheet = budgetMapper.getSheet(year, month);
@@ -198,10 +199,11 @@ public class BudgetService {
         return attachIndicators(current,sheet.getYear(),sheet.getMonth());
     }
 
+    @Transactional
     public BudgetSheetVO updateLock(Integer year, Integer month, Boolean locked, Long userId) {
         if(permissions.enforced(userId))permissions.require(userId,"budget.lock");else validateAdmin(userId);
         validateYearMonth(year, month);
-        BizBudgetSheet sheet = budgetMapper.getSheet(year, month);
+        BizBudgetSheet sheet = budgetMapper.getSheetForUpdate(year, month);
         if (sheet == null) {
             throw new RuntimeException("没有找到该预算表");
         }
@@ -214,6 +216,66 @@ public class BudgetService {
                 "sheetId", sheet.getSheetId());
         return getBudget(year, month);
     }
+
+    /** Only editable cells are patched; imported precision and all other columns remain intact. */
+    @Transactional
+    public BudgetSheetVO saveBudget(com.fasterxml.jackson.databind.JsonNode input, Long actor) {
+        validateEditor(actor);
+        allowedKeys(input,java.util.Set.of("year","month","baseVersionNo","sources","tasks","lockAfterSave"));
+        int year=requiredInt(input,"year"),month=requiredInt(input,"month"),base=requiredInt(input,"baseVersionNo");
+        if(year<2025||year>2029||month<1||month>12||base<0)throw new AdminManagementException(400,"预算年月或版本不正确");
+        if(input.has("lockAfterSave")&&!input.get("lockAfterSave").isBoolean())throw new AdminManagementException(400,"锁定选项不正确");
+        boolean lock=input.path("lockAfterSave").asBoolean(false);
+        if(lock){if(permissions.enforced(actor))permissions.require(actor,"budget.lock");else validateAdmin(actor);}
+        var sheet=budgetMapper.getSheetForUpdate(year,month);
+        if(sheet==null)throw new AdminManagementException(409,"请先导入该月预算");
+        if(Integer.valueOf(1).equals(sheet.getLocked()))throw new AdminManagementException(409,"预算已锁定，请重新加载后再编辑");
+        if(budgetMapper.nextVersionNo(sheet.getSheetId())-1!=base)throw new AdminManagementException(409,"预算版本已变化，请保留草稿并重新加载核对");
+        var current=toVO(sheet);boolean changed=false;
+        java.util.Set<String> sourceKeys=new java.util.HashSet<>();java.util.Set<Integer> taskKeys=new java.util.HashSet<>();
+        for(var edit:edits(input,"sources")){
+            allowedKeys(edit,java.util.Set.of("sourceKey","annualPlan","arrived"));
+            if(!edit.path("sourceKey").isTextual()||!sourceKeys.add(edit.path("sourceKey").asText()))throw new AdminManagementException(400,"资金来源缺失或重复");
+            var item=current.getSources().stream().filter(v->Objects.equals(v.getSourceKey(),edit.path("sourceKey").asText())).findFirst().orElseThrow(()->new AdminManagementException(400,"资金来源不存在"));
+            if(edit.has("annualPlan")){var value=editableAmount(edit.get("annualPlan"));changed|=!sameAmount(item.getAnnualPlan(),value);item.setAnnualPlan(value);}
+            if(edit.has("arrived")){var value=editableAmount(edit.get("arrived"));changed|=!sameAmount(item.getArrived(),value);item.setArrived(value);}
+            budgetMapper.updateEditableSource(item);
+        }
+        for(var edit:edits(input,"tasks")){
+            allowedKeys(edit,java.util.Set.of("taskIndex","goods","capital","other"));int index=requiredInt(edit,"taskIndex");
+            if(!taskKeys.add(index))throw new AdminManagementException(400,"改革任务重复");
+            var item=current.getTasks().stream().filter(v->Objects.equals(v.getTaskIndex(),index)).findFirst().orElseThrow(()->new AdminManagementException(400,"改革任务不存在"));
+            if(edit.has("goods")){var value=editableAmount(edit.get("goods"));changed|=!sameAmount(item.getGoods(),value);item.setGoods(value);}
+            if(edit.has("capital")){var value=editableAmount(edit.get("capital"));changed|=!sameAmount(item.getCapital(),value);item.setCapital(value);}
+            if(edit.has("other")){var value=editableAmount(edit.get("other"));changed|=!sameAmount(item.getOther(),value);item.setOther(value);}
+            budgetMapper.updateEditableTask(item);
+        }
+        if(lock){budgetMapper.updateLock(sheet.getSheetId(),1);sheet.setLocked(1);}
+        if(changed){
+            sheet.setUpdateTime(new Date());
+            budgetMapper.updateEditTime(sheet.getSheetId(),sheet.getUpdateTime());
+            String name=sheet.getFileId()==null?null:budgetMapper.getVersions(year,month).stream().map(BudgetVersionVO::getFileName).filter(Objects::nonNull).findFirst().orElse(null);
+            saveVersion(sheet,current,"EDIT",null,sheet.getFileId(),name,actor,new Date(),"在线编辑预算；原文件为导入来源附件");
+            BusinessLogUtil.info("预算在线保存","userId",actor,"year",year,"month",month,"result","成功");
+        }
+        return attachIndicators(toVO(sheet),year,month);
+    }
+
+    private static void allowedKeys(com.fasterxml.jackson.databind.JsonNode node,java.util.Set<String> allowed){
+        if(node==null||!node.isObject())throw new AdminManagementException(400,"预算修改内容不正确");
+        node.fieldNames().forEachRemaining(key->{if(!allowed.contains(key))throw new AdminManagementException(400,"不允许修改字段："+key);});
+    }
+    private static int requiredInt(com.fasterxml.jackson.databind.JsonNode node,String key){
+        var value=node.get(key);if(value==null||!value.isIntegralNumber()||!value.canConvertToInt())throw new AdminManagementException(400,"缺少或无效参数："+key);return value.intValue();
+    }
+    private static Iterable<com.fasterxml.jackson.databind.JsonNode> edits(com.fasterxml.jackson.databind.JsonNode node,String key){
+        var value=node.get(key);if(value==null)return java.util.List.of();if(!value.isArray()||value.size()>500)throw new AdminManagementException(400,"预算修改列表不正确");return value;
+    }
+    private static BigDecimal editableAmount(com.fasterxml.jackson.databind.JsonNode value){
+        if(value==null||value.isNull()||!value.isNumber())throw new AdminManagementException(400,"金额须为非空数字");
+        var amount=value.decimalValue();if(amount.signum()<0||amount.scale()>2||amount.compareTo(new BigDecimal("9999999999999999.99"))>0)throw new AdminManagementException(400,"金额须为非负数，最多2位小数且不超过16位整数");return amount;
+    }
+    private static boolean sameAmount(BigDecimal first,BigDecimal second){return first!=null&&first.compareTo(second)==0;}
 
     public void exportBudget(Integer year, Integer month, HttpServletResponse response) throws IOException {
         BudgetSheetVO vo = getBudget(year, month);
@@ -264,6 +326,7 @@ public class BudgetService {
         vo.setSheet(sheet);
         vo.setSources(budgetMapper.getSources(sheet.getSheetId()));
         vo.setTasks(budgetMapper.getTasks(sheet.getSheetId()));
+        vo.setCurrentVersionNo(budgetMapper.nextVersionNo(sheet.getSheetId())-1);
         return vo;
     }
 
@@ -290,6 +353,7 @@ public class BudgetService {
         version.setYear(sheet.getYear());
         version.setMonth(sheet.getMonth());
         version.setVersionNo(budgetMapper.nextVersionNo(sheet.getSheetId()));
+        budget.setCurrentVersionNo(version.getVersionNo());
         version.setOperationType(operationType);
         version.setSourceVersionId(sourceVersionId);
         version.setFileId(fileId);
@@ -365,7 +429,7 @@ public class BudgetService {
     }
 
     private void validateEditor(Long userId) {
-        if (!budgetAccess.canFillBudget(userId)) throw new TaskManagementException(403, "仅管理员、双高办及财务处正常账号可以填报预算");
+        if (!budgetAccess.canFillBudget(userId)) throw new AdminManagementException(403, "仅管理员、双高办及财务处正常账号可以填报预算");
     }
 
     private void validateAdmin(Long userId) {

@@ -26,8 +26,8 @@ public class AuditOptionReadService {
      if(todo&&!test)args.add(actor);break;
     case "performance":
      source="biz_performance_submission s JOIN biz_performance p ON p.perf_id=s.perf_id AND COALESCE(p.is_delete,0)=0";year="s.year";range=scopes.rowByYear(actor,domain,"p",year);
-     predicate=todo?"s.flow_status IN(10,20)"+(test?"":" AND s.current_handler_id=?"):"(s.flow_status=30 OR s.flow_status<0) AND (s.submit_by=? OR s.current_handler_id=?)";
-     if(todo&&!test)args.add(actor);if(!todo){args.add(actor);args.add(actor);}break;
+     predicate=todo?"s.flow_status IN(10,20)"+(test?"":" AND s.current_handler_id=?"):"(s.flow_status=30 OR s.flow_status<0) AND (s.submit_by=? OR s.current_handler_id=? OR EXISTS(SELECT 1 FROM biz_performance_audit_log l WHERE l.sub_id=s.sub_id AND l.operator_id=? AND l.action_type IN('pass','reject')))";
+     if(todo&&!test)args.add(actor);if(!todo){args.add(actor);args.add(actor);args.add(actor);}break;
     case "achievements":
      if(!org.example.utils.AchievementPermissionUtil.isAchievementAuditor(permissions.user(actor)))continue;
      source="biz_achievement_submission s JOIN biz_achievement a ON a.ach_id=s.ach_id AND COALESCE(a.is_delete,0)=0";year="YEAR(a.got_time)";range=scopes.row(actor,domain,"a",null);predicate=todo?"s.flow_status=10":"(s.flow_status=30 OR s.flow_status<0)";break;

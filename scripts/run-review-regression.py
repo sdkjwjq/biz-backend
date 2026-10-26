@@ -64,7 +64,23 @@ def main():
         env["SHUANGGAO_TEST_DB_USER"] = user
         env["SHUANGGAO_TEST_JDBC_URL"] = ("jdbc:mysql://127.0.0.1:3306/" + database
                                          + "?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai")
-        if method == "auditscope":
+        if method == "browserrepairs":
+            selector = "ReviewBatchRegressionApiTest#" + "+".join([
+                "budgetWebEditsAreVersionedAtomicAndPreserveImportedColumns",
+                "budgetWebEditsValidateDecimalsAndSerializeConcurrentSaves",
+                "budgetImportsCreateVersionsAndRestoreWithoutOverwritingHistory",
+                "financeAndOfficeCanImportBudgetWithoutAdministratorRole",
+                "rejectedPerformanceStaysInActualReviewersHistoryAndLocate",
+                "performanceRollbackPreservesOtherYearsAndCurrentTargets",
+                "performanceActiveReviewStagesStillAllowRejection",
+                "achievementResubmitRetainsRejectedEvidenceAndRejectsDuplicates",
+                "achievementAdminResubmitSerializesDuplicatesAndKeepsReporter",
+                "rejectedAchievementsStayInListWithLatestReasonAndOtherStatusesIgnoreOldReason",
+                "deletedAchievementsNeverRemainPendingAndCompletedHistorySurvives",
+                "noticeListHidesStaleRequestsPreservesOrdinaryMessagesAndIsolation",
+                "administratorAuditPageAndBadgeUseSamePendingScope",
+            ]) + ",AuditScopeConsistencyApiTest"
+        elif method == "auditscope":
             selector = "AuditScopeConsistencyApiTest"
         elif method == "admindrawer":
             selector = "AdminTestApiTest,CoreIndicatorApiTest,ExpertReviewApiTest,ReviewBatchRegressionApiTest#automaticAdminTraceDoesNotBlockLargeBatchTransfers"

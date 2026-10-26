@@ -196,11 +196,13 @@ class ReviewBatchRegressionApiTest {
                 + "('synthetic',990003,?,'0',999999,'月度提醒','月度审核任务提醒',0,1),"
                 + "('synthetic',990004,?,'0',999999,NULL,'普通消息',0,0),"
                 + "('synthetic',990005,?,'0',999999,'任务完成','任务已完成',1,0),"
-                + "('synthetic',990006,?,'0',999999,'任务完成','任务已完成',0,0)",
-                ADMIN, ADMIN, ADMIN, ADMIN, ADMIN, USER);
+                + "('synthetic',990006,?,'0',999999,'任务完成','任务已完成',0,0),"
+                + "('synthetic',990007,?,'0',NULL,NULL,'无关联通知',0,0)",
+                ADMIN, ADMIN, ADMIN, ADMIN, ADMIN, USER, ADMIN);
         JsonNode notices = body(request(HttpMethod.GET, "/system/notice", login(ADMIN), null));
-        assertEquals(3, notices.size());
-        assertEquals(6, jdbc.queryForObject("SELECT COUNT(*) FROM sys_notice", Integer.class));
+        assertEquals(4, notices.size());
+        assertTrue(java.util.stream.StreamSupport.stream(notices.spliterator(),false).anyMatch(notice->notice.path("noticeId").asLong()==990007));
+        assertEquals(7, jdbc.queryForObject("SELECT COUNT(*) FROM sys_notice", Integer.class));
     }
 
     private ResponseEntity<String> request(HttpMethod method, String path, String token, Object body) {
@@ -347,6 +349,149 @@ class ReviewBatchRegressionApiTest {
         headers.set("Authorization", token);
         return http.exchange("http://127.0.0.1:" + port + "/api/budget/import", HttpMethod.POST,
                 new HttpEntity<>(body, headers), String.class);
+    }
+
+
+    @Test
+    void budgetWebEditsAreVersionedAtomicAndPreserveImportedColumns() throws Exception {
+        String admin=login(ADMIN);Path file=budgetWorkbook("edit",123.4567);
+        try {
+            assertEquals(HttpStatus.OK,uploadBudget(admin,2029,11,file).getStatusCode());
+            JsonNode initial=body(request(HttpMethod.GET,"/budget?year=2029&month=11",admin,null));
+            JsonNode source=initial.path("sources").get(0),task=initial.path("tasks").get(0);
+            int base=initial.path("currentVersionNo").asInt();assertEquals(1,base);
+            assertEquals(HttpStatus.OK,request(HttpMethod.POST,"/budget/lock?year=2029&month=11&locked=false",admin,null).getStatusCode());
+            Map<String,Object> patch=new LinkedHashMap<>(Map.of("year",2029,"month",11,"baseVersionNo",base,
+                    "sources",List.of(Map.of("sourceKey",source.path("sourceKey").asText(),"annualPlan",new BigDecimal("222.22"))),
+                    "tasks",List.of(Map.of("taskIndex",task.path("taskIndex").asInt(),"goods",new BigDecimal("12.34")))));
+            JsonNode saved=body(request(HttpMethod.POST,"/budget/save",admin,patch));
+            assertEquals(2,saved.path("currentVersionNo").asInt());assertEquals(0,saved.path("sheet").path("locked").asInt());
+            assertEquals(new BigDecimal("222.22"),decimal(saved.path("sources").get(0).path("annualPlan")));
+            for(String key:List.of("fiveYearTotal","available","carryover","arrived"))assertEquals(source.path(key),saved.path("sources").get(0).path(key),key);
+            for(String key:List.of("amount","coreOutput","targetValue","achieved","capital","other"))assertEquals(task.path(key),saved.path("tasks").get(0).path(key),key);
+            assertEquals("EDIT",jdbc.queryForObject("SELECT operation_type FROM biz_budget_import_version ORDER BY version_id DESC LIMIT 1",String.class));
+            assertEquals(HttpStatus.CONFLICT,request(HttpMethod.POST,"/budget/save",admin,patch).getStatusCode());
+            patch.put("baseVersionNo",2);patch.put("tasks",List.of(Map.of("taskIndex",task.path("taskIndex").asInt(),"goods",-1)));
+            patch.put("sources",List.of(Map.of("sourceKey",source.path("sourceKey").asText(),"annualPlan",333)));
+            assertEquals(HttpStatus.BAD_REQUEST,request(HttpMethod.POST,"/budget/save",admin,patch).getStatusCode());
+            assertEquals(0,jdbc.queryForObject("SELECT annual_plan FROM biz_budget_source_item ORDER BY item_id LIMIT 1",BigDecimal.class).compareTo(new BigDecimal("222.22")));
+            patch.put("sources",List.of(Map.of("sourceKey",source.path("sourceKey").asText(),"annualPlan",new BigDecimal("333.33"))));patch.put("tasks",List.of());patch.put("lockAfterSave",true);
+            JsonNode locked=body(request(HttpMethod.POST,"/budget/save",admin,patch));assertEquals(1,locked.path("sheet").path("locked").asInt());assertEquals(3,locked.path("currentVersionNo").asInt());
+            patch.put("baseVersionNo",3);assertEquals(HttpStatus.CONFLICT,request(HttpMethod.POST,"/budget/save",admin,patch).getStatusCode());
+            assertEquals(HttpStatus.FORBIDDEN,request(HttpMethod.POST,"/budget/save",login(USER),patch).getStatusCode());
+            assertEquals(3,jdbc.queryForObject("SELECT COUNT(*) FROM biz_budget_import_version",Integer.class));
+            assertEquals(initial.path("sheet").path("fileId"),locked.path("sheet").path("fileId"));
+        } finally {Files.deleteIfExists(file);}
+    }
+
+    @Test
+    void budgetWebEditsValidateDecimalsAndSerializeConcurrentSaves() throws Exception {
+        String admin=login(ADMIN);Path file=budgetWorkbook("edit-edges",123.4567);
+        try {
+            assertEquals(HttpStatus.OK,uploadBudget(admin,2026,5,file).getStatusCode());
+            JsonNode original=body(request(HttpMethod.GET,"/budget?year=2026&month=5",admin,null));
+            String source=original.path("sources").get(0).path("sourceKey").asText();
+            assertEquals(HttpStatus.OK,request(HttpMethod.POST,"/budget/lock?year=2026&month=5&locked=false",admin,null).getStatusCode());
+            Map<String,Object> patch=new LinkedHashMap<>(Map.of("year",2026,"month",5,"baseVersionNo",1));
+            for(Object invalid:java.util.Arrays.asList(null,-0.01,new BigDecimal("0.001"),new BigDecimal("10000000000000000.00"),"222.22")) {
+                Map<String,Object> cell=new LinkedHashMap<>();cell.put("sourceKey",source);cell.put("annualPlan",invalid);patch.put("sources",List.of(cell));
+                assertEquals(HttpStatus.BAD_REQUEST,request(HttpMethod.POST,"/budget/save",admin,patch).getStatusCode(),String.valueOf(invalid));
+                assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM biz_budget_import_version",Integer.class));
+            }
+            patch.put("sources",List.of(Map.of("sourceKey",source,"annualPlan",1),Map.of("sourceKey",source,"arrived",2)));
+            assertEquals(HttpStatus.BAD_REQUEST,request(HttpMethod.POST,"/budget/save",admin,patch).getStatusCode());
+            patch.put("sources",List.of(Map.of("sourceKey",source,"fiveYearTotal",1)));
+            assertEquals(HttpStatus.BAD_REQUEST,request(HttpMethod.POST,"/budget/save",admin,patch).getStatusCode());
+            BigDecimal largest=new BigDecimal("9999999999999999.99");
+            patch.put("sources",List.of(Map.of("sourceKey",source,"annualPlan",largest)));
+            assertEquals(HttpStatus.OK,request(HttpMethod.POST,"/budget/save",admin,patch).getStatusCode());
+            assertEquals(0,largest.compareTo(jdbc.queryForObject("SELECT annual_plan FROM biz_budget_source_item WHERE source_key=?",BigDecimal.class,source)));
+            patch.put("baseVersionNo",2);
+            assertEquals(2,body(request(HttpMethod.POST,"/budget/save",admin,patch)).path("currentVersionNo").asInt(),"no-op must not create a version");
+
+            jdbc.update("INSERT INTO sys_user_permission(user_id,access_mode,permissions_json,scopes_json,version) VALUES(?,'CUSTOM',?,?,1) ON DUPLICATE KEY UPDATE access_mode=VALUES(access_mode),permissions_json=VALUES(permissions_json),scopes_json=VALUES(scopes_json),version=version+1",USER,
+                    json.writeValueAsString(Map.of("budget.read",true,"budget.fill",true)),json.writeValueAsString(Map.of("budget",Map.of("mode","ALL","years",List.of(2026)))));
+            String finance=login(USER);
+            patch.put("year",2027);assertEquals(HttpStatus.FORBIDDEN,request(HttpMethod.POST,"/budget/save",finance,patch).getStatusCode());patch.put("year",2026);
+            patch.put("sources",List.of(Map.of("sourceKey",source,"annualPlan",new BigDecimal("222.22"))));
+            patch.put("lockAfterSave",true);assertEquals(HttpStatus.FORBIDDEN,request(HttpMethod.POST,"/budget/save",finance,patch).getStatusCode());
+            patch.put("lockAfterSave",false);assertEquals(HttpStatus.OK,request(HttpMethod.POST,"/budget/save",finance,patch).getStatusCode());
+            assertEquals(USER,jdbc.queryForObject("SELECT created_by FROM biz_budget_import_version ORDER BY version_id DESC LIMIT 1",Long.class));
+            jdbc.update("UPDATE sys_user_permission SET permissions_json='{\"budget.read\":true,\"budget.fill\":false}',version=version+1 WHERE user_id=?",USER);
+            patch.put("baseVersionNo",3);assertEquals(HttpStatus.FORBIDDEN,request(HttpMethod.POST,"/budget/save",finance,patch).getStatusCode(),"old token must use current permission");
+
+            var pool=java.util.concurrent.Executors.newFixedThreadPool(2);var start=new java.util.concurrent.CountDownLatch(1);
+            try {
+                List<java.util.concurrent.Future<Integer>> responses=new ArrayList<>();
+                for(int amount:List.of(10,20)) {
+                    Map<String,Object> concurrent=Map.of("year",2026,"month",5,"baseVersionNo",3,"sources",List.of(Map.of("sourceKey",source,"annualPlan",amount)));
+                    responses.add(pool.submit(()->{start.await();return request(HttpMethod.POST,"/budget/save",admin,concurrent).getStatusCode().value();}));
+                }
+                start.countDown();List<Integer> codes=new ArrayList<>();for(var response:responses)codes.add(response.get(30,java.util.concurrent.TimeUnit.SECONDS));
+                codes.sort(Integer::compareTo);assertEquals(List.of(200,409),codes);
+            } finally {pool.shutdownNow();}
+            assertEquals(4,jdbc.queryForObject("SELECT COUNT(*) FROM biz_budget_import_version",Integer.class));
+            assertEquals(0,original.path("sources").get(0).path("available").decimalValue().compareTo(jdbc.queryForObject("SELECT available FROM biz_budget_source_item WHERE source_key=?",BigDecimal.class,source)));
+        } finally {Files.deleteIfExists(file);}
+    }
+
+    @Test
+    void rejectedPerformanceStaysInActualReviewersHistoryAndLocate() throws Exception {
+        seedManualPerformance("1");String auditor=login(AUDITOR);long sub=submitPerformance(2026,"3",login(USER));
+        assertSuccess(reviewPerformance(sub,false,auditor),"已退回");
+        JsonNode records=body(request(HttpMethod.GET,"/performance/audit/records",auditor,null));assertTrue(records.isArray());assertEquals(1,records.size());assertEquals(sub,records.get(0).path("subId").asLong());
+        JsonNode page=body(request(HttpMethod.GET,"/list-filters/audits?tab=done&responseMode=page&includeFields=false&f.type=performance",auditor,null));assertEquals(1,page.path("total").asInt());
+        JsonNode located=body(request(HttpMethod.GET,"/list-filters/audits/locate?type=performance&subId="+sub,auditor,null));assertTrue(located.path("isViewMode").asBoolean());
+        assertEquals(0,body(request(HttpMethod.GET,"/performance/audit/records",login(LEADER),null)).size());
+        assertTrue(body(request(HttpMethod.GET,"/list-filters/audits/filter-options?tab=done&field=submitBy",auditor,null)).path("total").asInt()>0);
+    }
+
+    @Test
+    void achievementResubmitRetainsRejectedEvidenceAndRejectsDuplicates() throws Exception {
+        long uploaderId=990000L+DEPT;seedUser(uploaderId,"1");String uploader=login(uploaderId),admin=login(ADMIN);
+        assertSuccess(request(HttpMethod.POST,"/achievement/add",uploader,achievementQuantityPayload()),"添加成功");
+        long id=jdbc.queryForObject("SELECT MAX(ach_id) FROM biz_achievement",Long.class),old=jdbc.queryForObject("SELECT MAX(sub_id) FROM biz_achievement_submission",Long.class);
+        assertSuccess(request(HttpMethod.POST,"/achievement/audit",admin,Map.of("sub_id",old,"is_pass",false,"content","请补充依据")),"已退回");
+        assertSuccess(request(HttpMethod.POST,"/achievement/update/"+id,uploader,achievementQuantityPayload()),"修改成功");
+        assertEquals(-10,jdbc.queryForObject("SELECT audit_status FROM biz_achievement WHERE ach_id=?",Integer.class,id));
+        assertEquals(HttpStatus.FORBIDDEN,request(HttpMethod.POST,"/achievement/"+id+"/resubmit",login(USER),null).getStatusCode());
+        JsonNode submitted=body(request(HttpMethod.POST,"/achievement/"+id+"/resubmit",uploader,null));long next=submitted.path("subId").asLong();assertTrue(next>old);
+        assertEquals(HttpStatus.CONFLICT,request(HttpMethod.POST,"/achievement/"+id+"/resubmit",uploader,null).getStatusCode());
+        assertEquals(2,jdbc.queryForObject("SELECT COUNT(*) FROM biz_achievement_submission WHERE ach_id=?",Integer.class,id));
+        assertEquals(-10,jdbc.queryForObject("SELECT flow_status FROM biz_achievement_submission WHERE sub_id=?",Integer.class,old));
+        assertEquals("请补充依据",jdbc.queryForObject("SELECT comment FROM biz_achievement_audit_log WHERE sub_id=? AND action_type='reject'",String.class,old));
+        assertEquals(uploaderId,jdbc.queryForObject("SELECT create_by FROM biz_achievement WHERE ach_id=?",Long.class,id));
+        assertSuccess(request(HttpMethod.POST,"/achievement/audit",admin,Map.of("sub_id",next,"is_pass",true,"content","归档")),"已归档");
+        assertEquals(30,jdbc.queryForObject("SELECT audit_status FROM biz_achievement WHERE ach_id=?",Integer.class,id));
+    }
+
+    @Test
+    void achievementAdminResubmitSerializesDuplicatesAndKeepsReporter() throws Exception {
+        long uploaderId=990000L+DEPT;seedUser(uploaderId,"1");String uploader=login(uploaderId),admin=login(ADMIN);
+        assertSuccess(request(HttpMethod.POST,"/achievement/add",uploader,achievementQuantityPayload()),"添加成功");
+        long id=jdbc.queryForObject("SELECT MAX(ach_id) FROM biz_achievement",Long.class),old=jdbc.queryForObject("SELECT MAX(sub_id) FROM biz_achievement_submission",Long.class);
+        assertSuccess(request(HttpMethod.POST,"/achievement/audit",admin,Map.of("sub_id",old,"is_pass",false,"content","保留原驳回意见")),"已退回");
+        var pool=java.util.concurrent.Executors.newFixedThreadPool(2);var start=new java.util.concurrent.CountDownLatch(1);
+        try {
+            var a=pool.submit(()->{start.await();return request(HttpMethod.POST,"/achievement/"+id+"/resubmit",admin,null).getStatusCode().value();});
+            var b=pool.submit(()->{start.await();return request(HttpMethod.POST,"/achievement/"+id+"/resubmit",admin,null).getStatusCode().value();});
+            start.countDown();List<Integer> codes=new ArrayList<>(List.of(a.get(30,java.util.concurrent.TimeUnit.SECONDS),b.get(30,java.util.concurrent.TimeUnit.SECONDS)));
+            codes.sort(Integer::compareTo);assertEquals(List.of(200,409),codes);
+        } finally {pool.shutdownNow();}
+        long next=jdbc.queryForObject("SELECT MAX(sub_id) FROM biz_achievement_submission",Long.class);
+        assertEquals(2,jdbc.queryForObject("SELECT COUNT(*) FROM biz_achievement_submission WHERE ach_id=?",Integer.class,id));
+        assertEquals(uploaderId,jdbc.queryForObject("SELECT submit_by FROM biz_achievement_submission WHERE sub_id=?",Long.class,next));
+        assertEquals(ADMIN,jdbc.queryForObject("SELECT operator_id FROM biz_achievement_audit_log WHERE sub_id=? AND action_type='submit'",Long.class,next));
+        assertEquals("保留原驳回意见",jdbc.queryForObject("SELECT comment FROM biz_achievement_audit_log WHERE sub_id=? AND action_type='reject'",String.class,old));
+        assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM biz_achievement_submission WHERE ach_id=? AND flow_status=10",Integer.class,id));
+    }
+
+    @Test
+    void administratorAuditPageAndBadgeUseSamePendingScope() throws Exception {
+        seedManualPerformance("1");submitPerformance(2026,"3",login(USER));
+        JsonNode page=body(request(HttpMethod.GET,"/list-filters/audits?tab=todo&responseMode=page&includeFields=false",login(ADMIN),null));
+        assertTrue(page.path("total").asInt()>0);assertEquals(page.path("total").asInt(),page.path("summary").path("todoCount").asInt());
+        assertEquals(0,body(request(HttpMethod.GET,"/list-filters/audits?tab=todo&responseMode=page&includeFields=false",login(USER),null)).path("total").asInt());
     }
 
     private Path budgetWorkbook(String suffix, double available) throws Exception {

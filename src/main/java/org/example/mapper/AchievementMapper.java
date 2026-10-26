@@ -35,6 +35,12 @@ public interface AchievementMapper {
     @Select(REPORT_COLUMNS + "WHERE a.ach_id = #{achId} AND a.is_delete = 0")
     BizAchievement getAchievementById(Long achId);
 
+    @Select("SELECT * FROM biz_achievement WHERE ach_id=#{achId} AND is_delete=0 FOR UPDATE")
+    BizAchievement getAchievementByIdForUpdate(Long achId);
+
+    @Select("SELECT COUNT(*) FROM biz_achievement_submission WHERE ach_id=#{achId} AND is_delete=0 AND flow_status=10")
+    long countPendingAchievementSubmissions(Long achId);
+
     /**
      * 查询所有未删除的标志性成果列表
      * @return 标志性成果列表

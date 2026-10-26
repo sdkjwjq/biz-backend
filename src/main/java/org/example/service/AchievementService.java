@@ -201,6 +201,7 @@ public class AchievementService {
      * 仅修改未删除的成果，根据成果ID更新
      * @param achievement 标志性成果实体（含成果ID和需修改字段）
      */
+    @Transactional
     public void updateAchievement(Long id, BizAchievement achievement, Long userId) {
         SysUser user = getActiveUser(userId);
         SysDept dept = getActiveDept(user);
@@ -213,7 +214,7 @@ public class AchievementService {
             throw new RuntimeException("修改成果信息不能为空");
         }
         validateAchievement(achievement);
-        BizAchievement existing = achievementMapper.getAchievementById(id);
+        BizAchievement existing = achievementMapper.getAchievementByIdForUpdate(id);
         if (existing == null) {
             throw new RuntimeException("成果ID不存在，无法修改");
         }
@@ -238,6 +239,33 @@ public class AchievementService {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    /** A new submission preserves the rejected submission and its audit evidence. */
+    @Transactional
+    public Long resubmitAchievement(Long achId, Long actor) {
+        SysUser user = getActiveUser(actor);
+        if(user==null || !"1".equals(user.getStatus()))throw new AdminManagementException(403,"账号已失效");
+        boolean admin=AchievementPermissionUtil.isPrimaryAchievementAdmin(user);
+        if(!admin&&!canUploadAchievement(actor))throw new AdminManagementException(403,"没有成果填报权限");
+        var achievement=achievementMapper.getAchievementByIdForUpdate(achId);
+        if(achievement==null)throw new AdminManagementException(404,"成果不存在或已删除");
+        if(!admin&&(!Objects.equals(actor,achievement.getCreateBy())||!Objects.equals(user.getDeptId(),achievement.getDeptId())))throw new AdminManagementException(403,"仅允许重新提交本部门账号创建的成果");
+        if(achievement.getAuditStatus()==null||achievement.getAuditStatus()>=0||achievementMapper.countPendingAchievementSubmissions(achId)>0)throw new AdminManagementException(409,"成果状态已变化，请刷新后查看");
+        validateAchievement(achievement);
+        var handler=getActiveUser(ADMIN_ID);
+        if(handler==null||!"1".equals(handler.getStatus()))throw new AdminManagementException(409,"归档审核账号已失效，请联系管理员");
+        Date now=new Date();
+        var submission=new BizAchievementSubmission();
+        submission.setAchId(achId);submission.setSubmitBy(achievement.getCreateBy());submission.setSubmitTime(now);
+        submission.setFlowStatus(10);submission.setCurrentHandlerId(ADMIN_ID);submission.setComment(achievement.getComment());submission.setIsDelete(0);
+        achievementMapper.createAchievementSubmission(submission);
+        int previous=achievement.getAuditStatus();achievement.setAuditStatus(10);achievement.setCurrentHandlerId(ADMIN_ID);achievement.setUpdateTime(now);
+        achievementMapper.updateAchievementAuditState(achievement);
+        createAchievementAuditLog(submission.getSubId(),actor,"submit",previous,10,"修改后重新提交");
+        sendNotice(actor,ADMIN_ID,"成果归档审核","成果待归档审核","成果「"+achievement.getAchName()+"」已重新提交，请进行归档审核","3",submission.getSubId());
+        AdminTestContext.record(actor,"ACHIEVEMENT",achId,achievement.getAchName(),"驳回后重新提交");
+        return submission.getSubId();
     }
 
     private void validateAchievement(BizAchievement achievement) {

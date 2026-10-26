@@ -77,6 +77,15 @@ public class BudgetController {
         }
     }
 
+    @PostMapping("/save")
+    public Object save(@RequestBody org.example.entity.dto.BudgetSaveRequest body, HttpServletRequest request) {
+        try { return budgetService.saveBudget(body.changes(), currentUserId(request)); }
+        catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
+            return new ErrorVO(e.getMessage(),500);
+        }
+    }
+
     @GetMapping("/export")
     public Object exportBudget(@RequestParam("year") Integer year,
                                @RequestParam("month") Integer month,

@@ -140,10 +140,13 @@ public interface PerformanceMapper {
     @Select("SELECT s.* FROM biz_performance_submission s JOIN biz_performance p ON p.perf_id=s.perf_id AND COALESCE(p.is_delete,0)=0 WHERE s.is_delete=0 AND s.flow_status IN(10,20) ORDER BY s.submit_time DESC")
     List<BizPerformanceSubmission> getAllPendingPerformanceSubmissions();
 
-    @Select("SELECT * FROM biz_performance_submission " +
-            "WHERE (submit_by = #{userId} OR current_handler_id = #{userId}) AND is_delete = 0 " +
-            "AND (flow_status = 30 OR flow_status < 0) ORDER BY submit_time DESC")
+    @Select("SELECT s.* FROM biz_performance_submission s " +
+            "WHERE (s.submit_by = #{userId} OR s.current_handler_id = #{userId} OR EXISTS (SELECT 1 FROM biz_performance_audit_log l WHERE l.sub_id=s.sub_id AND l.operator_id=#{userId} AND l.action_type IN ('pass','reject'))) AND s.is_delete = 0 " +
+            "AND (s.flow_status = 30 OR s.flow_status < 0) ORDER BY s.submit_time DESC")
     List<BizPerformanceSubmission> getPerformanceSubmissionRecords(@Param("userId") Long userId);
+
+    @Select("SELECT COUNT(*)>0 FROM biz_performance_audit_log WHERE sub_id=#{subId} AND operator_id=#{actor} AND action_type IN ('pass','reject')")
+    boolean handledPerformanceSubmission(@Param("subId") Long subId,@Param("actor") Long actor);
 
     @Select("SELECT * FROM biz_performance_submission " +
             "WHERE perf_id = #{perfId} AND (#{year} IS NULL OR year = #{year}) AND is_delete = 0 " +

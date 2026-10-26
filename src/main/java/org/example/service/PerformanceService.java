@@ -731,7 +731,7 @@ public class PerformanceService {
             if(!java.util.Set.of(10,20).contains(status))return null;
             if(AdminTestContext.enabled(actor)){var object=performanceMapper.getPerformanceById(submission.getPerfId());if(object==null||Integer.valueOf(1).equals(object.getIsDelete()))return null;}
             else if(!java.util.Objects.equals(actor,submission.getCurrentHandlerId()))return null;
-        }else if(!(status==30||status<0)||!(java.util.Objects.equals(actor,submission.getSubmitBy())||java.util.Objects.equals(actor,submission.getCurrentHandlerId())))return null;
+        }else if(!(status==30||status<0)||!(java.util.Objects.equals(actor,submission.getSubmitBy())||java.util.Objects.equals(actor,submission.getCurrentHandlerId())||performanceMapper.handledPerformanceSubmission(subId,actor)))return null;
         return performanceMapper.getPerformanceAuditVO(subId);
     }
 

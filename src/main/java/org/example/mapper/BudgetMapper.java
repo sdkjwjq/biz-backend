@@ -49,6 +49,15 @@ public interface BudgetMapper {
     @Update("UPDATE biz_budget_sheet SET locked = #{locked}, update_time = NOW() WHERE sheet_id = #{sheetId}")
     void updateLock(Long sheetId, Integer locked);
 
+    @Update("UPDATE biz_budget_sheet SET update_time=#{updateTime} WHERE sheet_id=#{sheetId}")
+    void updateEditTime(@Param("sheetId") Long sheetId, @Param("updateTime") java.util.Date updateTime);
+
+    @Update("UPDATE biz_budget_source_item SET annual_plan=#{annualPlan},arrived=#{arrived} WHERE item_id=#{itemId} AND sheet_id=#{sheetId}")
+    void updateEditableSource(BizBudgetSourceItem item);
+
+    @Update("UPDATE biz_budget_task_item SET goods=#{goods},capital=#{capital},other=#{other} WHERE item_id=#{itemId} AND sheet_id=#{sheetId}")
+    void updateEditableTask(BizBudgetTaskItem item);
+
     @Delete("DELETE FROM biz_budget_source_item WHERE sheet_id = #{sheetId}")
     void deleteSources(Long sheetId);
 
