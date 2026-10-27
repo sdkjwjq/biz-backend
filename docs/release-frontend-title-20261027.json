@@ -1,0 +1,12 @@
+{
+  "release": "shuanggao-frontend-fix-20261027",
+  "archive": "D:\\college\\2026\\shuanggao\\releases\\shuanggao-frontend-fix-20261027.tar.gz",
+  "sha256": "ac050043e7742269c1501ee90119a1345dc8cc073dacac24f38830375d34891b",
+  "bytes": 9646299,
+  "frontendFiles": 74,
+  "browserChecks": 9,
+  "deploymentChecks": 13,
+  "archiveMatchesDirectory": true,
+  "productionDeployed": false,
+  "testDirectory": "D:\\college\\2026\\shuanggao\\.run\\frontend-patch-20261027\\attempt-9fulnjjv"
+}
