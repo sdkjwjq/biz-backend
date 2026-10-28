@@ -61,6 +61,7 @@ def main():
         subprocess.run([mysql, *connection, database], input=(root / 'data/migrations/2026-10-12-core-indicators.sql').read_bytes(), env=env, check=True)
         subprocess.run([mysql, *connection, database], input=(root / 'data/migrations/2026-10-14-core-indicator-report-mapping.sql').read_bytes(), env=env, check=True)
         subprocess.run([mysql, *connection, database], input=(root / 'data/migrations/2026-10-24-permissions-expert-reviews.sql').read_bytes(), env=env, check=True)
+        subprocess.run([mysql, *connection, database], input=(root / "data/migrations/2026-10-28-transfer-reviewers.sql").read_bytes(), env=env, check=True)
         env["SHUANGGAO_TEST_DB_USER"] = user
         env["SHUANGGAO_TEST_JDBC_URL"] = ("jdbc:mysql://127.0.0.1:3306/" + database
                                          + "?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai")
@@ -80,6 +81,14 @@ def main():
                 "noticeListHidesStaleRequestsPreservesOrdinaryMessagesAndIsolation",
                 "administratorAuditPageAndBadgeUseSamePendingScope",
             ]) + ",AuditScopeConsistencyApiTest"
+        elif method == "transferreviewers":
+            selector = "ReviewBatchRegressionApiTest#" + "+".join([
+                "ownershipTransferValidatesInputAndRequiresAdmin", "ownershipTransferBlocksActiveAuditsAndRecordsTheChange",
+                "ownershipTransferHandlesPerformanceAndRejectsActiveAudits", "automaticAdminTraceDoesNotBlockLargeBatchTransfers",
+                "transferReviewerFieldsStayIndependentAndRouteNewTaskSubmissions", "transferCanChangeOnlyReviewerAndRejectInactiveAssignmentsAtomically",
+                "transferMixedReviewersCanRemainDistinctForLegacyAndBatchRequests", "performanceTransferUpdatesTheReviewerActuallyUsedBySubmission",
+                "taskWithMissingReviewerCanStillBeOpenedAndReassigned", "transferRejectsStaleOwnershipPreviewWithoutOverwritingChanges",
+            ]) + ",PermissionApiTest"
         elif method == "auditscope":
             selector = "AuditScopeConsistencyApiTest"
         elif method == "admindrawer":

@@ -33,6 +33,8 @@ NEW_SOURCES = [
 ]
 ADDITIONS = {
     ('biz_core_report','performance_code'): 'varchar(30) DEFAULT NULL',
+    ('biz_ownership_change_log','auditor_before_id'): 'bigint DEFAULT NULL',
+    ('biz_ownership_change_log','auditor_after_id'): 'bigint DEFAULT NULL',
     ('biz_task','is_priority'): 'tinyint NOT NULL DEFAULT 0',
     ('biz_task','is_difficult'): 'tinyint NOT NULL DEFAULT 0',
     ('biz_task','planned_completion_date'): 'date DEFAULT NULL',
@@ -158,7 +160,7 @@ DEALLOCATE PREPARE release_stmt;
     selection=','.join("'"+name+"'" for name in sorted(tables))
     columns=query('SELECT TABLE_NAME,COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ('+selection+') ORDER BY TABLE_NAME,ORDINAL_POSITION')
     assert {line.split('\t')[0] for line in columns.splitlines()}==tables
-    additional = {('sys_user', 'force_password_change'), *[('biz_work_record', c) for c in ['delete_marker','deleted_by','deleted_time','delete_reason']]}
+    additional = {('biz_ownership_change_log','auditor_before_id'), ('biz_ownership_change_log','auditor_after_id'), ('sys_user', 'force_password_change'), *[('biz_work_record', c) for c in ['delete_marker','deleted_by','deleted_time','delete_reason']]}
     columns = '\n'.join(sorted(set(columns.splitlines()) | {'\t'.join(pair) for pair in additional}))+'\n'
     (OUT/'sql/required-columns.tsv').write_text(columns,encoding='utf-8',newline='\n')
     allowed='\n'.join(line for line in columns.splitlines() if line.split('\t')[0] in added_tables or tuple(line.split('\t')) in ADDITIONS or tuple(line.split('\t')) in additional)+'\n'

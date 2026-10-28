@@ -2094,6 +2094,91 @@ class ReviewBatchRegressionApiTest {
         assertTrue(trace.get("after_json").toString().contains("938019"));
     }
 
+    @Test
+    void transferReviewerFieldsStayIndependentAndRouteNewTaskSubmissions() throws Exception {
+        seedSubmissionFlow(); long dept = seedTransferTargets(); seedUser(910006L, "1");
+        Map<String,Object> input = transferPayload(List.of(930002L), dept, 910004L, 910005L, "Three independent roles");
+        input.put("auditorId", 910006L);
+        assertEquals(1, body(request(HttpMethod.POST,"/manage/transfer/tasks",login(ADMIN),input)).path("updated").asInt());
+        var task=jdbc.queryForMap("SELECT leader_id,auditor_id,principal_id FROM biz_task WHERE task_id=930002");
+        assertEquals(910004L,((Number)task.get("leader_id")).longValue());
+        assertEquals(910006L,((Number)task.get("auditor_id")).longValue());
+        assertEquals(910005L,((Number)task.get("principal_id")).longValue());
+        var log=body(request(HttpMethod.GET,"/manage/transfer/logs?targetType=TASK&targetId=930002",login(ADMIN),null)).get(0);
+        assertEquals(AUDITOR,log.path("auditorBeforeId").asLong());assertEquals(910006L,log.path("auditorAfterId").asLong());
+        assertEquals(3,jdbc.queryForObject("SELECT COUNT(*) FROM sys_notice WHERE trigger_event='归属移交'",Integer.class));
+        jdbc.update("UPDATE sys_file SET upload_by=910004 WHERE file_id=940001");
+        assertSuccess(request(HttpMethod.POST,"/biz/sub",login(910004L),submission("3")),"提交成功");
+        long sub=newestSubmission();assertEquals(910006L,jdbc.queryForObject("SELECT current_handler_id FROM biz_material_submission WHERE sub_id=?",Long.class,sub));
+        review(sub,true,login(910006L));assertEquals(910005L,jdbc.queryForObject("SELECT current_handler_id FROM biz_material_submission WHERE sub_id=?",Long.class,sub));
+        review(sub,true,login(910005L));assertEquals(ADMIN,jdbc.queryForObject("SELECT current_handler_id FROM biz_material_submission WHERE sub_id=?",Long.class,sub));
+    }
+
+    @Test
+    void transferCanChangeOnlyReviewerAndRejectInactiveAssignmentsAtomically() throws Exception {
+        seedSubmissionFlow(); seedUser(910006L,"1");
+        var input=transferPayload(List.of(930002L),DEPT,USER,LEADER,"Reviewer only");input.put("auditorId",910006L);
+        jdbc.update("UPDATE sys_user SET status='0' WHERE user_id=910006");
+        assertEquals(400,request(HttpMethod.POST,"/manage/transfer/tasks",login(ADMIN),input).getStatusCode().value());
+        assertEquals(AUDITOR,jdbc.queryForObject("SELECT auditor_id FROM biz_task WHERE task_id=930002",Long.class));
+        assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM biz_ownership_change_log",Integer.class));
+        jdbc.update("UPDATE sys_user SET status='1' WHERE user_id=910006");
+        jdbc.update("UPDATE sys_dept SET status='1' WHERE dept_id=?",DEPT);
+        assertEquals(400,request(HttpMethod.POST,"/manage/transfer/tasks",login(ADMIN),input).getStatusCode().value());
+        jdbc.update("UPDATE sys_dept SET status='0' WHERE dept_id=?",DEPT);
+        assertEquals(1,body(request(HttpMethod.POST,"/manage/transfer/tasks",login(ADMIN),input)).path("updated").asInt());
+        assertEquals(USER,jdbc.queryForObject("SELECT leader_id FROM biz_task WHERE task_id=930002",Long.class));
+        assertEquals(LEADER,jdbc.queryForObject("SELECT principal_id FROM biz_task WHERE task_id=930002",Long.class));
+        assertEquals(910006L,jdbc.queryForObject("SELECT auditor_id FROM biz_task WHERE task_id=930002",Long.class));
+    }
+
+    @Test
+    void transferMixedReviewersCanRemainDistinctForLegacyAndBatchRequests() throws Exception {
+        seedSubmissionFlow();long dept=seedTransferTargets();seedUser(910006L,"1");seedTask(930009L,930001L,3);
+        jdbc.update("UPDATE biz_task SET auditor_id=910006 WHERE task_id=930009");
+        var input=transferPayload(List.of(930002L,930009L),dept,910004L,910005L,"Keep different reviewers");
+        assertEquals(2,body(request(HttpMethod.POST,"/manage/transfer/tasks",login(ADMIN),input)).path("updated").asInt());
+        assertEquals(AUDITOR,jdbc.queryForObject("SELECT auditor_id FROM biz_task WHERE task_id=930002",Long.class));
+        assertEquals(910006L,jdbc.queryForObject("SELECT auditor_id FROM biz_task WHERE task_id=930009",Long.class));
+        assertEquals(2,jdbc.queryForObject("SELECT COUNT(*) FROM biz_ownership_change_log WHERE auditor_before_id=auditor_after_id",Integer.class));
+    }
+
+    @Test
+    void performanceTransferUpdatesTheReviewerActuallyUsedBySubmission() throws Exception {
+        seedManualPerformance("1");long dept=seedTransferTargets();seedUser(910006L,"1");
+        var input=transferPayload(List.of(950001L),dept,910004L,910005L,"Performance reviewer");input.put("auditorId",910006L);
+        assertEquals(1,body(request(HttpMethod.POST,"/manage/transfer/performances",login(ADMIN),input)).path("updated").asInt());
+        long sub=submitPerformance(2026,"3",login(910004L));
+        assertEquals(910006L,jdbc.queryForObject("SELECT current_handler_id FROM biz_performance_submission WHERE sub_id=?",Long.class,sub));
+        assertEquals(910005L,jdbc.queryForObject("SELECT principal_id FROM biz_performance WHERE perf_id=950001",Long.class));
+    }
+
+    @Test
+    void taskWithMissingReviewerCanStillBeOpenedAndReassigned() throws Exception {
+        seedSubmissionFlow();seedUser(910006L,"1");
+        jdbc.update("UPDATE biz_task SET auditor_id=999999 WHERE task_id=930002");
+        var detail=body(request(HttpMethod.GET,"/biz/tasks/930002",login(ADMIN),null));
+        assertEquals(999999L,detail.path("auditorId").asLong());
+        var input=transferPayload(List.of(930002L),DEPT,USER,LEADER,"Repair missing reviewer");input.put("auditorId",910006L);
+        assertEquals(1,body(request(HttpMethod.POST,"/manage/transfer/tasks",login(ADMIN),input)).path("updated").asInt());
+        assertEquals(910006L,jdbc.queryForObject("SELECT auditor_id FROM biz_task WHERE task_id=930002",Long.class));
+    }
+
+    @Test
+    void transferRejectsStaleOwnershipPreviewWithoutOverwritingChanges() throws Exception {
+        seedSubmissionFlow();seedUser(910006L,"1");
+        var input=transferPayload(List.of(930002L),DEPT,USER,LEADER,"Concurrent preview");input.put("auditorId",AUDITOR);
+        input.put("expected",List.of(Map.of("id",930002,"deptId",DEPT,"leaderId",USER,"auditorId",AUDITOR,"principalId",LEADER)));
+        jdbc.update("UPDATE biz_task SET auditor_id=910006 WHERE task_id=930002");
+        assertEquals(409,request(HttpMethod.POST,"/manage/transfer/tasks",login(ADMIN),input).getStatusCode().value());
+        assertEquals(910006L,jdbc.queryForObject("SELECT auditor_id FROM biz_task WHERE task_id=930002",Long.class));
+        assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM biz_ownership_change_log",Integer.class));
+        input.put("expected",List.of(Map.of("id",930002,"deptId",DEPT,"leaderId",USER,"auditorId",910006L,"principalId",LEADER)));
+        assertEquals(1,body(request(HttpMethod.POST,"/manage/transfer/tasks",login(ADMIN),input)).path("updated").asInt());
+        input.put("expected",List.of());
+        assertEquals(400,request(HttpMethod.POST,"/manage/transfer/tasks",login(ADMIN),input).getStatusCode().value());
+    }
+
     private long seedTransferTargets() {
         jdbc.update("INSERT INTO sys_dept (dept_id, dept_name, is_delete) VALUES (920002, 'Review department B', 0)");
         jdbc.update("INSERT INTO sys_user (user_id, dept_id, user_name, nick_name, email, password, role, status, is_delete, force_password_change) "

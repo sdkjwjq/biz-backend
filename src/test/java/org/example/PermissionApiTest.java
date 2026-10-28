@@ -78,6 +78,16 @@ class PermissionApiTest {
             System.out.println("AUDIT_ROW_SCOPE_BENCH "+json.writeValueAsString(Map.of("auditRows",size,"distinctTasks",3,"taskGraphRows",5,"legacy_median_us",oldTimes.get(2),"batch_median_us",newTimes.get(2),"equalScope",true)));
         }
     }
+    @Test void performanceDutyTransferChangesReviewerNotCorePrincipal() throws Exception {
+        configure(90104L,List.of(),Map.of("performance.read",true,"performance.audit",true),Map.of("performance",Map.of("mode","ALL")));
+        jdbc.update("INSERT INTO biz_performance_submission(sub_id,perf_id,year_id,year,actual_value,submit_by,flow_status,current_handler_id,is_delete) VALUES(51,11,21,2026,2,90101,10,90102,0)");
+        var preview=body(get("/admin/permissions/duties/preview?domain=performance&id=51",admin));
+        var response=call(HttpMethod.POST,"/admin/permissions/duties/transfer",admin,Map.of("domain","performance","id",51,"handlerId",90104,"token",preview.path("token").asText(),"reason","绩效实际审核人移交"));
+        assertEquals(200,response.getStatusCode().value(),response.getBody());
+        assertEquals(90104,jdbc.queryForObject("SELECT auditor_id FROM biz_performance WHERE perf_id=11",Integer.class));
+        assertEquals(90102,jdbc.queryForObject("SELECT principal_id FROM biz_performance WHERE perf_id=11",Integer.class));
+        assertEquals(90104,jdbc.queryForObject("SELECT current_handler_id FROM biz_performance_submission WHERE sub_id=51",Integer.class));
+    }
     @BeforeEach void seed()throws Exception{
         jdbc.execute((ConnectionCallback<Void>)c->{assertTrue(c.getCatalog().matches("biz_review_test_[0-9a-f]{32}"));try(Statement s=c.createStatement()){List<String> tables=new ArrayList<>();try(ResultSet rs=s.executeQuery("SHOW FULL TABLES WHERE Table_type='BASE TABLE'")){while(rs.next())tables.add(rs.getString(1));}s.execute("SET FOREIGN_KEY_CHECKS=0");for(String t:tables)s.executeUpdate("DELETE FROM `"+t+"`");s.execute("SET FOREIGN_KEY_CHECKS=1");}return null;});
         jdbc.update("INSERT INTO sys_permission_revision VALUES(1,0)");
