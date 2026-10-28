@@ -17,9 +17,9 @@ import java.util.List;
 public interface OwnershipTransferMapper {
 
     @Insert("INSERT INTO biz_ownership_change_log(target_type, target_id, target_code, target_name, batch_id, operator_id, reason, "
-            + "dept_before_id, dept_after_id, leader_before_id, leader_after_id, principal_before_id, principal_after_id, create_time) VALUES("
+            + "dept_before_id, dept_after_id, leader_before_id, leader_after_id, auditor_before_id, auditor_after_id, principal_before_id, principal_after_id, create_time) VALUES("
             + "#{targetType}, #{targetId}, #{targetCode}, #{targetName}, #{batchId}, #{operatorId}, #{reason}, "
-            + "#{deptBeforeId}, #{deptAfterId}, #{leaderBeforeId}, #{leaderAfterId}, #{principalBeforeId}, #{principalAfterId}, #{createTime})")
+            + "#{deptBeforeId}, #{deptAfterId}, #{leaderBeforeId}, #{leaderAfterId}, #{auditorBeforeId}, #{auditorAfterId}, #{principalBeforeId}, #{principalAfterId}, #{createTime})")
     @Options(useGeneratedKeys = true, keyProperty = "logId", keyColumn = "log_id")
     void insertLog(BizOwnershipChangeLog log);
 
@@ -30,6 +30,8 @@ public interface OwnershipTransferMapper {
             + "l.dept_after_id AS deptAfterId, COALESCE(da.dept_name,'') AS deptAfterName, "
             + "l.leader_before_id AS leaderBeforeId, COALESCE(NULLIF(ulb.nick_name,''), ulb.user_name, '') AS leaderBeforeName, "
             + "l.leader_after_id AS leaderAfterId, COALESCE(NULLIF(ula.nick_name,''), ula.user_name, '') AS leaderAfterName, "
+            + "l.auditor_before_id AS auditorBeforeId, COALESCE(NULLIF(uab.nick_name,''), uab.user_name, '') AS auditorBeforeName, "
+            + "l.auditor_after_id AS auditorAfterId, COALESCE(NULLIF(uaa.nick_name,''), uaa.user_name, '') AS auditorAfterName, "
             + "l.principal_before_id AS principalBeforeId, COALESCE(NULLIF(upb.nick_name,''), upb.user_name, '') AS principalBeforeName, "
             + "l.principal_after_id AS principalAfterId, COALESCE(NULLIF(upa.nick_name,''), upa.user_name, '') AS principalAfterName, "
             + "l.create_time AS createTime "
@@ -39,6 +41,8 @@ public interface OwnershipTransferMapper {
             + "LEFT JOIN sys_dept da ON da.dept_id = l.dept_after_id "
             + "LEFT JOIN sys_user ulb ON ulb.user_id = l.leader_before_id "
             + "LEFT JOIN sys_user ula ON ula.user_id = l.leader_after_id "
+            + "LEFT JOIN sys_user uab ON uab.user_id = l.auditor_before_id "
+            + "LEFT JOIN sys_user uaa ON uaa.user_id = l.auditor_after_id "
             + "LEFT JOIN sys_user upb ON upb.user_id = l.principal_before_id "
             + "LEFT JOIN sys_user upa ON upa.user_id = l.principal_after_id "
             + "WHERE l.target_type = #{targetType} AND l.target_id = #{targetId} "
@@ -54,15 +58,15 @@ public interface OwnershipTransferMapper {
             + "AND COALESCE(is_delete,0) = 0 AND flow_status IN (10, 20)")
     int countActivePerformanceAudits(@Param("perfId") Long perfId);
 
-    @Update("UPDATE biz_task SET dept_id = #{deptId}, leader_id = #{leaderId}, principal_id = #{principalId}, "
+    @Update("UPDATE biz_task SET dept_id = #{deptId}, leader_id = #{leaderId}, auditor_id = #{auditorId}, principal_id = #{principalId}, "
             + "update_time = #{time} WHERE task_id = #{taskId} AND COALESCE(is_delete,0) = 0")
     int updateTaskOwnership(@Param("taskId") Long taskId, @Param("deptId") Long deptId,
-                            @Param("leaderId") Long leaderId, @Param("principalId") Long principalId,
+                            @Param("leaderId") Long leaderId, @Param("auditorId") Long auditorId, @Param("principalId") Long principalId,
                             @Param("time") Date time);
 
-    @Update("UPDATE biz_performance SET dept_id = #{deptId}, leader_id = #{leaderId}, principal_id = #{principalId}, "
+    @Update("UPDATE biz_performance SET dept_id = #{deptId}, leader_id = #{leaderId}, auditor_id = #{auditorId}, principal_id = #{principalId}, "
             + "update_time = #{time} WHERE perf_id = #{perfId} AND COALESCE(is_delete,0) = 0")
     int updatePerformanceOwnership(@Param("perfId") Long perfId, @Param("deptId") Long deptId,
-                                   @Param("leaderId") Long leaderId, @Param("principalId") Long principalId,
+                                   @Param("leaderId") Long leaderId, @Param("auditorId") Long auditorId, @Param("principalId") Long principalId,
                                    @Param("time") Date time);
 }

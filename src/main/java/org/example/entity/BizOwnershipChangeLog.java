@@ -19,6 +19,8 @@ public class BizOwnershipChangeLog {
     private Long deptAfterId;
     private Long leaderBeforeId;
     private Long leaderAfterId;
+    private Long auditorBeforeId;
+    private Long auditorAfterId;
     private Long principalBeforeId;
     private Long principalAfterId;
     private Date createTime;

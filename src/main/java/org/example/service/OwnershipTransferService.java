@@ -27,7 +27,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * 管理员归属移交：批量变更归口部门、责任人与归口审核人。
+ * 管理员归属移交：批量变更归口部门、填报负责人、专业群审核人与归口部门审核人。
  * 整批校验，任一记录不满足条件即整批拒绝；变更与日志在同一事务提交。
  */
 @Service
@@ -54,10 +54,10 @@ public class OwnershipTransferService {
     private OwnershipTransferMapper ownershipMapper;
 
     private record Prepared(List<Long> ids, Long deptId, String deptName, Long leaderId,
-                            Long principalId, String reason) { }
+                            Long auditorId, Long principalId, String reason) { }
 
     private record Target(String type, Long id, String code, String name,
-                          Integer level, Long deptId, Long leaderId, Long principalId) { }
+                          Integer level, Long deptId, Long leaderId, Long auditorId, Long principalId) { }
 
     public boolean canTransfer(Long userId) {
         if(userId!=null&&permissions.enforced(userId))return permissions.allowed(userId,"tasks.transfer")||permissions.allowed(userId,"performance.transfer");
@@ -88,8 +88,19 @@ public class OwnershipTransferService {
     private Map<String, Object> transfer(OwnershipTransferDTO input, Long userId, String type) {
         requireAdmin(userId);
         boolean task = TYPE_TASK.equals(type);
+        if (permissions.enforced(userId) && !permissions.allowed(userId, task ? "tasks.transfer" : "performance.transfer"))
+            throw new TaskManagementException(403, "无权移交此类业务");
         String noun = task ? "任务" : "绩效指标";
         Prepared prepared = prepare(input, noun);
+        Map<Long, OwnershipTransferDTO.CurrentOwnership> expected = new LinkedHashMap<>();
+        if (input.getExpected() != null) {
+            for (var snapshot : input.getExpected()) {
+                if (snapshot == null || snapshot.id() == null || expected.put(snapshot.id(), snapshot) != null)
+                    throw new TaskManagementException(400, "移交原归属快照不完整，请重新打开移交");
+            }
+            if (!expected.keySet().equals(new LinkedHashSet<>(prepared.ids())))
+                throw new TaskManagementException(400, "移交原归属快照与所选记录不一致");
+        }
 
         List<Target> pending = new ArrayList<>();
         List<String> missing = new ArrayList<>();
@@ -106,6 +117,13 @@ public class OwnershipTransferService {
                 wrongLevel.add(label(current.code(), current.name()));
                 continue;
             }
+            var before = expected.get(id);
+            if (before != null && (!Objects.equals(before.deptId(), current.deptId())
+                    || !Objects.equals(before.leaderId(), current.leaderId())
+                    || !Objects.equals(before.auditorId(), current.auditorId())
+                    || !Objects.equals(before.principalId(), current.principalId()))) {
+                throw new TaskManagementException(409, "归属已被其他管理员修改，请重新打开移交并核对：" + label(current.code(), current.name()));
+            }
             int activeCount = task ? ownershipMapper.countActiveTaskAudits(id)
                     : ownershipMapper.countActivePerformanceAudits(id);
             if (activeCount > 0) {
@@ -114,7 +132,8 @@ public class OwnershipTransferService {
             }
             if (Objects.equals(current.deptId(), prepared.deptId())
                     && Objects.equals(current.leaderId(), prepared.leaderId())
-                    && Objects.equals(current.principalId(), prepared.principalId())) {
+                    && Objects.equals(current.principalId(), prepared.principalId())
+                    && Objects.equals(current.auditorId(), reviewer(current, prepared))) {
                 skipped++;
                 continue;
             }
@@ -139,13 +158,13 @@ public class OwnershipTransferService {
         for (Target target : pending) {
             if (task) {
                 ownershipMapper.updateTaskOwnership(target.id(), prepared.deptId(), prepared.leaderId(),
-                        prepared.principalId(), now);
+                        reviewer(target, prepared), prepared.principalId(), now);
             } else {
                 ownershipMapper.updatePerformanceOwnership(target.id(), prepared.deptId(), prepared.leaderId(),
-                        prepared.principalId(), now);
+                        reviewer(target, prepared), prepared.principalId(), now);
             }
             if(task){BizTask changed=bizMapper.getTaskById(target.id());permissionManagement.requireHandler(changed.getAuditorId(),"tasks",target.id(),changed.getPhase(),10);permissionManagement.requireHandler(changed.getPrincipalId(),"tasks",target.id(),changed.getPhase(),20);}
-            else{permissionManagement.requireHandler(prepared.principalId(),"performance",target.id(),null,10);}
+            else{permissionManagement.requireHandler(reviewer(target, prepared),"performance",target.id(),null,10);}
             BizOwnershipChangeLog log = new BizOwnershipChangeLog();
             log.setTargetType(type);
             log.setTargetId(target.id());
@@ -158,6 +177,8 @@ public class OwnershipTransferService {
             log.setDeptAfterId(prepared.deptId());
             log.setLeaderBeforeId(target.leaderId());
             log.setLeaderAfterId(prepared.leaderId());
+            log.setAuditorBeforeId(target.auditorId());
+            log.setAuditorAfterId(reviewer(target, prepared));
             log.setPrincipalBeforeId(target.principalId());
             log.setPrincipalAfterId(prepared.principalId());
             log.setCreateTime(now);
@@ -175,6 +196,7 @@ public class OwnershipTransferService {
                 "skipped", skipped,
                 "deptId", prepared.deptId(),
                 "leaderId", prepared.leaderId(),
+                "auditorId", prepared.auditorId(),
                 "principalId", prepared.principalId(),
                 "reason", prepared.reason());
         return Map.of("batchId", batchId, "total", prepared.ids().size(),
@@ -193,11 +215,13 @@ public class OwnershipTransferService {
         if (ids.size() > MAX_BATCH) throw new TaskManagementException(400, "一次最多移交 " + MAX_BATCH + " 条");
 
         SysDept dept = input.getDeptId() == null ? null : sysMapper.getDeptById(input.getDeptId());
-        if (dept == null || Integer.valueOf(1).equals(dept.getIsDelete())) {
+        if (dept == null || Integer.valueOf(1).equals(dept.getIsDelete()) || "1".equals(dept.getStatus())) {
             throw new TaskManagementException(400, "请选择有效的归口部门");
         }
         SysUser leader = user(input.getLeaderId());
         if (leader == null) throw new TaskManagementException(400, "请选择有效的责任人");
+        if (input.getAuditorId() != null && user(input.getAuditorId()) == null)
+            throw new TaskManagementException(400, "请选择有效的专业群审核人");
         SysUser principal = user(input.getPrincipalId());
         if (principal == null) throw new TaskManagementException(400, "请选择有效的归口审核人");
 
@@ -207,7 +231,7 @@ public class OwnershipTransferService {
             throw new TaskManagementException(400, "移交原因不能超过 " + MAX_REASON + " 字");
         }
         return new Prepared(ids, dept.getDeptId(), dept.getDeptName(),
-                leader.getUserId(), principal.getUserId(), reason);
+                leader.getUserId(), input.getAuditorId(), principal.getUserId(), reason);
     }
 
     private SysUser user(Long userId) {
@@ -219,7 +243,7 @@ public class OwnershipTransferService {
         BizTask task = bizMapper.getTaskByIdForUpdate(taskId);
         if (task == null || Integer.valueOf(1).equals(task.getIsDelete())) return null;
         return new Target(TYPE_TASK, task.getTaskId(), task.getTaskCode(), task.getTaskName(),
-                task.getLevel(), task.getDeptId(), task.getLeaderId(), task.getPrincipalId());
+                task.getLevel(), task.getDeptId(), task.getLeaderId(), task.getAuditorId(), task.getPrincipalId());
     }
 
     private Target performanceTarget(Long perfId) {
@@ -227,7 +251,11 @@ public class OwnershipTransferService {
         if (performance == null || Integer.valueOf(1).equals(performance.getIsDelete())) return null;
         return new Target(TYPE_PERFORMANCE, performance.getPerfId(), performance.getPerfCode(),
                 performance.getPerfName(), null, performance.getDeptId(), performance.getLeaderId(),
-                performance.getPrincipalId());
+                performance.getAuditorId(), performance.getPrincipalId());
+    }
+
+    private Long reviewer(Target target, Prepared prepared) {
+        return prepared.auditorId() == null ? target.auditorId() : prepared.auditorId();
     }
 
     /** 只通知实际发生变更的接收人；操作人自己不需要收到通知。 */
@@ -235,6 +263,9 @@ public class OwnershipTransferService {
         Map<Long, List<String>> recipients = new LinkedHashMap<>();
         if (!Objects.equals(target.leaderId(), prepared.leaderId())) {
             recipients.computeIfAbsent(prepared.leaderId(), key -> new ArrayList<>()).add("责任人");
+        }
+        if (!Objects.equals(target.auditorId(), reviewer(target, prepared))) {
+            recipients.computeIfAbsent(reviewer(target, prepared), key -> new ArrayList<>()).add("专业群审核人");
         }
         if (!Objects.equals(target.principalId(), prepared.principalId())) {
             recipients.computeIfAbsent(prepared.principalId(), key -> new ArrayList<>()).add("归口审核人");

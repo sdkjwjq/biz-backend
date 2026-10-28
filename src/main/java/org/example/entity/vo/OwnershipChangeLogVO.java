@@ -24,6 +24,10 @@ public class OwnershipChangeLogVO {
     private String leaderBeforeName;
     private Long leaderAfterId;
     private String leaderAfterName;
+    private Long auditorBeforeId;
+    private Long auditorAfterId;
+    private String auditorBeforeName;
+    private String auditorAfterName;
     private Long principalBeforeId;
     private String principalBeforeName;
     private Long principalAfterId;
