@@ -35,6 +35,7 @@ import java.util.List;
  */
 @Service
 public class SysService {
+    @Autowired private PlatformNoticeService platformNotices;
 
     @Autowired
     private SysMapper sysMapper;
@@ -299,6 +300,7 @@ public class SysService {
      */
     public void setRead(Long noticeId, Long userId) {
         try{
+            if(platformNotices.protectedInbox(noticeId,userId))throw new RuntimeException("重要平台通知需阅读正文后单独确认，不能批量标为已读");
             int updated = sysMapper.setRead(noticeId, userId);
             if (updated == 0) {
                 throw new RuntimeException("通知不存在或无权操作");

@@ -17,6 +17,10 @@ public class PermissionRequestGuard {
         Long actor=access.actor();if(actor==null)return;
         String path=request.getRequestURI().substring(request.getContextPath().length()).replaceAll("/+$","");
         if(path.startsWith("/system/password")||path.equals("/system/logout")||path.equals("/system/login"))return;
+        // Recipient identity and attachment membership are checked by PlatformNoticeService,
+        // including accounts without a messages menu. This grants no administration permission.
+        if(("GET".equals(request.getMethod())&&(path.equals("/platform-notices/status")||path.matches("/platform-notices/[0-9]+/attachments/[0-9]+")))
+          ||("POST".equals(request.getMethod())&&path.matches("/platform-notices/[0-9]+/(open|confirm)")))return;
         var state=access.state(actor);boolean get="GET".equals(request.getMethod());
         if(path.equals("/system/access")||path.endsWith("/capabilities"))return;
         if(get&&path.equals("/list-filters/audits/locate"))return; // The locate service checks its exact business source and scope.

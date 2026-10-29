@@ -94,6 +94,7 @@ def main():
             for name in ("permission-file-a.pdf", "permission-file-b.pdf"):
                 (WORK / "uploads" / name).write_bytes(b"%PDF-1.4\nSynthetic isolated authorization fixture\n%%EOF")
         sql((ROOT / "data/migrations/2026-10-28-transfer-reviewers.sql").read_text(encoding="utf-8"), schema)
+        sql((ROOT / "data/migrations/2026-10-29-platform-notices.sql").read_text(encoding="utf-8"), schema)
         if args.fixture == "work-record-scope":
             sql((ROOT / "scripts/ui-audit/fixture-work-record-scope.sql").read_text(encoding="utf-8"), schema)
         if args.fixture in ("core", "budgettrends", "admintest", "presentation", "overview", "browser-repairs", "usability"):

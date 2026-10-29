@@ -253,6 +253,11 @@ else
 fi
 "${MYSQL[@]}" < "$PACKAGE/sql/additive.sql" > "$BACKUP/migration.log"
 bash "$PACKAGE/schema-check.sh" after
+if [[ -f "$PACKAGE/sql/2026-10-29-platform-notices-check.sql" ]]; then
+  "${MYSQL[@]}" < "$PACKAGE/sql/2026-10-29-platform-notices-check.sql" > "$BACKUP/platform-notices-check.log"
+  notice_tables=$(awk -F'\t' '$1=="platform_notice_tables"{print $2}' "$BACKUP/platform-notices-check.log")
+  [[ "$notice_tables" == 4 ]] || die '平台通知结构不完整，请查看 platform-notices-check.log'
+fi
 
 # From this point forward the update writes migration history or derived business values.
 # A failed update must therefore restore the complete database backup before restarting the old JAR.
@@ -305,6 +310,16 @@ if [[ -f "$PACKAGE/sql/2026-10-29-performance-leader-repair-candidates.sql" ]]; 
   cat "$PACKAGE/sql/2026-10-29-performance-leader-repair-candidates.sql" \
       "$PACKAGE/sql/2026-10-29-performance-leader-repair-check.sql" | "${MYSQL[@]}" > "$BACKUP/performance-leader-repair-check.log"
   say '绩效专业群负责人已定向核对修正；后续负责人移交、原审核人及绩效数值保留'
+fi
+
+if [[ -f "$PACKAGE/sql/2026-10-29-customer-assignments-candidates.sql" ]]; then
+  cat "$PACKAGE/sql/2026-10-29-customer-assignments-candidates.sql" \
+      "$PACKAGE/sql/2026-10-29-customer-assignments.sql" | "${MYSQL[@]}" > "$BACKUP/customer-assignments.log"
+  cat "$PACKAGE/sql/2026-10-29-customer-assignments-candidates.sql" \
+      "$PACKAGE/sql/2026-10-29-customer-assignments-check.sql" | "${MYSQL[@]}" > "$BACKUP/customer-assignments-check.log"
+  say "20261029任务评级及绩效职责已核对；陈奥林17项审核人保持原值。逐项结果：$BACKUP/customer-assignments-check.log"
+  pending_assignments=$(awk -F'\t' '$1=="PERFORMANCE" && $2=="ACTIVE_AUDIT"{print $3}' "$BACKUP/customer-assignments-check.log")
+  if [[ -n "$pending_assignments" && "$pending_assignments" != 0 ]]; then say "有 $pending_assignments 项仍在审核中，保留当前职责，待处理完成后再核对更新"; fi
 fi
 
 achievement_migration=$({ "${MYSQL[@]}" -e "SELECT COUNT(*) FROM sys_release_migration WHERE migration_key='achievement-archive-record-fix-20260626'"; } | tr -d '\r')

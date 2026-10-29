@@ -19,11 +19,14 @@ public class PermissionTransactionAspect {
     public PermissionTransactionAspect(PermissionService access,PermissionRequestGuard guard,PermissionManagementService management,PlatformTransactionManager transactions){this.access=access;this.guard=guard;this.management=management;this.tx=new TransactionTemplate(transactions);this.tx.setIsolationLevel(org.springframework.transaction.TransactionDefinition.ISOLATION_READ_COMMITTED);this.snapshotTx=new TransactionTemplate(transactions);this.snapshotTx.setIsolationLevel(org.springframework.transaction.TransactionDefinition.ISOLATION_REPEATABLE_READ);}
     @Around("execution(public * org.example.service.*Service.*(..)) && !within(org.example.service.Permission*) && !within(org.example.service.LeadershipAccessService)")
     public Object write(ProceedingJoinPoint point)throws Throwable{
+        // This pre-interceptor check must run before business-action permission checks.
+        // It only reads the current recipient's pending queue, even on POST requests.
+        if(point.getTarget() instanceof PlatformNoticeService && Set.of("installed","loginCutoff","mustRead").contains(point.getSignature().getName()))return point.proceed();
         if(nested.get()||!(RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes a)||Set.of("GET","OPTIONS","HEAD").contains(a.getRequest().getMethod())||access.actor()==null||!access.installed())return point.proceed();
         String path=a.getRequest().getRequestURI();if(path.contains("/system/password")||path.contains("/system/login")||path.contains("/system/logout"))return point.proceed();
         nested.set(true);
         TransactionTemplate transaction=path.contains("/work-records")?snapshotTx:tx;
         boolean configuration=path.matches(".*/(admin/(users|departments)|system/users)(/.*)?");
-        try{return transaction.execute(status->{if(configuration)access.lockChange();else access.lockOperation();guard.check(a.getRequest(),(JsonNode)a.getRequest().getAttribute(PermissionRequestGuard.BODY));var before=management.pendingSnapshot();try{Object result=point.proceed();management.validateChangedPending(before);if(configuration)access.advance();return result;}catch(Throwable error){status.setRollbackOnly();if(error instanceof RuntimeException r)throw r;throw new IllegalStateException(error);}});}finally{nested.remove();}
+        try{return transaction.execute(status->{if(configuration)access.lockChange();else access.lockOperation();guard.check(a.getRequest(),(JsonNode)a.getRequest().getAttribute(PermissionRequestGuard.BODY));boolean notices=path.matches(".*/(admin/)?platform-notices(/.*)?");var before=notices?Map.<String,Map<String,Object>>of():management.pendingSnapshot();try{Object result=point.proceed();if(!notices)management.validateChangedPending(before);if(configuration)access.advance();return result;}catch(Throwable error){status.setRollbackOnly();if(error instanceof RuntimeException r)throw r;throw new IllegalStateException(error);}});}finally{nested.remove();}
     }
 }

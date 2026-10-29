@@ -1,16 +1,16 @@
-# 双高平台更新包 20261025
+# 双高平台更新包 20261029
 
 适用环境：Java 17、MySQL 8、Bash 4.2+。服务器不需要安装 Python 或 Node。
 
 ## 一键更新
 
-将完整文件夹 `shuanggao-update-20261025` 上传到 `/root/biz-backend/`，不要覆盖旧更新包，然后执行：
+将完整文件夹 `shuanggao-update-20261029` 上传到 `/root/biz-backend/`，不要覆盖旧更新包，然后执行：
 
 ```bash
-cd /root/biz-backend/shuanggao-update-20261025
+cd /root/biz-backend/shuanggao-update-20261029
 chmod -R go-rwx .
-sha256sum -c SHA256SUMS --quiet
-bash update.sh --check
+sha256sum -c SHA256SUMS --quiet &&
+bash update.sh --check &&
 bash update.sh --update
 ```
 
@@ -35,6 +35,13 @@ bash update.sh --update
 迁移或启动失败时，脚本会自动恢复本次更新前的完整数据库和应用文件。更新成功后输出备份路径及准确回滚命令。
 
 ## 本次主要内容
+
+- 新增“管理中心→通知管理”：草稿、范围预览、发布、附件、更正版本、撤回、浏览记录和 Excel 导出。
+- 重要通知在接收用户下次登录时逐条阅读并确认，全部确认后进入业务页面；当前在线编辑不被新通知打断。普通通知在消息中心查看。
+- 修复历史任务、绩效负责人误写为归口审核人的问题；按精确历史证据修复专业群负责人，保留后续合法移交、原填报记录和审批日志。
+- 合并任务、绩效移交的三项独立职责修复：专业群负责人、专业群审核人、归口部门审核人。
+- 按已确认表格更新29个任务评级，其中7个同时为重点和困难；核对155项绩效职责。陈奥林17项审核人保持原值，“刘继锋”对应现有刘继峰账号110101。
+- 数据迁移遇到后续配置变更、无效账号或在途审核时保留当前数据并记录，详见更新备份目录内 `*-check.log`。不得仅按预期数量认定全部已改。
 
 - 账号、审核、消息等列表的加载与分页优化，加载期间不再提前显示空结果。
 - 权限内候选远程搜索、看板读取及任务和绩效大树表渲染优化；不改变既有业务规则。
@@ -75,10 +82,12 @@ bash update.sh --update
 本包包含数据迁移，成功后应使用脚本输出的数据库及应用完整回滚命令：
 
 ```bash
-bash /root/biz-backend/shuanggao-update-20261025/update.sh --rollback-database /root/biz-backend/backups/release-实际时间-PID
+bash /root/biz-backend/shuanggao-update-20261029/update.sh --rollback-database /root/biz-backend/backups/release-实际时间-PID
 ```
 
 回滚前脚本会额外保存当时的数据库到 `before-rollback-*.sql.gz`，再恢复更新前数据库、JAR 和前端。不要把回滚命令当作重启命令。
+
+完整数据库回滚后，新产生的通知、回执、填报和审核记录保存在这份回滚前备份中，不会自动合并回旧数据库。需先保留并核对新增业务数据。通知专用结构回滚脚本在存在记录时会拒绝删表。
 
 包内 `manual-*-rollback.sql` 只供人工诊断。正常回滚使用上面的完整备份恢复命令。
 

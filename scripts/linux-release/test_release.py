@@ -123,6 +123,24 @@ def online_backup_migration_rehearsal():
         assert hashlib.sha256(run('SELECT task_id,current_value FROM biz_level4_task ORDER BY task_id')).hexdigest()==child_values
         assert hashlib.sha256(run('SELECT * FROM biz_audit_log ORDER BY log_id')).hexdigest()==audit_logs
         checks.append('online-backup-new-migrations-preserve-accounts-original-values-and-audit-history')
+        value_projection='SELECT perf_id,target_value,current_value FROM biz_performance ORDER BY perf_id'
+        old_values=run(value_projection)
+        submission_rows=run('SELECT * FROM biz_performance_submission ORDER BY sub_id')
+        for name in ['task-leader-repair','performance-leader-repair','customer-assignments']:
+            prefix='sql/2026-10-29-'+name
+            candidate=(PACKAGE/(prefix+'-candidates.sql')).read_bytes()
+            forward=candidate+(PACKAGE/(prefix+'.sql')).read_bytes()
+            run(forward)
+            before_repeat=run('CHECKSUM TABLE biz_task,biz_performance')
+            run(forward)
+            assert run('CHECKSUM TABLE biz_task,biz_performance')==before_repeat
+            run(candidate+(PACKAGE/(prefix+'-check.sql')).read_bytes())
+        assert run(value_projection)==old_values
+        assert run('SELECT * FROM biz_performance_submission ORDER BY sub_id')==submission_rows
+        assert hashlib.sha256(run('SELECT task_id,current_value FROM biz_level4_task ORDER BY task_id')).hexdigest()==child_values
+        assert hashlib.sha256(run('SELECT * FROM biz_audit_log ORDER BY log_id')).hexdigest()==audit_logs
+        assert b'platform_notice_tables\t4' in run((PACKAGE/'sql/2026-10-29-platform-notices-check.sql').read_bytes())
+        checks.append('packaged-owner-and-customer-migrations-repeat-safe-and-preserve-values-submissions-and-audit-logs')
     finally:
         assert re.fullmatch(r'biz_review_test_[0-9a-f]{32}',rehearsal)
         run('DROP DATABASE `'+rehearsal+'`',None)
@@ -252,6 +270,19 @@ def smoke_jar():
                     assert sql('SELECT audit_status FROM biz_achievement WHERE ach_id=998810').strip()==b'30'
                     checks.append('packaged-jar-budget-save-lock-exact-precision-and-edit-version')
                     checks.append('packaged-jar-achievement-resubmit-archive-original-evidence-and-duplicate-guard')
+                notice=call('/admin/platform-notices',{'title':'Packaged notice smoke','content':'Read in isolated database','important':True,'audienceType':'USERS','audienceIds':[910006],'fileIds':[]},token)
+                call('/admin/platform-notices/'+str(notice['id'])+'/publish',{'version':notice['version']},token)
+                reader=call('/system/login',{'user_id':910006,'password':'ReleaseSmoke123'})['token']
+                assert call('/platform-notices/status',token=reader)['total']==1
+                try:
+                    call('/core-indicators/capabilities',token=reader)
+                    raise AssertionError('Packaged mandatory-notice gate was bypassed')
+                except urllib.error.HTTPError as blocked: assert blocked.code==423
+                opened=call('/platform-notices/'+str(notice['id'])+'/open',{'requestId':'release-smoke-open'},reader)
+                call('/platform-notices/'+str(notice['id'])+'/confirm',{'contentVersion':opened['contentVersion'],'viewKey':opened['viewKey']},reader)
+                assert call('/platform-notices/status',token=reader)['total']==0
+                assert call('/core-indicators/capabilities',token=reader)['canFill'] is True
+                checks.append('actual-packaged-jar-notice-publish-login-gate-confirm-and-business-resume')
             finally:
                 process.terminate(); process.wait(timeout=30)
     checks.append('packaged-jar-real-start-external-password-login-and-new-module-apis')

@@ -30,6 +30,7 @@ NEW_SOURCES = [
     'data/migrations/2026-10-12-leadership-access.sql',
     'data/migrations/2026-10-12-core-indicators.sql',
     'data/migrations/2026-10-24-permissions-expert-reviews.sql',
+    'data/migrations/2026-10-29-platform-notices.sql',
 ]
 ADDITIONS = {
     ('biz_core_report','performance_code'): 'varchar(30) DEFAULT NULL',
@@ -56,7 +57,7 @@ def query(sql):
 
 def main():
     if OUT.exists():
-        shutil.rmtree(OUT)
+        raise RuntimeError('Release folder already exists; use a new release name instead of replacing delivered artifacts')
     for directory in ['backend','frontend','sql','templates']:
         (OUT/directory).mkdir(parents=True,exist_ok=True)
     source = BUILD/'target/biz_backend-1.0-SNAPSHOT.jar'
@@ -66,7 +67,9 @@ def main():
         assert not re.search(r'^\s*#?\s*spring.datasource.password=(?!\$\{)',properties,re.M)
         assert len(jar.read('BOOT-INF/classes/templates/work-record.docx')) > 1000
     shutil.copy2(source,OUT/'backend'/source.name)
-    shutil.copytree(ROOT.parent/'biz/dist',OUT/'frontend',dirs_exist_ok=True)
+    frontend_dist = Path(os.environ.get('RELEASE_FRONTEND_DIST', str(ROOT.parent/'biz/dist'))).resolve()
+    assert frontend_dist.is_relative_to(ROOT.parent.resolve()) and (frontend_dist/'index.html').is_file()
+    shutil.copytree(frontend_dist,OUT/'frontend',dirs_exist_ok=True)
     shutil.copy2(ROOT.parent/'biz/public/templates/budget-template.xlsx',OUT/'templates/budget-template.xlsx')
     for name in ['update.sh','schema-check.sh','database-restore.sh','README.md']:
         text=(Path(__file__).parent/name).read_text(encoding='utf-8')
@@ -76,6 +79,10 @@ def main():
     manual = ROOT.parent/'docs/操作手册'
     assert (manual/'index.html').is_file(), 'Updated operation manual is required'
     shutil.copytree(manual, OUT/'manual')
+    previous_word = ROOT.parent/'releases/shuanggao-update-20261027/manual/user-guide-20261026.docx'
+    if previous_word.is_file(): shutil.copy2(previous_word, OUT/'manual'/previous_word.name)
+    notice_guide = Path(__file__).parent/'PLATFORM_NOTICES.md'
+    if notice_guide.is_file(): shutil.copy2(notice_guide, OUT/'平台通知操作说明.md')
 
     creates=[]
     added_tables=set()
@@ -86,7 +93,7 @@ def main():
             assert name not in added_tables
             added_tables.add(name)
             creates.append(re.sub(r'^CREATE TABLE(?: IF NOT EXISTS)?','CREATE TABLE IF NOT EXISTS',match.group(0)))
-    assert len(added_tables)==29
+    assert len(added_tables)==33
     sql='-- Additive structure only. No historical data repair, account writes or seed records.\n'+ '\n\n'.join(creates)+'\n'
     for (table,column),definition in ADDITIONS.items():
         sql+=f"""
@@ -144,6 +151,11 @@ DEALLOCATE PREPARE release_stmt;
         source = ROOT / ('data/migrations/2026-10-29-task-leader-repair'+suffix+'.sql')
         (OUT/'sql'/source.name).write_text(source.read_text(encoding='utf-8'),encoding='utf-8',newline='\n')
         source = ROOT / ('data/migrations/2026-10-29-performance-leader-repair'+suffix+'.sql')
+        (OUT/'sql'/source.name).write_text(source.read_text(encoding='utf-8'),encoding='utf-8',newline='\n')
+        source = ROOT / ('data/migrations/2026-10-29-customer-assignments'+suffix+'.sql')
+        (OUT/'sql'/source.name).write_text(source.read_text(encoding='utf-8'),encoding='utf-8',newline='\n')
+    for suffix in ['', '-check', '-rollback']:
+        source = ROOT / ('data/migrations/2026-10-29-platform-notices'+suffix+'.sql')
         (OUT/'sql'/source.name).write_text(source.read_text(encoding='utf-8'),encoding='utf-8',newline='\n')
     data_update = ROOT/'data/migrations/2026-09-18-task-auditor-dept-principal-update.sql'
     data_sql = data_update.read_text(encoding='utf-8')
@@ -219,6 +231,12 @@ DEALLOCATE PREPARE release_stmt;
     manifest['one_time_migrations'].append('leadership-schoolwide-20261023')
     manifest['data_update_backup_tables'] += ['bak_20261023_leadership','bak_20261023_leadership_department']
     manifest['budget_fillers'] = ['active-admin','active-office-department-100','active-finance-department-104']
+    manifest['data_updates'] += ['sql/2026-10-29-'+name+'.sql' for name in ['task-leader-repair','performance-leader-repair','customer-assignments']]
+    manifest['platform_notices'] = {'important_at_next_login': True, 'recipient_snapshot': True, 'explicit_confirmation': True, 'read_log_export': True}
+    manifest['customer_configuration'] = {'task_ratings': 29, 'both_priority_and_difficult': 7, 'performance_candidates': 155, 'chen_aolin_reviewers_unchanged': 17, 'liu_jifeng_user_id': 110101, 'skip_newer_or_active_workflow_conflicts': True}
+    manifest['data_update_backup_tables'] += ['bak_20261029_task_leader','bak_20261029_performance_leader','bak_20261029_customer_task','bak_20261029_customer_performance']
+    manifest['excluded_uncommitted_frontend_files'] = ['src/components/ExpertReviewEditor.vue','vite.config.js']
+    manifest['frontend_working_changes'] = []
     (OUT/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
     files=sorted(p for p in OUT.rglob('*') if p.is_file() and p.name!='SHA256SUMS')
     (OUT/'SHA256SUMS').write_text(''.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.relative_to(OUT).as_posix()+'\n' for p in files),encoding='ascii',newline='\n')

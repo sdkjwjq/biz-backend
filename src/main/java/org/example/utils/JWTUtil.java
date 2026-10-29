@@ -36,6 +36,9 @@ public class JWTUtil {
 
         Algorithm algorithm = Algorithm.HMAC256(SECRET_KEY);
         return JWT.create()
+                .withClaim("loginAt",nowMillis)
+                .withJWTId(java.util.UUID.randomUUID().toString())
+                .withIssuedAt(new Date(nowMillis))
                 .withClaim("id",user.getUserId())
                 .withClaim("username", user.getUserName())
                 .withClaim("role", user.getRole())
