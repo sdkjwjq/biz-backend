@@ -82,7 +82,7 @@ def main():
     previous_word = ROOT.parent/'releases/shuanggao-update-20261027/manual/user-guide-20261026.docx'
     if previous_word.is_file(): shutil.copy2(previous_word, OUT/'manual'/previous_word.name)
     notice_guide = Path(__file__).parent/'PLATFORM_NOTICES.md'
-    if notice_guide.is_file(): shutil.copy2(notice_guide, OUT/'平台通知操作说明.md')
+    if notice_guide.is_file(): shutil.copy2(notice_guide, OUT/'platform-notices-guide.md')
 
     creates=[]
     added_tables=set()
