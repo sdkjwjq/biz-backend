@@ -299,6 +299,14 @@ if [[ -f "$PACKAGE/sql/2026-10-29-task-leader-repair-candidates.sql" ]]; then
   say '历史任务负责人已定向核对修正；后续负责人移交、两级审核人及审核历史保留'
 fi
 
+if [[ -f "$PACKAGE/sql/2026-10-29-performance-leader-repair-candidates.sql" ]]; then
+  cat "$PACKAGE/sql/2026-10-29-performance-leader-repair-candidates.sql" \
+      "$PACKAGE/sql/2026-10-29-performance-leader-repair.sql" | "${MYSQL[@]}" > "$BACKUP/performance-leader-repair.log"
+  cat "$PACKAGE/sql/2026-10-29-performance-leader-repair-candidates.sql" \
+      "$PACKAGE/sql/2026-10-29-performance-leader-repair-check.sql" | "${MYSQL[@]}" > "$BACKUP/performance-leader-repair-check.log"
+  say '绩效专业群负责人已定向核对修正；后续负责人移交、原审核人及绩效数值保留'
+fi
+
 achievement_migration=$({ "${MYSQL[@]}" -e "SELECT COUNT(*) FROM sys_release_migration WHERE migration_key='achievement-archive-record-fix-20260626'"; } | tr -d '\r')
 achievement_backup_exists=$({ "${MYSQL[@]}" -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='bak_achievement_archive_missing_20260626'"; } | tr -d '\r')
 if [[ "$achievement_migration" == 0 && "$achievement_backup_exists" != 0 ]]; then

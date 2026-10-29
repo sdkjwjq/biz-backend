@@ -143,6 +143,8 @@ DEALLOCATE PREPARE release_stmt;
     for suffix in ['-candidates', '', '-check', '-rollback']:
         source = ROOT / ('data/migrations/2026-10-29-task-leader-repair'+suffix+'.sql')
         (OUT/'sql'/source.name).write_text(source.read_text(encoding='utf-8'),encoding='utf-8',newline='\n')
+        source = ROOT / ('data/migrations/2026-10-29-performance-leader-repair'+suffix+'.sql')
+        (OUT/'sql'/source.name).write_text(source.read_text(encoding='utf-8'),encoding='utf-8',newline='\n')
     data_update = ROOT/'data/migrations/2026-09-18-task-auditor-dept-principal-update.sql'
     data_sql = data_update.read_text(encoding='utf-8')
     assert data_sql.startswith('-- 2026-09-18 task update')

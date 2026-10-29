@@ -2169,6 +2169,36 @@ class ReviewBatchRegressionApiTest {
     }
 
     @Test
+    void performanceOwnerUsesProfessionalLeaderAcrossListsDetailsAndSubmission() throws Exception {
+        seedManualPerformance("1");
+        jdbc.update("UPDATE biz_performance SET perf_code='2.1.1',ancestors='0,2,2.1' WHERE perf_id=950001");
+        String admin=login(ADMIN);
+        var detail=body(request(HttpMethod.GET,"/performance/950001",admin,null));
+        assertEquals(USER,detail.path("leaderId").asLong());
+        assertEquals(LEADER,detail.path("principalId").asLong());
+        for(var item:body(request(HttpMethod.GET,"/performance/year/2026",admin,null)))
+            if(item.path("perfId").asLong()==950001L){assertEquals(USER,item.path("leaderId").asLong());assertEquals(LEADER,item.path("principalId").asLong());}
+        var tree=body(request(HttpMethod.GET,"/list-filters/performance?responseMode=tree&f.year=2026",admin,null));
+        assertEquals(1,tree.path("total").asInt());
+        JsonNode owner=null;
+        for(var item:tree.path("items"))if(item.path("perfId").asLong()==950001L)owner=item;
+        assertNotNull(owner);
+        assertEquals(USER,owner.path("leaderId").asLong());
+        assertEquals("Review "+USER,owner.path("leaderName").asText());
+        assertEquals("Review "+LEADER,owner.path("principalName").asText());
+        var filtered=body(request(HttpMethod.GET,"/list-filters/performance?responseMode=tree&f.year=2026&f.leaderId="+USER,admin,null));
+        assertEquals(1,filtered.path("total").asInt());
+        var wrong=body(request(HttpMethod.GET,"/list-filters/performance?responseMode=tree&f.year=2026&f.leaderId="+LEADER,admin,null));
+        assertEquals(0,wrong.path("total").asInt());
+        var denied=request(HttpMethod.POST,"/performance/submit?pref_id=950001&actual_value=3&year=2026",login(LEADER),null);
+        assertTrue(!denied.getStatusCode().is2xxSuccessful()||body(denied).path("code").asInt()>=400);
+        assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM biz_performance_submission",Integer.class));
+        long sub=submitPerformance(2026,"3",login(USER));
+        assertEquals(USER,jdbc.queryForObject("SELECT submit_by FROM biz_performance_submission WHERE sub_id=?",Long.class,sub));
+        assertEquals(AUDITOR,jdbc.queryForObject("SELECT current_handler_id FROM biz_performance_submission WHERE sub_id=?",Long.class,sub));
+    }
+
+    @Test
     void taskWithMissingReviewerCanStillBeOpenedAndReassigned() throws Exception {
         seedSubmissionFlow();seedUser(910006L,"1");
         jdbc.update("UPDATE biz_task SET auditor_id=999999 WHERE task_id=930002");
