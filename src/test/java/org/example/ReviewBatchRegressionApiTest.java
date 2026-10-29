@@ -2104,6 +2104,21 @@ class ReviewBatchRegressionApiTest {
         assertEquals(910004L,((Number)task.get("leader_id")).longValue());
         assertEquals(910006L,((Number)task.get("auditor_id")).longValue());
         assertEquals(910005L,((Number)task.get("principal_id")).longValue());
+        var detail=body(request(HttpMethod.GET,"/biz/tasks/930002",login(ADMIN),null));
+        assertEquals(910004L,detail.path("leaderId").asLong());
+        assertEquals(910006L,detail.path("auditorId").asLong());
+        assertEquals(910005L,detail.path("principalId").asLong());
+        JsonNode listOwner=null;
+        for(var row:body(request(HttpMethod.GET,"/biz/tasks",login(ADMIN),null)))
+            if(row.path("taskId").asLong()==930002L)listOwner=row;
+        assertNotNull(listOwner);
+        assertEquals(910004L,listOwner.path("leaderId").asLong());
+        assertEquals(jdbc.queryForObject("SELECT user_name FROM sys_user WHERE user_id=910004",String.class),listOwner.path("leaderName").asText());
+        jdbc.update("UPDATE sys_file SET upload_by=910005 WHERE file_id=940001");
+        var nonOwnerSubmit=request(HttpMethod.POST,"/biz/sub",login(910005L),submission("3"));
+        assertTrue(!nonOwnerSubmit.getStatusCode().is2xxSuccessful() || body(nonOwnerSubmit).path("code").asInt()>=400,
+                "归口审核人不因审核职责自动成为任务填报负责人");
+        assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM biz_material_submission",Integer.class));
         var log=body(request(HttpMethod.GET,"/manage/transfer/logs?targetType=TASK&targetId=930002",login(ADMIN),null)).get(0);
         assertEquals(AUDITOR,log.path("auditorBeforeId").asLong());assertEquals(910006L,log.path("auditorAfterId").asLong());
         assertEquals(3,jdbc.queryForObject("SELECT COUNT(*) FROM sys_notice WHERE trigger_event='归属移交'",Integer.class));

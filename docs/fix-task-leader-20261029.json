@@ -1,0 +1,35 @@
+{
+  "passed": true,
+  "checks": [
+    "Online backup rehearsal: 226 exact matches repaired; all other task fields, all other tables, submissions and audit histories unchanged",
+    "Repeated forward execution is a no-op and preserves first backups",
+    "Rollback restores only owners, preserves evidence, is idempotent, and prevents silent reapplication",
+    "Already-correct, changed owner/code/parent, deleted task and legitimate owner transfers are skipped; later reviewer-only changes preserved",
+    "Rollback refuses the whole batch when later task edits exist",
+    "Changed root responsibility and disabled original owners are not overwritten",
+    "Injected write failure rolls back task updates, backups and success evidence atomically"
+  ],
+  "temporaryDatabaseRemoved": true,
+  "localBusinessDatabaseModified": false,
+  "productionDatabaseAccessed": false,
+  "date": "2026-10-29",
+  "scope": "biz_task.leader_id historical data repair only",
+  "source_of_evidence": "20260920backup.sql historical owner-change preimage plus same level-one owner",
+  "historical_candidates": 226,
+  "current_online_repair_count": "Not yet known; production not accessed",
+  "httpRegression": {
+    "passed": true,
+    "tests": 1,
+    "assertions": [
+      "Separate leaderId, auditorId and principalId in task detail",
+      "List owner name matches leaderId",
+      "Principal with valid uploaded material cannot submit instead of owner",
+      "Real owner can submit",
+      "Professional reviewer then owning-department reviewer then administrator"
+    ]
+  },
+  "deploymentFolder": "releases/shuanggao-task-owner-fix-20261029",
+  "applicationBinariesRebuilt": false,
+  "unrelatedUserChangesPreserved": true,
+  "performanceOwnersModified": false
+}

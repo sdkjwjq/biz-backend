@@ -1,0 +1,2267 @@
+{
+  "evidence": "20260920backup.sql: bak_20260720_owner_change_task compared with biz_task; every original owner also matches its level-one task",
+  "source_sha256": "f7a77a5eafd53f376115f1655d4cb5e07c05cad7751058368819fe305d167b85",
+  "automatic_repair_scope": "Only exact historical identities and wrong owner values; current root must corroborate original owner; recorded owner transfers are excluded",
+  "tasks": [
+    {
+      "task_id": 41,
+      "project_id": 1,
+      "parent_id": 11,
+      "root_id": 1,
+      "year": 2025,
+      "code": "SG01010125",
+      "owner_before": 112212,
+      "owner_after": 120796
+    },
+    {
+      "task_id": 42,
+      "project_id": 1,
+      "parent_id": 11,
+      "root_id": 1,
+      "year": 2025,
+      "code": "SG01010225",
+      "owner_before": 112212,
+      "owner_after": 120796
+    },
+    {
+      "task_id": 43,
+      "project_id": 1,
+      "parent_id": 11,
+      "root_id": 1,
+      "year": 2025,
+      "code": "SG01010325",
+      "owner_before": 112212,
+      "owner_after": 120796
+    },
+    {
+      "task_id": 44,
+      "project_id": 1,
+      "parent_id": 11,
+      "root_id": 1,
+      "year": 2025,
+      "code": "SG01010425",
+      "owner_before": 112212,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 45,
+      "project_id": 1,
+      "parent_id": 11,
+      "root_id": 1,
+      "year": 2025,
+      "code": "SG01010525",
+      "owner_before": 112212,
+      "owner_after": 110131
+    },
+    {
+      "task_id": 46,
+      "project_id": 1,
+      "parent_id": 11,
+      "root_id": 1,
+      "year": 2025,
+      "code": "SG01010625",
+      "owner_before": 112212,
+      "owner_after": 120796
+    },
+    {
+      "task_id": 47,
+      "project_id": 1,
+      "parent_id": 11,
+      "root_id": 1,
+      "year": 2026,
+      "code": "SG01010726",
+      "owner_before": 112212,
+      "owner_after": 120796
+    },
+    {
+      "task_id": 48,
+      "project_id": 1,
+      "parent_id": 11,
+      "root_id": 1,
+      "year": 2026,
+      "code": "SG01010826",
+      "owner_before": 112212,
+      "owner_after": 120796
+    },
+    {
+      "task_id": 49,
+      "project_id": 1,
+      "parent_id": 11,
+      "root_id": 1,
+      "year": 2026,
+      "code": "SG01010926",
+      "owner_before": 112212,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 50,
+      "project_id": 1,
+      "parent_id": 11,
+      "root_id": 1,
+      "year": 2026,
+      "code": "SG01011026",
+      "owner_before": 112212,
+      "owner_after": 110131
+    },
+    {
+      "task_id": 51,
+      "project_id": 1,
+      "parent_id": 11,
+      "root_id": 1,
+      "year": 2026,
+      "code": "SG01011126",
+      "owner_before": 112212,
+      "owner_after": 120317
+    },
+    {
+      "task_id": 52,
+      "project_id": 1,
+      "parent_id": 11,
+      "root_id": 1,
+      "year": 2026,
+      "code": "SG01011226",
+      "owner_before": 112212,
+      "owner_after": 120796
+    },
+    {
+      "task_id": 53,
+      "project_id": 1,
+      "parent_id": 11,
+      "root_id": 1,
+      "year": 2027,
+      "code": "SG01011327",
+      "owner_before": 112212,
+      "owner_after": 120796
+    },
+    {
+      "task_id": 54,
+      "project_id": 1,
+      "parent_id": 11,
+      "root_id": 1,
+      "year": 2027,
+      "code": "SG01011427",
+      "owner_before": 112212,
+      "owner_after": 120796
+    },
+    {
+      "task_id": 55,
+      "project_id": 1,
+      "parent_id": 11,
+      "root_id": 1,
+      "year": 2027,
+      "code": "SG01011527",
+      "owner_before": 112212,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 57,
+      "project_id": 1,
+      "parent_id": 11,
+      "root_id": 1,
+      "year": 2027,
+      "code": "SG01011727",
+      "owner_before": 112212,
+      "owner_after": 120317
+    },
+    {
+      "task_id": 58,
+      "project_id": 1,
+      "parent_id": 11,
+      "root_id": 1,
+      "year": 2027,
+      "code": "SG01011827",
+      "owner_before": 112212,
+      "owner_after": 120796
+    },
+    {
+      "task_id": 59,
+      "project_id": 1,
+      "parent_id": 11,
+      "root_id": 1,
+      "year": 2028,
+      "code": "SG01011928",
+      "owner_before": 112212,
+      "owner_after": 120796
+    },
+    {
+      "task_id": 60,
+      "project_id": 1,
+      "parent_id": 11,
+      "root_id": 1,
+      "year": 2028,
+      "code": "SG01012028",
+      "owner_before": 112212,
+      "owner_after": 120796
+    },
+    {
+      "task_id": 61,
+      "project_id": 1,
+      "parent_id": 11,
+      "root_id": 1,
+      "year": 2028,
+      "code": "SG01012128",
+      "owner_before": 112212,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 62,
+      "project_id": 1,
+      "parent_id": 11,
+      "root_id": 1,
+      "year": 2028,
+      "code": "SG01012228",
+      "owner_before": 112212,
+      "owner_after": 120796
+    },
+    {
+      "task_id": 63,
+      "project_id": 1,
+      "parent_id": 11,
+      "root_id": 1,
+      "year": 2028,
+      "code": "SG01012328",
+      "owner_before": 112212,
+      "owner_after": 120317
+    },
+    {
+      "task_id": 64,
+      "project_id": 1,
+      "parent_id": 11,
+      "root_id": 1,
+      "year": 2028,
+      "code": "SG01012428",
+      "owner_before": 112212,
+      "owner_after": 120796
+    },
+    {
+      "task_id": 65,
+      "project_id": 1,
+      "parent_id": 11,
+      "root_id": 1,
+      "year": 2029,
+      "code": "SG01012529",
+      "owner_before": 112212,
+      "owner_after": 120796
+    },
+    {
+      "task_id": 66,
+      "project_id": 1,
+      "parent_id": 11,
+      "root_id": 1,
+      "year": 2029,
+      "code": "SG01012629",
+      "owner_before": 112212,
+      "owner_after": 120796
+    },
+    {
+      "task_id": 67,
+      "project_id": 1,
+      "parent_id": 11,
+      "root_id": 1,
+      "year": 2029,
+      "code": "SG01012729",
+      "owner_before": 112212,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 68,
+      "project_id": 1,
+      "parent_id": 11,
+      "root_id": 1,
+      "year": 2029,
+      "code": "SG01012829",
+      "owner_before": 112212,
+      "owner_after": 120796
+    },
+    {
+      "task_id": 69,
+      "project_id": 1,
+      "parent_id": 11,
+      "root_id": 1,
+      "year": 2029,
+      "code": "SG01012929",
+      "owner_before": 112212,
+      "owner_after": 120796
+    },
+    {
+      "task_id": 72,
+      "project_id": 1,
+      "parent_id": 12,
+      "root_id": 1,
+      "year": 2025,
+      "code": "SG01020325",
+      "owner_before": 112212,
+      "owner_after": 120870
+    },
+    {
+      "task_id": 78,
+      "project_id": 1,
+      "parent_id": 12,
+      "root_id": 1,
+      "year": 2026,
+      "code": "SG01020926",
+      "owner_before": 112212,
+      "owner_after": 121362
+    },
+    {
+      "task_id": 79,
+      "project_id": 1,
+      "parent_id": 12,
+      "root_id": 1,
+      "year": 2027,
+      "code": "SG01021027",
+      "owner_before": 112212,
+      "owner_after": 121362
+    },
+    {
+      "task_id": 82,
+      "project_id": 1,
+      "parent_id": 12,
+      "root_id": 1,
+      "year": 2027,
+      "code": "SG01021327",
+      "owner_before": 112212,
+      "owner_after": 121111
+    },
+    {
+      "task_id": 83,
+      "project_id": 1,
+      "parent_id": 12,
+      "root_id": 1,
+      "year": 2028,
+      "code": "SG01021428",
+      "owner_before": 112212,
+      "owner_after": 121362
+    },
+    {
+      "task_id": 85,
+      "project_id": 1,
+      "parent_id": 12,
+      "root_id": 1,
+      "year": 2028,
+      "code": "SG01021628",
+      "owner_before": 112212,
+      "owner_after": 120119
+    },
+    {
+      "task_id": 87,
+      "project_id": 1,
+      "parent_id": 13,
+      "root_id": 1,
+      "year": 2025,
+      "code": "SG01030125",
+      "owner_before": 112212,
+      "owner_after": 120796
+    },
+    {
+      "task_id": 88,
+      "project_id": 1,
+      "parent_id": 13,
+      "root_id": 1,
+      "year": 2025,
+      "code": "SG01030225",
+      "owner_before": 112212,
+      "owner_after": 120317
+    },
+    {
+      "task_id": 90,
+      "project_id": 1,
+      "parent_id": 13,
+      "root_id": 1,
+      "year": 2025,
+      "code": "SG01030425",
+      "owner_before": 112212,
+      "owner_after": 120317
+    },
+    {
+      "task_id": 92,
+      "project_id": 1,
+      "parent_id": 13,
+      "root_id": 1,
+      "year": 2026,
+      "code": "SG01030626",
+      "owner_before": 112212,
+      "owner_after": 110438
+    },
+    {
+      "task_id": 94,
+      "project_id": 1,
+      "parent_id": 13,
+      "root_id": 1,
+      "year": 2026,
+      "code": "SG01030826",
+      "owner_before": 112212,
+      "owner_after": 120317
+    },
+    {
+      "task_id": 99,
+      "project_id": 1,
+      "parent_id": 13,
+      "root_id": 1,
+      "year": 2027,
+      "code": "SG01031327",
+      "owner_before": 112212,
+      "owner_after": 120317
+    },
+    {
+      "task_id": 100,
+      "project_id": 1,
+      "parent_id": 13,
+      "root_id": 1,
+      "year": 2027,
+      "code": "SG01031427",
+      "owner_before": 112212,
+      "owner_after": 120317
+    },
+    {
+      "task_id": 103,
+      "project_id": 1,
+      "parent_id": 13,
+      "root_id": 1,
+      "year": 2028,
+      "code": "SG01031728",
+      "owner_before": 112212,
+      "owner_after": 110438
+    },
+    {
+      "task_id": 106,
+      "project_id": 1,
+      "parent_id": 13,
+      "root_id": 1,
+      "year": 2028,
+      "code": "SG01032028",
+      "owner_before": 112212,
+      "owner_after": 120317
+    },
+    {
+      "task_id": 109,
+      "project_id": 1,
+      "parent_id": 13,
+      "root_id": 1,
+      "year": 2029,
+      "code": "SG01032329",
+      "owner_before": 112212,
+      "owner_after": 120317
+    },
+    {
+      "task_id": 110,
+      "project_id": 1,
+      "parent_id": 14,
+      "root_id": 2,
+      "year": 2025,
+      "code": "SG02010125",
+      "owner_before": 111634,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 111,
+      "project_id": 1,
+      "parent_id": 14,
+      "root_id": 2,
+      "year": 2025,
+      "code": "SG02010225",
+      "owner_before": 111634,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 113,
+      "project_id": 1,
+      "parent_id": 14,
+      "root_id": 2,
+      "year": 2025,
+      "code": "SG02010425",
+      "owner_before": 111634,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 114,
+      "project_id": 1,
+      "parent_id": 14,
+      "root_id": 2,
+      "year": 2025,
+      "code": "SG02010525",
+      "owner_before": 111634,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 115,
+      "project_id": 1,
+      "parent_id": 14,
+      "root_id": 2,
+      "year": 2025,
+      "code": "SG02010625",
+      "owner_before": 111634,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 116,
+      "project_id": 1,
+      "parent_id": 14,
+      "root_id": 2,
+      "year": 2026,
+      "code": "SG02010726",
+      "owner_before": 111634,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 117,
+      "project_id": 1,
+      "parent_id": 14,
+      "root_id": 2,
+      "year": 2026,
+      "code": "SG02010826",
+      "owner_before": 111634,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 120,
+      "project_id": 1,
+      "parent_id": 14,
+      "root_id": 2,
+      "year": 2026,
+      "code": "SG02011126",
+      "owner_before": 111634,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 121,
+      "project_id": 1,
+      "parent_id": 14,
+      "root_id": 2,
+      "year": 2027,
+      "code": "SG02011227",
+      "owner_before": 111634,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 122,
+      "project_id": 1,
+      "parent_id": 14,
+      "root_id": 2,
+      "year": 2027,
+      "code": "SG02011327",
+      "owner_before": 111634,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 123,
+      "project_id": 1,
+      "parent_id": 14,
+      "root_id": 2,
+      "year": 2027,
+      "code": "SG02011427",
+      "owner_before": 111634,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 125,
+      "project_id": 1,
+      "parent_id": 14,
+      "root_id": 2,
+      "year": 2028,
+      "code": "SG02011628",
+      "owner_before": 111634,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 126,
+      "project_id": 1,
+      "parent_id": 14,
+      "root_id": 2,
+      "year": 2028,
+      "code": "SG02011728",
+      "owner_before": 111634,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 129,
+      "project_id": 1,
+      "parent_id": 14,
+      "root_id": 2,
+      "year": 2028,
+      "code": "SG02012028",
+      "owner_before": 111634,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 130,
+      "project_id": 1,
+      "parent_id": 14,
+      "root_id": 2,
+      "year": 2029,
+      "code": "SG02012129",
+      "owner_before": 111634,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 131,
+      "project_id": 1,
+      "parent_id": 14,
+      "root_id": 2,
+      "year": 2029,
+      "code": "SG02012229",
+      "owner_before": 111634,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 133,
+      "project_id": 1,
+      "parent_id": 14,
+      "root_id": 2,
+      "year": 2029,
+      "code": "SG02012429",
+      "owner_before": 111634,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 134,
+      "project_id": 1,
+      "parent_id": 14,
+      "root_id": 2,
+      "year": 2029,
+      "code": "SG02012529",
+      "owner_before": 111634,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 135,
+      "project_id": 1,
+      "parent_id": 15,
+      "root_id": 2,
+      "year": 2025,
+      "code": "SG02020125",
+      "owner_before": 111634,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 136,
+      "project_id": 1,
+      "parent_id": 15,
+      "root_id": 2,
+      "year": 2025,
+      "code": "SG02020225",
+      "owner_before": 111634,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 140,
+      "project_id": 1,
+      "parent_id": 15,
+      "root_id": 2,
+      "year": 2026,
+      "code": "SG02020626",
+      "owner_before": 111634,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 141,
+      "project_id": 1,
+      "parent_id": 15,
+      "root_id": 2,
+      "year": 2026,
+      "code": "SG02020726",
+      "owner_before": 111634,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 150,
+      "project_id": 1,
+      "parent_id": 15,
+      "root_id": 2,
+      "year": 2029,
+      "code": "SG02021629",
+      "owner_before": 111634,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 151,
+      "project_id": 1,
+      "parent_id": 16,
+      "root_id": 2,
+      "year": 2025,
+      "code": "SG02030125",
+      "owner_before": 111634,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 154,
+      "project_id": 1,
+      "parent_id": 16,
+      "root_id": 2,
+      "year": 2025,
+      "code": "SG02030425",
+      "owner_before": 111634,
+      "owner_after": 110802
+    },
+    {
+      "task_id": 155,
+      "project_id": 1,
+      "parent_id": 16,
+      "root_id": 2,
+      "year": 2025,
+      "code": "SG02030525",
+      "owner_before": 111634,
+      "owner_after": 110802
+    },
+    {
+      "task_id": 157,
+      "project_id": 1,
+      "parent_id": 16,
+      "root_id": 2,
+      "year": 2026,
+      "code": "SG02030726",
+      "owner_before": 111634,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 159,
+      "project_id": 1,
+      "parent_id": 16,
+      "root_id": 2,
+      "year": 2026,
+      "code": "SG02030926",
+      "owner_before": 111634,
+      "owner_after": 110802
+    },
+    {
+      "task_id": 160,
+      "project_id": 1,
+      "parent_id": 16,
+      "root_id": 2,
+      "year": 2026,
+      "code": "SG02031026",
+      "owner_before": 111634,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 161,
+      "project_id": 1,
+      "parent_id": 16,
+      "root_id": 2,
+      "year": 2026,
+      "code": "SG02031126",
+      "owner_before": 111634,
+      "owner_after": 110802
+    },
+    {
+      "task_id": 163,
+      "project_id": 1,
+      "parent_id": 16,
+      "root_id": 2,
+      "year": 2027,
+      "code": "SG02031327",
+      "owner_before": 111634,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 165,
+      "project_id": 1,
+      "parent_id": 16,
+      "root_id": 2,
+      "year": 2027,
+      "code": "SG02031527",
+      "owner_before": 111634,
+      "owner_after": 110802
+    },
+    {
+      "task_id": 166,
+      "project_id": 1,
+      "parent_id": 16,
+      "root_id": 2,
+      "year": 2027,
+      "code": "SG02031627",
+      "owner_before": 111634,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 167,
+      "project_id": 1,
+      "parent_id": 16,
+      "root_id": 2,
+      "year": 2027,
+      "code": "SG02031727",
+      "owner_before": 111634,
+      "owner_after": 110802
+    },
+    {
+      "task_id": 168,
+      "project_id": 1,
+      "parent_id": 16,
+      "root_id": 2,
+      "year": 2028,
+      "code": "SG02031828",
+      "owner_before": 111634,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 170,
+      "project_id": 1,
+      "parent_id": 16,
+      "root_id": 2,
+      "year": 2028,
+      "code": "SG02032028",
+      "owner_before": 111634,
+      "owner_after": 110802
+    },
+    {
+      "task_id": 171,
+      "project_id": 1,
+      "parent_id": 16,
+      "root_id": 2,
+      "year": 2028,
+      "code": "SG02032128",
+      "owner_before": 111634,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 172,
+      "project_id": 1,
+      "parent_id": 16,
+      "root_id": 2,
+      "year": 2028,
+      "code": "SG02032228",
+      "owner_before": 111634,
+      "owner_after": 110802
+    },
+    {
+      "task_id": 173,
+      "project_id": 1,
+      "parent_id": 16,
+      "root_id": 2,
+      "year": 2029,
+      "code": "SG02032329",
+      "owner_before": 111634,
+      "owner_after": 110802
+    },
+    {
+      "task_id": 175,
+      "project_id": 1,
+      "parent_id": 16,
+      "root_id": 2,
+      "year": 2029,
+      "code": "SG02032529",
+      "owner_before": 111634,
+      "owner_after": 110802
+    },
+    {
+      "task_id": 176,
+      "project_id": 1,
+      "parent_id": 16,
+      "root_id": 2,
+      "year": 2029,
+      "code": "SG02032629",
+      "owner_before": 111634,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 177,
+      "project_id": 1,
+      "parent_id": 16,
+      "root_id": 2,
+      "year": 2029,
+      "code": "SG02032729",
+      "owner_before": 111634,
+      "owner_after": 110802
+    },
+    {
+      "task_id": 179,
+      "project_id": 1,
+      "parent_id": 17,
+      "root_id": 3,
+      "year": 2025,
+      "code": "SG03010125",
+      "owner_before": 112327,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 195,
+      "project_id": 1,
+      "parent_id": 17,
+      "root_id": 3,
+      "year": 2029,
+      "code": "SG03011729",
+      "owner_before": 112327,
+      "owner_after": 110271
+    },
+    {
+      "task_id": 237,
+      "project_id": 1,
+      "parent_id": 19,
+      "root_id": 3,
+      "year": 2029,
+      "code": "SG03031629",
+      "owner_before": 112327,
+      "owner_after": 110131
+    },
+    {
+      "task_id": 348,
+      "project_id": 1,
+      "parent_id": 26,
+      "root_id": 6,
+      "year": 2025,
+      "code": "SG06010125",
+      "owner_before": 110254,
+      "owner_after": 120385
+    },
+    {
+      "task_id": 349,
+      "project_id": 1,
+      "parent_id": 26,
+      "root_id": 6,
+      "year": 2025,
+      "code": "SG06010225",
+      "owner_before": 110254,
+      "owner_after": 120385
+    },
+    {
+      "task_id": 350,
+      "project_id": 1,
+      "parent_id": 26,
+      "root_id": 6,
+      "year": 2025,
+      "code": "SG06010325",
+      "owner_before": 110254,
+      "owner_after": 120385
+    },
+    {
+      "task_id": 351,
+      "project_id": 1,
+      "parent_id": 26,
+      "root_id": 6,
+      "year": 2025,
+      "code": "SG06010425",
+      "owner_before": 110254,
+      "owner_after": 121362
+    },
+    {
+      "task_id": 352,
+      "project_id": 1,
+      "parent_id": 26,
+      "root_id": 6,
+      "year": 2026,
+      "code": "SG06010526",
+      "owner_before": 110254,
+      "owner_after": 120385
+    },
+    {
+      "task_id": 353,
+      "project_id": 1,
+      "parent_id": 26,
+      "root_id": 6,
+      "year": 2026,
+      "code": "SG06010626",
+      "owner_before": 110254,
+      "owner_after": 120385
+    },
+    {
+      "task_id": 354,
+      "project_id": 1,
+      "parent_id": 26,
+      "root_id": 6,
+      "year": 2026,
+      "code": "SG06010726",
+      "owner_before": 110254,
+      "owner_after": 120385
+    },
+    {
+      "task_id": 355,
+      "project_id": 1,
+      "parent_id": 26,
+      "root_id": 6,
+      "year": 2026,
+      "code": "SG06010826",
+      "owner_before": 110254,
+      "owner_after": 121362
+    },
+    {
+      "task_id": 356,
+      "project_id": 1,
+      "parent_id": 26,
+      "root_id": 6,
+      "year": 2026,
+      "code": "SG06010926",
+      "owner_before": 110254,
+      "owner_after": 121362
+    },
+    {
+      "task_id": 357,
+      "project_id": 1,
+      "parent_id": 26,
+      "root_id": 6,
+      "year": 2027,
+      "code": "SG06011027",
+      "owner_before": 110254,
+      "owner_after": 120385
+    },
+    {
+      "task_id": 358,
+      "project_id": 1,
+      "parent_id": 26,
+      "root_id": 6,
+      "year": 2027,
+      "code": "SG06011127",
+      "owner_before": 110254,
+      "owner_after": 120385
+    },
+    {
+      "task_id": 359,
+      "project_id": 1,
+      "parent_id": 26,
+      "root_id": 6,
+      "year": 2027,
+      "code": "SG06011227",
+      "owner_before": 110254,
+      "owner_after": 121362
+    },
+    {
+      "task_id": 360,
+      "project_id": 1,
+      "parent_id": 26,
+      "root_id": 6,
+      "year": 2027,
+      "code": "SG06011327",
+      "owner_before": 110254,
+      "owner_after": 121362
+    },
+    {
+      "task_id": 361,
+      "project_id": 1,
+      "parent_id": 26,
+      "root_id": 6,
+      "year": 2027,
+      "code": "SG06011427",
+      "owner_before": 110254,
+      "owner_after": 120311
+    },
+    {
+      "task_id": 362,
+      "project_id": 1,
+      "parent_id": 26,
+      "root_id": 6,
+      "year": 2028,
+      "code": "SG06011528",
+      "owner_before": 110254,
+      "owner_after": 120385
+    },
+    {
+      "task_id": 363,
+      "project_id": 1,
+      "parent_id": 26,
+      "root_id": 6,
+      "year": 2028,
+      "code": "SG06011628",
+      "owner_before": 110254,
+      "owner_after": 120385
+    },
+    {
+      "task_id": 364,
+      "project_id": 1,
+      "parent_id": 26,
+      "root_id": 6,
+      "year": 2028,
+      "code": "SG06011728",
+      "owner_before": 110254,
+      "owner_after": 120385
+    },
+    {
+      "task_id": 365,
+      "project_id": 1,
+      "parent_id": 26,
+      "root_id": 6,
+      "year": 2028,
+      "code": "SG06011828",
+      "owner_before": 110254,
+      "owner_after": 121362
+    },
+    {
+      "task_id": 366,
+      "project_id": 1,
+      "parent_id": 26,
+      "root_id": 6,
+      "year": 2028,
+      "code": "SG06011928",
+      "owner_before": 110254,
+      "owner_after": 120311
+    },
+    {
+      "task_id": 367,
+      "project_id": 1,
+      "parent_id": 26,
+      "root_id": 6,
+      "year": 2029,
+      "code": "SG06012029",
+      "owner_before": 110254,
+      "owner_after": 120385
+    },
+    {
+      "task_id": 368,
+      "project_id": 1,
+      "parent_id": 26,
+      "root_id": 6,
+      "year": 2029,
+      "code": "SG06012129",
+      "owner_before": 110254,
+      "owner_after": 120385
+    },
+    {
+      "task_id": 369,
+      "project_id": 1,
+      "parent_id": 26,
+      "root_id": 6,
+      "year": 2029,
+      "code": "SG06012229",
+      "owner_before": 110254,
+      "owner_after": 121362
+    },
+    {
+      "task_id": 370,
+      "project_id": 1,
+      "parent_id": 27,
+      "root_id": 6,
+      "year": 2025,
+      "code": "SG06020125",
+      "owner_before": 110254,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 371,
+      "project_id": 1,
+      "parent_id": 27,
+      "root_id": 6,
+      "year": 2025,
+      "code": "SG06020225",
+      "owner_before": 110254,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 372,
+      "project_id": 1,
+      "parent_id": 27,
+      "root_id": 6,
+      "year": 2025,
+      "code": "SG06020325",
+      "owner_before": 110254,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 373,
+      "project_id": 1,
+      "parent_id": 27,
+      "root_id": 6,
+      "year": 2025,
+      "code": "SG06020425",
+      "owner_before": 110254,
+      "owner_after": 121362
+    },
+    {
+      "task_id": 374,
+      "project_id": 1,
+      "parent_id": 27,
+      "root_id": 6,
+      "year": 2025,
+      "code": "SG06020525",
+      "owner_before": 110254,
+      "owner_after": 120977
+    },
+    {
+      "task_id": 375,
+      "project_id": 1,
+      "parent_id": 27,
+      "root_id": 6,
+      "year": 2026,
+      "code": "SG06020626",
+      "owner_before": 110254,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 376,
+      "project_id": 1,
+      "parent_id": 27,
+      "root_id": 6,
+      "year": 2026,
+      "code": "SG06020726",
+      "owner_before": 110254,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 378,
+      "project_id": 1,
+      "parent_id": 27,
+      "root_id": 6,
+      "year": 2026,
+      "code": "SG06020926",
+      "owner_before": 110254,
+      "owner_after": 120977
+    },
+    {
+      "task_id": 379,
+      "project_id": 1,
+      "parent_id": 27,
+      "root_id": 6,
+      "year": 2027,
+      "code": "SG06021027",
+      "owner_before": 110254,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 380,
+      "project_id": 1,
+      "parent_id": 27,
+      "root_id": 6,
+      "year": 2027,
+      "code": "SG06021127",
+      "owner_before": 110254,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 382,
+      "project_id": 1,
+      "parent_id": 27,
+      "root_id": 6,
+      "year": 2027,
+      "code": "SG06021327",
+      "owner_before": 110254,
+      "owner_after": 120977
+    },
+    {
+      "task_id": 383,
+      "project_id": 1,
+      "parent_id": 27,
+      "root_id": 6,
+      "year": 2028,
+      "code": "SG06021428",
+      "owner_before": 110254,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 384,
+      "project_id": 1,
+      "parent_id": 27,
+      "root_id": 6,
+      "year": 2028,
+      "code": "SG06021528",
+      "owner_before": 110254,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 385,
+      "project_id": 1,
+      "parent_id": 27,
+      "root_id": 6,
+      "year": 2028,
+      "code": "SG06021628",
+      "owner_before": 110254,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 387,
+      "project_id": 1,
+      "parent_id": 27,
+      "root_id": 6,
+      "year": 2028,
+      "code": "SG06021828",
+      "owner_before": 110254,
+      "owner_after": 120977
+    },
+    {
+      "task_id": 388,
+      "project_id": 1,
+      "parent_id": 27,
+      "root_id": 6,
+      "year": 2029,
+      "code": "SG06021929",
+      "owner_before": 110254,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 389,
+      "project_id": 1,
+      "parent_id": 27,
+      "root_id": 6,
+      "year": 2029,
+      "code": "SG06022029",
+      "owner_before": 110254,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 391,
+      "project_id": 1,
+      "parent_id": 27,
+      "root_id": 6,
+      "year": 2029,
+      "code": "SG06022229",
+      "owner_before": 110254,
+      "owner_after": 120977
+    },
+    {
+      "task_id": 395,
+      "project_id": 1,
+      "parent_id": 28,
+      "root_id": 6,
+      "year": 2025,
+      "code": "SG06030425",
+      "owner_before": 110254,
+      "owner_after": 121362
+    },
+    {
+      "task_id": 396,
+      "project_id": 1,
+      "parent_id": 28,
+      "root_id": 6,
+      "year": 2025,
+      "code": "SG06030525",
+      "owner_before": 110254,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 397,
+      "project_id": 1,
+      "parent_id": 28,
+      "root_id": 6,
+      "year": 2026,
+      "code": "SG06030626",
+      "owner_before": 110254,
+      "owner_after": 120870
+    },
+    {
+      "task_id": 398,
+      "project_id": 1,
+      "parent_id": 28,
+      "root_id": 6,
+      "year": 2026,
+      "code": "SG06030726",
+      "owner_before": 110254,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 399,
+      "project_id": 1,
+      "parent_id": 28,
+      "root_id": 6,
+      "year": 2026,
+      "code": "SG06030826",
+      "owner_before": 110254,
+      "owner_after": 121362
+    },
+    {
+      "task_id": 401,
+      "project_id": 1,
+      "parent_id": 28,
+      "root_id": 6,
+      "year": 2026,
+      "code": "SG06031026",
+      "owner_before": 110254,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 402,
+      "project_id": 1,
+      "parent_id": 28,
+      "root_id": 6,
+      "year": 2027,
+      "code": "SG06031127",
+      "owner_before": 110254,
+      "owner_after": 120870
+    },
+    {
+      "task_id": 403,
+      "project_id": 1,
+      "parent_id": 28,
+      "root_id": 6,
+      "year": 2027,
+      "code": "SG06031227",
+      "owner_before": 110254,
+      "owner_after": 121362
+    },
+    {
+      "task_id": 405,
+      "project_id": 1,
+      "parent_id": 28,
+      "root_id": 6,
+      "year": 2027,
+      "code": "SG06031427",
+      "owner_before": 110254,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 407,
+      "project_id": 1,
+      "parent_id": 28,
+      "root_id": 6,
+      "year": 2028,
+      "code": "SG06031628",
+      "owner_before": 110254,
+      "owner_after": 120870
+    },
+    {
+      "task_id": 408,
+      "project_id": 1,
+      "parent_id": 28,
+      "root_id": 6,
+      "year": 2028,
+      "code": "SG06031728",
+      "owner_before": 110254,
+      "owner_after": 121362
+    },
+    {
+      "task_id": 410,
+      "project_id": 1,
+      "parent_id": 28,
+      "root_id": 6,
+      "year": 2028,
+      "code": "SG06031928",
+      "owner_before": 110254,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 411,
+      "project_id": 1,
+      "parent_id": 28,
+      "root_id": 6,
+      "year": 2029,
+      "code": "SG06032029",
+      "owner_before": 110254,
+      "owner_after": 120870
+    },
+    {
+      "task_id": 412,
+      "project_id": 1,
+      "parent_id": 28,
+      "root_id": 6,
+      "year": 2029,
+      "code": "SG06032129",
+      "owner_before": 110254,
+      "owner_after": 121362
+    },
+    {
+      "task_id": 429,
+      "project_id": 1,
+      "parent_id": 29,
+      "root_id": 7,
+      "year": 2028,
+      "code": "SG07011628",
+      "owner_before": 112120,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 438,
+      "project_id": 1,
+      "parent_id": 30,
+      "root_id": 7,
+      "year": 2026,
+      "code": "SG07020526",
+      "owner_before": 112120,
+      "owner_after": 120317
+    },
+    {
+      "task_id": 441,
+      "project_id": 1,
+      "parent_id": 30,
+      "root_id": 7,
+      "year": 2027,
+      "code": "SG07020827",
+      "owner_before": 112120,
+      "owner_after": 120317
+    },
+    {
+      "task_id": 443,
+      "project_id": 1,
+      "parent_id": 30,
+      "root_id": 7,
+      "year": 2028,
+      "code": "SG07021028",
+      "owner_before": 112120,
+      "owner_after": 120317
+    },
+    {
+      "task_id": 446,
+      "project_id": 1,
+      "parent_id": 31,
+      "root_id": 7,
+      "year": 2025,
+      "code": "SG07030125",
+      "owner_before": 112120,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 471,
+      "project_id": 1,
+      "parent_id": 31,
+      "root_id": 7,
+      "year": 2029,
+      "code": "SG07032629",
+      "owner_before": 112120,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 503,
+      "project_id": 1,
+      "parent_id": 33,
+      "root_id": 8,
+      "year": 2026,
+      "code": "SG08021126",
+      "owner_before": 110261,
+      "owner_after": 110887
+    },
+    {
+      "task_id": 505,
+      "project_id": 1,
+      "parent_id": 33,
+      "root_id": 8,
+      "year": 2026,
+      "code": "SG08021326",
+      "owner_before": 110261,
+      "owner_after": 110887
+    },
+    {
+      "task_id": 506,
+      "project_id": 1,
+      "parent_id": 33,
+      "root_id": 8,
+      "year": 2026,
+      "code": "SG08021426",
+      "owner_before": 110261,
+      "owner_after": 110887
+    },
+    {
+      "task_id": 513,
+      "project_id": 1,
+      "parent_id": 33,
+      "root_id": 8,
+      "year": 2027,
+      "code": "SG08022127",
+      "owner_before": 110261,
+      "owner_after": 110887
+    },
+    {
+      "task_id": 514,
+      "project_id": 1,
+      "parent_id": 33,
+      "root_id": 8,
+      "year": 2027,
+      "code": "SG08022227",
+      "owner_before": 110261,
+      "owner_after": 110887
+    },
+    {
+      "task_id": 522,
+      "project_id": 1,
+      "parent_id": 33,
+      "root_id": 8,
+      "year": 2028,
+      "code": "SG08023028",
+      "owner_before": 110261,
+      "owner_after": 110887
+    },
+    {
+      "task_id": 523,
+      "project_id": 1,
+      "parent_id": 33,
+      "root_id": 8,
+      "year": 2028,
+      "code": "SG08023128",
+      "owner_before": 110261,
+      "owner_after": 110887
+    },
+    {
+      "task_id": 530,
+      "project_id": 1,
+      "parent_id": 33,
+      "root_id": 8,
+      "year": 2029,
+      "code": "SG08023829",
+      "owner_before": 110261,
+      "owner_after": 110887
+    },
+    {
+      "task_id": 531,
+      "project_id": 1,
+      "parent_id": 33,
+      "root_id": 8,
+      "year": 2029,
+      "code": "SG08023929",
+      "owner_before": 110261,
+      "owner_after": 110887
+    },
+    {
+      "task_id": 534,
+      "project_id": 1,
+      "parent_id": 34,
+      "root_id": 8,
+      "year": 2025,
+      "code": "SG08030225",
+      "owner_before": 110261,
+      "owner_after": 121111
+    },
+    {
+      "task_id": 538,
+      "project_id": 1,
+      "parent_id": 34,
+      "root_id": 8,
+      "year": 2027,
+      "code": "SG08030627",
+      "owner_before": 110261,
+      "owner_after": 121111
+    },
+    {
+      "task_id": 540,
+      "project_id": 1,
+      "parent_id": 34,
+      "root_id": 8,
+      "year": 2028,
+      "code": "SG08030828",
+      "owner_before": 110261,
+      "owner_after": 121111
+    },
+    {
+      "task_id": 541,
+      "project_id": 1,
+      "parent_id": 34,
+      "root_id": 8,
+      "year": 2029,
+      "code": "SG08030929",
+      "owner_before": 110261,
+      "owner_after": 121111
+    },
+    {
+      "task_id": 542,
+      "project_id": 1,
+      "parent_id": 34,
+      "root_id": 8,
+      "year": 2029,
+      "code": "SG08031029",
+      "owner_before": 110261,
+      "owner_after": 121111
+    },
+    {
+      "task_id": 543,
+      "project_id": 1,
+      "parent_id": 35,
+      "root_id": 9,
+      "year": 2025,
+      "code": "SG09010125",
+      "owner_before": 110260,
+      "owner_after": 120977
+    },
+    {
+      "task_id": 544,
+      "project_id": 1,
+      "parent_id": 35,
+      "root_id": 9,
+      "year": 2025,
+      "code": "SG09010225",
+      "owner_before": 110260,
+      "owner_after": 120977
+    },
+    {
+      "task_id": 545,
+      "project_id": 1,
+      "parent_id": 35,
+      "root_id": 9,
+      "year": 2025,
+      "code": "SG09010325",
+      "owner_before": 110260,
+      "owner_after": 120977
+    },
+    {
+      "task_id": 547,
+      "project_id": 1,
+      "parent_id": 35,
+      "root_id": 9,
+      "year": 2026,
+      "code": "SG09010526",
+      "owner_before": 110260,
+      "owner_after": 120977
+    },
+    {
+      "task_id": 548,
+      "project_id": 1,
+      "parent_id": 35,
+      "root_id": 9,
+      "year": 2026,
+      "code": "SG09010626",
+      "owner_before": 110260,
+      "owner_after": 120977
+    },
+    {
+      "task_id": 549,
+      "project_id": 1,
+      "parent_id": 35,
+      "root_id": 9,
+      "year": 2026,
+      "code": "SG09010726",
+      "owner_before": 110260,
+      "owner_after": 120977
+    },
+    {
+      "task_id": 550,
+      "project_id": 1,
+      "parent_id": 35,
+      "root_id": 9,
+      "year": 2026,
+      "code": "SG09010826",
+      "owner_before": 110260,
+      "owner_after": 120977
+    },
+    {
+      "task_id": 551,
+      "project_id": 1,
+      "parent_id": 35,
+      "root_id": 9,
+      "year": 2027,
+      "code": "SG09010927",
+      "owner_before": 110260,
+      "owner_after": 120977
+    },
+    {
+      "task_id": 552,
+      "project_id": 1,
+      "parent_id": 35,
+      "root_id": 9,
+      "year": 2027,
+      "code": "SG09011027",
+      "owner_before": 110260,
+      "owner_after": 120977
+    },
+    {
+      "task_id": 554,
+      "project_id": 1,
+      "parent_id": 35,
+      "root_id": 9,
+      "year": 2028,
+      "code": "SG09011228",
+      "owner_before": 110260,
+      "owner_after": 120977
+    },
+    {
+      "task_id": 555,
+      "project_id": 1,
+      "parent_id": 35,
+      "root_id": 9,
+      "year": 2028,
+      "code": "SG09011328",
+      "owner_before": 110260,
+      "owner_after": 120977
+    },
+    {
+      "task_id": 557,
+      "project_id": 1,
+      "parent_id": 35,
+      "root_id": 9,
+      "year": 2029,
+      "code": "SG09011529",
+      "owner_before": 110260,
+      "owner_after": 120977
+    },
+    {
+      "task_id": 558,
+      "project_id": 1,
+      "parent_id": 35,
+      "root_id": 9,
+      "year": 2029,
+      "code": "SG09011629",
+      "owner_before": 110260,
+      "owner_after": 120977
+    },
+    {
+      "task_id": 560,
+      "project_id": 1,
+      "parent_id": 36,
+      "root_id": 9,
+      "year": 2025,
+      "code": "SG09020125",
+      "owner_before": 110260,
+      "owner_after": 110318
+    },
+    {
+      "task_id": 561,
+      "project_id": 1,
+      "parent_id": 36,
+      "root_id": 9,
+      "year": 2025,
+      "code": "SG09020225",
+      "owner_before": 110260,
+      "owner_after": 110255
+    },
+    {
+      "task_id": 562,
+      "project_id": 1,
+      "parent_id": 36,
+      "root_id": 9,
+      "year": 2025,
+      "code": "SG09020325",
+      "owner_before": 110260,
+      "owner_after": 110318
+    },
+    {
+      "task_id": 563,
+      "project_id": 1,
+      "parent_id": 36,
+      "root_id": 9,
+      "year": 2025,
+      "code": "SG09020425",
+      "owner_before": 110260,
+      "owner_after": 120977
+    },
+    {
+      "task_id": 565,
+      "project_id": 1,
+      "parent_id": 36,
+      "root_id": 9,
+      "year": 2026,
+      "code": "SG09020626",
+      "owner_before": 110260,
+      "owner_after": 110318
+    },
+    {
+      "task_id": 566,
+      "project_id": 1,
+      "parent_id": 36,
+      "root_id": 9,
+      "year": 2026,
+      "code": "SG09020726",
+      "owner_before": 110260,
+      "owner_after": 110318
+    },
+    {
+      "task_id": 568,
+      "project_id": 1,
+      "parent_id": 36,
+      "root_id": 9,
+      "year": 2027,
+      "code": "SG09020927",
+      "owner_before": 110260,
+      "owner_after": 110318
+    },
+    {
+      "task_id": 569,
+      "project_id": 1,
+      "parent_id": 36,
+      "root_id": 9,
+      "year": 2027,
+      "code": "SG09021027",
+      "owner_before": 110260,
+      "owner_after": 110318
+    },
+    {
+      "task_id": 571,
+      "project_id": 1,
+      "parent_id": 36,
+      "root_id": 9,
+      "year": 2028,
+      "code": "SG09021228",
+      "owner_before": 110260,
+      "owner_after": 110318
+    },
+    {
+      "task_id": 572,
+      "project_id": 1,
+      "parent_id": 36,
+      "root_id": 9,
+      "year": 2028,
+      "code": "SG09021328",
+      "owner_before": 110260,
+      "owner_after": 110318
+    },
+    {
+      "task_id": 574,
+      "project_id": 1,
+      "parent_id": 36,
+      "root_id": 9,
+      "year": 2029,
+      "code": "SG09021529",
+      "owner_before": 110260,
+      "owner_after": 110318
+    },
+    {
+      "task_id": 575,
+      "project_id": 1,
+      "parent_id": 36,
+      "root_id": 9,
+      "year": 2029,
+      "code": "SG09021629",
+      "owner_before": 110260,
+      "owner_after": 110318
+    },
+    {
+      "task_id": 578,
+      "project_id": 1,
+      "parent_id": 37,
+      "root_id": 9,
+      "year": 2025,
+      "code": "SG09030225",
+      "owner_before": 110260,
+      "owner_after": 120977
+    },
+    {
+      "task_id": 580,
+      "project_id": 1,
+      "parent_id": 37,
+      "root_id": 9,
+      "year": 2025,
+      "code": "SG09030425",
+      "owner_before": 110260,
+      "owner_after": 110318
+    },
+    {
+      "task_id": 584,
+      "project_id": 1,
+      "parent_id": 37,
+      "root_id": 9,
+      "year": 2026,
+      "code": "SG09030826",
+      "owner_before": 110260,
+      "owner_after": 120977
+    },
+    {
+      "task_id": 585,
+      "project_id": 1,
+      "parent_id": 37,
+      "root_id": 9,
+      "year": 2026,
+      "code": "SG09030926",
+      "owner_before": 110260,
+      "owner_after": 110318
+    },
+    {
+      "task_id": 588,
+      "project_id": 1,
+      "parent_id": 37,
+      "root_id": 9,
+      "year": 2027,
+      "code": "SG09031227",
+      "owner_before": 110260,
+      "owner_after": 120977
+    },
+    {
+      "task_id": 589,
+      "project_id": 1,
+      "parent_id": 37,
+      "root_id": 9,
+      "year": 2027,
+      "code": "SG09031327",
+      "owner_before": 110260,
+      "owner_after": 110318
+    },
+    {
+      "task_id": 591,
+      "project_id": 1,
+      "parent_id": 37,
+      "root_id": 9,
+      "year": 2027,
+      "code": "SG09031527",
+      "owner_before": 110260,
+      "owner_after": 120977
+    },
+    {
+      "task_id": 594,
+      "project_id": 1,
+      "parent_id": 37,
+      "root_id": 9,
+      "year": 2028,
+      "code": "SG09031828",
+      "owner_before": 110260,
+      "owner_after": 110318
+    },
+    {
+      "task_id": 596,
+      "project_id": 1,
+      "parent_id": 37,
+      "root_id": 9,
+      "year": 2028,
+      "code": "SG09032028",
+      "owner_before": 110260,
+      "owner_after": 120977
+    },
+    {
+      "task_id": 598,
+      "project_id": 1,
+      "parent_id": 37,
+      "root_id": 9,
+      "year": 2029,
+      "code": "SG09032229",
+      "owner_before": 110260,
+      "owner_after": 121000
+    },
+    {
+      "task_id": 599,
+      "project_id": 1,
+      "parent_id": 37,
+      "root_id": 9,
+      "year": 2029,
+      "code": "SG09032329",
+      "owner_before": 110260,
+      "owner_after": 110318
+    },
+    {
+      "task_id": 601,
+      "project_id": 1,
+      "parent_id": 37,
+      "root_id": 9,
+      "year": 2029,
+      "code": "SG09032529",
+      "owner_before": 110260,
+      "owner_after": 120977
+    },
+    {
+      "task_id": 602,
+      "project_id": 1,
+      "parent_id": 38,
+      "root_id": 10,
+      "year": 2025,
+      "code": "SG10010125",
+      "owner_before": 110234,
+      "owner_after": 120311
+    },
+    {
+      "task_id": 603,
+      "project_id": 1,
+      "parent_id": 38,
+      "root_id": 10,
+      "year": 2025,
+      "code": "SG10010225",
+      "owner_before": 110234,
+      "owner_after": 120311
+    },
+    {
+      "task_id": 604,
+      "project_id": 1,
+      "parent_id": 38,
+      "root_id": 10,
+      "year": 2025,
+      "code": "SG10010325",
+      "owner_before": 110234,
+      "owner_after": 120311
+    },
+    {
+      "task_id": 605,
+      "project_id": 1,
+      "parent_id": 38,
+      "root_id": 10,
+      "year": 2025,
+      "code": "SG10010425",
+      "owner_before": 110234,
+      "owner_after": 120311
+    },
+    {
+      "task_id": 608,
+      "project_id": 1,
+      "parent_id": 38,
+      "root_id": 10,
+      "year": 2026,
+      "code": "SG10010726",
+      "owner_before": 110234,
+      "owner_after": 120311
+    },
+    {
+      "task_id": 609,
+      "project_id": 1,
+      "parent_id": 38,
+      "root_id": 10,
+      "year": 2027,
+      "code": "SG10010827",
+      "owner_before": 110234,
+      "owner_after": 120311
+    },
+    {
+      "task_id": 610,
+      "project_id": 1,
+      "parent_id": 38,
+      "root_id": 10,
+      "year": 2027,
+      "code": "SG10010927",
+      "owner_before": 110234,
+      "owner_after": 120311
+    },
+    {
+      "task_id": 611,
+      "project_id": 1,
+      "parent_id": 38,
+      "root_id": 10,
+      "year": 2028,
+      "code": "SG10011028",
+      "owner_before": 110234,
+      "owner_after": 120311
+    },
+    {
+      "task_id": 612,
+      "project_id": 1,
+      "parent_id": 38,
+      "root_id": 10,
+      "year": 2028,
+      "code": "SG10011128",
+      "owner_before": 110234,
+      "owner_after": 120311
+    },
+    {
+      "task_id": 613,
+      "project_id": 1,
+      "parent_id": 38,
+      "root_id": 10,
+      "year": 2028,
+      "code": "SG10011228",
+      "owner_before": 110234,
+      "owner_after": 120311
+    },
+    {
+      "task_id": 614,
+      "project_id": 1,
+      "parent_id": 38,
+      "root_id": 10,
+      "year": 2029,
+      "code": "SG10011329",
+      "owner_before": 110234,
+      "owner_after": 120311
+    },
+    {
+      "task_id": 615,
+      "project_id": 1,
+      "parent_id": 38,
+      "root_id": 10,
+      "year": 2029,
+      "code": "SG10011429",
+      "owner_before": 110234,
+      "owner_after": 120311
+    },
+    {
+      "task_id": 616,
+      "project_id": 1,
+      "parent_id": 38,
+      "root_id": 10,
+      "year": 2029,
+      "code": "SG10011529",
+      "owner_before": 110234,
+      "owner_after": 120311
+    },
+    {
+      "task_id": 617,
+      "project_id": 1,
+      "parent_id": 39,
+      "root_id": 10,
+      "year": 2025,
+      "code": "SG10020125",
+      "owner_before": 110234,
+      "owner_after": 120311
+    },
+    {
+      "task_id": 618,
+      "project_id": 1,
+      "parent_id": 39,
+      "root_id": 10,
+      "year": 2025,
+      "code": "SG10020225",
+      "owner_before": 110234,
+      "owner_after": 120311
+    },
+    {
+      "task_id": 619,
+      "project_id": 1,
+      "parent_id": 39,
+      "root_id": 10,
+      "year": 2026,
+      "code": "SG10020326",
+      "owner_before": 110234,
+      "owner_after": 120311
+    },
+    {
+      "task_id": 620,
+      "project_id": 1,
+      "parent_id": 39,
+      "root_id": 10,
+      "year": 2026,
+      "code": "SG10020426",
+      "owner_before": 110234,
+      "owner_after": 120311
+    },
+    {
+      "task_id": 621,
+      "project_id": 1,
+      "parent_id": 39,
+      "root_id": 10,
+      "year": 2027,
+      "code": "SG10020527",
+      "owner_before": 110234,
+      "owner_after": 120311
+    },
+    {
+      "task_id": 622,
+      "project_id": 1,
+      "parent_id": 39,
+      "root_id": 10,
+      "year": 2027,
+      "code": "SG10020627",
+      "owner_before": 110234,
+      "owner_after": 120311
+    },
+    {
+      "task_id": 623,
+      "project_id": 1,
+      "parent_id": 39,
+      "root_id": 10,
+      "year": 2028,
+      "code": "SG10020728",
+      "owner_before": 110234,
+      "owner_after": 120311
+    },
+    {
+      "task_id": 624,
+      "project_id": 1,
+      "parent_id": 39,
+      "root_id": 10,
+      "year": 2029,
+      "code": "SG10020829",
+      "owner_before": 110234,
+      "owner_after": 120311
+    },
+    {
+      "task_id": 625,
+      "project_id": 1,
+      "parent_id": 39,
+      "root_id": 10,
+      "year": 2029,
+      "code": "SG10020929",
+      "owner_before": 110234,
+      "owner_after": 120311
+    },
+    {
+      "task_id": 627,
+      "project_id": 1,
+      "parent_id": 40,
+      "root_id": 10,
+      "year": 2025,
+      "code": "SG10030225",
+      "owner_before": 110234,
+      "owner_after": 110802
+    },
+    {
+      "task_id": 631,
+      "project_id": 1,
+      "parent_id": 40,
+      "root_id": 10,
+      "year": 2027,
+      "code": "SG10030627",
+      "owner_before": 110234,
+      "owner_after": 110802
+    },
+    {
+      "task_id": 633,
+      "project_id": 1,
+      "parent_id": 40,
+      "root_id": 10,
+      "year": 2028,
+      "code": "SG10030828",
+      "owner_before": 110234,
+      "owner_after": 110802
+    },
+    {
+      "task_id": 635,
+      "project_id": 1,
+      "parent_id": 40,
+      "root_id": 10,
+      "year": 2029,
+      "code": "SG10031029",
+      "owner_before": 110234,
+      "owner_after": 110802
+    }
+  ]
+}

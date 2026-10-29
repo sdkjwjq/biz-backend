@@ -289,6 +289,16 @@ else
   say '任务归属数据迁移已执行过，本次跳过，避免覆盖后续管理员移交'
 fi
 
+# Repair only the exact historical leader_id corruption. Keep subsequent owner transfers,
+# reviewer configurations, original submitters, pending handlers and approval history.
+if [[ -f "$PACKAGE/sql/2026-10-29-task-leader-repair-candidates.sql" ]]; then
+  cat "$PACKAGE/sql/2026-10-29-task-leader-repair-candidates.sql" \
+      "$PACKAGE/sql/2026-10-29-task-leader-repair.sql" | "${MYSQL[@]}" > "$BACKUP/task-leader-repair.log"
+  cat "$PACKAGE/sql/2026-10-29-task-leader-repair-candidates.sql" \
+      "$PACKAGE/sql/2026-10-29-task-leader-repair-check.sql" | "${MYSQL[@]}" > "$BACKUP/task-leader-repair-check.log"
+  say '历史任务负责人已定向核对修正；后续负责人移交、两级审核人及审核历史保留'
+fi
+
 achievement_migration=$({ "${MYSQL[@]}" -e "SELECT COUNT(*) FROM sys_release_migration WHERE migration_key='achievement-archive-record-fix-20260626'"; } | tr -d '\r')
 achievement_backup_exists=$({ "${MYSQL[@]}" -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='bak_achievement_archive_missing_20260626'"; } | tr -d '\r')
 if [[ "$achievement_migration" == 0 && "$achievement_backup_exists" != 0 ]]; then
