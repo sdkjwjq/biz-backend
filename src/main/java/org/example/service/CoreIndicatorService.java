@@ -36,7 +36,7 @@ public class CoreIndicatorService {
  private void filler(Long id,int year){if(!fillableYears(user(id)).contains(year))throw new TaskManagementException(403,"仅管理员、双高办或该年度有效三级任务及四级目标责任人（专业群）可填报");}
  private Map<String,Object> mapping(Long id,boolean lock){List<Map<String,Object>> rows=jdbc.queryForList("SELECT indicator_id indicatorId,indicator_code indicatorCode,sort_order sortOrder FROM biz_core_indicator WHERE indicator_id=?"+(lock?" FOR UPDATE":""),id);if(rows.isEmpty())throw new TaskManagementException(404,"核心指标不存在");return rows.get(0);}
  private Map<String,Object> performance(Map<String,Object> mapping){return performance(mapping,false);}
- private Map<String,Object> performance(Map<String,Object> mapping,boolean lock){List<Map<String,Object>> rows=jdbc.queryForList("SELECT perf_id perfId,perf_name indicatorName,target_value targetValue,data_type dataType,principal_id principalId FROM biz_performance WHERE perf_code=? AND COALESCE(is_delete,0)=0"+(lock?" FOR UPDATE":""),mapping.get("indicatorCode"));if(rows.size()!=1)throw new TaskManagementException(409,"指标"+mapping.get("indicatorCode")+"对应绩效缺失或重复，请联系管理员核实");Map<String,Object> result=rows.get(0);if(number(mapping.get("indicatorId"))==10 && !"发布《工程机械产业发展报告》数量".equals(result.get("indicatorName")))throw new TaskManagementException(409,"第十项核心指标关联名称不符，请联系管理员核实发布产业发展报告指标");return result;}
+ private Map<String,Object> performance(Map<String,Object> mapping,boolean lock){List<Map<String,Object>> rows=jdbc.queryForList("SELECT p.perf_id perfId,p.perf_name indicatorName,p.target_value targetValue,p.data_type dataType,p.principal_id principalId,p.dept_id deptId,d.dept_name deptName FROM biz_performance p LEFT JOIN sys_dept d ON d.dept_id=p.dept_id WHERE p.perf_code=? AND COALESCE(p.is_delete,0)=0"+(lock?" FOR UPDATE":""),mapping.get("indicatorCode"));if(rows.size()!=1)throw new TaskManagementException(409,"指标"+mapping.get("indicatorCode")+"对应绩效缺失或重复，请联系管理员核实");Map<String,Object> result=rows.get(0);if(number(mapping.get("indicatorId"))==10 && !"发布《工程机械产业发展报告》数量".equals(result.get("indicatorName")))throw new TaskManagementException(409,"第十项核心指标关联名称不符，请联系管理员核实发布产业发展报告指标");return result;}
  private void current(Map<String,Object> report){if(Boolean.TRUE.equals(report.get("mappingObsolete")) || report.get("mappingObsolete") instanceof Number n && n.intValue()!=0)throw new TaskManagementException(409,"该记录为修正前的旧关联记录，仅供查阅，请重新填报当前指标");}
  private long number(Object value){return ((Number)value).longValue();}
  private int state(Map<String,Object> row){return ((Number)row.get("flowStatus")).intValue();}
@@ -59,10 +59,12 @@ public class CoreIndicatorService {
  private List<Map<String,Object>> annualList(Long actor,int year,Integer month){
   Map<Long,List<Map<String,Object>>> recent=new HashMap<>();for(var row:rankedReports(year,null,false,2))recent.computeIfAbsent(number(row.get("indicatorId")),k->new ArrayList<>()).add(row);
   Map<Long,Map<String,Object>> archived=new HashMap<>();for(var row:rankedReports(year,month,true,1))archived.put(number(row.get("indicatorId")),row);
+  // 上年末归档完成值：上一年度最后一次归档（整年度截至 12 月）的累计完成值。
+  Map<Long,Map<String,Object>> previousYear=new HashMap<>();for(var row:rankedReports(year-1,12,true,1))previousYear.put(number(row.get("indicatorId")),row);
   List<Map<String,Object>> result=new ArrayList<>();for(var mapping:jdbc.queryForList("SELECT indicator_id indicatorId,indicator_code indicatorCode,sort_order sortOrder FROM biz_core_indicator ORDER BY sort_order")){
    long id=number(mapping.get("indicatorId"));if(permissions.enforced(actor)&&!permissions.canRead(actor,"core",id,year))continue;
    Map<String,Object> item=new LinkedHashMap<>(mapping);try{item.putAll(performance(mapping));}catch(TaskManagementException error){item.put("configurationError",error.getMessage());}
-   item.put("recentReports",recent.getOrDefault(id,List.of()));item.put("effectiveResult",archived.get(id));result.add(item);
+   item.put("recentReports",recent.getOrDefault(id,List.of()));item.put("effectiveResult",archived.get(id));item.put("previousYearResult",!permissions.enforced(actor)||permissions.canRead(actor,"core",id,year-1)?previousYear.get(id):null);result.add(item);
   }return result;
  }
  public Map<Long,Map<String,Object>> effectiveResults(Long actor,int year,int month){
@@ -84,8 +86,11 @@ public class CoreIndicatorService {
   // 退回、撤回后的重新填报复制本人原内容；原正式记录与审核证据始终保留。
   List<Map<String,Object>> returned=jdbc.queryForList(SELECT+"WHERE r.indicator_id=? AND r.record_year=? AND r.record_month=? AND r.submit_by=? AND r.submit_time IS NOT NULL AND r.flow_status IN(-1,-10,-20) AND "+CURRENT+" ORDER BY r.report_id DESC LIMIT 1 FOR UPDATE",indicator,year,month,actor);
   Map<String,Object> previous=returned.isEmpty()?Collections.emptyMap():returned.get(0);
+  // 首次填报时，截至上年年末累计完成值默认取上一年度最后一次归档的累计值（通常为 12 月）。
+  Object previousYearValue=previous.get("previousYearValue");
+  if(previousYearValue==null&&(!permissions.enforced(actor)||permissions.canRead(actor,"core",indicator,year-1))){Map<String,Object> prior=effective(indicator,year-1,12);if(prior!=null)previousYearValue=prior.get("actualValue");}
   SysUser owner=user(actor);
-  jdbc.update("INSERT INTO biz_core_report(indicator_id,record_year,record_month,draft_key,performance_code,indicator_name,target_value,data_type,submit_by,submit_name,previous_year_value,actual_value,comment) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",indicator,year,month,key,mapping(indicator,false).get("indicatorCode"),p.get("indicatorName"),p.get("targetValue"),p.get("dataType"),actor,owner.getNickName(),previous.get("previousYearValue"),previous.get("actualValue"),previous.getOrDefault("comment",""));
+  jdbc.update("INSERT INTO biz_core_report(indicator_id,record_year,record_month,draft_key,performance_code,indicator_name,target_value,data_type,submit_by,submit_name,previous_year_value,actual_value,comment) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",indicator,year,month,key,mapping(indicator,false).get("indicatorCode"),p.get("indicatorName"),p.get("targetValue"),p.get("dataType"),actor,owner.getNickName(),previousYearValue,previous.get("actualValue"),previous.getOrDefault("comment",""));
   return detail(jdbc.queryForObject("SELECT report_id FROM biz_core_report WHERE draft_key=?",Long.class,key),actor);
  }
  private BigDecimal value(BigDecimal value,boolean required){if(value==null){if(required)throw new TaskManagementException(400,"请填写两项累计完成值");return null;}if(value.signum()<0||value.stripTrailingZeros().scale()>4||value.precision()-value.scale()>16)throw new TaskManagementException(400,"完成值必须为非负数，最多4位小数及16位整数");return value;}

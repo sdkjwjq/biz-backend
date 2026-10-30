@@ -143,13 +143,27 @@ public class PermissionService {
     @SuppressWarnings("unchecked")
     public List<Map<String,Object>> scopeRules(State s,String domain){
         if(s.admin())return List.of(Map.of("mode","ALL"));
-        if(s.policy().scopes().containsKey(domain))return List.of((Map<String,Object>)s.policy().scopes().get(domain));
+        if(s.policy().scopes().containsKey(domain))return withExpertScope(s,domain,List.of((Map<String,Object>)s.policy().scopes().get(domain)));
         List<Map<String,Object>> rules=new ArrayList<>();boolean leader=s.roles().stream().anyMatch(r->r.code().equals("LEADERSHIP"));
-        for(var role:s.roles())if(role.scopes().get(domain) instanceof Map<?,?> rule){
+        for(var role:s.roles())if(!(domain.equals("tasks")&&role.code().equals("EXPERT")&&s.policy().scopes().containsKey("expert"))&&role.scopes().get(domain) instanceof Map<?,?> rule){
             if("LEGACY".equals(s.policy().mode())&&leader&&Set.of("USER","RESPONSIBLE").contains(role.code())&&Set.of("tasks","performance").contains(domain))continue;
             rules.add((Map<String,Object>)rule);
         }
-        return rules;
+        return withExpertScope(s,domain,rules);
+    }
+    @SuppressWarnings("unchecked")
+    private List<Map<String,Object>> withExpertScope(State state,String domain,List<Map<String,Object>> rules){
+        if(!domain.equals("tasks")||!state.permissions().contains("expert.read")||!(state.policy().scopes().get("expert") instanceof Map<?,?> raw))return rules;
+        var combined=new ArrayList<>(rules);combined.add((Map<String,Object>)raw);return combined;
+    }
+    /** Explicit review assignments never replace a teacher's ordinary business scope. */
+    @SuppressWarnings("unchecked")
+    public Set<Long> expertTaskIds(State state,Integer year){
+        if(!state.permissions().contains("expert.read")||!state.permissions().contains("tasks.read"))return Set.of();
+        if(state.admin()||!(state.policy().scopes().get("expert") instanceof Map<?,?> raw))return taskIds(state,year);
+        Map<String,Object> rule=(Map<String,Object>)raw;Set<Long> selected=ids(rule.get("items"));var result=new LinkedHashSet<Long>();
+        for(var task:tasks.getAllTasks())if(Integer.valueOf(3).equals(task.getLevel())&&!Integer.valueOf(1).equals(task.getIsDelete())&&(year==null||Objects.equals(year,task.getPhase()))&&yearMatches(rule,task.getPhase())&&("ALL".equals(rule.get("mode"))||"CUSTOM".equals(rule.get("mode"))&&selected.contains(task.getTaskId())))result.add(task.getTaskId());
+        return result;
     }
     private boolean yearMatches(Map<String,Object> rule,Integer year){Set<Long> years=ids(rule.get("years"));return year==null||years.isEmpty()||years.contains(year.longValue());}
     public Set<Long> taskIds(State s,Integer year){
@@ -350,7 +364,7 @@ public class PermissionService {
         for(Integer year:linkedBudgets)if(s.permissions().contains("budget.materials")&&budgetScope(actor,year))return true;
         return linkedTasks.isEmpty()&&linkedAchievements.isEmpty()&&linkedBudgets.isEmpty()&&linkedPerformance.isEmpty()&&jdbc.queryForObject("SELECT COUNT(*) FROM sys_file WHERE file_id=? AND upload_by=? AND COALESCE(is_delete,0)=0",Integer.class,fileId,actor)>0&&s.permissions().stream().anyMatch(p->p.endsWith(".materials"));
     }
-    public Map<String,Object> description(Long actor){State s=state(actor);Map<String,Object> result=new LinkedHashMap<>();result.put("permissions",s.permissions());result.put("permissionVersion",s.revision());result.put("permissionConfigured",s.configured());result.put("permissionEnforced",installed());result.put("permissionRoles",s.roles());Map<String,Object> ranges=new LinkedHashMap<>();for(String module:List.of("tasks","performance","achievements","core","records","budget"))ranges.put(module,scopeRules(s,module));result.put("dataScopes",ranges);return result;}
+    public Map<String,Object> description(Long actor){State s=state(actor);Map<String,Object> result=new LinkedHashMap<>();result.put("permissions",s.permissions());result.put("permissionVersion",s.revision());result.put("permissionConfigured",s.configured());result.put("permissionEnforced",installed());result.put("permissionRoles",s.roles());Map<String,Object> ranges=new LinkedHashMap<>();for(String module:List.of("tasks","performance","achievements","core","records","budget"))ranges.put(module,scopeRules(s,module));if(s.policy().scopes().containsKey("expert"))ranges.put("expert",List.of(s.policy().scopes().get("expert")));result.put("dataScopes",ranges);return result;}
     public boolean leadershipAll(Long id){return cached("leadershipAll:"+id,()->jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM sys_leadership_access WHERE user_id=? AND scope='ALL')",Integer.class,id)==1);}
     public Set<Long> leadershipDepartments(Long id){return cached("leadershipDepartments:"+id,()->new HashSet<>(jdbc.queryForList("SELECT d.dept_id FROM sys_leadership_department d JOIN sys_leadership_access a ON a.user_id=d.user_id AND a.scope='DEPARTMENTS' WHERE d.user_id=?",Long.class,id)));}
     private boolean under(BizTask task,Set<Long> roots,Map<Long,BizTask> byId){Set<Long> seen=new HashSet<>();for(BizTask p=task;p!=null&&seen.add(p.getTaskId());p=byId.get(p.getParentId()))if(roots.contains(p.getTaskId()))return true;return false;}

@@ -552,4 +552,36 @@ class ExpertReviewApiTest {
   var lightweight=body(get("/biz/tasks/manage/options?separateOptions=true",admin));assertEquals(0,lightweight.path("users").size());assertEquals(0,lightweight.path("directories").size());
   assertTrue(body(get("/biz/tasks/manage/candidates?domain=users&ids=90101",admin)).path("selected").size()>0);
  }
+
+ Map<String,Object> assignment(long expert,int year,List<Long> ids)throws Exception{var config=body(get("/admin/permissions/users/"+expert,admin));return new LinkedHashMap<>(Map.of("year",year,"taskIds",ids,"version",config.path("policy").path("version").asLong(),"revision",config.path("revision").asLong(),"reason","隔离验证评审任务调整"));}
+ @Test void reviewAssignmentsPreserveOtherYearsAndUseReadVersion()throws Exception{
+  var change=assignment(90104,2026,List.of(3L));var preview=body(call(HttpMethod.POST,"/admin/permissions/users/90104/expert-tasks/preview",admin,change,false));assertTrue(preview.path("blocked").isEmpty());
+  assertEquals(200,call(HttpMethod.POST,"/admin/permissions/users/90104/expert-tasks",admin,change,false).getStatusCode().value());
+  assertEquals(409,call(HttpMethod.POST,"/admin/permissions/users/90104/expert-tasks",admin,change,false).getStatusCode().value());
+  var current=body(get("/expert-reviews?year=2026",b));assertEquals(2,current.path("total").asInt());assertEquals(404,get("/expert-reviews/tasks/4?year=2026",b).getStatusCode().value());assertEquals(200,get("/expert-reviews/tasks/5?year=2025",b).getStatusCode().value());
+  assertEquals(200,call(HttpMethod.POST,"/admin/permissions/users/90104/expert-tasks",admin,assignment(90104,2026,List.of()),false).getStatusCode().value());assertEquals(0,body(get("/expert-reviews?year=2026",b)).path("total").asInt());assertEquals(200,get("/expert-reviews/tasks/5?year=2025",b).getStatusCode().value());
+ }
+ @Test void addingTeacherAsExpertPreservesBusinessScopeAndLimitsOnlyReviews()throws Exception{
+  var before=body(get("/biz/tasks",owner));assertEquals(200,call(HttpMethod.POST,"/admin/permissions/users/90101/expert-tasks",admin,assignment(90101,2026,List.of(4L)),false).getStatusCode().value());
+  assertEquals(before,body(get("/biz/tasks",owner)));assertEquals(404,get("/expert-reviews/tasks/3?year=2026",owner).getStatusCode().value());assertEquals(200,get("/expert-reviews/tasks/4?year=2026",owner).getStatusCode().value());
+  var scoped=body(get("/list-filters/tasks?responseMode=tree&f.year=2026",owner));assertEquals(2,scoped.path("total").asInt());assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM sys_admin_operation_log WHERE module='PERMISSION' AND target_id='90101'",Integer.class));
+ }
+ @Test void newLaunchExpertStartsWithoutTasksAndInvalidAssignmentsAreAtomic()throws Exception{
+  assertEquals(200,call(HttpMethod.POST,"/admin/permissions/experts",admin,Map.of("userId",90939,"nickName","新建配置中专家","configureTasks",true),false).getStatusCode().value());jdbc.update("UPDATE sys_user SET force_password_change=0 WHERE user_id=90939");
+  var expertToken=body(call(HttpMethod.POST,"/system/login",null,Map.of("user_id",90939,"password","90939"),false)).path("token").asText();assertEquals(0,body(get("/expert-reviews?year=2026",expertToken)).path("total").asInt());assertEquals(0,body(get("/list-filters/tasks?f.year=2026",expertToken)).path("total").asInt());
+  for(var ids:List.of(List.of(3L,3L),List.of(5L),List.of(999999L))){assertEquals(400,call(HttpMethod.POST,"/admin/permissions/users/90939/expert-tasks",admin,assignment(90939,2026,ids),false).getStatusCode().value());}
+  assertEquals(0,body(get("/expert-reviews?year=2026",expertToken)).path("total").asInt());assertEquals(403,call(HttpMethod.POST,"/admin/permissions/users/90939/expert-tasks",owner,assignment(90939,2026,List.of(3L)),false).getStatusCode().value());
+  assertEquals(200,call(HttpMethod.POST,"/admin/permissions/users/90939/expert-tasks",admin,assignment(90939,2026,List.of(3L)),false).getStatusCode().value());assertTrue(detail(3,expertToken).path("canWrite").asBoolean());
+  assertEquals(404,get("/expert-reviews/tasks/4?year=2026",expertToken).getStatusCode().value());
+ }
+ @Test void assigningReviewTasksKeepsPersonalDenyAndFormalEvidence()throws Exception{
+  submit(3,"原正式意见",a);jdbc.update("UPDATE sys_user_permission SET permissions_json='{\"expert.write\":false}' WHERE user_id=90103");
+  assertEquals(200,call(HttpMethod.POST,"/admin/permissions/users/90103/expert-tasks",admin,assignment(90103,2026,List.of(3L)),false).getStatusCode().value());assertFalse(detail(3,a).path("canWrite").asBoolean());
+  assertEquals(200,call(HttpMethod.POST,"/admin/permissions/users/90103/expert-tasks",admin,assignment(90103,2026,List.of()),false).getStatusCode().value());assertEquals(404,get("/expert-reviews/tasks/3?year=2026",a).getStatusCode().value());assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM biz_expert_review_revision WHERE expert_id=90103",Integer.class));assertEquals(1,body(get("/expert-reviews/admin?year=2026&expertId=90103",admin)).path("total").asInt());
+ }
+ @Test void expertMemberCandidatesArePagedAndLiteralAndAdminOnly()throws Exception{
+  for(int i=0;i<205;i++)jdbc.update("INSERT INTO sys_user(user_id,user_name,nick_name,role,status,is_delete) VALUES(?,?,?,'1','1',0)",90200+i,"member"+i,"批量候选"+i);
+  var first=body(get("/expert-reviews/admin/members?keyword=member&page=1",admin));assertEquals(205,first.path("total").asInt());assertEquals(50,first.path("items").size());assertEquals(5,body(get("/expert-reviews/admin/members?keyword=member&page=5",admin)).path("items").size());
+  assertEquals(0,body(get("/expert-reviews/admin/members?keyword=%",admin)).path("total").asInt());assertEquals(403,get("/expert-reviews/admin/members",owner).getStatusCode().value());assertEquals(400,get("/expert-reviews/admin/members?page=0",admin).getStatusCode().value());
+ }
 }

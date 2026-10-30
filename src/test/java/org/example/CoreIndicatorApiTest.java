@@ -352,4 +352,15 @@ class CoreIndicatorApiTest {
         JsonNode items=ok(request(HttpMethod.GET,"/core-indicators",token,null));assertEquals(10,items.size());
         assertTrue(items.get(0).has("configurationError"));
     }
+
+    private void oldCoreArchive(int year,int month,int value){jdbc.update("INSERT INTO biz_core_report(indicator_id,record_year,record_month,performance_code,indicator_name,target_value,data_type,submit_by,submit_name,previous_year_value,actual_value,flow_status,submit_time,archive_time) VALUES(1,?,?,'1.1.5','Synthetic indicator',10,'1',?,'Synthetic',0,?,30,NOW(),NOW())",year,month,OWNER,value);}
+    @Test void previousYearArchiveAndDepartmentAreDisplayedAndPrefilledWithoutBanningLaterReports()throws Exception{
+        oldCoreArchive(2025,12,6);oldCoreArchive(2026,1,8);String token=login(ADMIN);
+        var row=ok(request(HttpMethod.GET,"/core-indicators?year=2026&month=1",token,null)).get(0);assertEquals("Synthetic department",row.path("deptName").asText());assertEquals(6,row.path("previousYearResult").path("actualValue").asInt());assertEquals(8,row.path("effectiveResult").path("actualValue").asInt());
+        var created=draft(token,1);assertEquals(6,created.path("previousYearValue").asInt());assertEquals(0,created.path("flowStatus").asInt());assertEquals(2,jdbc.queryForObject("SELECT COUNT(*) FROM biz_core_report WHERE flow_status=30",Integer.class));assertEquals(7,jdbc.queryForObject("SELECT current_value FROM biz_performance WHERE perf_id=960001",Integer.class));
+    }
+    @Test void priorYearValuesAreNotLeakedOutsideCoreReadScope()throws Exception{
+        oldCoreArchive(2025,12,6);jdbc.update("INSERT INTO sys_user_permission(user_id,access_mode,permissions_json,scopes_json,version) VALUES(?,'CUSTOM','{\"core.read\":true,\"core.fill\":true}','{\"core\":{\"mode\":\"ALL\",\"years\":[2026]}}',1)",OWNER);String token=login(OWNER);
+        assertTrue(ok(request(HttpMethod.GET,"/core-indicators?year=2026&month=1",token,null)).get(0).path("previousYearResult").isNull());assertTrue(draft(token,1).path("previousYearValue").isNull());
+    }
 }
