@@ -9,7 +9,12 @@ import org.example.mapper.WorkRecordMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.*;
@@ -36,7 +41,7 @@ public class CoreIndicatorService {
  private void filler(Long id,int year){if(!fillableYears(user(id)).contains(year))throw new TaskManagementException(403,"仅管理员、双高办或该年度有效三级任务及四级目标责任人（专业群）可填报");}
  private Map<String,Object> mapping(Long id,boolean lock){List<Map<String,Object>> rows=jdbc.queryForList("SELECT indicator_id indicatorId,indicator_code indicatorCode,sort_order sortOrder FROM biz_core_indicator WHERE indicator_id=?"+(lock?" FOR UPDATE":""),id);if(rows.isEmpty())throw new TaskManagementException(404,"核心指标不存在");return rows.get(0);}
  private Map<String,Object> performance(Map<String,Object> mapping){return performance(mapping,false);}
- private Map<String,Object> performance(Map<String,Object> mapping,boolean lock){List<Map<String,Object>> rows=jdbc.queryForList("SELECT p.perf_id perfId,p.perf_name indicatorName,p.target_value targetValue,p.data_type dataType,p.principal_id principalId,p.dept_id deptId,d.dept_name deptName FROM biz_performance p LEFT JOIN sys_dept d ON d.dept_id=p.dept_id WHERE p.perf_code=? AND COALESCE(p.is_delete,0)=0"+(lock?" FOR UPDATE":""),mapping.get("indicatorCode"));if(rows.size()!=1)throw new TaskManagementException(409,"指标"+mapping.get("indicatorCode")+"对应绩效缺失或重复，请联系管理员核实");Map<String,Object> result=rows.get(0);if(number(mapping.get("indicatorId"))==10 && !"发布《工程机械产业发展报告》数量".equals(result.get("indicatorName")))throw new TaskManagementException(409,"第十项核心指标关联名称不符，请联系管理员核实发布产业发展报告指标");return result;}
+ private Map<String,Object> performance(Map<String,Object> mapping,boolean lock){List<Map<String,Object>> rows=jdbc.queryForList("SELECT p.perf_id perfId,p.perf_name indicatorName,p.target_value targetValue,p.data_type dataType,p.principal_id principalId,p.dept_id deptId,d.dept_name deptName,d.leader_id deptLeaderId,lu.nick_name deptLeaderName FROM biz_performance p LEFT JOIN sys_dept d ON d.dept_id=p.dept_id LEFT JOIN sys_user lu ON lu.user_id=d.leader_id WHERE p.perf_code=? AND COALESCE(p.is_delete,0)=0"+(lock?" FOR UPDATE":""),mapping.get("indicatorCode"));if(rows.size()!=1)throw new TaskManagementException(409,"指标"+mapping.get("indicatorCode")+"对应绩效缺失或重复，请联系管理员核实");Map<String,Object> result=rows.get(0);if(number(mapping.get("indicatorId"))==10 && !"发布《工程机械产业发展报告》数量".equals(result.get("indicatorName")))throw new TaskManagementException(409,"第十项核心指标关联名称不符，请联系管理员核实发布产业发展报告指标");return result;}
  private void current(Map<String,Object> report){if(Boolean.TRUE.equals(report.get("mappingObsolete")) || report.get("mappingObsolete") instanceof Number n && n.intValue()!=0)throw new TaskManagementException(409,"该记录为修正前的旧关联记录，仅供查阅，请重新填报当前指标");}
  private long number(Object value){return ((Number)value).longValue();}
  private int state(Map<String,Object> row){return ((Number)row.get("flowStatus")).intValue();}
@@ -112,6 +117,52 @@ public class CoreIndicatorService {
  private String todoCondition(SysUser u){return "0".equals(u.getRole())?"(r.current_handler_id=? OR r.flow_status=20) AND r.flow_status IN(10,20)":"r.current_handler_id=? AND r.flow_status IN(10,20)";}
  public long countTodoAudits(Long actor){SysUser u=user(actor);if(AdminTestContext.enabled(actor))return jdbc.queryForObject("SELECT COUNT(*) FROM biz_core_report r WHERE "+CURRENT+" AND r.flow_status IN(10,20)",Long.class);return auditCountScopes.visibleCount("core",actor,jdbc.queryForList("SELECT r.indicator_id objectId,r.record_year auditYear,COUNT(*) amount FROM biz_core_report r WHERE "+CURRENT+" AND "+todoCondition(u)+" GROUP BY r.indicator_id,r.record_year",actor));}
  public List<Map<String,Object>> audits(Long actor,boolean todo){SysUser u=user(actor);String condition=todo?todoCondition(u):"EXISTS(SELECT 1 FROM biz_core_audit_log l WHERE l.report_id=r.report_id AND l.operator_id=? AND l.action IN('通过','退回'))";if(todo && AdminTestContext.enabled(actor))return jdbc.queryForList(SELECT+"WHERE "+CURRENT+" AND r.flow_status IN(10,20) ORDER BY r.submit_time,r.report_id");return jdbc.queryForList(SELECT+"WHERE "+(todo?CURRENT+" AND ":"")+condition+" ORDER BY r.submit_time,r.report_id",actor);}
+ /** 导出当前筛选条件下的核心指标汇总表：本年归档完成值 = 最近归档完成值 - 上年末归档完成值。 */
+ public record Export(Integer year,Integer month,List<Long> ids){}
+ public byte[] export(Long actor,Export input)throws IOException{
+  if(input==null||input.year()==null)throw new TaskManagementException(400,"请选择导出年度");
+  int year=input.year(),month=input.month()==null?LocalDate.now(ZoneId.of("Asia/Shanghai")).getMonthValue():input.month();
+  if(year<2025||year>2029||month<1||month>12)throw new TaskManagementException(400,"导出年月不正确");
+  Set<Long> wanted=new LinkedHashSet<>();if(input.ids()!=null)for(Long id:input.ids())if(id!=null)wanted.add(id);
+  if(wanted.size()>500)throw new TaskManagementException(400,"一次最多导出500条指标");
+  List<Map<String,Object>> rows=list(actor,year,month).stream().filter(item->wanted.isEmpty()||wanted.contains(number(item.get("indicatorId")))).toList();
+  if(rows.isEmpty())throw new TaskManagementException(400,"当前筛选条件下没有可导出的指标");
+  try(var book=new XSSFWorkbook();var out=new ByteArrayOutputStream()){
+   var sheet=book.createSheet("核心指标");
+   String[] names={"序号","指标编号","核心指标名称","项目期满目标值","本年归档完成值","归口部门","工作说明"};
+   var style=book.createCellStyle();style.setWrapText(true);style.setVerticalAlignment(org.apache.poi.ss.usermodel.VerticalAlignment.TOP);
+   var centerStyle=book.createCellStyle();centerStyle.cloneStyleFrom(style);centerStyle.setAlignment(org.apache.poi.ss.usermodel.HorizontalAlignment.CENTER);
+   var header=sheet.createRow(0);for(int i=0;i<names.length;i++){var cell=header.createCell(i);cell.setCellValue(names[i]);cell.setCellStyle(style);}
+   int index=1;
+   for(var item:rows){
+    Map<?,?> current=(Map<?,?>)item.get("effectiveResult"),previous=(Map<?,?>)item.get("previousYearResult");
+    List<?> recent=(List<?>)item.get("recentReports");
+    Map<?,?> latest=recent==null||recent.isEmpty()?null:(Map<?,?>)recent.get(0);
+    Object comment=current==null?null:current.get("comment");
+    var line=sheet.createRow(index++);
+    numberCell(line,0,item.get("sortOrder"));textCell(line,1,item.get("indicatorCode"));textCell(line,2,item.get("indicatorName"));
+    numberCell(line,3,item.get("targetValue"));numberCell(line,4,yearArchived(current,previous));
+    textCell(line,5,item.get("deptName"));textCell(line,6,comment);
+    for(int col=0;col<7;col++){var cell=line.getCell(col);if(cell!=null)cell.setCellStyle(col==3||col==4?centerStyle:style);}
+    // 按最长单元格估算所需行数并固定行高，避免自动换行内容压到相邻行。
+    int lines=Math.max(1,Math.max(wrappedLines(item.get("indicatorName"),46),Math.max(wrappedLines(item.get("deptName"),28),wrappedLines(comment,58))));
+    line.setHeight((short)(Math.min(120,20+16*(lines-1))*20));
+   }
+   sheet.setColumnWidth(0,8*256);sheet.setColumnWidth(1,14*256);sheet.setColumnWidth(2,48*256);sheet.setColumnWidth(3,16*256);sheet.setColumnWidth(4,18*256);sheet.setColumnWidth(5,30*256);sheet.setColumnWidth(6,60*256);
+   sheet.createFreezePane(0,1);
+   book.write(out);return out.toByteArray();
+  }
+ }
+ private BigDecimal yearArchived(Map<?,?> current,Map<?,?> previous){
+  if(current==null)return null;
+  BigDecimal now=decimal(current.get("actualValue"));if(now==null)return null;
+  BigDecimal before=previous==null?null:decimal(previous.get("actualValue"));
+  return now.subtract(before==null?BigDecimal.ZERO:before);
+ }
+ private int wrappedLines(Object value,int chars){if(value==null)return 1;String text=String.valueOf(value);if(text.isBlank())return 1;int width=0;for(int i=0;i<text.length();i++)width+=text.charAt(i)>0x2E7F?2:1;return Math.max(1,(int)Math.ceil(width/(double)chars));}
+ private BigDecimal decimal(Object value){if(value==null)return null;try{return new BigDecimal(String.valueOf(value));}catch(NumberFormatException e){return null;}}
+ private void textCell(Row row,int column,Object value){if(value==null)return;String text=String.valueOf(value);if(!text.isBlank())row.createCell(column).setCellValue(text);}
+ private void numberCell(Row row,int column,Object value){if(value==null)return;String text=String.valueOf(value);if(text.isBlank())return;try{row.createCell(column).setCellValue(new BigDecimal(text).doubleValue());}catch(NumberFormatException e){row.createCell(column).setCellValue(text);}}
  /** 预算读取只能取同年、不晚于所选月份的归档快照，后续月份不得提前引用。 */
  public Map<String,Object> effective(Long indicator,int year,int month){Long actor=permissions.actor();if(actor!=null&&permissions.enforced(actor)&&!permissions.canRead(actor,"core",indicator,year))return null;List<Map<String,Object>> rows=jdbc.queryForList(SELECT+"WHERE r.indicator_id=? AND r.record_year=? AND r.record_month<=? AND r.flow_status=30 AND "+CURRENT+" ORDER BY r.record_month DESC,r.archive_time DESC,r.report_id DESC LIMIT 1",indicator,year,month);return rows.isEmpty()?null:rows.get(0);}
  private void log(Long id,Long actor,String action,int before,int after,String comment){AdminTestContext.record(actor,"CORE_REPORT",id,"核心指标填报 "+id,action);jdbc.update("INSERT INTO biz_core_audit_log(report_id,operator_id,action,pre_status,post_status,comment) VALUES(?,?,?,?,?,?)",id,actor,action,before,after,comment);}

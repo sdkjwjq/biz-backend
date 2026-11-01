@@ -354,6 +354,14 @@ class CoreIndicatorApiTest {
     }
 
     private void oldCoreArchive(int year,int month,int value){jdbc.update("INSERT INTO biz_core_report(indicator_id,record_year,record_month,performance_code,indicator_name,target_value,data_type,submit_by,submit_name,previous_year_value,actual_value,flow_status,submit_time,archive_time) VALUES(1,?,?,'1.1.5','Synthetic indicator',10,'1',?,'Synthetic',0,?,30,NOW(),NOW())",year,month,OWNER,value);}
+    @Test void coreExportUsesFilteredArchiveAndCorrectAnnualValue()throws Exception{
+        oldCoreArchive(2025,12,6);oldCoreArchive(2026,1,8);oldCoreArchive(2026,12,99);
+        jdbc.update("UPDATE biz_core_report SET comment='archived explanation' WHERE record_year=2026 AND record_month=1");String token=login(ADMIN);
+        var h=new HttpHeaders();h.set("Authorization",token);h.setContentType(MediaType.APPLICATION_JSON);
+        var response=http.exchange("http://127.0.0.1:"+port+"/api/core-indicators/export",HttpMethod.POST,new HttpEntity<>(Map.of("year",2026,"month",1,"ids",List.of(1)),h),byte[].class);
+        assertEquals(200,response.getStatusCode().value());
+        try(var book=new org.apache.poi.xssf.usermodel.XSSFWorkbook(new java.io.ByteArrayInputStream(response.getBody()))){var sheet=book.getSheetAt(0);assertEquals(1,sheet.getLastRowNum());assertEquals(2,sheet.getRow(1).getCell(4).getNumericCellValue());assertEquals("archived explanation",sheet.getRow(1).getCell(6).getStringCellValue());}
+    }
     @Test void previousYearArchiveAndDepartmentAreDisplayedAndPrefilledWithoutBanningLaterReports()throws Exception{
         oldCoreArchive(2025,12,6);oldCoreArchive(2026,1,8);String token=login(ADMIN);
         var row=ok(request(HttpMethod.GET,"/core-indicators?year=2026&month=1",token,null)).get(0);assertEquals("Synthetic department",row.path("deptName").asText());assertEquals(6,row.path("previousYearResult").path("actualValue").asInt());assertEquals(8,row.path("effectiveResult").path("actualValue").asInt());

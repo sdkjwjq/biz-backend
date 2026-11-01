@@ -20,6 +20,40 @@ import static org.junit.jupiter.api.Assertions.*;
 @Import(ReviewBatchRegressionApiTest.NoAutomaticSchedules.class)
 @SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT,properties={"logging.file.name=target/expert-test.log","logging.level.org.springframework=WARN"})
 class ExpertReviewApiTest {
+ @Test void resultOnlyRevisionStaysPrivateAndDoesNotChangeTaskProgress()throws Exception{
+  var first=input(3,"review result test",detail(3,a));first.put("result","pass");body(call(HttpMethod.POST,"/expert-reviews/submit",a,first,false));
+  var second=input(3,"review result test",detail(3,a));second.put("result","reject");var draft=body(call(HttpMethod.POST,"/expert-reviews/draft",a,second,false));
+  assertEquals("reject",draft.path("result").asText());assertEquals("pass",draft.path("formal").path("result").asText());
+  var list=body(get("/expert-reviews?year=2026&f.reviewStatus=draft",a));assertTrue(list.path("items").toString().contains("draft"));
+  second.put("version",draft.path("version").asLong());body(call(HttpMethod.POST,"/expert-reviews/submit",a,second,false));
+  var history=body(get("/expert-reviews/tasks/3/history?year=2026",a));assertEquals(2,history.size());assertEquals("reject",history.get(0).path("result").asText());assertEquals("pass",history.get(1).path("result").asText());
+  assertEquals(10,jdbc.queryForObject("SELECT progress FROM biz_task WHERE task_id=3",Integer.class));
+  assertEquals(403,call(HttpMethod.POST,"/expert-reviews/tree-export",owner,Map.of(),false).getStatusCode().value());
+  assertEquals(403,call(HttpMethod.POST,"/expert-reviews/tree-export",a,Map.of(),false).getStatusCode().value());
+ }
+ @Test void filteredReviewTreeKeepsAncestorsAndNeverShowsSiblings()throws Exception{
+  var tree=body(get("/expert-reviews?year=2026&responseMode=tree&f.keyword=EXPERT3",a));assertEquals(1,tree.path("total").asInt());
+  assertEquals(1,tree.path("tree").size());assertTrue(tree.path("tree").toString().contains("EXPERT3"));assertFalse(tree.path("tree").toString().contains("EXPERT4"));
+  var empty=body(get("/expert-reviews?year=2026&responseMode=tree&f.keyword=nonexistent",a));assertEquals(0,empty.path("tree").size());
+ }
+ @Test void batchAssignmentIsAtomicAndProtectsStaleVersions()throws Exception{
+  var ca=body(get("/admin/permissions/users/90103",admin));var cb=body(get("/admin/permissions/users/90104",admin));
+  var members=List.of(Map.of("expertId",90103,"version",ca.path("policy").path("version").asLong()),Map.of("expertId",90104,"version",99999));
+  var payload=new LinkedHashMap<String,Object>(Map.of("year",2026,"taskIds",List.of(4),"members",members,"revision",ca.path("revision").asLong(),"reason","batch test"));
+  assertEquals(409,call(HttpMethod.POST,"/admin/permissions/expert-tasks/batch",admin,payload,false).getStatusCode().value());
+  assertEquals(ca,body(get("/admin/permissions/users/90103",admin)));
+  payload.put("members",List.of(members.get(0),Map.of("expertId",90104,"version",cb.path("policy").path("version").asLong())));
+  assertEquals(2,body(call(HttpMethod.POST,"/admin/permissions/expert-tasks/batch",admin,payload,false)).path("updated").asInt());
+  assertEquals(200,get("/expert-reviews/tasks/4?year=2026",a).getStatusCode().value());
+  assertEquals(403,call(HttpMethod.POST,"/admin/permissions/expert-tasks/batch",a,payload,false).getStatusCode().value());
+ }
+ @Test void totalBudgetReadRequiresBothFunctionAndDataScope()throws Exception{
+  jdbc.update("INSERT INTO biz_budget_total(item,source,amount,sort_order) VALUES('test','source',10,0)");
+  assertEquals(1,body(get("/budget/plan/total",admin)).size());assertEquals(403,get("/budget/plan/total",a).getStatusCode().value());
+  jdbc.update("UPDATE sys_user_permission SET permissions_json='{\"budget.read\":true}',scopes_json='{\"budget\":{\"mode\":\"NONE\"}}' WHERE user_id=90103");
+  assertEquals(403,get("/budget/plan/total",a).getStatusCode().value());
+  jdbc.update("UPDATE sys_user_permission SET scopes_json='{\"budget\":{\"mode\":\"ALL\",\"years\":[2026]}}' WHERE user_id=90103");assertEquals(1,body(get("/budget/plan/total",a)).size());
+ }
  @DynamicPropertySource static void database(DynamicPropertyRegistry r){String url=System.getenv("SHUANGGAO_TEST_JDBC_URL");if(url==null||!url.matches("jdbc:mysql://127\\.0\\.0\\.1:3306/biz_review_test_[0-9a-f]{32}\\?.*"))throw new IllegalStateException("Isolated schema required");r.add("spring.datasource.url",()->url);r.add("spring.datasource.username",()->System.getenv("SHUANGGAO_TEST_DB_USER"));r.add("spring.datasource.password",()->System.getenv("SHUANGGAO_TEST_DB_PASSWORD"));}
  @LocalServerPort int port;@Autowired TestRestTemplate http;@Autowired JdbcTemplate jdbc;@Autowired ObjectMapper json;
  String admin,a,b,owner;

@@ -407,6 +407,9 @@ fi
 "${MYSQL[@]}" < "$PACKAGE/sql/2026-10-24-permissions-expert-reviews.sql" > "$BACKUP/permissions-expert-migration.log"
 "${MYSQL[@]}" < "$PACKAGE/sql/2026-10-24-permissions-expert-reviews-check.sql" > "$BACKUP/permissions-expert-check.log"
 say '权限及专家评审结构已核对，既有授权和评语保留'
+"${MYSQL[@]}" < "$PACKAGE/sql/2026-10-30-budget-and-review-result.sql" > "$BACKUP/budget-review-result-migration.log"
+"${MYSQL[@]}" < "$PACKAGE/sql/2026-10-30-budget-and-review-result-check.sql" > "$BACKUP/budget-review-result-check.log"
+say '总预算及专家评审结果结构已核对；保留已有预算修改和历史评语'
 
 "${MYSQL[@]}" < "$PACKAGE/sql/2026-10-24-audit-history-index.sql" > "$BACKUP/audit-history-index.log"
 "${MYSQL[@]}" < "$PACKAGE/sql/2026-10-24-audit-history-index-check.sql" > "$BACKUP/audit-history-index-check.log"

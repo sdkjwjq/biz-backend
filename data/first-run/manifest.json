@@ -1,0 +1,29 @@
+{
+  "snapshot": {
+    "path": "data/20260920backup.sql",
+    "date": "2026-09-20",
+    "sha256": "f7a77a5eafd53f376115f1655d4cb5e07c05cad7751058368819fe305d167b85"
+  },
+  "migrations": [
+    "data/first-run/preserve-task-times.sql",
+    "scripts/work-records/001_work_records.sql",
+    "scripts/work-records/002_work_record_delete.sql",
+    "scripts/password/001_force_password_change.sql",
+    "data/migrations/2026-09-24-ownership-change-log.sql",
+    "data/migrations/2026-09-24-performance-relation-edit.sql",
+    "data/migrations/2026-09-26-budget-import-version.sql",
+    "data/migrations/2026-09-27-admin-management.sql",
+    "data/migrations/2026-09-28-release-migration.sql",
+    "data/migrations/2026-10-12-leadership-access.sql",
+    "data/migrations/2026-10-12-task-attributes.sql",
+    "data/migrations/2026-10-12-core-indicators.sql",
+    "data/migrations/2026-10-14-core-indicator-report-mapping.sql",
+    "data/migrations/2026-10-23-leadership-schoolwide.sql",
+    "data/migrations/2026-10-24-permissions-expert-reviews.sql",
+    "data/migrations/2026-10-24-audit-history-index.sql",
+    "data/migrations/2026-10-28-transfer-reviewers.sql",
+    "data/migrations/2026-10-30-budget-and-review-result.sql",
+    "data/first-run/restore-task-times.sql"
+  ],
+  "verification": "data/first-run/verify.sql"
+}

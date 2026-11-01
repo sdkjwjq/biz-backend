@@ -14,6 +14,8 @@
 
 ## 快速开始
 
+新电脑首次恢复原有数据并启动当前版本，请先按[仓库根目录的完整首次运行说明](../README.md)执行。当前推荐入口是 `scripts/initialize-database.ps1`，它导入原有 `data/20260920backup.sql` 并补齐当前结构；下方接口文档继续保留。
+
 ### 环境要求
 
 - JDK 17+
@@ -24,15 +26,15 @@
 
 1. **克隆仓库**
    ```bash
-   git clone https://github.com/sdkjwjq/biz-backend.git
-   cd biz-backend
+   git clone https://gitee.com/li-tian-yi/shuanggao.git
+   cd shuanggao/biz-backend
    ```
 
 2. **配置数据库**
-   - 新建 MySQL 数据库（推荐名称：`biz`）
-   - 执行 `data/biz.sql` 初始化表结构
-   - 执行 `data/insert.sql` 插入初始化数据
-   - 修改 `application.properties` 配置数据库连接：
+   - 在仓库根目录执行 `powershell -NoProfile -ExecutionPolicy Bypass -File ./biz-backend/scripts/initialize-database.ps1 -Database biz -User root`，输入本地 MySQL 密码。
+   - 该命令只创建新库，拒绝覆盖已有数据库；也可以使用 `-Database biz_local` 等新库名。
+   - 不要再导入早期的 `data/biz.sql`、`data/insert.sql` 或旧初始化快照；当前完整数据恢复流程见根目录 README。
+   - 首次克隆时，将 `src/main/resources/application.properties.example` 复制为同目录的 `application.properties`（本地文件已被 Git 忽略），再配置数据库连接或通过 `SPRING_DATASOURCE_*` 环境变量提供连接信息：
      ```properties
      spring.datasource.url=jdbc:mysql://localhost:3306/biz_db?useSSL=false&serverTimezone=UTC
      spring.datasource.username=root
@@ -51,11 +53,11 @@
 ```
 IP地址: 172.19.2.81
 用户名: root
-密码: Xzcit@xg.2025.8
+密码: <configured-in-deployment-environment>
 
 数据库账号密码:
 账号: root
-密码: Xxxy@123
+密码: <configured-in-deployment-environment>
 ```
 
 #### 后端部署

@@ -98,6 +98,23 @@ public class PermissionManagementService {
     public Object previewExpertTasks(Long expertId,ExpertTaskChange body,Long actor){return previewUser(expertId,expertTaskPolicy(expertId,body,actor),actor);}
     @Transactional(rollbackFor=Exception.class,isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public Object expertTasks(Long expertId,ExpertTaskChange body,Long actor){access.requireAdmin(actor);access.lockChange();return saveUser(expertId,expertTaskPolicy(expertId,body,actor),actor);}
+    public record ExpertMember(Long expertId,Long version){}
+    public record ExpertBatch(Integer year,List<Long> taskIds,List<ExpertMember> members,Long revision,String reason){}
+    @Transactional(rollbackFor=Exception.class,isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
+    public Object batchExpertTasks(ExpertBatch body,Long actor){
+        access.requireAdmin(actor);access.lockChange();
+        if(body==null||body.members()==null||body.members().isEmpty()||body.members().size()>50||body.members().stream().anyMatch(m->m==null||m.expertId()==null)||body.members().stream().map(ExpertMember::expertId).distinct().count()!=body.members().size())throw new AdminManagementException(400,"请选择不重复的专家，最多50人");
+        checkRevision(body.revision());reason(body.reason());
+        Map<Long,UserChange> changes=new LinkedHashMap<>();
+        for(var member:body.members()){
+            if(body.taskIds()==null||body.taskIds().isEmpty()||body.taskIds().stream().anyMatch(Objects::isNull)||new HashSet<>(body.taskIds()).size()!=body.taskIds().size())throw new AdminManagementException(400,"请选择不重复的三级任务");
+            var ids=new LinkedHashSet<>(access.expertTaskIds(access.state(member.expertId()),body.year()));ids.addAll(body.taskIds());
+            var change=expertTaskPolicy(member.expertId(),new ExpertTaskChange(body.year(),new ArrayList<>(ids),member.version(),body.revision(),body.reason()),actor);
+            var after=validateUser(member.expertId(),change);block(lostPending(member.expertId(),access.policy(member.expertId()),after,Map.of()));changes.put(member.expertId(),change);
+        }
+        for(var entry:changes.entrySet()){var c=entry.getValue();saveUser(entry.getKey(),new UserChange(c.mode(),c.roles(),c.overrides(),c.scopes(),c.version(),access.revision(),c.reason()),actor);}
+        return Map.of("updated",changes.size(),"revision",access.revision());
+    }
     @Transactional(rollbackFor=Exception.class,isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public Object createExpert(ExpertAccount body,Long actor){access.requireAdmin(actor);access.lockChange();if(body==null||body.userId()==null||body.userId()<=0||body.nickName()==null||body.nickName().isBlank()||body.nickName().length()>100)throw new AdminManagementException(400,"请填写有效数字账号编号及姓名");String username=body.userName()==null||body.userName().isBlank()?"expert_"+body.userId():body.userName().trim();if(username.length()>100||users.getUserById(body.userId())!=null||users.getUserByName(username)!=null)throw new AdminManagementException(409,"账号编号或账号名称已被使用");
         if(body.email()!=null&&body.email().length()>50)throw new AdminManagementException(400,"邮箱最多50字");SysUser u=new SysUser();u.setUserId(body.userId());u.setNickName(body.nickName().trim());u.setUserName(username);u.setEmail(body.email());u.setRole("1");u.setStatus("1");u.setIsDelete(0);u.setPassword(str(body.userId()));u.setForcePasswordChange(1);u.setCreateTime(new Date());u.setUpdateTime(u.getCreateTime());users.addUser(u);

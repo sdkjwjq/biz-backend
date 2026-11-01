@@ -31,8 +31,11 @@ NEW_SOURCES = [
     'data/migrations/2026-10-12-core-indicators.sql',
     'data/migrations/2026-10-24-permissions-expert-reviews.sql',
     'data/migrations/2026-10-29-platform-notices.sql',
+    'data/migrations/2026-10-30-budget-and-review-result.sql',
 ]
 ADDITIONS = {
+    ('biz_expert_review','review_result'): 'varchar(16) DEFAULT NULL',
+    ('biz_expert_review_revision','review_result'): 'varchar(16) DEFAULT NULL',
     ('biz_core_report','performance_code'): 'varchar(30) DEFAULT NULL',
     ('biz_ownership_change_log','auditor_before_id'): 'bigint DEFAULT NULL',
     ('biz_ownership_change_log','auditor_after_id'): 'bigint DEFAULT NULL',
@@ -74,6 +77,9 @@ def main():
     for name in ['update.sh','schema-check.sh','database-restore.sh','README.md']:
         text=(Path(__file__).parent/name).read_text(encoding='utf-8')
         (OUT/name).write_text(text,encoding='utf-8',newline='\n')
+    for suffix in ['', '-check', '-rollback']:
+        source=ROOT/('data/migrations/2026-10-30-budget-and-review-result'+suffix+'.sql')
+        (OUT/'sql'/source.name).write_text(source.read_text(encoding='utf-8'),encoding='utf-8',newline='\n')
     verification=BUILD/'verification.json'
     if verification.exists(): shutil.copy2(verification,OUT/'verification.json')
     manual = ROOT.parent/'docs/操作手册'
