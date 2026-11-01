@@ -22,6 +22,7 @@
     "data/migrations/2026-10-24-permissions-expert-reviews.sql",
     "data/migrations/2026-10-24-audit-history-index.sql",
     "data/migrations/2026-10-28-transfer-reviewers.sql",
+    "data/migrations/2026-10-29-platform-notices.sql",
     "data/migrations/2026-10-30-budget-and-review-result.sql",
     "data/first-run/restore-task-times.sql"
   ],
