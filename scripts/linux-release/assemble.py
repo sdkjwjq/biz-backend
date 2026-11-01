@@ -244,7 +244,9 @@ DEALLOCATE PREPARE release_stmt;
     manifest['budget_fillers'] = ['active-admin','active-office-department-100','active-finance-department-104']
     manifest['data_updates'] += ['sql/2026-10-29-'+name+'.sql' for name in ['task-leader-repair','performance-leader-repair','customer-assignments']]
     manifest['data_updates'] += ['sql/2026-11-01-review-rounds.sql', 'sql/2026-11-01-chen-self-review.sql']
-    manifest['review_rounds'] = {'independent_experience': True, 'explicit_publication': True, 'fixed_task_ids': True, 'manual_pass_or_reject': True, 'legacy_read_only': True}
+    manifest['review_rounds'] = {'independent_experience': True, 'explicit_publication': True, 'fixed_task_ids': True, 'manual_pass_or_reject': True, 'legacy_read_only': True,
+        'task_ui': 'original-home-task-tree-and-drawer', 'permission_source': 'signed-experience-and-round-scope',
+        'pass_color': 'green', 'reject_color': 'red', 'business_actions_in_expert_mode': False}
     manifest['platform_notices'] = {'important_at_next_login': True, 'recipient_snapshot': True, 'explicit_confirmation': True, 'read_log_export': True}
     manifest['customer_configuration'] = {'task_ratings': 29, 'both_priority_and_difficult': 7, 'performance_candidates': 155, 'chen_aolin_reviewers_unchanged': 17, 'liu_jifeng_user_id': 110101, 'skip_newer_or_active_workflow_conflicts': True}
     manifest['customer_configuration'].pop('chen_aolin_reviewers_unchanged')

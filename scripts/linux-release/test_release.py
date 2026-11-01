@@ -234,11 +234,14 @@ def smoke_jar():
                     time.sleep(1)
                 else:raise AssertionError('Release JAR did not become healthy')
                 token=call('/system/login',{'user_id':110228,'password':'ReleaseSmoke123'})['token']
+                token=call('/system/review-context',{'experience':'BUSINESS'},token)['token']
                 assert call('/biz/tasks/manage/capabilities',token=token)['canCreate'] is True
                 capabilities=call('/work-records/capabilities',token=token)
                 assert isinstance(capabilities,dict) and capabilities.get('code',0)<400
                 for actor in (110228,910006):
                     selected=call('/system/login',{'user_id':actor,'password':'ReleaseSmoke123'})['token']
+                    if call('/system/review-context',token=selected)['experience']=='SELECT':
+                        selected=call('/system/review-context',{'experience':'BUSINESS'},selected)['token']
                     assert call('/core-indicators/capabilities',token=selected)['canFill'] is True
                     assert call('/system/access',token=selected)['canViewCoreIndicators'] is True
                     draft=call('/core-indicators/1/draft',{'year':2026,'month':1},selected)
@@ -283,6 +286,46 @@ def smoke_jar():
                 assert call('/platform-notices/status',token=reader)['total']==0
                 assert call('/core-indicators/capabilities',token=reader)['canFill'] is True
                 checks.append('actual-packaged-jar-notice-publish-login-gate-confirm-and-business-resume')
+                # Exercise the actual sanitized release JAR, not target/classes.
+                import datetime
+                now=datetime.datetime.now().replace(microsecond=0)
+                round=call('/admin/review-tasks',{'name':'Packaged round smoke','year':2026,
+                    'startsAt':(now-datetime.timedelta(hours=1)).isoformat(),
+                    'endsAt':(now+datetime.timedelta(hours=1)).isoformat()},token)
+                base='/admin/review-tasks/'+str(round['round_id'])
+                round=call(base+'/members',{'version':round['version'],'userIds':[910001],'reason':'Synthetic membership'},token)
+                req=urllib.request.Request(address+base+'/scope',method='PUT',
+                    data=json.dumps({'version':round['version'],'userIds':[910001],'taskIds':[930002],'reason':'Synthetic scope'}).encode(),
+                    headers={'Content-Type':'application/json','Authorization':token})
+                with urllib.request.urlopen(req,timeout=5) as response:round=json.load(response)
+                round=call(base+'/publish',{'version':round['version'],'reason':'Synthetic publish'},token)
+                expert=call('/system/login',{'user_id':910001,'password':'ReleaseSmoke123'})['token']
+                expert=call('/system/review-context',{'experience':'EXPERT'},expert)['token']
+                assert call('/system/access',token=expert)['currentUser']['userId']==910001
+                work='/review-work/'+str(round['round_id'])
+                tree=call(work+'/tasks?responseMode=tree',token=expert)
+                assert tree['total']==1 and tree['matchedIds']==[930002]
+                assert {row['taskId'] for row in tree['items']}=={930000,930001,930002}
+                leaf=next(row for row in tree['items'] if row['taskId']==930002)
+                assert leaf['leaderId']==910001 and leaf['principalId']==910002
+                assert call(work+'/tasks/filter-options',token=expert)['fields']
+                page=call(work+'/tasks/930002/page-detail',token=expert)
+                assert {'task','level4Tasks','submissions','auditLogs','children','review'}<=set(page)
+                before=sql('CHECKSUM TABLE biz_task,biz_material_submission,biz_audit_log,biz_expert_review,biz_expert_review_revision')
+                opinion=page['review']
+                saved=call(work+'/tasks/930002',{'roundVersion':opinion['round']['version'],
+                    'version':opinion['version'],'scopeToken':opinion['scopeToken'],
+                    'text':'Independent packaged review','result':'reject','submit':True},expert)
+                assert saved['formal']['review_result']=='reject' and len(saved['history'])==1
+                assert sql('CHECKSUM TABLE biz_task,biz_material_submission,biz_audit_log,biz_expert_review,biz_expert_review_revision')==before
+                for forbidden in ['/biz/tasks','/admin/users',work+'/tasks/930102/page-detail']:
+                    try:call(forbidden,token=expert);raise AssertionError('Expert scope escaped: '+forbidden)
+                    except urllib.error.HTTPError as denied:assert denied.code in (403,404)
+                rollback=subprocess.run([str(MYSQL),*args,schema],input=(PACKAGE/'sql/2026-11-01-review-rounds-rollback.sql').read_bytes(),env=env,capture_output=True)
+                assert rollback.returncode!=0 and b'new business data exists' in rollback.stderr
+                assert sql('SELECT COUNT(*) FROM biz_round_revision').strip()==b'1'
+                checks.append('packaged-jar-round-publication-original-task-page-own-opinion-and-role-scope-isolation')
+                checks.append('packaged-round-rollback-refuses-to-delete-new-evidence')
             finally:
                 process.terminate(); process.wait(timeout=30)
     checks.append('packaged-jar-real-start-external-password-login-and-new-module-apis')
