@@ -21,7 +21,7 @@ ReviewTaskReadService复用原投影与筛选规则，仅对已经核验的范�
 
 验证入口
 scripts/run-review-regression.py reviewrounds
-scripts/ui-audit/review-task-page.cjs（搭配随机隔离库serve.py --fixture review-rounds）
+scripts/ui-audit/review-task-page.cjs（搭配随机隔离库serve.py --fixture review-task-page）
 另运行核心指标、平台通知、手动自审、既有浏览器修复、权限及旧专家接口兼容回归。
 前端运行eslint src、现有Node测试及正式构建；后端运行Maven打包。
 本次本地证据目录：D:/college/2026/shuanggao/.run/review-task-ui-20261101。
