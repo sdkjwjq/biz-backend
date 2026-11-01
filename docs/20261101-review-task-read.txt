@@ -1,0 +1,36 @@
+专家评审接回原任务界面：实现与回退记录
+
+读取接口
+当前轮次前缀：/review-work/{roundId}
+历史轮次前缀：/review-history/work/{roundId}
+GET {base}/tasks?responseMode=tree：获准三级任务及必要祖先，total只计算命中三级任务。
+GET {base}/tasks/filter-options：本轮范围内字段和远程候选；支持关键词、分页及已选ID回显。
+GET {base}/tasks/{taskId}/page-detail：原抽屉需要的任务、四级目标、提交材料元信息、审批记录、获准子任务及本人评语。
+GET {base}/files/{fileId}：沿用原受控材料接口。
+不传responseMode时保留原数组协议。原意见保存、轮次管理、成员及授权接口继续使用。
+/system/access新增本人最小展示信息currentUser，不返回密码。
+
+边界
+ReviewRoundService核对账号状态、签名身份、轮次、成员、时间和任务范围。
+ReviewTaskReadService复用原投影与筛选规则，仅对已经核验的范围组装页面。
+目录进度按本次展示的获准三级任务汇总；不写回数据库。一级总评正式范围不受列表筛选影响。
+负责人仍来自leaderId，专业群审核人与归口审核人保持原字段。
+专家模式不扩大普通业务或管理接口权限；管理员也只能填写本人意见。
+历史接口不返回修订草稿，其他专家意见不返回。
+没有新增字段、迁移或业务数据修正，陈奥林手动自审配置保持不变。
+
+验证入口
+scripts/run-review-regression.py reviewrounds
+scripts/ui-audit/review-task-page.cjs（搭配随机隔离库serve.py --fixture review-rounds）
+另运行核心指标、平台通知、手动自审、既有浏览器修复、权限及旧专家接口兼容回归。
+前端运行eslint src、现有Node测试及正式构建；后端运行Maven打包。
+本次本地证据目录：D:/college/2026/shuanggao/.run/review-task-ui-20261101。
+浏览器截图和结果：biz-backend/target/ui-audit-review-task-page-20261101/task-page-evidence。
+浏览器网络故障和慢请求场景使用明确的故障注入，其余业务走真实接口与合成数据。
+
+回退
+1. 保留用户未提交改动、现有体验库及程序备份。
+2. 前后端分别撤销本次功能提交，重新构建并替换本地程序；也可恢复替换前封存的前后端程序。
+3. 本次无数据库迁移，不运行删表或清空意见的SQL，不重置体验账号、轮次、范围及意见。
+4. 备份后产生的新意见继续保留；不能用旧数据库备份覆盖新填报。
+本轮不制作服务器更新包，不部署线上。

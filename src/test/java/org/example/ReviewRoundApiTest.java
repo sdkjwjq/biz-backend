@@ -105,4 +105,52 @@ class ReviewRoundApiTest {
   var r=active();save(r,3,expert,true,"Exported opinion","reject");List<Map<String,Object>> tasks=new ArrayList<>();for(int i=0;i<500;i++)tasks.add(Map.of("taskId",1000+i,"taskCode","EXPORT"+i,"taskName","Synthetic frozen scope "+i,"year",2026,"targetValue",10,"currentValue",1,"progress",10));db.update("UPDATE biz_round_revision SET scope_json=?",json.writeValueAsString(Map.of("tasks",tasks)));
   HttpHeaders h=new HttpHeaders();h.set("Authorization",admin);var result=http.exchange("http://127.0.0.1:"+port+"/api/admin/review-tasks/"+id(r)+"/opinions/export",HttpMethod.GET,new HttpEntity<>(h),byte[].class);assertEquals(200,result.getStatusCode().value());try(var book=new org.apache.poi.xssf.usermodel.XSSFWorkbook(new java.io.ByteArrayInputStream(result.getBody()))){assertEquals(2,book.getNumberOfSheets());assertEquals("不通过",book.getSheetAt(0).getRow(1).getCell(6).getStringCellValue());assertEquals(500,book.getSheetAt(1).getLastRowNum());assertEquals("Synthetic frozen scope 499",book.getSheetAt(1).getRow(500).getCell(3).getStringCellValue());}
  }
+ @Test void originalTaskTreeIsScopedAndKeepsProfessionalOwnerDistinct()throws Exception{
+  db.update("UPDATE biz_task SET leader_id=?,auditor_id=?,principal_id=?,exp_target='Expected outcome',exp_effect='Expected effect',comment='Actual completion' WHERE task_id=3",owner,reviewer,other);
+  db.update("UPDATE biz_task SET progress=99,current_value=99,target_value=100 WHERE task_id IN(1,2)");
+  var r=active();var tree=get("/review-work/"+id(r)+"/tasks?responseMode=tree",expert);assertEquals(1,tree.path("total").asInt());assertEquals(3,tree.path("items").size());
+  var leaf=java.util.stream.StreamSupport.stream(tree.path("items").spliterator(),false).filter(t->t.path("taskId").asLong()==3).findFirst().orElseThrow();
+  assertEquals(owner,leaf.path("leaderId").asLong());assertEquals("Round user "+owner,leaf.path("leaderName").asText());assertEquals(other,leaf.path("principalId").asLong());assertEquals("Expected outcome",leaf.path("expTarget").asText());assertTrue(leaf.path("canReview").asBoolean());
+  for(var row:tree.path("items"))if(row.path("level").asInt()<3){assertTrue(row.path("currentValue").isNull());assertTrue(row.path("targetValue").isNull());assertEquals(10,row.path("progress").asInt());}
+  var page=get("/review-work/"+id(r)+"/tasks/3/page-detail",expert);assertEquals("Actual completion",page.path("task").path("comment").asText());assertEquals("Expected effect",page.path("task").path("expEffect").asText());assertEquals(0,page.path("children").size());assertTrue(page.path("review").path("canWrite").asBoolean());
+  assertEquals(404,call(HttpMethod.GET,"/review-work/"+id(r)+"/tasks/4/page-detail",expert,null).getStatusCode().value());assertEquals(403,call(HttpMethod.GET,"/review-work/"+id(r)+"/tasks?responseMode=tree",business,null).getStatusCode().value());
+  assertEquals(99,db.queryForObject("SELECT progress FROM biz_task WHERE task_id=1",Integer.class));
+ }
+ @Test void taskFiltersAndRootOpinionStatusDoNotChangeTheSubmittedScope()throws Exception{
+  var r=active();r=scope(fresh(r),List.of(reviewer),List.of(3L,4L));save(r,3,expert,true,"Leaf reviewed","pass");String base="/review-work/"+id(r)+"/tasks?responseMode=tree";
+  assertEquals(1,get(base+"&f.reviewStatus=submitted",expert).path("total").asInt());assertEquals(2,get(base+"&f.rootReviewStatus=unreviewed",expert).path("total").asInt());
+  assertEquals(1,get(base+"&f.keyword=ROUND3&f.year=2026",expert).path("total").asInt());
+  var root=get("/review-work/"+id(r)+"/tasks/1/page-detail",expert);assertEquals(2,root.path("children").size());assertEquals(2,root.path("review").path("scope").path("tasks").size());assertEquals(0,root.path("submissions").size());
+  assertTrue(root.path("task").path("targetValue").isNull());assertTrue(root.path("review").path("task").path("targetValue").isNull());
+  save(r,1,expert,true,"Root reviewed within the complete grant","reject");assertEquals(2,get(base+"&f.rootReviewStatus=submitted",expert).path("total").asInt());assertEquals(0,get(base+"&f.rootReviewStatus=unreviewed",expert).path("total").asInt());
+  assertEquals(400,call(HttpMethod.GET,base+"&f.scope=mine",expert,null).getStatusCode().value());assertEquals(400,call(HttpMethod.GET,base+"&f.progressFrom=90&f.progressTo=10",expert,null).getStatusCode().value());
+ }
+ @Test void roundFilterOptionsContainOnlyAuthorizedParticipantsAndYears()throws Exception{
+  var r=active();String base="/review-work/"+id(r)+"/tasks/filter-options";var definitions=get(base,expert);assertTrue(definitions.path("fields").size()>=15);
+  var people=get(base+"?field=leaderId&ids="+owner+"&ids="+other+"&pageSize=50",expert);assertEquals(1,people.path("total").asInt());assertEquals(1,people.path("selected").size());assertEquals(String.valueOf(owner),people.path("selected").get(0).path("value").asText());
+  var years=get(base+"?field=year",expert);assertEquals(1,years.path("items").size());assertEquals("2026",years.path("items").get(0).path("value").asText());
+  assertEquals(400,call(HttpMethod.GET,base+"?field=password",expert,null).getStatusCode().value());assertEquals(400,call(HttpMethod.GET,"/review-work/"+id(r)+"/tasks?responseMode=tree&f.year=2025",expert,null).getStatusCode().value());
+ }
+ @Test void pageDetailBatchesGoalsFilesAndAuditRecordsWithoutMutatingEvidence()throws Exception{
+  var r=active();db.update("INSERT INTO biz_level4_task(task_id,parent_id,dept_id,task_name,target_value,current_value,progress,data_type,is_delete) VALUES(91,3,991001,'Excess goal',2,3,100,'1',0)");
+  db.update("INSERT INTO sys_file(file_id,file_name,file_path,file_url,file_suffix,is_delete) VALUES(92,'Evidence.pdf','/synthetic/evidence.pdf','/synthetic/evidence.pdf','pdf',0)");
+  db.update("INSERT INTO biz_material_submission(sub_id,task_id,file_id,reported_value,data_type,submit_by,submit_dept_id,manage_dept_id,file_suffix,flow_status,is_delete) VALUES(93,3,92,1,'1',?,991001,991001,'pdf',40,0)",owner);
+  db.update("INSERT INTO biz_audit_log(sub_id,operator_id,action_type,pre_status,post_status,comment) VALUES(93,?,'通过',30,40,'Preserved audit evidence')",owner);
+  var page=get("/review-work/"+id(r)+"/tasks/3/page-detail",expert);assertEquals(150,page.path("level4Tasks").get(0).path("actualProgress").asInt());assertEquals(100,page.path("level4Tasks").get(0).path("countedProgress").asInt());assertEquals("Evidence.pdf",page.path("submissions").get(0).path("filename").asText());assertEquals("Preserved audit evidence",page.path("auditLogs").get(0).path("comment").asText());assertFalse(page.toString().contains("RoundTest123"));assertFalse(page.toString().contains("file_path"));
+  assertEquals(1,db.queryForObject("SELECT COUNT(*) FROM biz_audit_log",Integer.class));assertEquals(3,db.queryForObject("SELECT current_value FROM biz_level4_task WHERE task_id=91",Integer.class));
+ }
+ @Test void historyTaskPageSuppressesRevisionDraftsEvenForAdministrators()throws Exception{
+  var r=active();save(r,3,expert,true,"Formal only","pass");save(r,3,expert,false,"Unsubmitted revision","reject");db.update("UPDATE biz_review_round SET starts_at=?,ends_at=? WHERE round_id=?",now().minusDays(2),now().minusDays(1),id(r));
+  var history=get("/review-history/work/"+id(r)+"/tasks/3/page-detail",expert);assertFalse(history.path("review").path("canWrite").asBoolean());assertEquals("Formal only",history.path("review").path("draftText").asText());assertFalse(history.toString().contains("Unsubmitted revision"));
+  assertEquals(1,get("/review-history/work/"+id(r)+"/tasks?responseMode=tree",expert).path("total").asInt());
+  String a=switchTo(admin,"EXPERT");save(r,4,a,true,"Admin formal","pass");save(r,4,a,false,"Admin private draft","reject");var adminHistory=get("/review-history/work/"+id(r)+"/tasks/4/page-detail",a);assertFalse(adminHistory.path("review").path("canWrite").asBoolean());assertEquals("Admin formal",adminHistory.path("review").path("draftText").asText());assertFalse(adminHistory.toString().contains("Admin private draft"));
+  var historyTree=get("/review-history/work/"+id(r)+"/tasks?responseMode=tree&f.reviewStatus=submitted",a);assertEquals(1,historyTree.path("total").asInt());assertEquals(4,historyTree.path("matchedIds").get(0).asLong());
+ }
+ @Test void fullYearTaskTreeAndSelfProfileAreCompatibleWithBusinessReads()throws Exception{
+  var r=round(null,now().minusHours(1),now().plusHours(1));r=publish(scope(add(r,List.of(reviewer)),List.of(reviewer),List.of(3L,5L)));
+  String base="/review-work/"+id(r)+"/tasks?responseMode=tree";assertEquals(2,get(base,expert).path("total").asInt());assertEquals(1,get(base+"&f.year=2025",expert).path("total").asInt());assertEquals(1,get(base+"&f.year=2026",expert).path("total").asInt());
+  var profile=get("/system/access",expert).path("currentUser");assertEquals(reviewer,profile.path("userId").asLong());assertEquals("Round user "+reviewer,profile.path("nickName").asText());assertFalse(profile.has("password"));
+  var ordinary=get("/biz/tasks/3",business);assertEquals(owner,ordinary.path("leaderId").asLong());assertFalse(ordinary.has("leaderName"));assertEquals(10,ordinary.path("targetValue").asInt());assertEquals(10,ordinary.path("progress").asInt());
+  var list=java.util.stream.StreamSupport.stream(get("/biz/tasks",business).spliterator(),false).filter(t->t.path("taskId").asLong()==3).findFirst().orElseThrow();assertEquals("round-"+owner,list.path("leaderName").asText());assertEquals(owner,list.path("principalId").asLong());
+ }
 }

@@ -388,6 +388,20 @@ public class BusinessListFilterService {
         return decorateTasks(actor,all,ids);
     }
     public List<Map<String,Object>> tasks(Long actor){return tasks(actor,access.visibleTasks(actor,null));}
+    @org.springframework.beans.factory.annotation.Autowired private TaskReadProjectionService taskProjection;
+    /** Internal pure projection; the caller has already resolved business or round authorization. */
+    Data reviewTaskData(Long actor,List<BizTask> visible){
+        var views=taskProjection.project(visible,true);Map<Long,Map<String,Object>> snapshots=new LinkedHashMap<>();
+        Map<String,String> persons=new HashMap<>(),departments=new HashMap<>();var catalog=new ArrayList<Map<String,Object>>();
+        for(var view:views){var value=row(view);snapshots.put(view.getTaskId(),value);catalog.add(value);for(String role:List.of("leader","auditor","principal"))if(value.get(role+"Id")!=null)persons.put(str(value.get(role+"Id")),str(value.get(role+"Name")));if(view.getDeptId()!=null)departments.put(str(view.getDeptId()),str(view.getDeptName()));}
+        var rows=tasks(actor,visible,snapshots);Set<Long> handlers=new HashSet<>(),handlerDepts=new HashSet<>();
+        for(var row:rows){for(var v:(List<?>)row.get("handler"))handlers.add(id(v));for(var v:(List<?>)row.get("handlerDept"))handlerDepts.add(id(v));}
+        for(var chunk:TaskReadProjectionService.chunks(handlers))for(var value:jdbc.queryForList("SELECT user_id,COALESCE(nick_name,user_name) name FROM sys_user WHERE user_id IN("+TaskReadProjectionService.marks(chunk.size())+")",chunk.toArray()))persons.put(str(value.get("user_id")),str(value.get("name")));
+        for(var chunk:TaskReadProjectionService.chunks(handlerDepts))for(var value:jdbc.queryForList("SELECT dept_id,dept_name FROM sys_dept WHERE dept_id IN("+TaskReadProjectionService.marks(chunk.size())+")",chunk.toArray()))departments.put(str(value.get("dept_id")),str(value.get("dept_name")));
+        List<Field> fields=new ArrayList<>();taskFields(fields,rows,persons,departments);return new Data(rows,fields,catalog);
+    }
+    boolean taskReadMatches(Map<String,Object> row,ListFilterQuery query,List<Field> fields){return auditMatches(row,query,fields);}
+    Map<String,Object> taskReadTree(Data data,List<Map<String,Object>> rows,MultiValueMap<String,String> params){return treeResult("tasks",data,rows,params);}
     private List<Map<String,Object>> tasks(Long actor,List<BizTask> visible){return tasks(actor,visible,null);}
     private List<Map<String,Object>> tasks(Long actor,List<BizTask> visible,Map<Long,Map<String,Object>> snapshots){
         Map<Long,Map<String,Object>> all=new HashMap<>();

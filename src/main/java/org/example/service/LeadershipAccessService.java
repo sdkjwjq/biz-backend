@@ -256,6 +256,7 @@ public class LeadershipAccessService {
         boolean coreReviewer = jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM biz_performance p JOIN biz_core_indicator c ON BINARY c.indicator_code=BINARY p.perf_code WHERE p.principal_id=? AND COALESCE(p.is_delete,0)=0)",Integer.class,userId)==1;
         result.put("canViewCoreIndicators", admin || isDoubleHighOffice(userId) || scope.leader() || coreFiller || coreReviewer || coreDuties);
         result.put("userId", userId);
+        result.put("currentUser",Map.of("userId",userId,"nickName",Objects.toString(user.getNickName(),""),"userName",Objects.toString(user.getUserName(),"")));
         result.put("role", user.getRole());
         result.put("isAdmin", admin);
         result.put("isLeader", scope.leader());

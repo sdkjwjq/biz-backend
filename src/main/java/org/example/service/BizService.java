@@ -1329,7 +1329,7 @@ public class BizService {
         return actualProgress.min(ONE_HUNDRED);
     }
 
-    private void decorateLevel4Progress(List<BizLevel4Task> level4Tasks) {
+    void decorateLevel4Progress(List<BizLevel4Task> level4Tasks) {
         if (level4Tasks == null) {
             return;
         }
@@ -1782,67 +1782,15 @@ public class BizService {
      * @param task 任务实体
      * @return 任务视图对象
      */
-    public BizTaskVo taskToTaskVo(BizTask task) {
-        BizTaskVo taskVo = new BizTaskVo();
-        taskVo.setTaskId(task.getTaskId());
-        taskVo.setProjectId(task.getProjectId());
-        taskVo.setParentId(task.getParentId());
-        taskVo.setAncestors(task.getAncestors());
-        taskVo.setPhase(task.getPhase());
-        taskVo.setTaskCode(task.getTaskCode());
-        taskVo.setTaskName(task.getTaskName());
-        taskVo.setLevel(task.getLevel());
-        taskVo.setComment(task.getComment());
-        taskVo.setDeptId(task.getDeptId());
-        var department=task.getDeptId()==null?null:sysMapper.getDeptById(task.getDeptId());
-        taskVo.setDeptName(department==null?"":department.getDeptName());
-        taskVo.setPrincipalId(task.getPrincipalId());
-        var principal=task.getPrincipalId()==null?null:sysMapper.getUserById(task.getPrincipalId());
-        taskVo.setPrincipalName(principal==null?"":principal.getUserName());
-        // 避免空指针错误
-        if(task.getAuditorId()!=null){
-            taskVo.setAuditorId(task.getAuditorId());
-            taskVo.setAuditorName(sysMapper.getUserById(task.getAuditorId()).getUserName());
-        }else {
-            taskVo.setAuditorId(null);
-            taskVo.setAuditorName("无");
-        }
-        taskVo.setLeaderId(task.getLeaderId());
-        var leader=task.getLeaderId()==null?null:sysMapper.getUserById(task.getLeaderId());
-        taskVo.setLeaderName(leader==null?"":leader.getUserName());
-        taskVo.setExpTarget(task.getExpTarget());
-        taskVo.setExpLevel(task.getExpLevel());
-        taskVo.setExpEffect(task.getExpEffect());
-        taskVo.setExpMaterialDesc(task.getExpMaterialDesc());
-        taskVo.setDataType(task.getDataType());
-        taskVo.setTargetValue(task.getTargetValue());
-        taskVo.setCurrentValue(task.getCurrentValue());
-        taskVo.setWeight(task.getWeight());
-        taskVo.setProgress(task.getProgress());
-        taskVo.setStatus(task.getStatus());
-        taskVo.setIsDelete(task.getIsDelete());
-        taskVo.setCreateTime(task.getCreateTime());
-        taskVo.setUpdateTime(task.getUpdateTime());
-        taskVo.setIsPriority(task.getIsPriority());
-        taskVo.setIsDifficult(task.getIsDifficult());
-        taskVo.setPlannedCompletionDate(task.getPlannedCompletionDate());
-        taskVo.setActualCompletionDate(task.getActualCompletionDate());
-        taskVo.setManagementVersion(task.getManagementVersion());
-        return taskVo;
-    }
+    @Autowired private TaskReadProjectionService taskReadProjection;
+    public BizTaskVo taskToTaskVo(BizTask task) {return taskReadProjection.project(List.of(task),false).get(0);}
 
     /**
      * TaskListToTaskVoList转换方法
      * @param tasks 任务实体列表
      * @return 任务视图对象列表
      */
-    public List<BizTaskVo> taskListToTaskVoList(List<BizTask> tasks) {
-        List<BizTaskVo> taskVos = new ArrayList<>();
-        for (BizTask task : tasks) {
-            taskVos.add(taskToTaskVo(task));
-        }
-        return taskVos;
-    }
+    public List<BizTaskVo> taskListToTaskVoList(List<BizTask> tasks) {return taskReadProjection.project(tasks,false);}
 
     /**
      * TaskDTO转Task转换方法
@@ -1891,7 +1839,7 @@ public class BizService {
         bizAuditVO.setSubId(audit.getSubId());
         bizAuditVO.setTaskId(audit.getTaskId());
         bizAuditVO.setFileId(audit.getFileId());
-        bizAuditVO.setFilename(file.getFileName());
+        bizAuditVO.setFilename(file==null?null:file.getFileName());
         bizAuditVO.setReportedValue(audit.getReportedValue());
         bizAuditVO.setDataType(audit.getDataType());
         bizAuditVO.setSubmitBy(audit.getSubmitBy());

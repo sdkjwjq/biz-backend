@@ -7,6 +7,7 @@ import java.util.*;
 
 @RestController
 public class ReviewRoundController {
+ @org.springframework.beans.factory.annotation.Autowired private ReviewTaskReadService taskReads;
  private final ReviewRoundService rounds;private final ReviewContextService contexts;private final PermissionService access;private final SysService system;
  public ReviewRoundController(ReviewRoundService rounds,ReviewContextService contexts,PermissionService access,SysService system){this.rounds=rounds;this.contexts=contexts;this.access=access;this.system=system;}
  @GetMapping("/system/review-context")public Object choices(HttpServletRequest request){return contexts.choices(access.actor(),request.getHeader("Authorization"));}
@@ -25,15 +26,19 @@ public class ReviewRoundController {
  @PostMapping("/admin/review-tasks/{id}/publish")public Object publish(@PathVariable long id,@RequestBody ReviewRoundService.Change b){return rounds.publish(access.actor(),id,b);}
  @GetMapping("/admin/review-tasks/{id}/opinions")public Object opinions(@PathVariable long id){return rounds.opinions(access.actor(),id);}
  @GetMapping("/review-work")public Object mine(){return rounds.mine(access.actor());}
- @GetMapping("/review-work/{id}/tasks")public Object tasks(@PathVariable long id){return rounds.objects(access.actor(),id);}
+ @GetMapping("/review-work/{id}/tasks")public Object tasks(@PathVariable long id,@RequestParam org.springframework.util.MultiValueMap<String,String> params){return taskReads.query(access.actor(),id,params,false);}
  @GetMapping("/review-work/{id}/tasks/{task}")public Object review(@PathVariable long id,@PathVariable long task){return rounds.detail(access.actor(),id,task);}
  @PostMapping("/review-work/{id}/tasks/{task}")public Object save(@PathVariable long id,@PathVariable long task,@RequestBody ReviewRoundService.Opinion b){return rounds.save(access.actor(),id,task,b);}
  @GetMapping("/review-work/{id}/files/{file}")public void file(@PathVariable long id,@PathVariable long file,HttpServletResponse response)throws java.io.IOException{rounds.file(access.actor(),id,file);system.downloadFile(file,response);}
- @GetMapping("/review-history")public Object legacy(@RequestParam(defaultValue="1")int page){return rounds.legacy(access.actor(),page);}
+ @GetMapping("/review-history")public Object legacy(@RequestParam(defaultValue="1")int page,HttpServletRequest request){return rounds.legacy(access.actor(),page,!"BUSINESS".equals(contexts.mode(request.getHeader("Authorization"))));}
  @GetMapping("/admin/review-tasks/{id}/opinions/export")public ResponseEntity<byte[]> export(@PathVariable long id)throws java.io.IOException{return ResponseEntity.ok().contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")).header(HttpHeaders.CONTENT_DISPOSITION,"attachment; filename=review-opinions.xlsx").body(rounds.export(access.actor(),id));}
  @GetMapping("/review-history/rounds")public Object ended(){return rounds.ended(access.actor());}
- @GetMapping("/review-history/work/{id}/tasks")public Object endedTasks(@PathVariable long id){rounds.requireEnded(id);return rounds.objects(access.actor(),id);}
+ @GetMapping("/review-history/work/{id}/tasks")public Object endedTasks(@PathVariable long id,@RequestParam org.springframework.util.MultiValueMap<String,String> params){return taskReads.query(access.actor(),id,params,true);}
  @GetMapping("/review-history/work/{id}/tasks/{task}")public Object endedDetail(@PathVariable long id,@PathVariable long task){return rounds.historicalDetail(access.actor(),id,task);}
  @GetMapping("/review-history/work/{id}/files/{file}")public void endedFile(@PathVariable long id,@PathVariable long file,HttpServletResponse response)throws java.io.IOException{rounds.requireEnded(id);rounds.file(access.actor(),id,file);system.downloadFile(file,response);}
+ @GetMapping("/review-work/{id}/tasks/filter-options")public Object options(@PathVariable long id,@RequestParam org.springframework.util.MultiValueMap<String,String> params){return taskReads.options(access.actor(),id,params,false);}
+ @GetMapping("/review-history/work/{id}/tasks/filter-options")public Object historyOptions(@PathVariable long id,@RequestParam org.springframework.util.MultiValueMap<String,String> params){return taskReads.options(access.actor(),id,params,true);}
+ @GetMapping("/review-work/{id}/tasks/{task}/page-detail")public Object pageDetail(@PathVariable long id,@PathVariable long task){return taskReads.detail(access.actor(),id,task,false);}
+ @GetMapping("/review-history/work/{id}/tasks/{task}/page-detail")public Object historyPageDetail(@PathVariable long id,@PathVariable long task){return taskReads.detail(access.actor(),id,task,true);}
  @ExceptionHandler(AdminManagementException.class)public ResponseEntity<?> error(AdminManagementException e){return ResponseEntity.status(e.getCode()).body(Map.of("code",e.getCode(),"message",e.getMessage()));}
 }
