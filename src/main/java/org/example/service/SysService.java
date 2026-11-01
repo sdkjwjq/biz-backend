@@ -73,6 +73,7 @@ public class SysService {
      * @param password 密码
      * @return 登录视图对象
      */
+    @org.springframework.beans.factory.annotation.Autowired private ReviewContextService reviewContexts;
     public SysLoginVO login(Long userId, String password) {
         SysUser user = sysMapper.getUserById(userId);
         if (user != null && Integer.valueOf(1).equals(user.getIsDelete())) {
@@ -100,6 +101,7 @@ public class SysService {
                     "nickName", user.getNickName(),
                     "role", user.getRole(),
                     "deptId", user.getDeptId());
+            sysLoginVo.setToken(reviewContexts.loginToken(userId,sysLoginVo.getToken()));
             return sysLoginVo;
         } else if (user == null){
             BusinessLogUtil.warn("用户登录",

@@ -2169,6 +2169,21 @@ class ReviewBatchRegressionApiTest {
     }
 
     @Test
+    void professionalOwnerMayManuallyReviewOwnSubmissionWithoutAutomaticApproval() throws Exception {
+        seedManualPerformance("1");jdbc.update("UPDATE biz_performance SET auditor_id=leader_id WHERE perf_id=950001");
+        String person=login(USER);long sub=submitPerformance(2026,"3",person);
+        assertEquals(10,jdbc.queryForObject("SELECT flow_status FROM biz_performance_submission WHERE sub_id=?",Integer.class,sub));
+        assertEquals(USER,jdbc.queryForObject("SELECT current_handler_id FROM biz_performance_submission WHERE sub_id=?",Long.class,sub));
+        assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM biz_performance_audit_log WHERE sub_id=? AND action_type='pass'",Integer.class,sub));
+        assertSuccess(reviewPerformance(sub,true,person),"通过");
+        assertEquals(20,jdbc.queryForObject("SELECT flow_status FROM biz_performance_submission WHERE sub_id=?",Integer.class,sub));
+        assertEquals(ADMIN,jdbc.queryForObject("SELECT current_handler_id FROM biz_performance_submission WHERE sub_id=?",Long.class,sub));
+        assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM biz_performance_audit_log WHERE sub_id=? AND operator_id=? AND action_type='pass'",Integer.class,sub,USER));
+        assertSuccess(reviewPerformance(sub,true,login(ADMIN)),"归档");
+        assertEquals(30,jdbc.queryForObject("SELECT flow_status FROM biz_performance_submission WHERE sub_id=?",Integer.class,sub));
+    }
+
+    @Test
     void performanceOwnerUsesProfessionalLeaderAcrossListsDetailsAndSubmission() throws Exception {
         seedManualPerformance("1");
         jdbc.update("UPDATE biz_performance SET perf_code='2.1.1',ancestors='0,2,2.1' WHERE perf_id=950001");

@@ -19,6 +19,9 @@ public class PermissionTransactionAspect {
     public PermissionTransactionAspect(PermissionService access,PermissionRequestGuard guard,PermissionManagementService management,PlatformTransactionManager transactions){this.access=access;this.guard=guard;this.management=management;this.tx=new TransactionTemplate(transactions);this.tx.setIsolationLevel(org.springframework.transaction.TransactionDefinition.ISOLATION_READ_COMMITTED);this.snapshotTx=new TransactionTemplate(transactions);this.snapshotTx.setIsolationLevel(org.springframework.transaction.TransactionDefinition.ISOLATION_REPEATABLE_READ);}
     @Around("execution(public * org.example.service.*Service.*(..)) && !within(org.example.service.Permission*) && !within(org.example.service.LeadershipAccessService)")
     public Object write(ProceedingJoinPoint point)throws Throwable{
+        // Round operations have their own transactions and configuration lock. Context reads
+        // also run before the notice gate and must not trigger business-write checks there.
+        if(point.getTarget() instanceof ReviewRoundService || point.getTarget() instanceof ReviewContextService)return point.proceed();
         // This pre-interceptor check must run before business-action permission checks.
         // It only reads the current recipient's pending queue, even on POST requests.
         if(point.getTarget() instanceof PlatformNoticeService && Set.of("installed","loginCutoff","mustRead").contains(point.getSignature().getName()))return point.proceed();

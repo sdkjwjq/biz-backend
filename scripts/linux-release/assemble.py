@@ -32,6 +32,7 @@ NEW_SOURCES = [
     'data/migrations/2026-10-24-permissions-expert-reviews.sql',
     'data/migrations/2026-10-29-platform-notices.sql',
     'data/migrations/2026-10-30-budget-and-review-result.sql',
+    'data/migrations/2026-11-01-review-rounds.sql',
 ]
 ADDITIONS = {
     ('biz_expert_review','review_result'): 'varchar(16) DEFAULT NULL',
@@ -77,6 +78,10 @@ def main():
     for name in ['update.sh','schema-check.sh','database-restore.sh','README.md']:
         text=(Path(__file__).parent/name).read_text(encoding='utf-8')
         (OUT/name).write_text(text,encoding='utf-8',newline='\n')
+    for name in ['review-rounds', 'chen-self-review']:
+        for suffix in ['', '-check', '-rollback']:
+            source=ROOT/('data/migrations/2026-11-01-'+name+suffix+'.sql')
+            (OUT/'sql'/source.name).write_text(source.read_text(encoding='utf-8'),encoding='utf-8',newline='\n')
     for suffix in ['', '-check', '-rollback']:
         source=ROOT/('data/migrations/2026-10-30-budget-and-review-result'+suffix+'.sql')
         (OUT/'sql'/source.name).write_text(source.read_text(encoding='utf-8'),encoding='utf-8',newline='\n')
@@ -238,10 +243,15 @@ DEALLOCATE PREPARE release_stmt;
     manifest['data_update_backup_tables'] += ['bak_20261023_leadership','bak_20261023_leadership_department']
     manifest['budget_fillers'] = ['active-admin','active-office-department-100','active-finance-department-104']
     manifest['data_updates'] += ['sql/2026-10-29-'+name+'.sql' for name in ['task-leader-repair','performance-leader-repair','customer-assignments']]
+    manifest['data_updates'] += ['sql/2026-11-01-review-rounds.sql', 'sql/2026-11-01-chen-self-review.sql']
+    manifest['review_rounds'] = {'independent_experience': True, 'explicit_publication': True, 'fixed_task_ids': True, 'manual_pass_or_reject': True, 'legacy_read_only': True}
     manifest['platform_notices'] = {'important_at_next_login': True, 'recipient_snapshot': True, 'explicit_confirmation': True, 'read_log_export': True}
     manifest['customer_configuration'] = {'task_ratings': 29, 'both_priority_and_difficult': 7, 'performance_candidates': 155, 'chen_aolin_reviewers_unchanged': 17, 'liu_jifeng_user_id': 110101, 'skip_newer_or_active_workflow_conflicts': True}
+    manifest['customer_configuration'].pop('chen_aolin_reviewers_unchanged')
+    manifest['customer_configuration']['chen_aolin_manual_self_review_confirmed'] = 17
+    manifest['data_update_backup_tables'].append('bak_20261101_chen_self_review')
     manifest['data_update_backup_tables'] += ['bak_20261029_task_leader','bak_20261029_performance_leader','bak_20261029_customer_task','bak_20261029_customer_performance']
-    manifest['excluded_uncommitted_frontend_files'] = ['src/components/ExpertReviewEditor.vue','vite.config.js']
+    manifest['excluded_uncommitted_frontend_files'] = ['vite.config.js']
     manifest['frontend_working_changes'] = []
     (OUT/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
     files=sorted(p for p in OUT.rglob('*') if p.is_file() and p.name!='SHA256SUMS')

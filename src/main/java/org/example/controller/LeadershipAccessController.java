@@ -10,11 +10,12 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 public class LeadershipAccessController {
+    @org.springframework.beans.factory.annotation.Autowired private org.example.service.ReviewContextService reviewContexts;
     private final LeadershipAccessService access;
     public LeadershipAccessController(LeadershipAccessService access) { this.access = access; }
 
     @GetMapping("/system/access")
-    public Object current(HttpServletRequest request) { return access.capabilities(user(request)); }
+    public Object current(HttpServletRequest request) { var result=access.capabilities(user(request));result.putAll(reviewContexts.choices(user(request),request.getHeader("Authorization")));return result; }
 
     @GetMapping("/admin/users/{userId}/leadership")
     public Object configuration(@PathVariable Long userId, HttpServletRequest request) {

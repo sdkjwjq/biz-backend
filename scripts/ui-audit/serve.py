@@ -27,7 +27,7 @@ SPEC.loader.exec_module(RUNNER)
 def main():
     global WORK
     parser = argparse.ArgumentParser()
-    parser.add_argument("--fixture", choices=["base", "business", "review", "navigation", "convenience", "convenience2", "continuous", "customer", "work-records", "task-stats", "ownership-transfer", "ownership-transfer-scale", "performance-relation", "level4-equal-weight", "responsibility-filters", "leadership", "core", "budgettrends", "admintest", "work-record-scope", "presentation", "overview", "browser-repairs", "usability", "permissions"], default="base")
+    parser.add_argument("--fixture", choices=["review-rounds", "base", "business", "review", "navigation", "convenience", "convenience2", "continuous", "customer", "work-records", "task-stats", "ownership-transfer", "ownership-transfer-scale", "performance-relation", "level4-equal-weight", "responsibility-filters", "leadership", "core", "budgettrends", "admintest", "work-record-scope", "presentation", "overview", "browser-repairs", "usability", "permissions"], default="base")
     parser.add_argument("--frontend-port", type=int, default=15173)
     parser.add_argument("--backend-port", type=int, default=18080)
     parser.add_argument("--run-id")
@@ -88,7 +88,7 @@ def main():
         sql((ROOT / "data/migrations/2026-10-24-permissions-expert-reviews.sql").read_text(encoding="utf-8"), schema)
         sql((ROOT / "scripts/ui-audit/fixture.sql").read_text(encoding="utf-8"), schema)
         sql("UPDATE sys_user SET force_password_change=0", schema)
-        if args.fixture == "permissions":
+        if args.fixture in ("permissions","review-rounds"):
             sql((ROOT / "scripts/ui-audit/fixture-permissions.sql").read_text(encoding="utf-8"), schema)
             (WORK / "uploads").mkdir(exist_ok=True)
             for name in ("permission-file-a.pdf", "permission-file-b.pdf"):
@@ -96,6 +96,8 @@ def main():
         sql((ROOT / "data/migrations/2026-10-28-transfer-reviewers.sql").read_text(encoding="utf-8"), schema)
         sql((ROOT / "data/migrations/2026-10-29-platform-notices.sql").read_text(encoding="utf-8"), schema)
         sql((ROOT / "data/migrations/2026-10-30-budget-and-review-result.sql").read_text(encoding="utf-8"), schema)
+        if args.fixture == "review-rounds":
+            sql((ROOT / "data/migrations/2026-11-01-review-rounds.sql").read_text(encoding="utf-8"), schema)
         if args.fixture == "work-record-scope":
             sql((ROOT / "scripts/ui-audit/fixture-work-record-scope.sql").read_text(encoding="utf-8"), schema)
         if args.fixture in ("core", "budgettrends", "admintest", "presentation", "overview", "browser-repairs", "usability"):

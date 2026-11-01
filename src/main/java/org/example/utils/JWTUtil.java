@@ -57,6 +57,13 @@ public class JWTUtil {
      * @param token Token字符串
      * @return 解码后的JWT对象
      */
+    public static String withExperience(String token,String experience) {
+        var jwt=verifyJwtToken(token);
+        try {
+            var payload=new com.fasterxml.jackson.databind.ObjectMapper().readValue(new String(java.util.Base64.getUrlDecoder().decode(jwt.getPayload()),java.nio.charset.StandardCharsets.UTF_8),new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String,Object>>(){});
+            return JWT.create().withPayload(payload).withClaim("experience",experience).withJWTId(java.util.UUID.randomUUID().toString()).withExpiresAt(jwt.getExpiresAt()).sign(Algorithm.HMAC256(SECRET_KEY));
+        }catch(java.io.IOException e){throw new IllegalStateException(e);}
+    }
     public static DecodedJWT verifyJwtToken(String token) {
         try {
             Algorithm algorithm = Algorithm.HMAC256(SECRET_KEY);

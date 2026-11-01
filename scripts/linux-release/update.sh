@@ -317,7 +317,7 @@ if [[ -f "$PACKAGE/sql/2026-10-29-customer-assignments-candidates.sql" ]]; then
       "$PACKAGE/sql/2026-10-29-customer-assignments.sql" | "${MYSQL[@]}" > "$BACKUP/customer-assignments.log"
   cat "$PACKAGE/sql/2026-10-29-customer-assignments-candidates.sql" \
       "$PACKAGE/sql/2026-10-29-customer-assignments-check.sql" | "${MYSQL[@]}" > "$BACKUP/customer-assignments-check.log"
-  say "20261029任务评级及绩效职责已核对；陈奥林17项审核人保持原值。逐项结果：$BACKUP/customer-assignments-check.log"
+  say "20261029任务评级及绩效职责已核对；陈奥林17项另按本次确认核对。逐项结果：$BACKUP/customer-assignments-check.log"
   pending_assignments=$(awk -F'\t' '$1=="PERFORMANCE" && $2=="ACTIVE_AUDIT"{print $3}' "$BACKUP/customer-assignments-check.log")
   if [[ -n "$pending_assignments" && "$pending_assignments" != 0 ]]; then say "有 $pending_assignments 项仍在审核中，保留当前职责，待处理完成后再核对更新"; fi
 fi
@@ -410,6 +410,12 @@ say '权限及专家评审结构已核对，既有授权和评语保留'
 "${MYSQL[@]}" < "$PACKAGE/sql/2026-10-30-budget-and-review-result.sql" > "$BACKUP/budget-review-result-migration.log"
 "${MYSQL[@]}" < "$PACKAGE/sql/2026-10-30-budget-and-review-result-check.sql" > "$BACKUP/budget-review-result-check.log"
 say '总预算及专家评审结果结构已核对；保留已有预算修改和历史评语'
+"${MYSQL[@]}" < "$PACKAGE/sql/2026-11-01-review-rounds.sql" > "$BACKUP/review-rounds-migration.log"
+"${MYSQL[@]}" < "$PACKAGE/sql/2026-11-01-review-rounds-check.sql" > "$BACKUP/review-rounds-check.log"
+say '独立评审任务结构已核对；旧意见保留只读，不自动产生新轮次权限'
+"${MYSQL[@]}" < "$PACKAGE/sql/2026-11-01-chen-self-review.sql" > "$BACKUP/chen-self-review-migration.log"
+"${MYSQL[@]}" < "$PACKAGE/sql/2026-11-01-chen-self-review-check.sql" > "$BACKUP/chen-self-review-check.log"
+say "陈奥林17项按本人填报、本人手动审核核对；活动审批及后续管理员调整保留。逐项结果：$BACKUP/chen-self-review-migration.log"
 
 "${MYSQL[@]}" < "$PACKAGE/sql/2026-10-24-audit-history-index.sql" > "$BACKUP/audit-history-index.log"
 "${MYSQL[@]}" < "$PACKAGE/sql/2026-10-24-audit-history-index-check.sql" > "$BACKUP/audit-history-index-check.log"

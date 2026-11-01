@@ -64,10 +64,14 @@ def main():
         subprocess.run([mysql, *connection, database], input=(root / "data/migrations/2026-10-28-transfer-reviewers.sql").read_bytes(), env=env, check=True)
         subprocess.run([mysql, *connection, database], input=(root / "data/migrations/2026-10-29-platform-notices.sql").read_bytes(), env=env, check=True)
         subprocess.run([mysql, *connection, database], input=(root / "data/migrations/2026-10-30-budget-and-review-result.sql").read_bytes(), env=env, check=True)
+        if 'reviewrounds' in sys.argv:
+            subprocess.run([mysql, *connection, database], input=(root / "data/migrations/2026-11-01-review-rounds.sql").read_bytes(), env=env, check=True)
         env["SHUANGGAO_TEST_DB_USER"] = user
         env["SHUANGGAO_TEST_JDBC_URL"] = ("jdbc:mysql://127.0.0.1:3306/" + database
                                          + "?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai")
-        if method == "platformnotices":
+        if method == "reviewrounds":
+            selector = "ReviewRoundApiTest"
+        elif method == "platformnotices":
             selector = "PlatformNoticeApiTest"
         elif method == "browserrepairs":
             selector = "ReviewBatchRegressionApiTest#" + "+".join([

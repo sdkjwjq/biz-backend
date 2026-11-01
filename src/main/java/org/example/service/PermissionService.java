@@ -93,10 +93,11 @@ public class PermissionService {
         return new ArrayList<>(result.values());
     }
     public State state(Long id){return cached("state:"+id,()->evaluate(id,policy(id),Map.of()));}
+    public boolean reviewRoundsInstalled(){return cached("reviewRoundsInstalled",()->jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='biz_review_round'",Integer.class)==1);}
     public State evaluate(Long id,Policy policy,Map<String,PermissionCatalog.Role> replacement){
         SysUser u=user(id);Map<String,PermissionCatalog.Role> definitions=roles().stream().collect(Collectors.toMap(PermissionCatalog.Role::code,r->r));definitions.putAll(replacement);
         Set<String> codes=new LinkedHashSet<>();if("LEGACY".equals(policy.mode()))codes.addAll(automaticRoles(u));codes.addAll(policy.roles());
-        List<PermissionCatalog.Role> active=codes.stream().map(definitions::get).filter(Objects::nonNull).filter(PermissionCatalog.Role::enabled).toList();
+        List<PermissionCatalog.Role> active=codes.stream().map(definitions::get).filter(Objects::nonNull).filter(PermissionCatalog.Role::enabled).filter(r->!reviewRoundsInstalled()||!r.code().equals("EXPERT")).toList();
         Set<String> granted=new LinkedHashSet<>();active.forEach(r->granted.addAll(r.permissions()));
         policy.overrides().forEach((k,v)->{if(Boolean.TRUE.equals(v))granted.add(k);else granted.remove(k);});
         boolean admin="0".equals(u.getRole());if(admin)granted.addAll(PermissionCatalog.ACTIONS.keySet());
@@ -153,6 +154,7 @@ public class PermissionService {
     }
     @SuppressWarnings("unchecked")
     private List<Map<String,Object>> withExpertScope(State state,String domain,List<Map<String,Object>> rules){
+        if(reviewRoundsInstalled())return rules;
         if(!domain.equals("tasks")||!state.permissions().contains("expert.read")||!(state.policy().scopes().get("expert") instanceof Map<?,?> raw))return rules;
         var combined=new ArrayList<>(rules);combined.add((Map<String,Object>)raw);return combined;
     }

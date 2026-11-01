@@ -21,6 +21,7 @@ public class PermissionRequestGuard {
         // including accounts without a messages menu. This grants no administration permission.
         if(("GET".equals(request.getMethod())&&(path.equals("/platform-notices/status")||path.matches("/platform-notices/[0-9]+/attachments/[0-9]+")))
           ||("POST".equals(request.getMethod())&&path.matches("/platform-notices/[0-9]+/(open|confirm)")))return;
+        if(path.equals("/system/review-context")||path.startsWith("/review-history")||path.startsWith("/review-work"))return; // Signed role gate plus round service enforce membership, time and scope.
         var state=access.state(actor);boolean get="GET".equals(request.getMethod());
         if(path.equals("/system/access")||path.endsWith("/capabilities"))return;
         if(get&&path.equals("/list-filters/audits/locate"))return; // The locate service checks its exact business source and scope.
