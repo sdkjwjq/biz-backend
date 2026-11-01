@@ -104,7 +104,8 @@ def main():
             assert name not in added_tables
             added_tables.add(name)
             creates.append(re.sub(r'^CREATE TABLE(?: IF NOT EXISTS)?','CREATE TABLE IF NOT EXISTS',match.group(0)))
-    assert len(added_tables)==33
+    assert len(added_tables)==39
+    assert {'biz_budget_total','biz_review_round','biz_review_member','biz_review_scope','biz_round_opinion','biz_round_revision'} <= added_tables
     sql='-- Additive structure only. No historical data repair, account writes or seed records.\n'+ '\n\n'.join(creates)+'\n'
     for (table,column),definition in ADDITIONS.items():
         sql+=f"""
