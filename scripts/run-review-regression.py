@@ -113,6 +113,8 @@ def main():
             selector = "PermissionApiTest,AdminManagementApiTest,AdminOverviewApiTest"
         elif method == "overview":
             selector = "AdminOverviewApiTest"
+        elif method == "budgetcompat":
+            selector = "ExpertReviewApiTest#groupedBudgetVersionsMatchLegacyAndRecheckYearScope+budgetVersionFiltersKeepCurrentPerMonthBeforePaging,BudgetTrendApiTest#exportedExecutionReimportsActualAmountInsteadOfReadonlyBudgetAmount"
         elif method == "budgettrends":
             selector = "BudgetTrendApiTest,BudgetTrendBatchTest,BudgetVersionListTest,AdminOverviewQueryTest,ReviewBatchRegressionApiTest#budgetImportsCreateVersionsAndRestoreWithoutOverwritingHistory"
         elif method == "core":
