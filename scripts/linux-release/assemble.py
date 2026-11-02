@@ -113,8 +113,8 @@ def main():
             assert name not in added_tables
             added_tables.add(name)
             creates.append(re.sub(r'^CREATE TABLE(?: IF NOT EXISTS)?','CREATE TABLE IF NOT EXISTS',match.group(0)))
-    assert len(added_tables)==39
-    assert {'biz_budget_total','biz_review_round','biz_review_member','biz_review_scope','biz_round_opinion','biz_round_revision'} <= added_tables
+    assert len(added_tables)==40
+    assert {'biz_budget_total','biz_review_round','biz_review_member','biz_review_scope','biz_round_opinion','biz_round_revision','biz_task_transfer_request'} <= added_tables
     sql='-- Additive structure only. No historical data repair, account writes or seed records.\n'+ '\n\n'.join(creates)+'\n'
     for (table,column),definition in ADDITIONS.items():
         definition=definition.replace("'", "''")
@@ -130,6 +130,8 @@ DEALLOCATE PREPARE release_stmt;
         sql += '\n' + (ROOT/migration).read_text(encoding='utf-8')
     for module in ['section','goods-budget','execution-budget-rows']:
         sql+='\n'+(ROOT/('data/migrations/2026-11-02-budget-'+module+'.sql')).read_text(encoding='utf-8')
+    # Upgrade an earlier draft table before the post-migration schema gate.
+    sql+='\n'+(ROOT/'data/migrations/2026-11-02-task-transfer-request.sql').read_text(encoding='utf-8')
     (OUT/'sql/additive.sql').write_text(sql,encoding='utf-8',newline='\n')
     for module in ['leadership-access', 'task-attributes', 'core-indicators']:
         for suffix in ['', '-check', '-rollback']:
@@ -260,6 +262,9 @@ DEALLOCATE PREPARE release_stmt;
     manifest['data_updates'] += ['sql/2026-10-29-'+name+'.sql' for name in ['task-leader-repair','performance-leader-repair','customer-assignments']]
     manifest['data_updates'] += ['sql/2026-11-01-review-rounds.sql', 'sql/2026-11-01-chen-self-review.sql']
     manifest['data_updates'].append('sql/2026-11-02-task-leader-completion.sql')
+    manifest['data_updates'].append('sql/2026-11-02-task-transfer-request.sql')
+    manifest['task_transfer_requests'] = {'recipient_confirmation': True, 'current_duty_only': True,
+        'active_audits_blocked': True, 'scope_checked': True, 'duplicate_pending_guard': True}
     manifest['task_owner_completion'] = {'candidates': 368, 'fixed_ids_and_identity_checks': True,
         'preserve_recorded_transfers': True, 'preserve_reviewers_and_history': True,
         'actual_applied_count': 'backup/task-leader-completion.log'}

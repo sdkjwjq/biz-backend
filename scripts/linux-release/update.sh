@@ -432,6 +432,8 @@ say '总预算及专家评审结果结构已核对；保留已有预算修改和
 say '独立评审任务结构已核对；旧意见保留只读，不自动产生新轮次权限'
 "${MYSQL[@]}" < "$PACKAGE/sql/2026-11-02-task-transfer-request.sql" > "$BACKUP/task-transfer-request-migration.log"
 "${MYSQL[@]}" < "$PACKAGE/sql/2026-11-02-task-transfer-request-check.sql" > "$BACKUP/task-transfer-request-check.log"
+transfer_errors=$(awk -F'\t' '$2!="0"{print $1 "=" $2}' "$BACKUP/task-transfer-request-check.log")
+[[ -z "$transfer_errors" ]] || die "任务移交申请核对失败：$transfer_errors"
 say '任务移交申请结构已核对，既有移交及通知记录保留'
 "${MYSQL[@]}" < "$PACKAGE/sql/2026-11-01-chen-self-review.sql" > "$BACKUP/chen-self-review-migration.log"
 "${MYSQL[@]}" < "$PACKAGE/sql/2026-11-01-chen-self-review-check.sql" > "$BACKUP/chen-self-review-check.log"
