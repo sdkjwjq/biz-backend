@@ -183,9 +183,23 @@ public class PermissionService {
         return taskIds(s,year,all);
     }
     private Set<Long> taskIds(State s,Integer year,List<BizTask> all){
+        return taskIds(s,year,all,Set.of());
+    }
+    /** Preview the same task scopes with just the proposed duty, without writing business data. */
+    public boolean canReceiveTask(Long userId,Long taskId,String field){
+        State state=state(userId);if(!state.permissions().contains("tasks.read"))return false;
+        List<BizTask> all=new ArrayList<>(tasks.getAllTasks().stream().filter(t->!Integer.valueOf(1).equals(t.getIsDelete())).toList());
+        for(int i=0;i<all.size();i++)if(Objects.equals(all.get(i).getTaskId(),taskId)){
+            BizTask proposed=new BizTask();BeanUtils.copyProperties(all.get(i),proposed);
+            switch(field){case "leader"->proposed.setLeaderId(userId);case "auditor"->proposed.setAuditorId(userId);case "principal"->proposed.setPrincipalId(userId);default->throw new AdminManagementException(400,"移交类型不正确");}
+            all.set(i,proposed);return taskIds(state,proposed.getPhase(),all,Set.of(taskId)).contains(taskId);
+        }return false;
+    }
+    private Set<Long> taskIds(State s,Integer year,List<BizTask> all,Set<Long> proposedBusiness){
         if(!s.permissions().contains("tasks.read"))return Set.of();
         Map<Long,BizTask> byId=all.stream().collect(Collectors.toMap(BizTask::getTaskId,t->t));
         Set<Long> visible=new LinkedHashSet<>();Set<Long> business=tasks.getVisibleTasks(s.userId()).stream().map(BizTask::getTaskId).collect(Collectors.toSet());
+        business.addAll(proposedBusiness);
         business.addAll(jdbc.queryForList("SELECT DISTINCT parent_id FROM biz_level4_task WHERE leader_id=? AND COALESCE(is_delete,0)=0",Long.class,s.userId()));
         List<Map<String,Object>> rules=scopeRules(s,"tasks");RowAccess context=new RowAccess(s);
         for(var task:all)if(Integer.valueOf(3).equals(task.getLevel())&&(year==null||Objects.equals(year,task.getPhase()))) {

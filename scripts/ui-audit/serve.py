@@ -27,7 +27,7 @@ SPEC.loader.exec_module(RUNNER)
 def main():
     global WORK
     parser = argparse.ArgumentParser()
-    parser.add_argument("--fixture", choices=["dashboard-access", "budget-sections", "review-task-page", "review-rounds", "base", "business", "review", "navigation", "convenience", "convenience2", "continuous", "customer", "work-records", "task-stats", "ownership-transfer", "ownership-transfer-scale", "performance-relation", "level4-equal-weight", "responsibility-filters", "leadership", "core", "budgettrends", "admintest", "work-record-scope", "presentation", "overview", "browser-repairs", "usability", "permissions"], default="base")
+    parser.add_argument("--fixture", choices=["task-transfer", "dashboard-access", "budget-sections", "review-task-page", "review-rounds", "base", "business", "review", "navigation", "convenience", "convenience2", "continuous", "customer", "work-records", "task-stats", "ownership-transfer", "ownership-transfer-scale", "performance-relation", "level4-equal-weight", "responsibility-filters", "leadership", "core", "budgettrends", "admintest", "work-record-scope", "presentation", "overview", "browser-repairs", "usability", "permissions"], default="base")
     parser.add_argument("--frontend-port", type=int, default=15173)
     parser.add_argument("--backend-port", type=int, default=18080)
     parser.add_argument("--run-id")
@@ -90,16 +90,19 @@ def main():
         sql((ROOT / "data/migrations/2026-10-24-permissions-expert-reviews.sql").read_text(encoding="utf-8"), schema)
         sql((ROOT / "scripts/ui-audit/fixture.sql").read_text(encoding="utf-8"), schema)
         sql("UPDATE sys_user SET force_password_change=0", schema)
-        if args.fixture in ("permissions","review-rounds","review-task-page","budget-sections","dashboard-access"):
+        if args.fixture in ("permissions","review-rounds","review-task-page","budget-sections","dashboard-access","task-transfer"):
             sql((ROOT / "scripts/ui-audit/fixture-permissions.sql").read_text(encoding="utf-8"), schema)
             (WORK / "uploads").mkdir(exist_ok=True)
             for name in ("permission-file-a.pdf", "permission-file-b.pdf"):
                 (WORK / "uploads" / name).write_bytes(b"%PDF-1.4\nSynthetic isolated authorization fixture\n%%EOF")
         sql((ROOT / "data/migrations/2026-10-28-transfer-reviewers.sql").read_text(encoding="utf-8"), schema)
+        sql((ROOT / "data/migrations/2026-11-02-task-transfer-request.sql").read_text(encoding="utf-8"), schema)
         sql((ROOT / "data/migrations/2026-10-29-platform-notices.sql").read_text(encoding="utf-8"), schema)
         sql((ROOT / "data/migrations/2026-10-30-budget-and-review-result.sql").read_text(encoding="utf-8"), schema)
-        if args.fixture in ("review-rounds","review-task-page","budget-sections","dashboard-access"):
+        if args.fixture in ("review-rounds","review-task-page","budget-sections","dashboard-access","task-transfer"):
             sql((ROOT / "data/migrations/2026-11-01-review-rounds.sql").read_text(encoding="utf-8"), schema)
+        if args.fixture == "task-transfer":
+            sql((ROOT / "scripts/ui-audit/fixture-task-transfer.sql").read_text(encoding="utf-8"), schema)
         if args.fixture == "dashboard-access":
             sql((ROOT / "scripts/ui-audit/fixture-dashboard-access.sql").read_text(encoding="utf-8"), schema)
         if args.fixture == "budget-sections":

@@ -28,6 +28,7 @@
     "data/migrations/2026-11-02-budget-goods-budget.sql",
     "data/migrations/2026-11-02-budget-execution-budget-rows.sql",
     "data/migrations/2026-11-01-review-rounds.sql",
+    "data/migrations/2026-11-02-task-transfer-request.sql",
     "data/first-run/restore-task-times.sql"
   ],
   "verification": "data/first-run/verify.sql"

@@ -63,6 +63,7 @@ public class WebConfig implements WebMvcConfigurer {
                 .addPathPatterns("/scheduled/**")
                 .addPathPatterns("/work-records/**")
                 .addPathPatterns("/manage/**")
+                .addPathPatterns("/task-transfer/**")
                 .addPathPatterns("/admin/**")
                 .addPathPatterns("/core-indicators/**", "/expert-reviews/**", "/uploads/**", "/platform-notices/**", "/review-work/**", "/review-history/**", "/review-history")
                 .excludePathPatterns("/system/login", "/system/password/reset", "/system/password/reset/");

@@ -430,6 +430,9 @@ say '总预算及专家评审结果结构已核对；保留已有预算修改和
 "${MYSQL[@]}" < "$PACKAGE/sql/2026-11-01-review-rounds.sql" > "$BACKUP/review-rounds-migration.log"
 "${MYSQL[@]}" < "$PACKAGE/sql/2026-11-01-review-rounds-check.sql" > "$BACKUP/review-rounds-check.log"
 say '独立评审任务结构已核对；旧意见保留只读，不自动产生新轮次权限'
+"${MYSQL[@]}" < "$PACKAGE/sql/2026-11-02-task-transfer-request.sql" > "$BACKUP/task-transfer-request-migration.log"
+"${MYSQL[@]}" < "$PACKAGE/sql/2026-11-02-task-transfer-request-check.sql" > "$BACKUP/task-transfer-request-check.log"
+say '任务移交申请结构已核对，既有移交及通知记录保留'
 "${MYSQL[@]}" < "$PACKAGE/sql/2026-11-01-chen-self-review.sql" > "$BACKUP/chen-self-review-migration.log"
 "${MYSQL[@]}" < "$PACKAGE/sql/2026-11-01-chen-self-review-check.sql" > "$BACKUP/chen-self-review-check.log"
 say "陈奥林17项按本人填报、本人手动审核核对；活动审批及后续管理员调整保留。逐项结果：$BACKUP/chen-self-review-migration.log"

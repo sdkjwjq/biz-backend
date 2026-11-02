@@ -66,12 +66,15 @@ def main():
         subprocess.run([mysql, *connection, database], input=(root / "data/migrations/2026-10-28-transfer-reviewers.sql").read_bytes(), env=env, check=True)
         subprocess.run([mysql, *connection, database], input=(root / "data/migrations/2026-10-29-platform-notices.sql").read_bytes(), env=env, check=True)
         subprocess.run([mysql, *connection, database], input=(root / "data/migrations/2026-10-30-budget-and-review-result.sql").read_bytes(), env=env, check=True)
-        if method in ('reviewrounds','exports','dashboardaccess'):
+        if method in ('reviewrounds','exports','dashboardaccess','transferrequests'):
             subprocess.run([mysql, *connection, database], input=(root / "data/migrations/2026-11-01-review-rounds.sql").read_bytes(), env=env, check=True)
         env["SHUANGGAO_TEST_DB_USER"] = user
         env["SHUANGGAO_TEST_JDBC_URL"] = ("jdbc:mysql://127.0.0.1:3306/" + database
                                          + "?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai")
-        if method == "dashboardaccess":
+        subprocess.run([mysql,*connection,database],input=(root / "data/migrations/2026-11-02-task-transfer-request.sql").read_bytes(),env=env,check=True)
+        if method == "transferrequests":
+            selector = "TaskTransferRequestApiTest"
+        elif method == "dashboardaccess":
             selector = "DashboardAccessApiTest"
         elif method == "exports":
             selector = "DetailedExportApiTest,org.example.service.AnalysisWorkbookTest"
@@ -111,6 +114,8 @@ def main():
             selector = "ExpertReviewApiTest"
         elif method == "permissionsexpert":
             selector = "PermissionApiTest,ExpertReviewApiTest"
+        elif method == "transfercompat":
+            selector = "ReviewBatchRegressionApiTest#" + "+".join(["transferReviewerFieldsStayIndependentAndRouteNewTaskSubmissions","transferCanChangeOnlyReviewerAndRejectInactiveAssignmentsAtomically","transferMixedReviewersCanRemainDistinctForLegacyAndBatchRequests","transferRejectsStaleOwnershipPreviewWithoutOverwritingChanges","ownershipTransferValidatesInputAndRequiresAdmin","ownershipTransferBlocksActiveAuditsAndRecordsTheChange"])
         elif method == "permissions":
             selector = "PermissionApiTest"
         elif method == "permissionsintegration":

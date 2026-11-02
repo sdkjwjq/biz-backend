@@ -33,6 +33,7 @@ NEW_SOURCES = [
     'data/migrations/2026-10-29-platform-notices.sql',
     'data/migrations/2026-10-30-budget-and-review-result.sql',
     'data/migrations/2026-11-01-review-rounds.sql',
+    'data/migrations/2026-11-02-task-transfer-request.sql',
 ]
 ADDITIONS = {
     ('biz_budget_sheet','section'): "varchar(16) NOT NULL DEFAULT 'annual'",
@@ -80,6 +81,9 @@ def main():
     for name in ['update.sh','schema-check.sh','database-restore.sh','README.md']:
         text=(Path(__file__).parent/name).read_text(encoding='utf-8')
         (OUT/name).write_text(text,encoding='utf-8',newline='\n')
+    for suffix in ['', '-check', '-rollback']:
+        source=ROOT/('data/migrations/2026-11-02-task-transfer-request'+suffix+'.sql')
+        (OUT/'sql'/source.name).write_text(source.read_text(encoding='utf-8'),encoding='utf-8',newline='\n')
     for name in ['review-rounds', 'chen-self-review']:
         for suffix in ['', '-check', '-rollback']:
             source=ROOT/('data/migrations/2026-11-01-'+name+suffix+'.sql')
