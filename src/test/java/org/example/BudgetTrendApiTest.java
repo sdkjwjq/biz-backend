@@ -316,7 +316,7 @@ class BudgetTrendApiTest {
     }
 
     @Test void exportedExecutionReimportsActualAmountInsteadOfReadonlyBudgetAmount() throws Exception {
-        month(1,1);var execution=budgets.copySection(2026,1,"annual","execution",ADMIN);jdbc.update("UPDATE biz_budget_task_item SET amount=8 WHERE sheet_id=?",execution.getSheet().getSheetId());
+        month(1,1);jdbc.update("UPDATE biz_budget_source_item SET source_name='学校自筹资金' WHERE sheet_id=970001");var execution=budgets.copySection(2026,1,"annual","execution",ADMIN);jdbc.update("UPDATE biz_budget_task_item SET amount=8 WHERE sheet_id=?",execution.getSheet().getSheetId());
         var output=new org.springframework.mock.web.MockHttpServletResponse();budgets.exportBudget(2026,1,"execution",output);
         var file=new org.springframework.mock.web.MockMultipartFile("file","execution-roundtrip.xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",output.getContentAsByteArray());
         var imported=budgets.importBudget(2026,2,"execution",file,ADMIN);assertEquals(8,imported.getTasks().get(0).getAmount().intValue());assertEquals(1,imported.getTasks().get(0).getGoods().intValue());assertNull(imported.getTasks().get(0).getBudgetAmount());assertEquals(10,budgets.getBudget(2026,1).getTasks().get(0).getAmount().intValue());
