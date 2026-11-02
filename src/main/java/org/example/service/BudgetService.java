@@ -63,14 +63,16 @@ public class BudgetService {
     private final DataFormatter formatter = new DataFormatter(Locale.CHINA);
 
     @Transactional(readOnly = true)
-    public BudgetSheetVO getBudget(Integer year, Integer month) {
+    public BudgetSheetVO getBudget(Integer year, Integer month, String section) {
         validateYearMonth(year, month);
-        BizBudgetSheet sheet = budgetMapper.getSheet(year, month);
+        String part = normalizeSection(section);
+        BizBudgetSheet sheet = budgetMapper.getSheet(year, month, part);
         if (sheet == null) {
             BudgetSheetVO empty = new BudgetSheetVO();
             BizBudgetSheet emptySheet = new BizBudgetSheet();
             emptySheet.setYear(year);
             emptySheet.setMonth(month);
+            emptySheet.setSection(part);
             emptySheet.setLocked(0);
             emptySheet.setIsDelete(0);
             empty.setSheet(emptySheet);
@@ -80,7 +82,15 @@ public class BudgetService {
         return attachIndicators(current,year,month);
     }
 
+    /** 预算表分区：annual=年度预算，execution=年度预算执行。 */
+    private String normalizeSection(String section) {
+        if(section==null||section.isBlank())return "annual";
+        if(!java.util.Set.of("annual","execution").contains(section))throw new AdminManagementException(400,"预算分区必须为年度预算或年度预算执行");
+        return section;
+    }
+
     private BudgetSheetVO attachIndicators(BudgetSheetVO current,Integer year,Integer month) {
+        attachExecutionPlan(current);
         for (int index=1;index<=10;index++) {
             Map<String,Object> effective=coreIndicators.effective((long)index,year,month);
             if(effective!=null)current.getArchivedIndicators().put(index,effective);
@@ -88,21 +98,46 @@ public class BudgetService {
         return current;
     }
 
+    /** Current execution views derive plan rows from the same month's annual budget. */
+    private void attachExecutionPlan(BudgetSheetVO current){
+        if(current.getSheet()==null||!"execution".equals(current.getSheet().getSection()))return;
+        var annual=budgetMapper.getSheet(current.getSheet().getYear(),current.getSheet().getMonth(),"annual");
+        java.util.Map<Integer,BizBudgetTaskItem> plans=new java.util.HashMap<>();
+        if(annual!=null)for(var row:budgetMapper.getTasks(annual.getSheetId()))plans.put(row.getTaskIndex(),row);
+        for(var row:current.getTasks()){
+            var plan=plans.get(row.getTaskIndex());
+            row.setBudgetAmount(plan==null?null:plan.getAmount());row.setGoodsBudget(plan==null?null:plan.getGoods());
+            row.setCapitalBudget(plan==null?null:plan.getCapital());row.setOtherBudget(plan==null?null:plan.getOther());
+        }
+    }
+
+    // Compatibility for existing internal callers and regression fixtures.
+    @Transactional(readOnly=true)
+    public BudgetSheetVO getBudget(Integer year,Integer month){return getBudget(year,month,"annual");}
     @Transactional
-    public BudgetSheetVO importBudget(Integer year, Integer month, MultipartFile file, Long userId) {
+    public BudgetSheetVO importBudget(Integer year,Integer month,MultipartFile file,Long userId){return importBudget(year,month,"annual",file,userId);}
+    public List<BudgetVersionVO> getVersions(Integer year,Integer month,Long userId){return getVersions(year,month,"annual",userId);}
+    @Transactional
+    public BudgetSheetVO updateLock(Integer year,Integer month,Boolean locked,Long userId){return updateLock(year,month,"annual",locked,userId);}
+    public void exportBudget(Integer year,Integer month,HttpServletResponse response)throws IOException{exportBudget(year,month,"annual",response);}
+
+    @Transactional
+    public BudgetSheetVO importBudget(Integer year, Integer month, String section, MultipartFile file, Long userId) {
         validateEditor(userId);
         validateYearMonth(year, month);
         validateExcel(file);
+        String part = normalizeSection(section);
 
         ParsedBudget parsed = parse(file);
         Long fileId = saveFile(file, userId);
         Date now = new Date();
 
-        BizBudgetSheet sheet = budgetMapper.getSheetForUpdate(year, month);
+        BizBudgetSheet sheet = budgetMapper.getSheetForUpdate(year, month, part);
         if (sheet == null) {
             sheet = new BizBudgetSheet();
             sheet.setYear(year);
             sheet.setMonth(month);
+            sheet.setSection(part);
             sheet.setLocked(1);
             sheet.setFileId(fileId);
             sheet.setImportBy(userId);
@@ -139,10 +174,10 @@ public class BudgetService {
         return attachIndicators(current,year,month);
     }
 
-    public List<BudgetVersionVO> getVersions(Integer year, Integer month, Long userId) {
+    public List<BudgetVersionVO> getVersions(Integer year, Integer month, String section, Long userId) {
         if(permissions.enforced(userId))permissions.require(userId,"budget.versions");else validateEditor(userId);
         validateYearMonth(year, month);
-        List<BudgetVersionVO> versions = budgetMapper.getVersions(year, month);
+        List<BudgetVersionVO> versions = budgetMapper.getVersions(year, month, normalizeSection(section));
         for (int index = 0; index < versions.size(); index++) {
             versions.get(index).setCurrent(index == 0);
         }
@@ -162,7 +197,9 @@ public class BudgetService {
         if(permissions.enforced(userId))permissions.require(userId,"budget.restore");else validateAdmin(userId);
         String reason = normalizeRestoreRemark(remark);
         BizBudgetImportVersion source = requireVersion(versionId);
-        BizBudgetSheet sheet = budgetMapper.getSheetForUpdate(source.getYear(), source.getMonth());
+        BizBudgetSheet sourceSheet = budgetMapper.getSheetById(source.getSheetId());
+        String part = normalizeSection(sourceSheet == null ? null : sourceSheet.getSection());
+        BizBudgetSheet sheet = budgetMapper.getSheetForUpdate(source.getYear(), source.getMonth(), part);
         if (sheet == null || !Objects.equals(sheet.getSheetId(), source.getSheetId())) {
             throw new RuntimeException("当前预算表不存在，无法恢复历史版本");
         }
@@ -199,11 +236,47 @@ public class BudgetService {
         return attachIndicators(current,sheet.getYear(),sheet.getMonth());
     }
 
+    /** 把某个分区的预算复制成另一个分区（例如年度预算 → 年度预算执行），两者之后各自独立。 */
     @Transactional
-    public BudgetSheetVO updateLock(Integer year, Integer month, Boolean locked, Long userId) {
+    public BudgetSheetVO copySection(Integer year, Integer month, String from, String to, Long userId) {
+        validateEditor(userId);
+        validateYearMonth(year, month);
+        String source = normalizeSection(from), target = normalizeSection(to);
+        if (source.equals(target)) throw new AdminManagementException(400, "源与目标分区不能相同");
+        BizBudgetSheet sourceSheet = budgetMapper.getSheetForUpdate(year, month, source);
+        if (sourceSheet == null) throw new AdminManagementException(409, "源预算表尚未导入，无法复制");
+        BudgetSheetVO sourceVO = toVO(sourceSheet);
+        BizBudgetSheet targetSheet = budgetMapper.getSheetForUpdate(year, month, target);
+        Date now = new Date();
+        if (targetSheet == null) {
+            targetSheet = new BizBudgetSheet();
+            targetSheet.setYear(year);
+            targetSheet.setMonth(month);
+            targetSheet.setSection(target);
+            targetSheet.setLocked(1);
+            targetSheet.setImportBy(userId);
+            targetSheet.setImportTime(now);
+            targetSheet.setUpdateTime(now);
+            targetSheet.setIsDelete(0);
+            budgetMapper.insertSheet(targetSheet);
+        } else if (Integer.valueOf(1).equals(targetSheet.getLocked())) {
+            throw new AdminManagementException(409, "目标预算表已锁定，请先解锁");
+        } else {
+            targetSheet.setUpdateTime(now);
+            budgetMapper.updateSheet(targetSheet);
+        }
+        replaceItems(targetSheet.getSheetId(), sourceVO.getSources(), sourceVO.getTasks());
+        BudgetSheetVO current = toVO(targetSheet);
+        saveVersion(targetSheet, current, "IMPORT", null, null, null, userId, now, "从" + ("annual".equals(source) ? "年度预算" : "年度预算执行") + "复制");
+        return attachIndicators(current, year, month);
+    }
+
+    @Transactional
+    public BudgetSheetVO updateLock(Integer year, Integer month, String section, Boolean locked, Long userId) {
         if(permissions.enforced(userId))permissions.require(userId,"budget.lock");else validateAdmin(userId);
         validateYearMonth(year, month);
-        BizBudgetSheet sheet = budgetMapper.getSheetForUpdate(year, month);
+        String part = normalizeSection(section);
+        BizBudgetSheet sheet = budgetMapper.getSheetForUpdate(year, month, part);
         if (sheet == null) {
             throw new RuntimeException("没有找到该预算表");
         }
@@ -214,20 +287,21 @@ public class BudgetService {
                 "year", year,
                 "month", month,
                 "sheetId", sheet.getSheetId());
-        return getBudget(year, month);
+        return getBudget(year, month, part);
     }
 
     /** Only editable cells are patched; imported precision and all other columns remain intact. */
     @Transactional
     public BudgetSheetVO saveBudget(com.fasterxml.jackson.databind.JsonNode input, Long actor) {
         validateEditor(actor);
-        allowedKeys(input,java.util.Set.of("year","month","baseVersionNo","sources","tasks","lockAfterSave"));
+        allowedKeys(input,java.util.Set.of("year","month","section","baseVersionNo","sources","tasks","lockAfterSave"));
         int year=requiredInt(input,"year"),month=requiredInt(input,"month"),base=requiredInt(input,"baseVersionNo");
+        String part=normalizeSection(input.has("section")?input.get("section").asText():null);
         if(year<2025||year>2029||month<1||month>12||base<0)throw new AdminManagementException(400,"预算年月或版本不正确");
         if(input.has("lockAfterSave")&&!input.get("lockAfterSave").isBoolean())throw new AdminManagementException(400,"锁定选项不正确");
         boolean lock=input.path("lockAfterSave").asBoolean(false);
         if(lock){if(permissions.enforced(actor))permissions.require(actor,"budget.lock");else validateAdmin(actor);}
-        var sheet=budgetMapper.getSheetForUpdate(year,month);
+        var sheet=budgetMapper.getSheetForUpdate(year,month,part);
         if(sheet==null)throw new AdminManagementException(409,"请先导入该月预算");
         if(Integer.valueOf(1).equals(sheet.getLocked()))throw new AdminManagementException(409,"预算已锁定，请重新加载后再编辑");
         if(budgetMapper.nextVersionNo(sheet.getSheetId())-1!=base)throw new AdminManagementException(409,"预算版本已变化，请保留草稿并重新加载核对");
@@ -254,7 +328,7 @@ public class BudgetService {
         if(changed){
             sheet.setUpdateTime(new Date());
             budgetMapper.updateEditTime(sheet.getSheetId(),sheet.getUpdateTime());
-            String name=sheet.getFileId()==null?null:budgetMapper.getVersions(year,month).stream().map(BudgetVersionVO::getFileName).filter(Objects::nonNull).findFirst().orElse(null);
+            String name=sheet.getFileId()==null?null:budgetMapper.getVersions(year,month,part).stream().map(BudgetVersionVO::getFileName).filter(Objects::nonNull).findFirst().orElse(null);
             saveVersion(sheet,current,"EDIT",null,sheet.getFileId(),name,actor,new Date(),"在线编辑预算；原文件为导入来源附件");
             BusinessLogUtil.info("预算在线保存","userId",actor,"year",year,"month",month,"result","成功");
         }
@@ -277,8 +351,8 @@ public class BudgetService {
     }
     private static boolean sameAmount(BigDecimal first,BigDecimal second){return first!=null&&first.compareTo(second)==0;}
 
-    public void exportBudget(Integer year, Integer month, HttpServletResponse response) throws IOException {
-        BudgetSheetVO vo = getBudget(year, month);
+    public void exportBudget(Integer year, Integer month, String section, HttpServletResponse response) throws IOException {
+        BudgetSheetVO vo = getBudget(year, month, section);
         try (Workbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet("预算表");
             writeRow(sheet, 0, "", "资金来源", "", "合计数");
@@ -306,13 +380,18 @@ public class BudgetService {
             for (int i = 0; i < tasks.size(); i++) {
                 sheet.getRow(base).createCell(4 + i).setCellValue(tasks.get(i).getTaskIndex() + " " + tasks.get(i).getTaskName());
             }
-            writeTaskRow(sheet, base + 1, "", "金额（万元）", tasks, "amount");
-            writeTaskRow(sheet, base + 2, "支出经济分类", "其中：商品和服务支出", tasks, "goods");
-            writeTaskRow(sheet, base + 3, "", "资本性支出", tasks, "capital");
-            writeTaskRow(sheet, base + 4, "", "其他支出", tasks, "other");
-            writeTaskTextRow(sheet, base + 5, "资金使用有效性", "指标名称", tasks, "coreOutput");
-            writeTaskTextRow(sheet, base + 6, "", "项目期满的目标值", tasks, "targetValue");
-            writeTaskTextRow(sheet, base + 7, "", "截至" + year + "年" + month + "月最近归档累计实现情况", tasks, "achieved");
+            boolean execution="execution".equals(vo.getSheet().getSection());int row=base+1;
+            if(execution)writeTaskRow(sheet,row++,"","预算金额（万元）",tasks,"budgetAmount");
+            writeTaskRow(sheet,row++,"","金额（万元）",tasks,"amount");
+            if(execution)writeTaskRow(sheet,row++,"支出经济分类","商品和服务预算",tasks,"goodsBudget");
+            writeTaskRow(sheet,row++,execution?"":"支出经济分类","其中：商品和服务支出",tasks,"goods");
+            if(execution)writeTaskRow(sheet,row++,"","资本性预算",tasks,"capitalBudget");
+            writeTaskRow(sheet,row++,"","资本性支出",tasks,"capital");
+            if(execution)writeTaskRow(sheet,row++,"","其他预算",tasks,"otherBudget");
+            writeTaskRow(sheet,row++,"","其他支出",tasks,"other");
+            writeTaskTextRow(sheet,row++,"资金使用有效性","指标名称",tasks,"coreOutput");
+            writeTaskTextRow(sheet,row++,"","项目期满的目标值",tasks,"targetValue");
+            writeTaskTextRow(sheet,row,"","截至"+year+"年"+month+"月最近归档累计实现情况",tasks,"achieved");
 
             String filename = "预算数据-" + year + "年" + month + "月.xlsx";
             response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
@@ -348,6 +427,7 @@ public class BudgetService {
     private BizBudgetImportVersion saveVersion(BizBudgetSheet sheet, BudgetSheetVO budget, String operationType,
                                                 Long sourceVersionId, Long fileId, String fileName, Long userId,
                                                 Date createTime, String remark) {
+        attachExecutionPlan(budget); // Freeze plan rows only in the newly created snapshot.
         BizBudgetImportVersion version = new BizBudgetImportVersion();
         version.setSheetId(sheet.getSheetId());
         version.setYear(sheet.getYear());
@@ -406,7 +486,8 @@ public class BudgetService {
     }
 
     private boolean isLatest(BizBudgetImportVersion version) {
-        List<BudgetVersionVO> versions = budgetMapper.getVersions(version.getYear(), version.getMonth());
+        BizBudgetSheet sourceSheet = budgetMapper.getSheetById(version.getSheetId());
+        List<BudgetVersionVO> versions = budgetMapper.getVersions(version.getYear(), version.getMonth(), normalizeSection(sourceSheet == null ? null : sourceSheet.getSection()));
         return !versions.isEmpty() && Objects.equals(versions.get(0).getVersionId(), version.getVersionId());
     }
 
@@ -531,13 +612,23 @@ public class BudgetService {
         int taskHeaderRow = findRowContains(sheet, evaluator, "改革任务");
         int totalCol = findCellContains(sheet.getRow(taskHeaderRow), evaluator, "合计数");
         Map<Integer, String> taskCols = taskColumns(sheet.getRow(taskHeaderRow), evaluator, totalCol + 1);
-        int amountRow = findRowContains(sheet, evaluator, "金额");
+        int amountRow = -1;
+        for(int row=taskHeaderRow+1;row<=sheet.getLastRowNum()&&amountRow<0;row++){
+            Row candidate=sheet.getRow(row);if(candidate==null)continue;
+            for(Cell cell:candidate){String label=normalize(text(cell,evaluator));if(label.contains("金额")&&!label.contains("预算金额")){amountRow=row;break;}}
+        }
+        if(amountRow<0)throw new RuntimeException("未找到预算表标题：金额");
         int goodsRow = findRowContains(sheet, evaluator, "商品和服务支出");
         int capitalRow = findRowContains(sheet, evaluator, "资本性支出");
         int otherRow = findRowContains(sheet, evaluator, "其他支出");
         int outputRow = findRowContains(sheet, evaluator, "指标名称");
         int targetRow = findRowContains(sheet, evaluator, "项目期满的目标值");
-        int achievedRow = findRowContains(sheet, evaluator, "目标累计实现情况");
+        int achievedRow = -1;
+        for(int row=taskHeaderRow+1;row<=sheet.getLastRowNum()&&achievedRow<0;row++){
+            Row candidate=sheet.getRow(row);if(candidate==null)continue;
+            for(Cell cell:candidate){String label=normalize(text(cell,evaluator));if(label.contains("目标累计实现情况")||label.contains("最近归档累计实现情况")){achievedRow=row;break;}}
+        }
+        if(achievedRow<0)throw new RuntimeException("未找到预算表标题：目标累计实现情况");
         List<BizBudgetTaskItem> result = new ArrayList<>();
         for (Map.Entry<Integer, String> entry : taskCols.entrySet()) {
             int col = entry.getKey();
@@ -702,10 +793,12 @@ public class BudgetService {
         Row row = sheet.createRow(rowIndex);
         row.createCell(0).setCellValue(left);
         row.createCell(1).setCellValue(label);
-        row.createCell(3).setCellValue(tasks.stream().map(taskValueGetter(field)).filter(Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add).doubleValue());
+        boolean plan=java.util.Set.of("budgetAmount","goodsBudget","capitalBudget","otherBudget").contains(field);
+        var total=row.createCell(3);
+        if(!plan||tasks.stream().allMatch(t->taskValueGetter(field).apply(t)!=null))total.setCellValue(tasks.stream().map(taskValueGetter(field)).filter(Objects::nonNull).reduce(BigDecimal.ZERO,BigDecimal::add).doubleValue());
         for (int i = 0; i < tasks.size(); i++) {
             BigDecimal value = taskValueGetter(field).apply(tasks.get(i));
-            row.createCell(4 + i).setCellValue(value == null ? 0 : value.doubleValue());
+            var cell=row.createCell(4+i);if(!plan||value!=null)cell.setCellValue(value==null?0:value.doubleValue());
         }
     }
 
@@ -713,6 +806,10 @@ public class BudgetService {
         return switch (field) {
             case "amount" -> BizBudgetTaskItem::getAmount;
             case "goods" -> BizBudgetTaskItem::getGoods;
+            case "goodsBudget" -> BizBudgetTaskItem::getGoodsBudget;
+            case "budgetAmount" -> BizBudgetTaskItem::getBudgetAmount;
+            case "capitalBudget" -> BizBudgetTaskItem::getCapitalBudget;
+            case "otherBudget" -> BizBudgetTaskItem::getOtherBudget;
             case "capital" -> BizBudgetTaskItem::getCapital;
             case "other" -> BizBudgetTaskItem::getOther;
             default -> item -> BigDecimal.ZERO;

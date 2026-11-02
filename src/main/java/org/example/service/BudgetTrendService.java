@@ -40,7 +40,9 @@ public class BudgetTrendService {
         var sheets=budgets.trendSheets(year);Map<Integer,BizBudgetSheet> byMonth=new HashMap<>();
         for(var sheet:sheets)if(byMonth.put(sheet.getMonth(),sheet)!=null)return legacyYearValues(year,taskIndex);
         if(sheets.isEmpty())return Map.of();
-        var ids=sheets.stream().map(BizBudgetSheet::getSheetId).toList();
+        Map<Integer,BizBudgetSheet> plans=new HashMap<>();
+        if(sheets.stream().anyMatch(s->"execution".equals(s.getSection())))for(var sheet:budgets.annualTrendSheets(year))plans.putIfAbsent(sheet.getMonth(),sheet);
+        var ids=java.util.stream.Stream.concat(sheets.stream(),plans.values().stream()).map(BizBudgetSheet::getSheetId).distinct().toList();
         Map<Long,List<BizBudgetTaskItem>> tasks=new HashMap<>();
         for(var item:budgets.trendTasks(ids))tasks.computeIfAbsent(item.getSheetId(),id->new ArrayList<>()).add(item);
         Map<Long,List<BizBudgetSourceItem>> sources=new HashMap<>();
@@ -51,7 +53,13 @@ public class BudgetTrendService {
             for(var item:items)if(item.getTaskIndex()!=null&&item.getTaskIndex()>=1&&item.getTaskIndex()<=10&&!seen.add(item.getTaskIndex())){duplicate=true;break;}
             // The original ORDER BY leaves ties unspecified. Preserve its exact encounter order when it matters.
             if(duplicate)items=budgets.getTasks(sheet.getSheetId());
-            result.put(sheet.getMonth(),monthValues(items,sources.getOrDefault(sheet.getSheetId(),List.of()),taskIndex));
+            var values=monthValues(items,sources.getOrDefault(sheet.getSheetId(),List.of()),taskIndex);
+            if("execution".equals(sheet.getSection())){
+                var plan=plans.get(sheet.getMonth());
+                var denominator=plan==null?null:monthValues(tasks.getOrDefault(plan.getSheetId(),List.of()),sources.getOrDefault(plan.getSheetId(),List.of()),taskIndex).denominator();
+                values=new MonthValues(values.cumulative(),denominator);
+            }
+            result.put(sheet.getMonth(),values);
         }
         return result;
     }
@@ -59,7 +67,15 @@ public class BudgetTrendService {
         Map<Integer,MonthValues> result=new HashMap<>();
         for(int month=1;month<=12;month++){
             var sheet=budgets.getSheet(year,month);
-            if(sheet!=null)result.put(month,monthValues(budgets.getTasks(sheet.getSheetId()),taskIndex==0?budgets.getSources(sheet.getSheetId()):List.of(),taskIndex));
+            if(sheet!=null){
+                var values=monthValues(budgets.getTasks(sheet.getSheetId()),taskIndex==0?budgets.getSources(sheet.getSheetId()):List.of(),taskIndex);
+                if("execution".equals(sheet.getSection())){
+                    var plan=budgets.getSheet(year,month,"annual");
+                    var denominator=plan==null?null:monthValues(budgets.getTasks(plan.getSheetId()),taskIndex==0?budgets.getSources(plan.getSheetId()):List.of(),taskIndex).denominator();
+                    values=new MonthValues(values.cumulative(),denominator);
+                }
+                result.put(month,values);
+            }
         }
         return result;
     }

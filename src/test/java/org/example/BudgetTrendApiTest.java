@@ -288,4 +288,38 @@ class BudgetTrendApiTest {
         assertFalse(jdbc.queryForObject("SELECT snapshot_json FROM biz_budget_import_version ORDER BY version_no DESC LIMIT 1",String.class).contains("archivedIndicators"),"Raw versions must remain readable by the previous application");
         assertEquals(2,jdbc.queryForObject("SELECT COUNT(*) FROM biz_budget_sheet",Integer.class));
     }
+    @Test void splitBudgetSectionsKeepValuesVersionsAndRestorationIndependent() throws Exception {
+        month(2,2);long annualId=970002;
+        var copied=budgets.copySection(2026,2,"annual","execution",ADMIN);long executionId=copied.getSheet().getSheetId();assertNotEquals(annualId,executionId);assertEquals(10,copied.getTasks().get(0).getBudgetAmount().intValue());assertEquals(2,copied.getTasks().get(0).getGoodsBudget().intValue());
+        long first=jdbc.queryForObject("SELECT version_id FROM biz_budget_import_version WHERE sheet_id=? AND version_no=1",Long.class,executionId);
+        String snapshot=jdbc.queryForObject("SELECT snapshot_json FROM biz_budget_import_version WHERE version_id=?",String.class,first);
+        budgets.updateLock(2026,2,"execution",false,ADMIN);
+        budgets.saveBudget(json.valueToTree(Map.of("year",2026,"month",2,"section","execution","baseVersionNo",1,"tasks",List.of(Map.of("taskIndex",1,"goods",3)))),ADMIN);
+        assertEquals(2,budgets.getBudget(2026,2).getTasks().get(0).getGoods().intValue());assertEquals(3,budgets.getBudget(2026,2,"execution").getTasks().get(0).getGoods().intValue());
+        budgets.updateLock(2026,2,"annual",false,ADMIN);budgets.saveBudget(json.valueToTree(Map.of("year",2026,"month",2,"baseVersionNo",0,"tasks",List.of(Map.of("taskIndex",1,"goods",4)))),ADMIN);
+        assertEquals(4,budgets.getBudget(2026,2,"execution").getTasks().get(0).getGoodsBudget().intValue());assertEquals(2,budgets.getVersion(first,ADMIN).getBudget().getTasks().get(0).getGoodsBudget().intValue());
+        budgets.restoreVersion(first,"Restore execution only",ADMIN);assertEquals(2,budgets.getBudget(2026,2,"execution").getTasks().get(0).getGoods().intValue());assertEquals(4,budgets.getBudget(2026,2).getTasks().get(0).getGoods().intValue());
+        assertEquals(snapshot,jdbc.queryForObject("SELECT snapshot_json FROM biz_budget_import_version WHERE version_id=?",String.class,first));assertEquals(3,budgets.getVersions(2026,2,"execution",ADMIN).size());assertEquals(1,budgets.getVersions(2026,2,ADMIN).size());
+        String token=login(ADMIN);var page=ok(request(HttpMethod.GET,"/list-filters/budget-versions?responseMode=page&separateOptions=true&section=execution&f.year=2026&f.month=2&f.effective=yes",token,null));assertEquals(1,page.path("total").asInt());assertEquals(executionId,page.path("items").get(0).path("sheetId").asLong());assertEquals("execution",page.path("items").get(0).path("section").asText());
+        var annual=ok(request(HttpMethod.GET,"/list-filters/budget?f.year=2026&f.month=2&section=annual",token,null));var execution=ok(request(HttpMethod.GET,"/list-filters/budget?f.year=2026&f.month=2&section=execution",token,null));assertEquals(annualId,annual.path("budget").path("sheet").path("sheetId").asLong());assertEquals(executionId,execution.path("budget").path("sheet").path("sheetId").asLong());
+        assertEquals(20,trend(0).get(1).path("cumulative").asInt());assertEquals(16.6667,trend(0).get(1).path("executionRate").asDouble(),0.00001);
+        var output=new org.springframework.mock.web.MockHttpServletResponse();budgets.exportBudget(2026,2,"execution",output);
+        try(var workbook=new org.apache.poi.xssf.usermodel.XSSFWorkbook(new java.io.ByteArrayInputStream(output.getContentAsByteArray()))){var sheet=workbook.getSheetAt(0);assertEquals("预算金额（万元）",sheet.getRow(8).getCell(1).getStringCellValue());assertEquals("商品和服务预算",sheet.getRow(10).getCell(1).getStringCellValue());assertEquals(4d,sheet.getRow(10).getCell(4).getNumericCellValue());assertEquals(2d,sheet.getRow(11).getCell(4).getNumericCellValue());}
+    }
+    @Test void sectionValidationAndReadonlyPlanRowsCannotChangeAnnualOrHistory() throws Exception {
+        month(3,1);var copied=budgets.copySection(2026,3,"annual","execution",ADMIN);long sheet=copied.getSheet().getSheetId();budgets.updateLock(2026,3,"execution",false,ADMIN);
+        assertThrows(org.example.service.AdminManagementException.class,()->budgets.getBudget(2026,3,"bogus"));
+        var invalid=json.valueToTree(Map.of("year",2026,"month",3,"section","execution","baseVersionNo",1,"tasks",List.of(Map.of("taskIndex",1,"goodsBudget",999))));assertThrows(org.example.service.AdminManagementException.class,()->budgets.saveBudget(invalid,ADMIN));
+        assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM biz_budget_import_version WHERE sheet_id=?",Integer.class,sheet));assertEquals(1,budgets.getBudget(2026,3).getTasks().get(0).getGoods().intValue());
+        jdbc.update("UPDATE biz_budget_sheet SET is_delete=1 WHERE sheet_id=970003");var withoutPlan=budgets.getBudget(2026,3,"execution");assertNull(withoutPlan.getTasks().get(0).getBudgetAmount());assertNull(withoutPlan.getTasks().get(0).getGoodsBudget());assertTrue(trend(0).get(2).path("executionRate").isNull());
+        assertEquals(403,request(HttpMethod.POST,"/budget/copy-section?year=2026&month=3&from=annual&to=execution",login(OWNER),null).getStatusCode().value());
+    }
+
+    @Test void exportedExecutionReimportsActualAmountInsteadOfReadonlyBudgetAmount() throws Exception {
+        month(1,1);var execution=budgets.copySection(2026,1,"annual","execution",ADMIN);jdbc.update("UPDATE biz_budget_task_item SET amount=8 WHERE sheet_id=?",execution.getSheet().getSheetId());
+        var output=new org.springframework.mock.web.MockHttpServletResponse();budgets.exportBudget(2026,1,"execution",output);
+        var file=new org.springframework.mock.web.MockMultipartFile("file","execution-roundtrip.xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",output.getContentAsByteArray());
+        var imported=budgets.importBudget(2026,2,"execution",file,ADMIN);assertEquals(8,imported.getTasks().get(0).getAmount().intValue());assertEquals(1,imported.getTasks().get(0).getGoods().intValue());assertNull(imported.getTasks().get(0).getBudgetAmount());assertEquals(10,budgets.getBudget(2026,1).getTasks().get(0).getAmount().intValue());
+    }
+
 }

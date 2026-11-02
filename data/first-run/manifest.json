@@ -24,6 +24,9 @@
     "data/migrations/2026-10-28-transfer-reviewers.sql",
     "data/migrations/2026-10-29-platform-notices.sql",
     "data/migrations/2026-10-30-budget-and-review-result.sql",
+    "data/migrations/2026-11-02-budget-section.sql",
+    "data/migrations/2026-11-02-budget-goods-budget.sql",
+    "data/migrations/2026-11-02-budget-execution-budget-rows.sql",
     "data/migrations/2026-11-01-review-rounds.sql",
     "data/first-run/restore-task-times.sql"
   ],

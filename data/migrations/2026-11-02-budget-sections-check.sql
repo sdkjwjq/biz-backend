@@ -1,0 +1,3 @@
+SELECT 'missing_budget_section_columns',5-COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND ((TABLE_NAME='biz_budget_sheet' AND COLUMN_NAME='section') OR (TABLE_NAME='biz_budget_task_item' AND COLUMN_NAME IN('budget_amount','goods_budget','capital_budget','other_budget')));
+SELECT 'budget_section_unique_invalid',IF(COUNT(*)=1,0,1) FROM (SELECT INDEX_NAME FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='biz_budget_sheet' AND NON_UNIQUE=0 GROUP BY INDEX_NAME HAVING GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX)='year,month,section,is_delete') k;
+SELECT 'invalid_budget_section',COUNT(*) FROM biz_budget_sheet WHERE section NOT IN('annual','execution') OR section IS NULL;

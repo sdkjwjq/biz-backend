@@ -329,11 +329,17 @@ public class AdminOverviewService {
         BigDecimal annual=null;
         if(sheet!=null) {
             var sources=budgets.getSources(sheet.getSheetId());
+            Map<Integer,BigDecimal> targets=new HashMap<>();
+            if("execution".equals(sheet.getSection())){
+                var plan=budgets.getSheet(year,month,"annual");sources=plan==null?List.of():budgets.getSources(plan.getSheetId());
+                if(plan!=null)for(var item:budgets.getTasks(plan.getSheetId()))targets.put(item.getTaskIndex(),item.getAmount());
+            }
             if(!sources.isEmpty()&&sources.stream().allMatch(s->s.getAnnualPlan()!=null))annual=sources.stream().map(BizBudgetSourceItem::getAnnualPlan).reduce(BigDecimal.ZERO,BigDecimal::add);
             var tasks=budgets.getTasks(sheet.getSheetId());values=trends.monthValues(tasks,sources,0);
             for(var t:tasks) if(t.getTaskIndex()!=null&&t.getTaskIndex()>=1&&t.getTaskIndex()<=10) {
                 BigDecimal expense=t.getGoods()==null||t.getCapital()==null||t.getOther()==null?null:t.getGoods().add(t.getCapital()).add(t.getOther());
-                rows.add(map("id",t.getTaskIndex(),"name",t.getTaskName(),"reformKey",str(t.getTaskIndex()),"reform",t.getTaskName(),"kind","budget","target",t.getAmount(),"value",expense,"ratio",ratio(expense,t.getAmount()),"goods",t.getGoods(),"capital",t.getCapital(),"other",t.getOther()));
+                BigDecimal target="execution".equals(sheet.getSection())?targets.get(t.getTaskIndex()):t.getAmount();
+                rows.add(map("id",t.getTaskIndex(),"name",t.getTaskName(),"reformKey",str(t.getTaskIndex()),"reform",t.getTaskName(),"kind","budget","target",target,"value",expense,"ratio",ratio(expense,target),"goods",t.getGoods(),"capital",t.getCapital(),"other",t.getOther()));
             }
         }
         return new Data("预算执行","所选月份","金额单位：万元。只读所选年月当前有效版本；年度预算安排按资金来源汇总，改革任务对比使用各任务分项预算。累计支出为商品和服务、资本性及其他支出之和。缺月留空、不跨月相减，负增长可能为财务调账。",List.of(

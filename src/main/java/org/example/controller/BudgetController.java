@@ -42,9 +42,10 @@ public class BudgetController {
 
     @GetMapping
     public Object getBudget(@RequestParam("year") Integer year,
-                            @RequestParam("month") Integer month) {
+                            @RequestParam("month") Integer month,
+                            @RequestParam(value="section", defaultValue="annual") String section) {
         try {
-            return budgetService.getBudget(year, month);
+            return budgetService.getBudget(year, month, section);
         } catch (Exception e) {
             var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
@@ -54,10 +55,25 @@ public class BudgetController {
     @PostMapping("/import")
     public Object importBudget(@RequestParam("year") Integer year,
                                @RequestParam("month") Integer month,
+                               @RequestParam(value="section", defaultValue="annual") String section,
                                @RequestParam("file") MultipartFile file,
                                HttpServletRequest request) {
         try {
-            return budgetService.importBudget(year, month, file, currentUserId(request));
+            return budgetService.importBudget(year, month, section, file, currentUserId(request));
+        } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
+
+    @PostMapping("/copy-section")
+    public Object copySection(@RequestParam("year") Integer year,
+                              @RequestParam("month") Integer month,
+                              @RequestParam(value="from", defaultValue="annual") String from,
+                              @RequestParam(value="to", defaultValue="execution") String to,
+                              HttpServletRequest request) {
+        try {
+            return budgetService.copySection(year, month, from, to, currentUserId(request));
         } catch (Exception e) {
             var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
@@ -67,10 +83,11 @@ public class BudgetController {
     @PostMapping("/lock")
     public Object updateLock(@RequestParam("year") Integer year,
                              @RequestParam("month") Integer month,
+                             @RequestParam(value="section", defaultValue="annual") String section,
                              @RequestParam("locked") Boolean locked,
                              HttpServletRequest request) {
         try {
-            return budgetService.updateLock(year, month, locked, currentUserId(request));
+            return budgetService.updateLock(year, month, section, locked, currentUserId(request));
         } catch (Exception e) {
             var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);
@@ -89,9 +106,10 @@ public class BudgetController {
     @GetMapping("/export")
     public Object exportBudget(@RequestParam("year") Integer year,
                                @RequestParam("month") Integer month,
+                               @RequestParam(value="section", defaultValue="annual") String section,
                                HttpServletResponse response) {
         try {
-            budgetService.exportBudget(year, month, response);
+            budgetService.exportBudget(year, month, section, response);
             return null;
         } catch (Exception e) {
             var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
@@ -102,9 +120,10 @@ public class BudgetController {
     @GetMapping("/versions")
     public Object versions(@RequestParam("year") Integer year,
                            @RequestParam("month") Integer month,
+                           @RequestParam(value="section", defaultValue="annual") String section,
                            HttpServletRequest request) {
         try {
-            return budgetService.getVersions(year, month, currentUserId(request));
+            return budgetService.getVersions(year, month, section, currentUserId(request));
         } catch (Exception e) {
             var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
             return new ErrorVO(e.getMessage(), 500);

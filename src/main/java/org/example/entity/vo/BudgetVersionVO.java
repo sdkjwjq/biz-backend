@@ -14,6 +14,7 @@ public class BudgetVersionVO {
     private Long sheetId;
     private Integer year;
     private Integer month;
+    private String section;
     private Integer versionNo;
     private String operationType;
     private Long sourceVersionId;

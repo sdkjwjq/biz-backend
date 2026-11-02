@@ -261,13 +261,15 @@ public class BusinessListFilterService {
         if(year<2025||year>2029||month>12)throw new AdminManagementException(400,"请选择有效的建设年度和月份");
         if(!access.budgetScope(actor,year))throw new AdminManagementException(403,"无权查看该年度预算");
         if(params.getOrDefault("f.expense",List.of()).stream().anyMatch(v->!Set.of("goods","capital","other").contains(v)))throw new AdminManagementException(400,"支出类别不正确");
-        var sheet=budget.getBudget(year,month);var rows=new ArrayList<Map<String,Object>>();Map<String,String> tasks=new LinkedHashMap<>(),sources=new LinkedHashMap<>();
+        String section=params.getFirst("section");if(section==null)section="annual";
+        var sheet=budget.getBudget(year,month,section);var rows=new ArrayList<Map<String,Object>>();Map<String,String> tasks=new LinkedHashMap<>(),sources=new LinkedHashMap<>();
         for(var source:sheet.getSources())sources.put(source.getSourceKey(),source.getSourceName());
         for(var task:sheet.getTasks()){
             Map<String,Object> r=new LinkedHashMap<>();r.put("task",task.getTaskIndex());r.put("year",year);r.put("month",month);tasks.put(str(task.getTaskIndex()),task.getTaskName());
             BigDecimal sum=task.getGoods()==null||task.getCapital()==null||task.getOther()==null?null:task.getGoods().add(task.getCapital()).add(task.getOther());
             r.put("hasExpense",sum==null?"unknown":sum.signum()==0?"no":"yes");
-            r.put("ratio",sum==null||task.getAmount()==null||task.getAmount().signum()<=0?null:sum.multiply(BigDecimal.valueOf(100)).divide(task.getAmount(),8,RoundingMode.HALF_UP));rows.add(r);
+            BigDecimal denominator="execution".equals(section)?task.getBudgetAmount():task.getAmount();
+            r.put("ratio",sum==null||denominator==null||denominator.signum()<=0?null:sum.multiply(BigDecimal.valueOf(100)).divide(denominator,8,RoundingMode.HALF_UP));rows.add(r);
         }
         List<Field> f=new ArrayList<>();years(f,false);months(f);multi(f,"task","改革任务",true,rows,tasks);
         f.add(new Field("source","资金来源","multi",true,"基础",sources.entrySet().stream().map(e->Map.<String,Object>of("value",e.getKey(),"label",e.getValue())).toList()));

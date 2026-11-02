@@ -56,6 +56,8 @@ def main():
                        input=(root / 'data/migrations/2026-09-27-admin-management.sql').read_bytes(),
                        env=env, check=True)
         env["SHUANGGAO_REVIEW_TEST"] = "true"
+        for module in ("section","goods-budget","execution-budget-rows"):
+            subprocess.run([mysql,*connection,database],input=(root/("data/migrations/2026-11-02-budget-"+module+".sql")).read_bytes(),env=env,check=True)
         subprocess.run([mysql, *connection, database], input=(root / 'data/migrations/2026-10-12-leadership-access.sql').read_bytes(), env=env, check=True)
         subprocess.run([mysql, *connection, database], input=(root / 'data/migrations/2026-10-12-task-attributes.sql').read_bytes(), env=env, check=True)
         subprocess.run([mysql, *connection, database], input=(root / 'data/migrations/2026-10-12-core-indicators.sql').read_bytes(), env=env, check=True)
@@ -112,7 +114,7 @@ def main():
         elif method == "overview":
             selector = "AdminOverviewApiTest"
         elif method == "budgettrends":
-            selector = "BudgetTrendApiTest,ReviewBatchRegressionApiTest#budgetImportsCreateVersionsAndRestoreWithoutOverwritingHistory"
+            selector = "BudgetTrendApiTest,BudgetTrendBatchTest,BudgetVersionListTest,AdminOverviewQueryTest,ReviewBatchRegressionApiTest#budgetImportsCreateVersionsAndRestoreWithoutOverwritingHistory"
         elif method == "core":
             selector = "CoreIndicatorApiTest"
         elif method == "leadership":

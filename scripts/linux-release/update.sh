@@ -251,20 +251,26 @@ if [[ $RESTORE_BACKUP == 1 ]]; then
 else
   say '备份完成，补充缺失结构并执行尚未完成的一次性数据迁移'
 fi
-"${MYSQL[@]}" < "$PACKAGE/sql/additive.sql" > "$BACKUP/migration.log"
-bash "$PACKAGE/schema-check.sh" after
-if [[ -f "$PACKAGE/sql/2026-10-29-platform-notices-check.sql" ]]; then
-  "${MYSQL[@]}" < "$PACKAGE/sql/2026-10-29-platform-notices-check.sql" > "$BACKUP/platform-notices-check.log"
-  notice_tables=$(awk -F'\t' '$1=="platform_notice_tables"{print $2}' "$BACKUP/platform-notices-check.log")
-  [[ "$notice_tables" == 4 ]] || die '平台通知结构不完整，请查看 platform-notices-check.log'
-fi
-
 # From this point forward the update writes migration history or derived business values.
 # A failed update must therefore restore the complete database backup before restarting the old JAR.
 if [[ $DB_REPLACED == 0 ]]; then
   DB_REPLACED=1
   printf 'ordinary-data-migration\n' > "$BACKUP/database-replaced"
 fi
+
+"${MYSQL[@]}" < "$PACKAGE/sql/additive.sql" > "$BACKUP/migration.log"
+bash "$PACKAGE/schema-check.sh" after
+if [[ -f "$PACKAGE/sql/2026-11-02-budget-sections-check.sql" ]]; then
+  "${MYSQL[@]}" < "$PACKAGE/sql/2026-11-02-budget-sections-check.sql" > "$BACKUP/budget-sections-check.log"
+  budget_errors=$(awk -F'\t' '$2!="0"{print $1 "=" $2}' "$BACKUP/budget-sections-check.log")
+  [[ -z "$budget_errors" ]] || die "预算分区结构核对失败：$budget_errors"
+fi
+if [[ -f "$PACKAGE/sql/2026-10-29-platform-notices-check.sql" ]]; then
+  "${MYSQL[@]}" < "$PACKAGE/sql/2026-10-29-platform-notices-check.sql" > "$BACKUP/platform-notices-check.log"
+  notice_tables=$(awk -F'\t' '$1=="platform_notice_tables"{print $2}' "$BACKUP/platform-notices-check.log")
+  [[ "$notice_tables" == 4 ]] || die '平台通知结构不完整，请查看 platform-notices-check.log'
+fi
+
 
 # Preserve the current budget state as V1 on first upgrade. This only inserts into the new
 # immutable history table and is idempotent; existing budget sheets and detail rows stay untouched.

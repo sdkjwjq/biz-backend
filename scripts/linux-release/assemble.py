@@ -35,6 +35,8 @@ NEW_SOURCES = [
     'data/migrations/2026-11-01-review-rounds.sql',
 ]
 ADDITIONS = {
+    ('biz_budget_sheet','section'): "varchar(16) NOT NULL DEFAULT 'annual'",
+    **{('biz_budget_task_item',field):'decimal(20,4) NULL DEFAULT 0.0000' for field in ['budget_amount','goods_budget','capital_budget','other_budget']},
     ('biz_expert_review','review_result'): 'varchar(16) DEFAULT NULL',
     ('biz_expert_review_revision','review_result'): 'varchar(16) DEFAULT NULL',
     ('biz_core_report','performance_code'): 'varchar(30) DEFAULT NULL',
@@ -85,6 +87,9 @@ def main():
     for suffix in ['', '-check', '-rollback']:
         source=ROOT/('data/migrations/2026-10-30-budget-and-review-result'+suffix+'.sql')
         (OUT/'sql'/source.name).write_text(source.read_text(encoding='utf-8'),encoding='utf-8',newline='\n')
+    for module in ['section','goods-budget','execution-budget-rows','sections-check','sections-rollback']:
+        source=ROOT/('data/migrations/2026-11-02-budget-'+module+'.sql')
+        (OUT/'sql'/source.name).write_text(source.read_text(encoding='utf-8'),encoding='utf-8',newline='\n')
     verification=BUILD/'verification.json'
     if verification.exists(): shutil.copy2(verification,OUT/'verification.json')
     manual = ROOT.parent/'docs/操作手册'
@@ -108,6 +113,7 @@ def main():
     assert {'biz_budget_total','biz_review_round','biz_review_member','biz_review_scope','biz_round_opinion','biz_round_revision'} <= added_tables
     sql='-- Additive structure only. No historical data repair, account writes or seed records.\n'+ '\n\n'.join(creates)+'\n'
     for (table,column),definition in ADDITIONS.items():
+        definition=definition.replace("'", "''")
         sql+=f"""
 SET @exists = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='{table}' AND COLUMN_NAME='{column}');
 SET @ddl = IF(@exists=0, 'ALTER TABLE `{table}` ADD COLUMN `{column}` {definition}', 'SELECT 1');
@@ -118,6 +124,8 @@ DEALLOCATE PREPARE release_stmt;
     assert not re.search(r'^\s*(?:DROP|DELETE|TRUNCATE|INSERT|UPDATE|REPLACE)\b',sql,re.M|re.I)
     for migration in ['scripts/work-records/002_work_record_delete.sql', 'scripts/password/001_force_password_change.sql']:
         sql += '\n' + (ROOT/migration).read_text(encoding='utf-8')
+    for module in ['section','goods-budget','execution-budget-rows']:
+        sql+='\n'+(ROOT/('data/migrations/2026-11-02-budget-'+module+'.sql')).read_text(encoding='utf-8')
     (OUT/'sql/additive.sql').write_text(sql,encoding='utf-8',newline='\n')
     for module in ['leadership-access', 'task-attributes', 'core-indicators']:
         for suffix in ['', '-check', '-rollback']:
@@ -252,6 +260,8 @@ DEALLOCATE PREPARE release_stmt;
         'preserve_recorded_transfers': True, 'preserve_reviewers_and_history': True,
         'actual_applied_count': 'backup/task-leader-completion.log'}
     manifest['task_tree_blank_restore_fix'] = True
+    manifest['budget_sections'] = ['annual','execution']
+    manifest['data_updates'] += ['sql/2026-11-02-budget-'+part+'.sql' for part in ['section','goods-budget','execution-budget-rows']]
     manifest['review_rounds'] = {'independent_experience': True, 'explicit_publication': True, 'fixed_task_ids': True, 'manual_pass_or_reject': True, 'legacy_read_only': True,
         'task_ui': 'original-home-task-tree-and-drawer', 'permission_source': 'signed-experience-and-round-scope',
         'pass_color': 'green', 'reject_color': 'red', 'business_actions_in_expert_mode': False}
