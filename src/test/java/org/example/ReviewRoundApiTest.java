@@ -153,4 +153,34 @@ class ReviewRoundApiTest {
   var ordinary=get("/biz/tasks/3",business);assertEquals(owner,ordinary.path("leaderId").asLong());assertFalse(ordinary.has("leaderName"));assertEquals(10,ordinary.path("targetValue").asInt());assertEquals(10,ordinary.path("progress").asInt());
   var list=java.util.stream.StreamSupport.stream(get("/biz/tasks",business).spliterator(),false).filter(t->t.path("taskId").asLong()==3).findFirst().orElseThrow();assertEquals("round-"+owner,list.path("leaderName").asText());assertEquals(owner,list.path("principalId").asLong());
  }
+ @Test void administrativeReportUsesLatestFormalVersionsAndNeverDrafts()throws Exception{
+  var r=active();save(r,3,expert,true,"First formal","pass");save(r,3,expert,true,"Second formal","reject");save(r,3,expert,false,"PRIVATE UNSUBMITTED REVISION","pass");save(r,1,expert,true,"Overall formal","pass");
+  String base="/admin/review-tasks/"+id(r);
+  var report=get(base+"/overview",admin);assertEquals(1,report.path("summary").path("activeExperts").asInt());assertEquals(1,report.path("summary").path("assignedTasks").asInt());assertEquals(1,report.path("summary").path("leafOpinions").asInt());assertEquals(1,report.path("summary").path("overallOpinions").asInt());assertEquals(1,report.path("summary").path("rejected").asInt());assertEquals(3,report.path("summary").path("revisionCount").asInt());assertFalse(report.toString().contains("PRIVATE"));
+  var current=get(base+"/opinion-records",admin);assertEquals(2,current.path("total").asInt());assertEquals(3,get(base+"/opinion-records?allVersions=true",admin).path("total").asInt());
+  var leaf=get(base+"/opinion-records?level=3",admin).path("items").get(0);assertEquals(2,leaf.path("revision_no").asInt());var detail=get(base+"/opinion-records/"+leaf.path("revision_id").asLong(),admin);assertEquals("Second formal",detail.path("review_text").asText());assertEquals(2,detail.path("revisions").size());assertEquals(1,detail.path("scope").path("tasks").size());assertFalse(detail.toString().contains("PRIVATE"));
+  long v1=detail.path("revisions").get(1).path("revision_id").asLong();assertEquals("First formal",get(base+"/opinion-records/"+v1,admin).path("review_text").asText());
+  db.update("UPDATE biz_task SET task_name='Renamed current task',current_value=9 WHERE task_id=3");assertEquals(1,get(base+"/opinion-records/"+v1,admin).path("scope").path("tasks").get(0).path("currentValue").asInt());
+  r=fresh(r);ok(call(HttpMethod.POST,base+"/members/"+reviewer+"/remove",admin,Map.of("version",r.path("version").asLong(),"reason","retain formal evidence")));
+  var after=get(base+"/overview",admin);assertEquals(0,after.path("summary").path("activeExperts").asInt());assertEquals(1,after.path("experts").size());assertEquals(0,after.path("experts").get(0).path("active").asInt());assertEquals(2,get(base+"/opinion-records",admin).path("total").asInt());
+ }
+ @Test void administrativeOpinionFiltersAndPaginationAreBoundedAndRoundScoped()throws Exception{
+  var r=active();save(r,3,expert,true,"Literal 100%_! evidence","reject");save(r,1,expert,true,"Overall evidence","pass");String base="/admin/review-tasks/"+id(r);
+  assertEquals(1,get(base+"/opinion-records?result=reject&expert="+reviewer+"&level=3",admin).path("total").asInt());assertEquals(1,get(base+"/opinion-records?keyword=%",admin).path("total").asInt());
+  var a=get(base+"/opinion-records?pageSize=1&page=1",admin);var b=get(base+"/opinion-records?pageSize=1&page=2",admin);assertEquals(2,a.path("total").asInt());assertNotEquals(a.path("items").get(0).path("revision_id"),b.path("items").get(0).path("revision_id"));
+  for(String query:List.of("level=2","result=unknown","page=0","pageSize=101","expert=-1"))assertEquals(400,call(HttpMethod.GET,base+"/opinion-records?"+query,admin,null).getStatusCode().value());
+  var second=round(2026,now().plusDays(1),now().plusDays(2));long revision=a.path("items").get(0).path("revision_id").asLong();assertEquals(404,call(HttpMethod.GET,"/admin/review-tasks/"+id(second)+"/opinion-records/"+revision,admin,null).getStatusCode().value());
+  for(String path:List.of("/overview","/opinion-records","/opinion-records/"+revision,"/activity","/activity/submission/"+revision)){
+   assertEquals(403,call(HttpMethod.GET,base+path,business,null).getStatusCode().value());assertEquals(403,call(HttpMethod.GET,base+path,expert,null).getStatusCode().value());
+  }
+  String administratorExpert=switchTo(admin,"EXPERT");assertEquals(403,call(HttpMethod.GET,base+"/overview",administratorExpert,null).getStatusCode().value());
+ }
+ @Test void administrativeActivityShowsOnlyActualRoundConfigurationAndFormalSubmissions()throws Exception{
+  var r=active();String base="/admin/review-tasks/"+id(r);int configured=get(base+"/activity?type=management",admin).path("total").asInt();assertEquals(4,configured);
+  save(r,3,expert,false,"Private draft","pass");assertEquals(configured,get(base+"/activity",admin).path("total").asInt());save(r,3,expert,true,"Formal first","pass");save(r,3,expert,true,"Formal revision","reject");
+  var submissions=get(base+"/activity?type=submission&pageSize=1",admin);assertEquals(2,submissions.path("total").asInt());assertEquals("OPINION_RESUBMIT",submissions.path("items").get(0).path("action").asText());long revision=submissions.path("items").get(0).path("id").asLong();assertEquals("Formal revision",get(base+"/activity/submission/"+revision,admin).path("review_text").asText());
+  var management=get(base+"/activity?type=management",admin).path("items");long log=management.get(0).path("id").asLong();assertTrue(get(base+"/activity/management/"+log,admin).has("after_json"));
+  var second=round(2026,now().plusDays(2),now().plusDays(3));assertEquals(404,call(HttpMethod.GET,"/admin/review-tasks/"+id(second)+"/activity/management/"+log,admin,null).getStatusCode().value());assertEquals(400,call(HttpMethod.GET,base+"/activity?type=unknown",admin,null).getStatusCode().value());assertEquals(400,call(HttpMethod.GET,base+"/activity?pageSize=101",admin,null).getStatusCode().value());
+ }
+
 }

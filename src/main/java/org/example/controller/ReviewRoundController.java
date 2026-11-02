@@ -8,6 +8,7 @@ import java.util.*;
 @RestController
 public class ReviewRoundController {
  @org.springframework.beans.factory.annotation.Autowired private ReviewTaskReadService taskReads;
+ @org.springframework.beans.factory.annotation.Autowired private ReviewManagementReadService managementReads;
  private final ReviewRoundService rounds;private final ReviewContextService contexts;private final PermissionService access;private final SysService system;
  public ReviewRoundController(ReviewRoundService rounds,ReviewContextService contexts,PermissionService access,SysService system){this.rounds=rounds;this.contexts=contexts;this.access=access;this.system=system;}
  @GetMapping("/system/review-context")public Object choices(HttpServletRequest request){return contexts.choices(access.actor(),request.getHeader("Authorization"));}
@@ -25,6 +26,11 @@ public class ReviewRoundController {
  @PutMapping("/admin/review-tasks/{id}/scope")public Object scope(@PathVariable long id,@RequestBody ReviewRoundService.ScopeInput b){return rounds.scope(access.actor(),id,b);}
  @PostMapping("/admin/review-tasks/{id}/publish")public Object publish(@PathVariable long id,@RequestBody ReviewRoundService.Change b){return rounds.publish(access.actor(),id,b);}
  @GetMapping("/admin/review-tasks/{id}/opinions")public Object opinions(@PathVariable long id){return rounds.opinions(access.actor(),id);}
+ @GetMapping("/admin/review-tasks/{id}/overview")public Object overview(@PathVariable long id){return managementReads.overview(access.actor(),id);}
+ @GetMapping("/admin/review-tasks/{id}/opinion-records")public Object records(@PathVariable long id,@RequestParam(required=false)Long expert,@RequestParam(required=false)Integer level,@RequestParam(defaultValue="")String result,@RequestParam(defaultValue="")String keyword,@RequestParam(defaultValue="false")boolean allVersions,@RequestParam(defaultValue="1")int page,@RequestParam(defaultValue="20")int pageSize){return managementReads.opinions(access.actor(),id,expert,level,result,keyword,allVersions,page,pageSize);}
+ @GetMapping("/admin/review-tasks/{id}/opinion-records/{revision}")public Object record(@PathVariable long id,@PathVariable long revision){return managementReads.opinion(access.actor(),id,revision);}
+ @GetMapping("/admin/review-tasks/{id}/activity")public Object activity(@PathVariable long id,@RequestParam(defaultValue="")String type,@RequestParam(defaultValue="1")int page,@RequestParam(defaultValue="20")int pageSize){return managementReads.activity(access.actor(),id,type,page,pageSize);}
+ @GetMapping("/admin/review-tasks/{id}/activity/{type}/{log}")public Object activityDetail(@PathVariable long id,@PathVariable String type,@PathVariable long log){return managementReads.activityDetail(access.actor(),id,type,log);}
  @GetMapping("/review-work")public Object mine(){return rounds.mine(access.actor());}
  @GetMapping("/review-work/{id}/tasks")public Object tasks(@PathVariable long id,@RequestParam org.springframework.util.MultiValueMap<String,String> params){return taskReads.query(access.actor(),id,params,false);}
  @GetMapping("/review-work/{id}/tasks/{task}")public Object review(@PathVariable long id,@PathVariable long task){return rounds.detail(access.actor(),id,task);}
