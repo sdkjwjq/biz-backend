@@ -105,10 +105,10 @@ public interface BudgetMapper {
     @Select("SELECT v.version_id, v.sheet_id, v.year, v.month, v.version_no, v.operation_type, " +
             "v.source_version_id, v.file_id, v.file_name, v.created_by, " +
             "COALESCE(NULLIF(u.nick_name, ''), u.user_name, CONCAT('用户', v.created_by)) AS created_by_name, " +
-            "v.create_time, v.remark, s.section FROM biz_budget_import_version v " +
+            "v.create_time, v.remark, COALESCE(s.section,'annual') section FROM biz_budget_import_version v " +
             "LEFT JOIN sys_user u ON u.user_id = v.created_by " +
-            "JOIN biz_budget_sheet s ON s.sheet_id = v.sheet_id " +
-            "WHERE v.year = #{year} AND v.month = #{month} AND s.section = #{section} AND v.is_delete = 0 " +
+            "LEFT JOIN biz_budget_sheet s ON s.sheet_id = v.sheet_id " +
+            "WHERE v.year = #{year} AND v.month = #{month} AND COALESCE(s.section,'annual') = #{section} AND v.is_delete = 0 " +
             "ORDER BY v.version_no DESC")
     List<BudgetVersionVO> getVersions(@Param("year") Integer year, @Param("month") Integer month, @Param("section") String section);
     default List<BudgetVersionVO> getVersions(Integer year,Integer month){return getVersions(year,month,"annual");}
@@ -116,8 +116,8 @@ public interface BudgetMapper {
     @Select("SELECT v.version_id, v.sheet_id, v.year, v.month, v.version_no, v.operation_type, " +
             "v.source_version_id, v.file_id, v.file_name, v.created_by, " +
             "COALESCE(NULLIF(u.nick_name, ''), u.user_name, CONCAT('用户', v.created_by)) AS created_by_name, " +
-            "v.create_time, v.remark, s.section FROM biz_budget_import_version v " +
+            "v.create_time, v.remark, COALESCE(s.section,'annual') section FROM biz_budget_import_version v " +
             "LEFT JOIN sys_user u ON u.user_id = v.created_by " +
-            "JOIN biz_budget_sheet s ON s.sheet_id=v.sheet_id WHERE v.version_id = #{versionId} AND v.is_delete = 0")
+            "LEFT JOIN biz_budget_sheet s ON s.sheet_id=v.sheet_id WHERE v.version_id = #{versionId} AND v.is_delete = 0")
     BudgetVersionVO getVersionVO(Long versionId);
 }

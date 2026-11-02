@@ -13,11 +13,11 @@ public class BudgetVersionListService {
         this.jdbc=jdbc;
         this.permissions=permissions;
     }
-    private static final String SELECT="SELECT v.version_id versionId,v.sheet_id sheetId,v.year,v.month,s.section,"
+    private static final String SELECT="SELECT v.version_id versionId,v.sheet_id sheetId,v.year,v.month,COALESCE(s.section,'annual') section,"
             +"v.version_no versionNo,v.operation_type operationType,v.source_version_id sourceVersionId,"
             +"v.file_id fileId,v.file_name fileName,v.created_by createdBy,u.nick_name createdByName,"
             +"v.create_time createTime,v.remark,CAST((v.version_no=latest.version_no) AS SIGNED) isCurrent ";
-    private static final String FROM="FROM biz_budget_import_version v LEFT JOIN sys_user u ON u.user_id=v.created_by JOIN biz_budget_sheet s ON s.sheet_id=v.sheet_id "
+    private static final String FROM="FROM biz_budget_import_version v LEFT JOIN sys_user u ON u.user_id=v.created_by LEFT JOIN biz_budget_sheet s ON s.sheet_id=v.sheet_id "
             +"LEFT JOIN (SELECT sheet_id,MAX(version_no) version_no FROM biz_budget_import_version "
             +"WHERE is_delete=0 GROUP BY sheet_id) latest ON latest.sheet_id=v.sheet_id ";
     private static final String ORDER=" ORDER BY v.year DESC,v.month DESC,v.version_no DESC";
@@ -37,7 +37,7 @@ public class BudgetVersionListService {
         String where="WHERE v.is_delete=0 AND v.year IN ("+String.join(",",Collections.nCopies(allowed.size(),"?"))+")";List<Object> args=new ArrayList<>(allowed);
         String section=params.getFirst("section");if(section!=null&&!section.isBlank()){
             if(!Set.of("annual","execution").contains(section))throw new AdminManagementException(400,"预算分区不正确");
-            where+=" AND s.section=?";args.add(section);
+            where+=" AND COALESCE(s.section,'annual')=?";args.add(section);
         }
         for(String key:List.of("year","month","createdBy","operationType","effective")){
             var values=params.getOrDefault("f."+key,List.of()).stream().filter(v->v!=null&&!v.isBlank()).distinct().toList();if(values.isEmpty())continue;
