@@ -17,6 +17,7 @@ const fs=require('node:fs/promises'),path=require('node:path'),assert=require('n
   token=(await call('/system/review-context',{experience:'BUSINESS'},token)).token;
   for(const [domain,route,key] of [['tasks','/home/works','tasks'],['performance','/home/works/performance','performance']]){
    for(let n=0;n<3;n++){
+    console.log(domain+' restore case '+(n+1));
     const context=await browser.newContext({viewport:{width:1440,height:900}});
     await context.addInitScript(({t,key})=>{localStorage.setItem('token',t);sessionStorage.setItem('works_browse_v1_'+key+':'+t.split('.')[2],JSON.stringify({fields:{year:'2026',quick:'all'},expanded:['930000','930001','1','10','40'],rowKey:'obsolete-row',anchor:'detail-row-obsolete-row',offset:40,scrollTop:100000,scrollLeft:0}))},{t:token,key});
     const p=await context.newPage();p.on('pageerror',e=>errors.push(e.message));

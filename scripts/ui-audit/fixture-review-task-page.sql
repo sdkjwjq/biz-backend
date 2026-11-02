@@ -1,4 +1,6 @@
 -- Only serve.py's random isolated schema. No business data is copied.
+-- The original performance tree groups actual indicators by their ancestors.
+UPDATE biz_performance SET ancestors='0,1,1.1' WHERE perf_id IN(950001,950011);
 UPDATE biz_task SET current_value=10,progress=100,comment='隔离测试完成说明',
  exp_target='隔离预期目标',exp_effect='隔离预期成效' WHERE task_id=930002;
 INSERT INTO biz_level4_task(task_id,parent_id,dept_id,task_name,target_value,current_value,progress,data_type,is_delete)
