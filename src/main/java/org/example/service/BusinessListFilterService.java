@@ -38,6 +38,12 @@ public class BusinessListFilterService {
     @org.springframework.beans.factory.annotation.Autowired private AuditOptionReadService auditOptionReads;
     @org.springframework.beans.factory.annotation.Autowired private ReadScopeSql readScopes;
     public record Data(List<Map<String,Object>> rows,List<Field> fields,List<Map<String,Object>> catalog){public Data(List<Map<String,Object>> rows,List<Field> fields){this(rows,fields,List.of());}}
+    /** Full authorized match set, before pagination; shares the list's exact predicates. */
+    public Data exportProjection(String domain,Long actor,MultiValueMap<String,String> params){
+        Data source=domain.equals("audits")?auditPageData(actor,params.getFirst("tab")):data(domain,actor,params.getFirst("f.year"),params.getFirst("f.month"));
+        var query=new ListFilterQuery(params,source.fields());
+        return new Data(source.rows().stream().filter(r->query.matches(r,source.fields())).filter(r->auditMatches(r,query,source.fields())).toList(),source.fields(),source.catalog());
+    }
     public Map<String,Object> query(String domain,Long actor,MultiValueMap<String,String> params){
         if(domain.equals("budget"))return budgetQuery(actor,params);
         if(domain.equals("admin-users")&&!"export".equals(params.getFirst("purpose"))&&"page".equals(params.getFirst("responseMode"))&&"false".equals(params.getFirst("includeFields"))){

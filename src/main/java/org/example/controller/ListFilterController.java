@@ -9,12 +9,12 @@ import org.springframework.util.MultiValueMap;
 public class ListFilterController {
  private final BusinessListFilterService filters;private final PermissionService access;
  public ListFilterController(BusinessListFilterService filters,PermissionService access){this.filters=filters;this.access=access;}
- @org.springframework.beans.factory.annotation.Autowired private TaskExportService taskExport;
+ @org.springframework.beans.factory.annotation.Autowired private DetailedExportService detailedExport;
  @org.springframework.beans.factory.annotation.Autowired private AuditListPageService audits;
  @org.springframework.beans.factory.annotation.Autowired private NoticeFilterPageService notices;
  @GetMapping("/tasks/export")public void exportTasks(@RequestParam MultiValueMap<String,String> params,jakarta.servlet.http.HttpServletResponse response)throws java.io.IOException{
-  Long actor=access.actor();access.require(actor,"tasks.export");var result=filters.query("tasks",actor,params);
-  var ids=((java.util.List<?>)result.get("ids")).stream().map(v->Long.valueOf(v.toString())).toList();if(ids.isEmpty())throw new AdminManagementException(400,"当前筛选没有可导出的任务");taskExport.exportTasks(ids,actor,response);
+  var selected=new org.springframework.util.LinkedMultiValueMap<String,String>(params);selected.set("scope","filtered");
+  detailedExport.export("tasks",access.actor(),selected,response);
  }
  @GetMapping("/admin-users/filter-options")public Object accountOptions(@RequestParam MultiValueMap<String,String> params){
   return params.containsKey("field")||"true".equals(params.getFirst("definitions"))?filters.filterOptions("admin-users",access.actor(),params):filters.accountOptions(access.actor());

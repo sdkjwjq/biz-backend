@@ -58,6 +58,11 @@ public class AuditListPageService {
     }
     private int historyType(Map<String,Object> row){return switch(str(row.get("type"))){case "task"->0;case "core"->1;case "performance"->2;default->3;};}
     private boolean pending(Map<String,Object> row){long status=number(row.get("flowStatus"));return "task".equals(row.get("type"))?Set.of(10L,20L,30L).contains(status):"achievement".equals(row.get("type"))?status==10:status==10||status==20;}
+    /** Same source, pending predicate and hydration as the screen, without a page boundary. */
+    public List<Map<String,Object>> exportRows(Long actor,MultiValueMap<String,String> params){
+        var data=filters.auditPageData(actor,params.getFirst("tab"));var query=new ListFilterQuery(params,data.fields());boolean todo=!"done".equals(params.getFirst("tab"));
+        return hydrate(data.rows().stream().filter(r->!todo||pending(r)).filter(r->query.matches(r,data.fields())).toList(),actor);
+    }
     private long todoCount(Long actor){
         // The validated filter establishes the same actor scope for list, count and locate.
         return sourceTodoCount(actor);
