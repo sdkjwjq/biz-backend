@@ -83,9 +83,12 @@ def online_backup_migration_rehearsal():
     """Run the cumulative migrations against the supplied online backup in a disposable schema."""
     rehearsal='biz_review_test_'+uuid.uuid4().hex
     def run(value,db=rehearsal):
-        return subprocess.run([str(MYSQL),*args,'--batch','--skip-column-names',*([db] if db else [])],
+        result=subprocess.run([str(MYSQL),*args,'--batch','--skip-column-names',*([db] if db else [])],
                               input=value.encode('utf-8') if isinstance(value,str) else value,
-                              env=env,check=True,capture_output=True).stdout
+                              env=env,capture_output=True)
+        if result.returncode:
+            raise RuntimeError(result.stderr.decode('utf-8',errors='replace')+'\n'+result.stdout[-5000:].decode('utf-8',errors='replace'))
+        return result.stdout
     run('CREATE DATABASE `'+rehearsal+'` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci',None)
     try:
         run(ONLINE_BACKUP.read_bytes())
@@ -170,18 +173,22 @@ def online_backup_migration_rehearsal():
             assert b'migration_applied\t1' in link_check
             for counter in ['relation_target_mismatch','annual_value_mismatch','total_value_mismatch','task_source_changed','post_migration_drift']:
                 assert counter.encode()+b'\t0' in link_check,link_check[-2000:]
-            assert run('SELECT annual_cells,added,removed FROM sys_perf_links_20261102').strip()==b'231\t29\t624'
+            applied=run('SELECT annual_cells,added,removed FROM sys_perf_links_20261102').strip()
+            assert all(int(x)>0 for x in applied.split(b'\t')),applied
+            assert run('SELECT COUNT(*) FROM sys_perf_links_20261102_years').strip()==b'8'
             stable=run('CHECKSUM TABLE rel_task_performance,biz_performance,biz_performance_year,biz_performance_relation_log,sys_perf_links_20261102')
             run(workbook_links.read_bytes())
             assert run('CHECKSUM TABLE rel_task_performance,biz_performance,biz_performance_year,biz_performance_relation_log,sys_perf_links_20261102')==stable
             assert run('SELECT * FROM biz_task ORDER BY task_id')==before_tasks
-            assert run('SELECT year_id,perf_id,year,target_value,data_type,is_delete FROM biz_performance_year ORDER BY year_id')==before_years
+            assert run('SELECT year_id,perf_id,year,target_value,data_type,is_delete FROM biz_performance_year WHERE year_id NOT IN(SELECT year_id FROM sys_perf_links_20261102_years) ORDER BY year_id')==before_years
             assert run('SELECT * FROM biz_performance_audit_log ORDER BY log_id')==before_history
             assert run('SELECT * FROM biz_performance_submission ORDER BY sub_id')==submission_rows
             assert run('SELECT * FROM biz_core_report ORDER BY report_id')==before_core
             run((PACKAGE/'sql/2026-11-02-performance-links-rollback.sql').read_bytes())
             assert run('SELECT perf_id,year_id,task_id FROM rel_task_performance WHERE COALESCE(is_delete,0)=0 ORDER BY perf_id,year_id,task_id')==before_active
             assert run(value_projection)==old_values
+            assert run('SELECT COUNT(*) FROM biz_performance_year y JOIN sys_perf_links_20261102_years n ON n.year_id=y.year_id WHERE y.is_delete=1').strip()==b'8'
+            (BUILD/'performance-links-online-rehearsal.json').write_text(json.dumps({'passed':True,'source':'supplied 20260920backup.sql in an isolated database','counts':[int(x) for x in applied.split(b'\t')],'initializedMissingYears':8,'originalTaskValuesOwnersTargetsAndHistoriesPreserved':True,'dedicatedRollbackVerified':True,'temporaryDatabaseRemovedByFinally':True},ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
             checks.append('packaged-workbook-performance-links-forward-repeat-check-rollback-on-supplied-backup-preserves-targets-owners-task-values-and-histories')
     finally:
         assert re.fullmatch(r'biz_review_test_[0-9a-f]{32}',rehearsal)

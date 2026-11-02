@@ -110,6 +110,19 @@ def main():
   sql('UPDATE biz_task SET current_value=COALESCE(current_value,0)+1 WHERE task_id='+tid)
   sql(migration('-rollback'),success=False)
   record('A newer source task value blocks rollback of derived performance values')
+  reset();extra=next(r for r in manifest['approved'] if r['code']=='1.1.6' and r['year']==2029)
+  pid=sql("SELECT perf_id FROM biz_performance WHERE perf_code='1.1.6'")
+  sql('DELETE FROM biz_performance_year WHERE perf_id='+pid+' AND year=2029')
+  ref=extra['proposed'][0];a,b,c=map(int,ref.split('-'));tc=f'SG{a:02d}{b:02d}{c:02d}29'
+  sql("UPDATE biz_task SET is_delete=1 WHERE task_code='"+tc+"'")
+  sql(migration(),success=False)
+  assert sql('SELECT COUNT(*) FROM biz_performance_year WHERE perf_id='+pid+' AND year=2029')=='0'
+  assert sql('SELECT COUNT(*) FROM sys_perf_links_20261102_years')=='0'
+  sql("UPDATE biz_task SET is_delete=0 WHERE task_code='"+tc+"'");sql(migration())
+  assert sql('SELECT COUNT(*) FROM sys_perf_links_20261102_years')=='1'
+  sql(migration('-rollback'))
+  assert sql('SELECT is_delete FROM biz_performance_year WHERE perf_id='+pid+' AND year=2029')=='1'
+  record('Missing annual initialization is transactional; dedicated rollback disables only the newly created year')
  finally:
   assert re.fullmatch('biz_perf_links_test_[0-9a-f]{32}',schema)
   sql('DROP DATABASE `'+schema+'`',None)

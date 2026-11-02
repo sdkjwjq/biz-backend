@@ -5256,5 +5256,9241 @@
       "name": "5-1-15 【新增】优化专业教材建设委员会工作机制",
       "new": false
     }
-  ]
+  ],
+  "targets": [
+    {
+      "code": "1.1.1",
+      "year": 2025,
+      "currentCodes": [
+        "SG01010125",
+        "SG01010225"
+      ],
+      "legacyCodes": [
+        "SG01010125",
+        "SG01010225"
+      ],
+      "desiredCodes": [
+        "SG01010125"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.1",
+      "year": 2026,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.1",
+      "year": 2027,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.1",
+      "year": 2028,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.1",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.3",
+      "year": 2025,
+      "currentCodes": [
+        "SG01030525"
+      ],
+      "legacyCodes": [
+        "SG01030525",
+        "SG01031026"
+      ],
+      "desiredCodes": [
+        "SG01030325"
+      ],
+      "missingYearTarget": 2.0
+    },
+    {
+      "code": "1.1.3",
+      "year": 2026,
+      "currentCodes": [
+        "SG01030726",
+        "SG01031026"
+      ],
+      "legacyCodes": [
+        "SG01030726"
+      ],
+      "desiredCodes": [
+        "SG01030726"
+      ],
+      "missingYearTarget": 4.0
+    },
+    {
+      "code": "1.1.3",
+      "year": 2027,
+      "currentCodes": [
+        "SG01031227"
+      ],
+      "legacyCodes": [
+        "SG01031227"
+      ],
+      "desiredCodes": [
+        "SG01031227"
+      ],
+      "missingYearTarget": 4.0
+    },
+    {
+      "code": "1.1.3",
+      "year": 2028,
+      "currentCodes": [
+        "SG01031728"
+      ],
+      "legacyCodes": [
+        "SG01031728"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.3",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.4",
+      "year": 2025,
+      "currentCodes": [
+        "SG01030425"
+      ],
+      "legacyCodes": [
+        "SG01030425"
+      ],
+      "desiredCodes": [
+        "SG01030425"
+      ],
+      "missingYearTarget": 5.0
+    },
+    {
+      "code": "1.1.4",
+      "year": 2026,
+      "currentCodes": [
+        "SG01030826"
+      ],
+      "legacyCodes": [
+        "SG01030826"
+      ],
+      "desiredCodes": [
+        "SG01030826"
+      ],
+      "missingYearTarget": 5.0
+    },
+    {
+      "code": "1.1.4",
+      "year": 2027,
+      "currentCodes": [
+        "SG01031327"
+      ],
+      "legacyCodes": [
+        "SG01031327"
+      ],
+      "desiredCodes": [
+        "SG01031327"
+      ],
+      "missingYearTarget": 5.0
+    },
+    {
+      "code": "1.1.4",
+      "year": 2028,
+      "currentCodes": [
+        "SG01032028"
+      ],
+      "legacyCodes": [
+        "SG01032028"
+      ],
+      "desiredCodes": [
+        "SG01032028"
+      ],
+      "missingYearTarget": 5.0
+    },
+    {
+      "code": "1.1.4",
+      "year": 2029,
+      "currentCodes": [
+        "SG01032329"
+      ],
+      "legacyCodes": [
+        "SG01032329"
+      ],
+      "desiredCodes": [
+        "SG01032329"
+      ],
+      "missingYearTarget": 5.0
+    },
+    {
+      "code": "1.1.5",
+      "year": 2025,
+      "currentCodes": [
+        "SG01010325",
+        "SG01010525",
+        "SG01030125",
+        "SG01030225",
+        "SG01030325",
+        "SG01030525"
+      ],
+      "legacyCodes": [
+        "SG01010325",
+        "SG01010525",
+        "SG01030125",
+        "SG01030225",
+        "SG01030325",
+        "SG01030525",
+        "SG01031026"
+      ],
+      "desiredCodes": [
+        "SG01030225"
+      ],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.5",
+      "year": 2026,
+      "currentCodes": [
+        "SG01010726",
+        "SG01010826",
+        "SG01011026",
+        "SG01030626",
+        "SG01030726",
+        "SG01030826",
+        "SG01030926",
+        "SG01031026"
+      ],
+      "legacyCodes": [
+        "SG01010726",
+        "SG01010826",
+        "SG01011026",
+        "SG01030626",
+        "SG01030726",
+        "SG01030826",
+        "SG01030926"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.5",
+      "year": 2027,
+      "currentCodes": [
+        "SG01011327",
+        "SG01011427",
+        "SG01011627",
+        "SG01031127",
+        "SG01031227",
+        "SG01031327",
+        "SG01031427",
+        "SG01031627"
+      ],
+      "legacyCodes": [
+        "SG01011327",
+        "SG01011427",
+        "SG01011627",
+        "SG01031127",
+        "SG01031227",
+        "SG01031327",
+        "SG01031427",
+        "SG01031627"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.5",
+      "year": 2028,
+      "currentCodes": [
+        "SG01011928",
+        "SG01012028",
+        "SG01012228"
+      ],
+      "legacyCodes": [
+        "SG01011928",
+        "SG01012028",
+        "SG01012228"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.5",
+      "year": 2029,
+      "currentCodes": [
+        "SG01012529",
+        "SG01012629",
+        "SG01012829"
+      ],
+      "legacyCodes": [
+        "SG01012529",
+        "SG01012629",
+        "SG01012829"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.6",
+      "year": 2025,
+      "currentCodes": [
+        "SG02010125",
+        "SG02010525"
+      ],
+      "legacyCodes": [
+        "SG02010125",
+        "SG02010525"
+      ],
+      "desiredCodes": [
+        "SG02010125"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.1.6",
+      "year": 2026,
+      "currentCodes": [
+        "SG02011026"
+      ],
+      "legacyCodes": [
+        "SG02011026"
+      ],
+      "desiredCodes": [
+        "SG02010726"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.1.6",
+      "year": 2027,
+      "currentCodes": [
+        "SG02011527"
+      ],
+      "legacyCodes": [
+        "SG02011527"
+      ],
+      "desiredCodes": [
+        "SG02011227"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.1.6",
+      "year": 2028,
+      "currentCodes": [
+        "SG02011928"
+      ],
+      "legacyCodes": [
+        "SG02011928"
+      ],
+      "desiredCodes": [
+        "SG02011628"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.1.6",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [
+        "SG02012129"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.1.7",
+      "year": 2025,
+      "currentCodes": [
+        "SG02010425",
+        "SG02010525"
+      ],
+      "legacyCodes": [
+        "SG02010425",
+        "SG02010525"
+      ],
+      "desiredCodes": [
+        "SG02010525"
+      ],
+      "missingYearTarget": 5.0
+    },
+    {
+      "code": "1.1.7",
+      "year": 2026,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.7",
+      "year": 2027,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.7",
+      "year": 2028,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.7",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.8",
+      "year": 2025,
+      "currentCodes": [
+        "SG02030425",
+        "SG02030525"
+      ],
+      "legacyCodes": [
+        "SG02030425",
+        "SG02030525"
+      ],
+      "desiredCodes": [
+        "SG02030525"
+      ],
+      "missingYearTarget": 600.0
+    },
+    {
+      "code": "1.1.8",
+      "year": 2026,
+      "currentCodes": [
+        "SG02031126"
+      ],
+      "legacyCodes": [
+        "SG02031126"
+      ],
+      "desiredCodes": [
+        "SG02031126"
+      ],
+      "missingYearTarget": 600.0
+    },
+    {
+      "code": "1.1.8",
+      "year": 2027,
+      "currentCodes": [
+        "SG02031727"
+      ],
+      "legacyCodes": [
+        "SG02031727"
+      ],
+      "desiredCodes": [
+        "SG02031727"
+      ],
+      "missingYearTarget": 600.0
+    },
+    {
+      "code": "1.1.8",
+      "year": 2028,
+      "currentCodes": [
+        "SG02032228"
+      ],
+      "legacyCodes": [
+        "SG02032228"
+      ],
+      "desiredCodes": [
+        "SG02032228"
+      ],
+      "missingYearTarget": 600.0
+    },
+    {
+      "code": "1.1.8",
+      "year": 2029,
+      "currentCodes": [
+        "SG02032729"
+      ],
+      "legacyCodes": [
+        "SG02032729"
+      ],
+      "desiredCodes": [
+        "SG02032729"
+      ],
+      "missingYearTarget": 600.0
+    },
+    {
+      "code": "1.1.9",
+      "year": 2025,
+      "currentCodes": [
+        "SG02030425"
+      ],
+      "legacyCodes": [
+        "SG02030425"
+      ],
+      "desiredCodes": [
+        "SG02030525"
+      ],
+      "missingYearTarget": 30.0
+    },
+    {
+      "code": "1.1.9",
+      "year": 2026,
+      "currentCodes": [
+        "SG02031126"
+      ],
+      "legacyCodes": [
+        "SG02031126"
+      ],
+      "desiredCodes": [
+        "SG02031126"
+      ],
+      "missingYearTarget": 30.0
+    },
+    {
+      "code": "1.1.9",
+      "year": 2027,
+      "currentCodes": [
+        "SG02031727"
+      ],
+      "legacyCodes": [
+        "SG02031727"
+      ],
+      "desiredCodes": [
+        "SG02031727"
+      ],
+      "missingYearTarget": 30.0
+    },
+    {
+      "code": "1.1.9",
+      "year": 2028,
+      "currentCodes": [
+        "SG02032228"
+      ],
+      "legacyCodes": [
+        "SG02032228"
+      ],
+      "desiredCodes": [
+        "SG02032228"
+      ],
+      "missingYearTarget": 30.0
+    },
+    {
+      "code": "1.1.9",
+      "year": 2029,
+      "currentCodes": [
+        "SG02032729"
+      ],
+      "legacyCodes": [
+        "SG02032729"
+      ],
+      "desiredCodes": [
+        "SG02032729"
+      ],
+      "missingYearTarget": 30.0
+    },
+    {
+      "code": "1.1.11",
+      "year": 2025,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 18.0
+    },
+    {
+      "code": "1.1.11",
+      "year": 2026,
+      "currentCodes": [
+        "SG03020626"
+      ],
+      "legacyCodes": [
+        "SG03020626"
+      ],
+      "desiredCodes": [
+        "SG03020626"
+      ],
+      "missingYearTarget": 20.0
+    },
+    {
+      "code": "1.1.11",
+      "year": 2027,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 20.0
+    },
+    {
+      "code": "1.1.11",
+      "year": 2028,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 20.0
+    },
+    {
+      "code": "1.1.11",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 20.0
+    },
+    {
+      "code": "1.1.12",
+      "year": 2025,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.12",
+      "year": 2026,
+      "currentCodes": [
+        "SG03010726"
+      ],
+      "legacyCodes": [
+        "SG03010726"
+      ],
+      "desiredCodes": [
+        "SG03010726"
+      ],
+      "missingYearTarget": 20.0
+    },
+    {
+      "code": "1.1.12",
+      "year": 2027,
+      "currentCodes": [
+        "SG03011327"
+      ],
+      "legacyCodes": [
+        "SG03011327"
+      ],
+      "desiredCodes": [
+        "SG03011327"
+      ],
+      "missingYearTarget": 30.0
+    },
+    {
+      "code": "1.1.12",
+      "year": 2028,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 30.0
+    },
+    {
+      "code": "1.1.12",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 30.0
+    },
+    {
+      "code": "1.1.13",
+      "year": 2025,
+      "currentCodes": [
+        "SG04010125",
+        "SG04010225"
+      ],
+      "legacyCodes": [
+        "SG04010125",
+        "SG04010225"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.13",
+      "year": 2026,
+      "currentCodes": [
+        "SG04010626"
+      ],
+      "legacyCodes": [
+        "SG04010626"
+      ],
+      "desiredCodes": [
+        "SG04010626"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.13",
+      "year": 2027,
+      "currentCodes": [
+        "SG04011327"
+      ],
+      "legacyCodes": [
+        "SG04011327"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.13",
+      "year": 2028,
+      "currentCodes": [
+        "SG04011928"
+      ],
+      "legacyCodes": [
+        "SG04011928"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.13",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.14",
+      "year": 2025,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.14",
+      "year": 2026,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.14",
+      "year": 2027,
+      "currentCodes": [
+        "SG04011627"
+      ],
+      "legacyCodes": [
+        "SG04011627"
+      ],
+      "desiredCodes": [
+        "SG04011627"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.14",
+      "year": 2028,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.14",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.15",
+      "year": 2025,
+      "currentCodes": [
+        "SG04010325",
+        "SG04010425"
+      ],
+      "legacyCodes": [
+        "SG04010325",
+        "SG04010425"
+      ],
+      "desiredCodes": [
+        "SG04010425"
+      ],
+      "missingYearTarget": 20.0
+    },
+    {
+      "code": "1.1.15",
+      "year": 2026,
+      "currentCodes": [
+        "SG04010826",
+        "SG04010926",
+        "SG04011026"
+      ],
+      "legacyCodes": [
+        "SG04010826",
+        "SG04010926",
+        "SG04011026"
+      ],
+      "desiredCodes": [
+        "SG04010926"
+      ],
+      "missingYearTarget": 20.0
+    },
+    {
+      "code": "1.1.15",
+      "year": 2027,
+      "currentCodes": [
+        "SG04011427",
+        "SG04011527",
+        "SG04011727"
+      ],
+      "legacyCodes": [
+        "SG04011427",
+        "SG04011527",
+        "SG04011727"
+      ],
+      "desiredCodes": [
+        "SG04011527"
+      ],
+      "missingYearTarget": 20.0
+    },
+    {
+      "code": "1.1.15",
+      "year": 2028,
+      "currentCodes": [
+        "SG04012028",
+        "SG04012128",
+        "SG04012228"
+      ],
+      "legacyCodes": [
+        "SG04012028",
+        "SG04012128",
+        "SG04012228"
+      ],
+      "desiredCodes": [
+        "SG04012128"
+      ],
+      "missingYearTarget": 20.0
+    },
+    {
+      "code": "1.1.15",
+      "year": 2029,
+      "currentCodes": [
+        "SG04012429",
+        "SG04012529",
+        "SG04012629"
+      ],
+      "legacyCodes": [
+        "SG04012429",
+        "SG04012529",
+        "SG04012629"
+      ],
+      "desiredCodes": [
+        "SG04012629"
+      ],
+      "missingYearTarget": 20.0
+    },
+    {
+      "code": "1.1.16",
+      "year": 2025,
+      "currentCodes": [
+        "SG04010425"
+      ],
+      "legacyCodes": [
+        "SG04010425"
+      ],
+      "desiredCodes": [
+        "SG04010425"
+      ],
+      "missingYearTarget": 15.0
+    },
+    {
+      "code": "1.1.16",
+      "year": 2026,
+      "currentCodes": [
+        "SG04010926"
+      ],
+      "legacyCodes": [
+        "SG04010926"
+      ],
+      "desiredCodes": [
+        "SG04010926"
+      ],
+      "missingYearTarget": 15.0
+    },
+    {
+      "code": "1.1.16",
+      "year": 2027,
+      "currentCodes": [
+        "SG04011527"
+      ],
+      "legacyCodes": [
+        "SG04011527"
+      ],
+      "desiredCodes": [
+        "SG04011527"
+      ],
+      "missingYearTarget": 15.0
+    },
+    {
+      "code": "1.1.16",
+      "year": 2028,
+      "currentCodes": [
+        "SG04012128"
+      ],
+      "legacyCodes": [
+        "SG04012128"
+      ],
+      "desiredCodes": [
+        "SG04012128"
+      ],
+      "missingYearTarget": 15.0
+    },
+    {
+      "code": "1.1.16",
+      "year": 2029,
+      "currentCodes": [
+        "SG04012629"
+      ],
+      "legacyCodes": [
+        "SG04012629"
+      ],
+      "desiredCodes": [
+        "SG04012629"
+      ],
+      "missingYearTarget": 15.0
+    },
+    {
+      "code": "1.1.17",
+      "year": 2025,
+      "currentCodes": [
+        "SG04020425"
+      ],
+      "legacyCodes": [
+        "SG04020425"
+      ],
+      "desiredCodes": [
+        "SG04020425"
+      ],
+      "missingYearTarget": 70.0
+    },
+    {
+      "code": "1.1.17",
+      "year": 2026,
+      "currentCodes": [
+        "SG04020926"
+      ],
+      "legacyCodes": [
+        "SG04020926"
+      ],
+      "desiredCodes": [
+        "SG04020926"
+      ],
+      "missingYearTarget": 80.0
+    },
+    {
+      "code": "1.1.17",
+      "year": 2027,
+      "currentCodes": [
+        "SG04021427"
+      ],
+      "legacyCodes": [
+        "SG04021427"
+      ],
+      "desiredCodes": [
+        "SG04021427"
+      ],
+      "missingYearTarget": 90.0
+    },
+    {
+      "code": "1.1.17",
+      "year": 2028,
+      "currentCodes": [
+        "SG04021828"
+      ],
+      "legacyCodes": [
+        "SG04021828"
+      ],
+      "desiredCodes": [
+        "SG04021828"
+      ],
+      "missingYearTarget": 95.0
+    },
+    {
+      "code": "1.1.17",
+      "year": 2029,
+      "currentCodes": [
+        "SG04022229"
+      ],
+      "legacyCodes": [
+        "SG04022229"
+      ],
+      "desiredCodes": [
+        "SG04022229"
+      ],
+      "missingYearTarget": 100.0
+    },
+    {
+      "code": "1.1.18",
+      "year": 2025,
+      "currentCodes": [
+        "SG04020525"
+      ],
+      "legacyCodes": [
+        "SG04020525"
+      ],
+      "desiredCodes": [
+        "SG04020525"
+      ],
+      "missingYearTarget": 60.0
+    },
+    {
+      "code": "1.1.18",
+      "year": 2026,
+      "currentCodes": [
+        "SG04021026"
+      ],
+      "legacyCodes": [
+        "SG04021026"
+      ],
+      "desiredCodes": [
+        "SG04021026"
+      ],
+      "missingYearTarget": 70.0
+    },
+    {
+      "code": "1.1.18",
+      "year": 2027,
+      "currentCodes": [
+        "SG04021527"
+      ],
+      "legacyCodes": [
+        "SG04021527"
+      ],
+      "desiredCodes": [
+        "SG04021527"
+      ],
+      "missingYearTarget": 80.0
+    },
+    {
+      "code": "1.1.18",
+      "year": 2028,
+      "currentCodes": [
+        "SG04021928"
+      ],
+      "legacyCodes": [
+        "SG04021928"
+      ],
+      "desiredCodes": [
+        "SG04021928"
+      ],
+      "missingYearTarget": 90.0
+    },
+    {
+      "code": "1.1.18",
+      "year": 2029,
+      "currentCodes": [
+        "SG04022329"
+      ],
+      "legacyCodes": [
+        "SG04022329"
+      ],
+      "desiredCodes": [
+        "SG04022329"
+      ],
+      "missingYearTarget": 90.0
+    },
+    {
+      "code": "1.1.19",
+      "year": 2025,
+      "currentCodes": [
+        "SG04030125"
+      ],
+      "legacyCodes": [
+        "SG04030125"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.19",
+      "year": 2026,
+      "currentCodes": [
+        "SG04030326"
+      ],
+      "legacyCodes": [
+        "SG04030326"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.19",
+      "year": 2027,
+      "currentCodes": [
+        "SG04030627"
+      ],
+      "legacyCodes": [
+        "SG04030627"
+      ],
+      "desiredCodes": [
+        "SG04030627"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.19",
+      "year": 2028,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.19",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.20",
+      "year": 2025,
+      "currentCodes": [
+        "SG05010425"
+      ],
+      "legacyCodes": [
+        "SG05010425"
+      ],
+      "desiredCodes": [
+        "SG05010425"
+      ],
+      "missingYearTarget": 8.0
+    },
+    {
+      "code": "1.1.20",
+      "year": 2026,
+      "currentCodes": [
+        "SG05010926"
+      ],
+      "legacyCodes": [
+        "SG05010926"
+      ],
+      "desiredCodes": [
+        "SG05010926"
+      ],
+      "missingYearTarget": 12.0
+    },
+    {
+      "code": "1.1.20",
+      "year": 2027,
+      "currentCodes": [
+        "SG05011227"
+      ],
+      "legacyCodes": [
+        "SG05011227"
+      ],
+      "desiredCodes": [
+        "SG05011227"
+      ],
+      "missingYearTarget": 12.0
+    },
+    {
+      "code": "1.1.20",
+      "year": 2028,
+      "currentCodes": [
+        "SG05011728"
+      ],
+      "legacyCodes": [
+        "SG05011728"
+      ],
+      "desiredCodes": [
+        "SG05011728"
+      ],
+      "missingYearTarget": 12.0
+    },
+    {
+      "code": "1.1.20",
+      "year": 2029,
+      "currentCodes": [
+        "SG05012029"
+      ],
+      "legacyCodes": [
+        "SG05012029"
+      ],
+      "desiredCodes": [
+        "SG05012029"
+      ],
+      "missingYearTarget": 6.0
+    },
+    {
+      "code": "1.1.21",
+      "year": 2025,
+      "currentCodes": [
+        "SG05020125",
+        "SG05020225",
+        "SG05020325"
+      ],
+      "legacyCodes": [
+        "SG05020125",
+        "SG05020225",
+        "SG05020325"
+      ],
+      "desiredCodes": [
+        "SG05020225"
+      ],
+      "missingYearTarget": 3.0
+    },
+    {
+      "code": "1.1.21",
+      "year": 2026,
+      "currentCodes": [
+        "SG05020426",
+        "SG05020526"
+      ],
+      "legacyCodes": [
+        "SG05020426",
+        "SG05020526"
+      ],
+      "desiredCodes": [
+        "SG05020526"
+      ],
+      "missingYearTarget": 6.0
+    },
+    {
+      "code": "1.1.21",
+      "year": 2029,
+      "currentCodes": [
+        "SG05021129",
+        "SG05021229"
+      ],
+      "legacyCodes": [
+        "SG05021129",
+        "SG05021229"
+      ],
+      "desiredCodes": [
+        "SG05021229"
+      ],
+      "missingYearTarget": 2.0
+    },
+    {
+      "code": "1.1.22",
+      "year": 2025,
+      "currentCodes": [
+        "SG06010125"
+      ],
+      "legacyCodes": [
+        "SG06010125"
+      ],
+      "desiredCodes": [
+        "SG06010125"
+      ],
+      "missingYearTarget": 100.0
+    },
+    {
+      "code": "1.1.22",
+      "year": 2026,
+      "currentCodes": [
+        "SG06010526"
+      ],
+      "legacyCodes": [
+        "SG06010526"
+      ],
+      "desiredCodes": [
+        "SG06010526"
+      ],
+      "missingYearTarget": 100.0
+    },
+    {
+      "code": "1.1.22",
+      "year": 2027,
+      "currentCodes": [
+        "SG06011027"
+      ],
+      "legacyCodes": [
+        "SG06011027"
+      ],
+      "desiredCodes": [
+        "SG06011027"
+      ],
+      "missingYearTarget": 100.0
+    },
+    {
+      "code": "1.1.22",
+      "year": 2028,
+      "currentCodes": [
+        "SG06011528"
+      ],
+      "legacyCodes": [
+        "SG06011528"
+      ],
+      "desiredCodes": [
+        "SG06011528"
+      ],
+      "missingYearTarget": 100.0
+    },
+    {
+      "code": "1.1.22",
+      "year": 2029,
+      "currentCodes": [
+        "SG06012029"
+      ],
+      "legacyCodes": [
+        "SG06012029"
+      ],
+      "desiredCodes": [
+        "SG06012029"
+      ],
+      "missingYearTarget": 100.0
+    },
+    {
+      "code": "1.1.23",
+      "year": 2025,
+      "currentCodes": [
+        "SG06020325"
+      ],
+      "legacyCodes": [
+        "SG06020325"
+      ],
+      "desiredCodes": [
+        "SG06020325"
+      ],
+      "missingYearTarget": 6.0
+    },
+    {
+      "code": "1.1.23",
+      "year": 2026,
+      "currentCodes": [
+        "SG06020726"
+      ],
+      "legacyCodes": [
+        "SG06020726"
+      ],
+      "desiredCodes": [
+        "SG06020726"
+      ],
+      "missingYearTarget": 6.0
+    },
+    {
+      "code": "1.1.23",
+      "year": 2027,
+      "currentCodes": [
+        "SG06021127"
+      ],
+      "legacyCodes": [
+        "SG06021127"
+      ],
+      "desiredCodes": [
+        "SG06021127"
+      ],
+      "missingYearTarget": 6.0
+    },
+    {
+      "code": "1.1.23",
+      "year": 2028,
+      "currentCodes": [
+        "SG06021628"
+      ],
+      "legacyCodes": [
+        "SG06021628"
+      ],
+      "desiredCodes": [
+        "SG06021628"
+      ],
+      "missingYearTarget": 6.0
+    },
+    {
+      "code": "1.1.23",
+      "year": 2029,
+      "currentCodes": [
+        "SG06022029"
+      ],
+      "legacyCodes": [
+        "SG06022029"
+      ],
+      "desiredCodes": [
+        "SG06022029"
+      ],
+      "missingYearTarget": 6.0
+    },
+    {
+      "code": "1.1.24",
+      "year": 2025,
+      "currentCodes": [
+        "SG06020425"
+      ],
+      "legacyCodes": [
+        "SG06020425"
+      ],
+      "desiredCodes": [
+        "SG06020425"
+      ],
+      "missingYearTarget": 4.0
+    },
+    {
+      "code": "1.1.24",
+      "year": 2026,
+      "currentCodes": [
+        "SG06020826"
+      ],
+      "legacyCodes": [
+        "SG06020826"
+      ],
+      "desiredCodes": [
+        "SG06020826"
+      ],
+      "missingYearTarget": 4.0
+    },
+    {
+      "code": "1.1.24",
+      "year": 2027,
+      "currentCodes": [
+        "SG06021227"
+      ],
+      "legacyCodes": [
+        "SG06021227"
+      ],
+      "desiredCodes": [
+        "SG06021227"
+      ],
+      "missingYearTarget": 4.0
+    },
+    {
+      "code": "1.1.24",
+      "year": 2028,
+      "currentCodes": [
+        "SG06021728"
+      ],
+      "legacyCodes": [
+        "SG06021728"
+      ],
+      "desiredCodes": [
+        "SG06021728"
+      ],
+      "missingYearTarget": 4.0
+    },
+    {
+      "code": "1.1.24",
+      "year": 2029,
+      "currentCodes": [
+        "SG06022129"
+      ],
+      "legacyCodes": [
+        "SG06022129"
+      ],
+      "desiredCodes": [
+        "SG06022129"
+      ],
+      "missingYearTarget": 4.0
+    },
+    {
+      "code": "1.1.25",
+      "year": 2025,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.25",
+      "year": 2026,
+      "currentCodes": [
+        "SG06020826"
+      ],
+      "legacyCodes": [
+        "SG06020826"
+      ],
+      "desiredCodes": [
+        "SG06020826"
+      ],
+      "missingYearTarget": 3.0
+    },
+    {
+      "code": "1.1.25",
+      "year": 2027,
+      "currentCodes": [
+        "SG06021227"
+      ],
+      "legacyCodes": [
+        "SG06021227"
+      ],
+      "desiredCodes": [
+        "SG06021227"
+      ],
+      "missingYearTarget": 3.0
+    },
+    {
+      "code": "1.1.25",
+      "year": 2028,
+      "currentCodes": [
+        "SG06021728"
+      ],
+      "legacyCodes": [
+        "SG06021728"
+      ],
+      "desiredCodes": [
+        "SG06021728"
+      ],
+      "missingYearTarget": 2.0
+    },
+    {
+      "code": "1.1.25",
+      "year": 2029,
+      "currentCodes": [
+        "SG06022129"
+      ],
+      "legacyCodes": [
+        "SG06022129"
+      ],
+      "desiredCodes": [
+        "SG06022129"
+      ],
+      "missingYearTarget": 2.0
+    },
+    {
+      "code": "1.1.26",
+      "year": 2025,
+      "currentCodes": [
+        "SG06020325"
+      ],
+      "legacyCodes": [
+        "SG06020325"
+      ],
+      "desiredCodes": [
+        "SG06020325"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.1.26",
+      "year": 2026,
+      "currentCodes": [
+        "SG06020726"
+      ],
+      "legacyCodes": [
+        "SG06020726"
+      ],
+      "desiredCodes": [
+        "SG06020726"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.1.26",
+      "year": 2027,
+      "currentCodes": [
+        "SG06021127"
+      ],
+      "legacyCodes": [
+        "SG06021127"
+      ],
+      "desiredCodes": [
+        "SG06021127"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.1.26",
+      "year": 2028,
+      "currentCodes": [
+        "SG06021628"
+      ],
+      "legacyCodes": [
+        "SG06021628"
+      ],
+      "desiredCodes": [
+        "SG06021628"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.1.26",
+      "year": 2029,
+      "currentCodes": [
+        "SG06022029"
+      ],
+      "legacyCodes": [
+        "SG06022029"
+      ],
+      "desiredCodes": [
+        "SG06022029"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.1.27",
+      "year": 2025,
+      "currentCodes": [
+        "SG06030525"
+      ],
+      "legacyCodes": [
+        "SG06030525"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 90.0
+    },
+    {
+      "code": "1.1.27",
+      "year": 2026,
+      "currentCodes": [
+        "SG06031026"
+      ],
+      "legacyCodes": [
+        "SG06031026"
+      ],
+      "desiredCodes": [
+        "SG06031026"
+      ],
+      "missingYearTarget": 90.0
+    },
+    {
+      "code": "1.1.27",
+      "year": 2027,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 90.0
+    },
+    {
+      "code": "1.1.27",
+      "year": 2028,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 90.0
+    },
+    {
+      "code": "1.1.27",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 90.0
+    },
+    {
+      "code": "1.1.28",
+      "year": 2025,
+      "currentCodes": [
+        "SG06030125"
+      ],
+      "legacyCodes": [
+        "SG06030125"
+      ],
+      "desiredCodes": [
+        "SG06030125"
+      ],
+      "missingYearTarget": 2.0
+    },
+    {
+      "code": "1.1.28",
+      "year": 2026,
+      "currentCodes": [
+        "SG06030626"
+      ],
+      "legacyCodes": [
+        "SG06030626"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.28",
+      "year": 2027,
+      "currentCodes": [
+        "SG06031127"
+      ],
+      "legacyCodes": [
+        "SG06031127"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.28",
+      "year": 2028,
+      "currentCodes": [
+        "SG06031628"
+      ],
+      "legacyCodes": [
+        "SG06031628"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.28",
+      "year": 2029,
+      "currentCodes": [
+        "SG06032029"
+      ],
+      "legacyCodes": [
+        "SG06032029"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.29",
+      "year": 2025,
+      "currentCodes": [
+        "SG06030225"
+      ],
+      "legacyCodes": [
+        "SG06030225"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.29",
+      "year": 2026,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.29",
+      "year": 2027,
+      "currentCodes": [
+        "SG06031527"
+      ],
+      "legacyCodes": [
+        "SG06031527"
+      ],
+      "desiredCodes": [
+        "SG06031527"
+      ],
+      "missingYearTarget": 80.0
+    },
+    {
+      "code": "1.1.29",
+      "year": 2028,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 90.0
+    },
+    {
+      "code": "1.1.29",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 100.0
+    },
+    {
+      "code": "1.1.30",
+      "year": 2025,
+      "currentCodes": [
+        "SG07010225",
+        "SG07010325"
+      ],
+      "legacyCodes": [
+        "SG07010225",
+        "SG07010325"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.30",
+      "year": 2026,
+      "currentCodes": [
+        "SG07010626",
+        "SG07010726"
+      ],
+      "legacyCodes": [
+        "SG07010626",
+        "SG07010726"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.30",
+      "year": 2027,
+      "currentCodes": [
+        "SG07011027",
+        "SG07011127",
+        "SG07011227"
+      ],
+      "legacyCodes": [
+        "SG07011027",
+        "SG07011127",
+        "SG07011227"
+      ],
+      "desiredCodes": [
+        "SG07011127"
+      ],
+      "missingYearTarget": 3.0
+    },
+    {
+      "code": "1.1.30",
+      "year": 2028,
+      "currentCodes": [
+        "SG07011528",
+        "SG07011628"
+      ],
+      "legacyCodes": [
+        "SG07011528",
+        "SG07011628"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.30",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.31",
+      "year": 2025,
+      "currentCodes": [
+        "SG07020125"
+      ],
+      "legacyCodes": [
+        "SG07020125"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.31",
+      "year": 2026,
+      "currentCodes": [
+        "SG07020326"
+      ],
+      "legacyCodes": [
+        "SG07020326"
+      ],
+      "desiredCodes": [
+        "SG07020326"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.31",
+      "year": 2027,
+      "currentCodes": [
+        "SG07020627"
+      ],
+      "legacyCodes": [
+        "SG07020627"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.31",
+      "year": 2028,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.31",
+      "year": 2029,
+      "currentCodes": [
+        "SG07021229"
+      ],
+      "legacyCodes": [
+        "SG07021229"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.32",
+      "year": 2025,
+      "currentCodes": [
+        "SG07020225"
+      ],
+      "legacyCodes": [
+        "SG07020225"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.32",
+      "year": 2026,
+      "currentCodes": [
+        "SG07020426"
+      ],
+      "legacyCodes": [
+        "SG07020426"
+      ],
+      "desiredCodes": [
+        "SG07020426"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.32",
+      "year": 2027,
+      "currentCodes": [
+        "SG07020727"
+      ],
+      "legacyCodes": [
+        "SG07020727"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.32",
+      "year": 2028,
+      "currentCodes": [
+        "SG07020928"
+      ],
+      "legacyCodes": [
+        "SG07020928"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.32",
+      "year": 2029,
+      "currentCodes": [
+        "SG07021129"
+      ],
+      "legacyCodes": [
+        "SG07021129"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.33",
+      "year": 2025,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.33",
+      "year": 2026,
+      "currentCodes": [
+        "SG07010826",
+        "SG07010926"
+      ],
+      "legacyCodes": [
+        "SG07010826",
+        "SG07010926"
+      ],
+      "desiredCodes": [
+        "SG07010926"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.33",
+      "year": 2027,
+      "currentCodes": [
+        "SG07011327"
+      ],
+      "legacyCodes": [
+        "SG07011327"
+      ],
+      "desiredCodes": [
+        "SG07011327"
+      ],
+      "missingYearTarget": 2.0
+    },
+    {
+      "code": "1.1.33",
+      "year": 2028,
+      "currentCodes": [
+        "SG07011728"
+      ],
+      "legacyCodes": [
+        "SG07011728"
+      ],
+      "desiredCodes": [
+        "SG07011728"
+      ],
+      "missingYearTarget": 2.0
+    },
+    {
+      "code": "1.1.33",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.34",
+      "year": 2025,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.34",
+      "year": 2026,
+      "currentCodes": [
+        "SG07010826",
+        "SG07010926"
+      ],
+      "legacyCodes": [
+        "SG07010826",
+        "SG07010926"
+      ],
+      "desiredCodes": [
+        "SG07010926"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.1.34",
+      "year": 2027,
+      "currentCodes": [
+        "SG07011327"
+      ],
+      "legacyCodes": [
+        "SG07011327"
+      ],
+      "desiredCodes": [
+        "SG07011327"
+      ],
+      "missingYearTarget": 20.0
+    },
+    {
+      "code": "1.1.34",
+      "year": 2028,
+      "currentCodes": [
+        "SG07011728"
+      ],
+      "legacyCodes": [
+        "SG07011728"
+      ],
+      "desiredCodes": [
+        "SG07011728"
+      ],
+      "missingYearTarget": 20.0
+    },
+    {
+      "code": "1.1.34",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.35",
+      "year": 2025,
+      "currentCodes": [
+        "SG07030325"
+      ],
+      "legacyCodes": [
+        "SG07030325"
+      ],
+      "desiredCodes": [
+        "SG07030325"
+      ],
+      "missingYearTarget": 7000.0
+    },
+    {
+      "code": "1.1.35",
+      "year": 2026,
+      "currentCodes": [
+        "SG07030826"
+      ],
+      "legacyCodes": [
+        "SG07030826"
+      ],
+      "desiredCodes": [
+        "SG07030826"
+      ],
+      "missingYearTarget": 7000.0
+    },
+    {
+      "code": "1.1.35",
+      "year": 2027,
+      "currentCodes": [
+        "SG07031327"
+      ],
+      "legacyCodes": [
+        "SG07031327"
+      ],
+      "desiredCodes": [
+        "SG07031327"
+      ],
+      "missingYearTarget": 7000.0
+    },
+    {
+      "code": "1.1.35",
+      "year": 2028,
+      "currentCodes": [
+        "SG07031828"
+      ],
+      "legacyCodes": [
+        "SG07031828"
+      ],
+      "desiredCodes": [
+        "SG07031828"
+      ],
+      "missingYearTarget": 7000.0
+    },
+    {
+      "code": "1.1.35",
+      "year": 2029,
+      "currentCodes": [
+        "SG07032229"
+      ],
+      "legacyCodes": [
+        "SG07032229"
+      ],
+      "desiredCodes": [
+        "SG07032229"
+      ],
+      "missingYearTarget": 7000.0
+    },
+    {
+      "code": "1.1.36",
+      "year": 2025,
+      "currentCodes": [
+        "SG07030425"
+      ],
+      "legacyCodes": [
+        "SG07030425"
+      ],
+      "desiredCodes": [
+        "SG07030425"
+      ],
+      "missingYearTarget": 1000.0
+    },
+    {
+      "code": "1.1.36",
+      "year": 2026,
+      "currentCodes": [
+        "SG07030926"
+      ],
+      "legacyCodes": [
+        "SG07030926"
+      ],
+      "desiredCodes": [
+        "SG07030926"
+      ],
+      "missingYearTarget": 1000.0
+    },
+    {
+      "code": "1.1.36",
+      "year": 2027,
+      "currentCodes": [
+        "SG07031427"
+      ],
+      "legacyCodes": [
+        "SG07031427"
+      ],
+      "desiredCodes": [
+        "SG07031427"
+      ],
+      "missingYearTarget": 1000.0
+    },
+    {
+      "code": "1.1.36",
+      "year": 2028,
+      "currentCodes": [
+        "SG07031928"
+      ],
+      "legacyCodes": [
+        "SG07031928"
+      ],
+      "desiredCodes": [
+        "SG07031928"
+      ],
+      "missingYearTarget": 1000.0
+    },
+    {
+      "code": "1.1.36",
+      "year": 2029,
+      "currentCodes": [
+        "SG07032329"
+      ],
+      "legacyCodes": [
+        "SG07032329"
+      ],
+      "desiredCodes": [
+        "SG07032329"
+      ],
+      "missingYearTarget": 1000.0
+    },
+    {
+      "code": "1.1.37",
+      "year": 2025,
+      "currentCodes": [
+        "SG08010525"
+      ],
+      "legacyCodes": [
+        "SG08010525"
+      ],
+      "desiredCodes": [
+        "SG08010525"
+      ],
+      "missingYearTarget": 20.0
+    },
+    {
+      "code": "1.1.37",
+      "year": 2026,
+      "currentCodes": [
+        "SG08010926"
+      ],
+      "legacyCodes": [
+        "SG08010926"
+      ],
+      "desiredCodes": [
+        "SG08010926"
+      ],
+      "missingYearTarget": 25.0
+    },
+    {
+      "code": "1.1.37",
+      "year": 2027,
+      "currentCodes": [
+        "SG08011327"
+      ],
+      "legacyCodes": [
+        "SG08011327"
+      ],
+      "desiredCodes": [
+        "SG08011327"
+      ],
+      "missingYearTarget": 30.0
+    },
+    {
+      "code": "1.1.37",
+      "year": 2028,
+      "currentCodes": [
+        "SG08011728"
+      ],
+      "legacyCodes": [
+        "SG08011728"
+      ],
+      "desiredCodes": [
+        "SG08011728"
+      ],
+      "missingYearTarget": 35.0
+    },
+    {
+      "code": "1.1.37",
+      "year": 2029,
+      "currentCodes": [
+        "SG08012129"
+      ],
+      "legacyCodes": [
+        "SG08012129"
+      ],
+      "desiredCodes": [
+        "SG08012129"
+      ],
+      "missingYearTarget": 40.0
+    },
+    {
+      "code": "1.1.38",
+      "year": 2025,
+      "currentCodes": [
+        "SG08010225",
+        "SG08010325"
+      ],
+      "legacyCodes": [
+        "SG08010225",
+        "SG08010325"
+      ],
+      "desiredCodes": [
+        "SG08010425"
+      ],
+      "missingYearTarget": 50.0
+    },
+    {
+      "code": "1.1.38",
+      "year": 2026,
+      "currentCodes": [
+        "SG08010626",
+        "SG08010726"
+      ],
+      "legacyCodes": [
+        "SG08010626",
+        "SG08010726"
+      ],
+      "desiredCodes": [
+        "SG08010826"
+      ],
+      "missingYearTarget": 70.0
+    },
+    {
+      "code": "1.1.38",
+      "year": 2027,
+      "currentCodes": [
+        "SG08011027",
+        "SG08011127"
+      ],
+      "legacyCodes": [
+        "SG08011027",
+        "SG08011127"
+      ],
+      "desiredCodes": [
+        "SG08011227"
+      ],
+      "missingYearTarget": 80.0
+    },
+    {
+      "code": "1.1.38",
+      "year": 2028,
+      "currentCodes": [
+        "SG08011428",
+        "SG08011528"
+      ],
+      "legacyCodes": [
+        "SG08011428",
+        "SG08011528"
+      ],
+      "desiredCodes": [
+        "SG08011628"
+      ],
+      "missingYearTarget": 90.0
+    },
+    {
+      "code": "1.1.39",
+      "year": 2025,
+      "currentCodes": [
+        "SG08020325"
+      ],
+      "legacyCodes": [
+        "SG08020325"
+      ],
+      "desiredCodes": [
+        "SG08020325"
+      ],
+      "missingYearTarget": 50.0
+    },
+    {
+      "code": "1.1.39",
+      "year": 2026,
+      "currentCodes": [
+        "SG08020826"
+      ],
+      "legacyCodes": [
+        "SG08020826"
+      ],
+      "desiredCodes": [
+        "SG08020826"
+      ],
+      "missingYearTarget": 60.0
+    },
+    {
+      "code": "1.1.39",
+      "year": 2027,
+      "currentCodes": [
+        "SG08021827"
+      ],
+      "legacyCodes": [
+        "SG08021827"
+      ],
+      "desiredCodes": [
+        "SG08021827"
+      ],
+      "missingYearTarget": 70.0
+    },
+    {
+      "code": "1.1.39",
+      "year": 2028,
+      "currentCodes": [
+        "SG08022628"
+      ],
+      "legacyCodes": [
+        "SG08022628"
+      ],
+      "desiredCodes": [
+        "SG08022628"
+      ],
+      "missingYearTarget": 75.0
+    },
+    {
+      "code": "1.1.39",
+      "year": 2029,
+      "currentCodes": [
+        "SG08023529"
+      ],
+      "legacyCodes": [
+        "SG08023529"
+      ],
+      "desiredCodes": [
+        "SG08023529"
+      ],
+      "missingYearTarget": 80.0
+    },
+    {
+      "code": "1.1.40",
+      "year": 2025,
+      "currentCodes": [
+        "SG08030225"
+      ],
+      "legacyCodes": [
+        "SG08030225"
+      ],
+      "desiredCodes": [
+        "SG08030225"
+      ],
+      "missingYearTarget": 20.0
+    },
+    {
+      "code": "1.1.40",
+      "year": 2026,
+      "currentCodes": [
+        "SG08030426"
+      ],
+      "legacyCodes": [
+        "SG08030426"
+      ],
+      "desiredCodes": [
+        "SG08030426"
+      ],
+      "missingYearTarget": 30.0
+    },
+    {
+      "code": "1.1.40",
+      "year": 2027,
+      "currentCodes": [
+        "SG08030627"
+      ],
+      "legacyCodes": [
+        "SG08030627"
+      ],
+      "desiredCodes": [
+        "SG08030627"
+      ],
+      "missingYearTarget": 50.0
+    },
+    {
+      "code": "1.1.40",
+      "year": 2028,
+      "currentCodes": [
+        "SG08030828"
+      ],
+      "legacyCodes": [
+        "SG08030828"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 50.0
+    },
+    {
+      "code": "1.1.40",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 50.0
+    },
+    {
+      "code": "1.1.41",
+      "year": 2025,
+      "currentCodes": [
+        "SG08030125",
+        "SG08030225"
+      ],
+      "legacyCodes": [
+        "SG08030125",
+        "SG08030225"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.41",
+      "year": 2026,
+      "currentCodes": [
+        "SG04030326",
+        "SG08030326",
+        "SG08030426"
+      ],
+      "legacyCodes": [
+        "SG04030326",
+        "SG08030326",
+        "SG08030426"
+      ],
+      "desiredCodes": [
+        "SG08030326"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.41",
+      "year": 2027,
+      "currentCodes": [
+        "SG04030627",
+        "SG08030527",
+        "SG08030627"
+      ],
+      "legacyCodes": [
+        "SG04030627",
+        "SG08030527",
+        "SG08030627"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.41",
+      "year": 2028,
+      "currentCodes": [
+        "SG08030728",
+        "SG08030828"
+      ],
+      "legacyCodes": [
+        "SG08030728",
+        "SG08030828"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.41",
+      "year": 2029,
+      "currentCodes": [
+        "SG08030929",
+        "SG08031029"
+      ],
+      "legacyCodes": [
+        "SG08030929",
+        "SG08031029"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.42",
+      "year": 2025,
+      "currentCodes": [
+        "SG09030125"
+      ],
+      "legacyCodes": [
+        "SG09030125"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.42",
+      "year": 2026,
+      "currentCodes": [
+        "SG09030626"
+      ],
+      "legacyCodes": [
+        "SG09030626"
+      ],
+      "desiredCodes": [
+        "SG09030626"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.42",
+      "year": 2027,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.42",
+      "year": 2028,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.42",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.43",
+      "year": 2025,
+      "currentCodes": [
+        "SG09010225"
+      ],
+      "legacyCodes": [
+        "SG09010225"
+      ],
+      "desiredCodes": [
+        "SG09010225"
+      ],
+      "missingYearTarget": 200.0
+    },
+    {
+      "code": "1.1.43",
+      "year": 2026,
+      "currentCodes": [
+        "SG09010626"
+      ],
+      "legacyCodes": [
+        "SG09010626"
+      ],
+      "desiredCodes": [
+        "SG09010626"
+      ],
+      "missingYearTarget": 200.0
+    },
+    {
+      "code": "1.1.43",
+      "year": 2027,
+      "currentCodes": [
+        "SG09010927"
+      ],
+      "legacyCodes": [
+        "SG09010927"
+      ],
+      "desiredCodes": [
+        "SG09010927"
+      ],
+      "missingYearTarget": 200.0
+    },
+    {
+      "code": "1.1.43",
+      "year": 2028,
+      "currentCodes": [
+        "SG09011228"
+      ],
+      "legacyCodes": [
+        "SG09011228"
+      ],
+      "desiredCodes": [
+        "SG09011228"
+      ],
+      "missingYearTarget": 200.0
+    },
+    {
+      "code": "1.1.43",
+      "year": 2029,
+      "currentCodes": [
+        "SG09011529"
+      ],
+      "legacyCodes": [
+        "SG09011529"
+      ],
+      "desiredCodes": [
+        "SG09011529"
+      ],
+      "missingYearTarget": 200.0
+    },
+    {
+      "code": "1.1.44",
+      "year": 2025,
+      "currentCodes": [
+        "SG09010325"
+      ],
+      "legacyCodes": [
+        "SG09010325"
+      ],
+      "desiredCodes": [
+        "SG09010325"
+      ],
+      "missingYearTarget": 200.0
+    },
+    {
+      "code": "1.1.44",
+      "year": 2026,
+      "currentCodes": [
+        "SG09010726"
+      ],
+      "legacyCodes": [
+        "SG09010726"
+      ],
+      "desiredCodes": [
+        "SG09010726"
+      ],
+      "missingYearTarget": 200.0
+    },
+    {
+      "code": "1.1.44",
+      "year": 2027,
+      "currentCodes": [
+        "SG09011027"
+      ],
+      "legacyCodes": [
+        "SG09011027"
+      ],
+      "desiredCodes": [
+        "SG09011027"
+      ],
+      "missingYearTarget": 200.0
+    },
+    {
+      "code": "1.1.44",
+      "year": 2028,
+      "currentCodes": [
+        "SG09011328"
+      ],
+      "legacyCodes": [
+        "SG09011328"
+      ],
+      "desiredCodes": [
+        "SG09011328"
+      ],
+      "missingYearTarget": 200.0
+    },
+    {
+      "code": "1.1.44",
+      "year": 2029,
+      "currentCodes": [
+        "SG09011629"
+      ],
+      "legacyCodes": [
+        "SG09011629"
+      ],
+      "desiredCodes": [
+        "SG09011629"
+      ],
+      "missingYearTarget": 200.0
+    },
+    {
+      "code": "1.1.45",
+      "year": 2025,
+      "currentCodes": [
+        "SG09020125",
+        "SG09020225",
+        "SG09020325"
+      ],
+      "legacyCodes": [
+        "SG09020125",
+        "SG09020225",
+        "SG09020325"
+      ],
+      "desiredCodes": [
+        "SG10020225"
+      ],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.45",
+      "year": 2026,
+      "currentCodes": [
+        "SG09020626",
+        "SG09020726"
+      ],
+      "legacyCodes": [
+        "SG09020626",
+        "SG09020726"
+      ],
+      "desiredCodes": [
+        "SG09020726",
+        "SG10020326"
+      ],
+      "missingYearTarget": 2.0
+    },
+    {
+      "code": "1.1.45",
+      "year": 2027,
+      "currentCodes": [
+        "SG09020927",
+        "SG09021027"
+      ],
+      "legacyCodes": [
+        "SG09020927",
+        "SG09021027"
+      ],
+      "desiredCodes": [
+        "SG09021027",
+        "SG10020527"
+      ],
+      "missingYearTarget": 2.0
+    },
+    {
+      "code": "1.1.45",
+      "year": 2028,
+      "currentCodes": [
+        "SG09021228",
+        "SG09021328"
+      ],
+      "legacyCodes": [
+        "SG09021228",
+        "SG09021328"
+      ],
+      "desiredCodes": [
+        "SG09021328",
+        "SG10020728"
+      ],
+      "missingYearTarget": 3.0
+    },
+    {
+      "code": "1.1.45",
+      "year": 2029,
+      "currentCodes": [
+        "SG09021529",
+        "SG09021629"
+      ],
+      "legacyCodes": [
+        "SG09021529",
+        "SG09021629"
+      ],
+      "desiredCodes": [
+        "SG09021629",
+        "SG10020829"
+      ],
+      "missingYearTarget": 3.0
+    },
+    {
+      "code": "1.1.46",
+      "year": 2025,
+      "currentCodes": [
+        "SG09010425"
+      ],
+      "legacyCodes": [
+        "SG09010425"
+      ],
+      "desiredCodes": [
+        "SG09010425"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.46",
+      "year": 2026,
+      "currentCodes": [
+        "SG09010826"
+      ],
+      "legacyCodes": [
+        "SG09010826"
+      ],
+      "desiredCodes": [
+        "SG09010826"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.46",
+      "year": 2027,
+      "currentCodes": [
+        "SG09011127"
+      ],
+      "legacyCodes": [
+        "SG09011127"
+      ],
+      "desiredCodes": [
+        "SG09011127"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.46",
+      "year": 2028,
+      "currentCodes": [
+        "SG09011428"
+      ],
+      "legacyCodes": [
+        "SG09011428"
+      ],
+      "desiredCodes": [
+        "SG09011428"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.46",
+      "year": 2029,
+      "currentCodes": [
+        "SG09011729"
+      ],
+      "legacyCodes": [
+        "SG09011729"
+      ],
+      "desiredCodes": [
+        "SG09011729"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.47",
+      "year": 2025,
+      "currentCodes": [
+        "SG09030325"
+      ],
+      "legacyCodes": [
+        "SG09030325"
+      ],
+      "desiredCodes": [
+        "SG09030325"
+      ],
+      "missingYearTarget": 30.0
+    },
+    {
+      "code": "1.1.47",
+      "year": 2026,
+      "currentCodes": [
+        "SG09030826"
+      ],
+      "legacyCodes": [
+        "SG09030826"
+      ],
+      "desiredCodes": [
+        "SG09030826"
+      ],
+      "missingYearTarget": 60.0
+    },
+    {
+      "code": "1.1.47",
+      "year": 2027,
+      "currentCodes": [
+        "SG09031227"
+      ],
+      "legacyCodes": [
+        "SG09031227"
+      ],
+      "desiredCodes": [
+        "SG09031227"
+      ],
+      "missingYearTarget": 100.0
+    },
+    {
+      "code": "1.1.47",
+      "year": 2028,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [
+        "SG09031828"
+      ],
+      "missingYearTarget": 150.0
+    },
+    {
+      "code": "1.1.47",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [
+        "SG09032329"
+      ],
+      "missingYearTarget": 200.0
+    },
+    {
+      "code": "1.1.48",
+      "year": 2025,
+      "currentCodes": [
+        "SG10010125"
+      ],
+      "legacyCodes": [
+        "SG10010125"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.48",
+      "year": 2026,
+      "currentCodes": [
+        "SG10010526"
+      ],
+      "legacyCodes": [
+        "SG10010526"
+      ],
+      "desiredCodes": [
+        "SG10010526"
+      ],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.48",
+      "year": 2027,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.48",
+      "year": 2028,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.48",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.49",
+      "year": 2025,
+      "currentCodes": [
+        "SG10030225"
+      ],
+      "legacyCodes": [
+        "SG10030225"
+      ],
+      "desiredCodes": [
+        "SG10030225"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.49",
+      "year": 2026,
+      "currentCodes": [
+        "SG10030426"
+      ],
+      "legacyCodes": [
+        "SG10030426"
+      ],
+      "desiredCodes": [
+        "SG10030426"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.49",
+      "year": 2027,
+      "currentCodes": [
+        "SG10030627"
+      ],
+      "legacyCodes": [
+        "SG10030627"
+      ],
+      "desiredCodes": [
+        "SG10030627"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.49",
+      "year": 2028,
+      "currentCodes": [
+        "SG10030828"
+      ],
+      "legacyCodes": [
+        "SG10030828"
+      ],
+      "desiredCodes": [
+        "SG10030828"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.49",
+      "year": 2029,
+      "currentCodes": [
+        "SG10031029"
+      ],
+      "legacyCodes": [
+        "SG10031029"
+      ],
+      "desiredCodes": [
+        "SG10031029"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.50",
+      "year": 2025,
+      "currentCodes": [
+        "SG10030125"
+      ],
+      "legacyCodes": [
+        "SG10030125"
+      ],
+      "desiredCodes": [
+        "SG10030125"
+      ],
+      "missingYearTarget": 4.0
+    },
+    {
+      "code": "1.1.50",
+      "year": 2026,
+      "currentCodes": [
+        "SG10030326"
+      ],
+      "legacyCodes": [
+        "SG10030326"
+      ],
+      "desiredCodes": [
+        "SG10030326"
+      ],
+      "missingYearTarget": 4.0
+    },
+    {
+      "code": "1.1.50",
+      "year": 2027,
+      "currentCodes": [
+        "SG10030527"
+      ],
+      "legacyCodes": [
+        "SG10030527"
+      ],
+      "desiredCodes": [
+        "SG10030527"
+      ],
+      "missingYearTarget": 4.0
+    },
+    {
+      "code": "1.1.50",
+      "year": 2028,
+      "currentCodes": [
+        "SG10030728"
+      ],
+      "legacyCodes": [
+        "SG10030728"
+      ],
+      "desiredCodes": [
+        "SG10030728"
+      ],
+      "missingYearTarget": 4.0
+    },
+    {
+      "code": "1.1.50",
+      "year": 2029,
+      "currentCodes": [
+        "SG10030929"
+      ],
+      "legacyCodes": [
+        "SG10030929"
+      ],
+      "desiredCodes": [
+        "SG10030929"
+      ],
+      "missingYearTarget": 4.0
+    },
+    {
+      "code": "1.1.51",
+      "year": 2025,
+      "currentCodes": [
+        "SG01010625"
+      ],
+      "legacyCodes": [
+        "SG01010625"
+      ],
+      "desiredCodes": [
+        "SG01010625"
+      ],
+      "missingYearTarget": 3.0
+    },
+    {
+      "code": "1.1.51",
+      "year": 2026,
+      "currentCodes": [
+        "SG01011226"
+      ],
+      "legacyCodes": [
+        "SG01011226"
+      ],
+      "desiredCodes": [
+        "SG01011226"
+      ],
+      "missingYearTarget": 4.0
+    },
+    {
+      "code": "1.1.51",
+      "year": 2027,
+      "currentCodes": [
+        "SG01011827"
+      ],
+      "legacyCodes": [
+        "SG01011827"
+      ],
+      "desiredCodes": [
+        "SG01011827"
+      ],
+      "missingYearTarget": 4.0
+    },
+    {
+      "code": "1.1.51",
+      "year": 2028,
+      "currentCodes": [
+        "SG01012428"
+      ],
+      "legacyCodes": [
+        "SG01012428"
+      ],
+      "desiredCodes": [
+        "SG01012428"
+      ],
+      "missingYearTarget": 3.0
+    },
+    {
+      "code": "1.1.51",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.52",
+      "year": 2025,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.52",
+      "year": 2026,
+      "currentCodes": [
+        "SG01030926"
+      ],
+      "legacyCodes": [
+        "SG01030926"
+      ],
+      "desiredCodes": [
+        "SG01030926"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.52",
+      "year": 2027,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.52",
+      "year": 2028,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.52",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.53",
+      "year": 2025,
+      "currentCodes": [
+        "SG02010125"
+      ],
+      "legacyCodes": [
+        "SG02010125"
+      ],
+      "desiredCodes": [
+        "SG02010125"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.1.53",
+      "year": 2026,
+      "currentCodes": [
+        "SG02010726"
+      ],
+      "legacyCodes": [
+        "SG02010726"
+      ],
+      "desiredCodes": [
+        "SG02010726"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.1.53",
+      "year": 2027,
+      "currentCodes": [
+        "SG02011227"
+      ],
+      "legacyCodes": [
+        "SG02011227"
+      ],
+      "desiredCodes": [
+        "SG02011227"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.1.53",
+      "year": 2028,
+      "currentCodes": [
+        "SG02011628"
+      ],
+      "legacyCodes": [
+        "SG02011628"
+      ],
+      "desiredCodes": [
+        "SG02011628"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.1.53",
+      "year": 2029,
+      "currentCodes": [
+        "SG02012129"
+      ],
+      "legacyCodes": [
+        "SG02012129"
+      ],
+      "desiredCodes": [
+        "SG02012129"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.1.54",
+      "year": 2025,
+      "currentCodes": [
+        "SG02010625"
+      ],
+      "legacyCodes": [
+        "SG02010625"
+      ],
+      "desiredCodes": [
+        "SG02010625"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.54",
+      "year": 2026,
+      "currentCodes": [
+        "SG02011126"
+      ],
+      "legacyCodes": [
+        "SG02011126"
+      ],
+      "desiredCodes": [
+        "SG02011126"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.54",
+      "year": 2027,
+      "currentCodes": [
+        "SG02011427"
+      ],
+      "legacyCodes": [
+        "SG02011427"
+      ],
+      "desiredCodes": [
+        "SG02011427"
+      ],
+      "missingYearTarget": 2.0
+    },
+    {
+      "code": "1.1.54",
+      "year": 2028,
+      "currentCodes": [
+        "SG02012028"
+      ],
+      "legacyCodes": [
+        "SG02012028"
+      ],
+      "desiredCodes": [
+        "SG02012028"
+      ],
+      "missingYearTarget": 2.0
+    },
+    {
+      "code": "1.1.54",
+      "year": 2029,
+      "currentCodes": [
+        "SG02012429"
+      ],
+      "legacyCodes": [
+        "SG02012429"
+      ],
+      "desiredCodes": [
+        "SG02012429"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.55",
+      "year": 2025,
+      "currentCodes": [
+        "SG03030225"
+      ],
+      "legacyCodes": [
+        "SG03030225"
+      ],
+      "desiredCodes": [
+        "SG03030225"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.55",
+      "year": 2026,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.55",
+      "year": 2027,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.55",
+      "year": 2028,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.55",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.56",
+      "year": 2025,
+      "currentCodes": [
+        "SG03030325"
+      ],
+      "legacyCodes": [
+        "SG03030325"
+      ],
+      "desiredCodes": [
+        "SG03030325"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.56",
+      "year": 2026,
+      "currentCodes": [
+        "SG03030826"
+      ],
+      "legacyCodes": [
+        "SG03030826"
+      ],
+      "desiredCodes": [
+        "SG03030826"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.56",
+      "year": 2027,
+      "currentCodes": [
+        "SG03031127"
+      ],
+      "legacyCodes": [
+        "SG03031127"
+      ],
+      "desiredCodes": [
+        "SG03031127"
+      ],
+      "missingYearTarget": 2.0
+    },
+    {
+      "code": "1.1.56",
+      "year": 2028,
+      "currentCodes": [
+        "SG03031428"
+      ],
+      "legacyCodes": [
+        "SG03031428"
+      ],
+      "desiredCodes": [
+        "SG03031428"
+      ],
+      "missingYearTarget": 2.0
+    },
+    {
+      "code": "1.1.56",
+      "year": 2029,
+      "currentCodes": [
+        "SG03031729"
+      ],
+      "legacyCodes": [
+        "SG03031729"
+      ],
+      "desiredCodes": [
+        "SG03031729"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.57",
+      "year": 2025,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.57",
+      "year": 2026,
+      "currentCodes": [
+        "SG04010826"
+      ],
+      "legacyCodes": [
+        "SG04010826"
+      ],
+      "desiredCodes": [
+        "SG04010826"
+      ],
+      "missingYearTarget": 2.0
+    },
+    {
+      "code": "1.1.57",
+      "year": 2027,
+      "currentCodes": [
+        "SG04011427"
+      ],
+      "legacyCodes": [
+        "SG04011427"
+      ],
+      "desiredCodes": [
+        "SG04011427"
+      ],
+      "missingYearTarget": 2.0
+    },
+    {
+      "code": "1.1.57",
+      "year": 2028,
+      "currentCodes": [
+        "SG04012028"
+      ],
+      "legacyCodes": [
+        "SG04012028"
+      ],
+      "desiredCodes": [
+        "SG04012028"
+      ],
+      "missingYearTarget": 3.0
+    },
+    {
+      "code": "1.1.57",
+      "year": 2029,
+      "currentCodes": [
+        "SG04012529"
+      ],
+      "legacyCodes": [
+        "SG04012529"
+      ],
+      "desiredCodes": [
+        "SG04012529"
+      ],
+      "missingYearTarget": 2.0
+    },
+    {
+      "code": "1.1.58",
+      "year": 2025,
+      "currentCodes": [
+        "SG04020125"
+      ],
+      "legacyCodes": [
+        "SG04020125"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.58",
+      "year": 2026,
+      "currentCodes": [
+        "SG04020626"
+      ],
+      "legacyCodes": [
+        "SG04020626"
+      ],
+      "desiredCodes": [
+        "SG04020626"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.58",
+      "year": 2027,
+      "currentCodes": [
+        "SG04021127",
+        "SG04021227"
+      ],
+      "legacyCodes": [
+        "SG04021127"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.58",
+      "year": 2028,
+      "currentCodes": [],
+      "legacyCodes": [
+        "SG04021227"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.58",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.59",
+      "year": 2025,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.59",
+      "year": 2026,
+      "currentCodes": [
+        "SG05011026"
+      ],
+      "legacyCodes": [
+        "SG05011026"
+      ],
+      "desiredCodes": [
+        "SG05011026"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.59",
+      "year": 2027,
+      "currentCodes": [
+        "SG05011327"
+      ],
+      "legacyCodes": [
+        "SG05011327"
+      ],
+      "desiredCodes": [
+        "SG05011327"
+      ],
+      "missingYearTarget": 2.0
+    },
+    {
+      "code": "1.1.59",
+      "year": 2028,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.59",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.60",
+      "year": 2025,
+      "currentCodes": [
+        "SG05020225"
+      ],
+      "legacyCodes": [
+        "SG05020225"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.60",
+      "year": 2026,
+      "currentCodes": [
+        "SG05020426"
+      ],
+      "legacyCodes": [
+        "SG05020426"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.60",
+      "year": 2028,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.60",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.61",
+      "year": 2025,
+      "currentCodes": [
+        "SG06020325"
+      ],
+      "legacyCodes": [
+        "SG06020325"
+      ],
+      "desiredCodes": [
+        "SG06020325"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.61",
+      "year": 2026,
+      "currentCodes": [
+        "SG06020726"
+      ],
+      "legacyCodes": [
+        "SG06020726"
+      ],
+      "desiredCodes": [
+        "SG06020726"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.61",
+      "year": 2027,
+      "currentCodes": [
+        "SG06021127"
+      ],
+      "legacyCodes": [
+        "SG06021127"
+      ],
+      "desiredCodes": [
+        "SG06021127"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.61",
+      "year": 2028,
+      "currentCodes": [
+        "SG06021628"
+      ],
+      "legacyCodes": [
+        "SG06021628"
+      ],
+      "desiredCodes": [
+        "SG06021628"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.61",
+      "year": 2029,
+      "currentCodes": [
+        "SG06022029"
+      ],
+      "legacyCodes": [
+        "SG06022029"
+      ],
+      "desiredCodes": [
+        "SG06022029"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.62",
+      "year": 2025,
+      "currentCodes": [
+        "SG06020525"
+      ],
+      "legacyCodes": [
+        "SG06020525"
+      ],
+      "desiredCodes": [
+        "SG06020525"
+      ],
+      "missingYearTarget": 20.0
+    },
+    {
+      "code": "1.1.62",
+      "year": 2026,
+      "currentCodes": [
+        "SG06020926"
+      ],
+      "legacyCodes": [
+        "SG06020926"
+      ],
+      "desiredCodes": [
+        "SG06020926"
+      ],
+      "missingYearTarget": 20.0
+    },
+    {
+      "code": "1.1.62",
+      "year": 2027,
+      "currentCodes": [
+        "SG06021327"
+      ],
+      "legacyCodes": [
+        "SG06021327"
+      ],
+      "desiredCodes": [
+        "SG06021327"
+      ],
+      "missingYearTarget": 20.0
+    },
+    {
+      "code": "1.1.62",
+      "year": 2028,
+      "currentCodes": [
+        "SG06021828"
+      ],
+      "legacyCodes": [
+        "SG06021828"
+      ],
+      "desiredCodes": [
+        "SG06021828"
+      ],
+      "missingYearTarget": 20.0
+    },
+    {
+      "code": "1.1.62",
+      "year": 2029,
+      "currentCodes": [
+        "SG06022229"
+      ],
+      "legacyCodes": [
+        "SG06022229"
+      ],
+      "desiredCodes": [
+        "SG06022229"
+      ],
+      "missingYearTarget": 20.0
+    },
+    {
+      "code": "1.1.63",
+      "year": 2025,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.63",
+      "year": 2026,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.63",
+      "year": 2027,
+      "currentCodes": [
+        "SG07011427"
+      ],
+      "legacyCodes": [
+        "SG07011427"
+      ],
+      "desiredCodes": [
+        "SG07011427"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.63",
+      "year": 2028,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.63",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.64",
+      "year": 2025,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.64",
+      "year": 2026,
+      "currentCodes": [
+        "SG07010926"
+      ],
+      "legacyCodes": [
+        "SG07010926"
+      ],
+      "desiredCodes": [
+        "SG07010926"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.1.64",
+      "year": 2027,
+      "currentCodes": [
+        "SG07011327"
+      ],
+      "legacyCodes": [
+        "SG07011327"
+      ],
+      "desiredCodes": [
+        "SG07011327"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.1.64",
+      "year": 2028,
+      "currentCodes": [
+        "SG07011728"
+      ],
+      "legacyCodes": [
+        "SG07011728"
+      ],
+      "desiredCodes": [
+        "SG07011728"
+      ],
+      "missingYearTarget": 5.0
+    },
+    {
+      "code": "1.1.64",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.65",
+      "year": 2025,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.65",
+      "year": 2026,
+      "currentCodes": [
+        "SG07030726"
+      ],
+      "legacyCodes": [
+        "SG07030726"
+      ],
+      "desiredCodes": [
+        "SG07030726"
+      ],
+      "missingYearTarget": 2.0
+    },
+    {
+      "code": "1.1.65",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [
+        "SG07031727"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.66",
+      "year": 2025,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.66",
+      "year": 2026,
+      "currentCodes": [
+        "SG08021126"
+      ],
+      "legacyCodes": [
+        "SG08021126"
+      ],
+      "desiredCodes": [
+        "SG08021126"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.66",
+      "year": 2027,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.66",
+      "year": 2028,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.66",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.67",
+      "year": 2025,
+      "currentCodes": [
+        "SG08020525"
+      ],
+      "legacyCodes": [
+        "SG08020525"
+      ],
+      "desiredCodes": [
+        "SG08020525"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.1.67",
+      "year": 2026,
+      "currentCodes": [
+        "SG08021226"
+      ],
+      "legacyCodes": [
+        "SG08021226"
+      ],
+      "desiredCodes": [
+        "SG08021226"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.1.67",
+      "year": 2027,
+      "currentCodes": [
+        "SG08022027"
+      ],
+      "legacyCodes": [
+        "SG08022027"
+      ],
+      "desiredCodes": [
+        "SG08022027"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.1.67",
+      "year": 2028,
+      "currentCodes": [
+        "SG08022828"
+      ],
+      "legacyCodes": [
+        "SG08022828"
+      ],
+      "desiredCodes": [
+        "SG08022828"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.1.67",
+      "year": 2029,
+      "currentCodes": [
+        "SG08023729"
+      ],
+      "legacyCodes": [
+        "SG08023729"
+      ],
+      "desiredCodes": [
+        "SG08023729"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.1.68",
+      "year": 2025,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.68",
+      "year": 2026,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.68",
+      "year": 2027,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.1.68",
+      "year": 2028,
+      "currentCodes": [
+        "SG08022928"
+      ],
+      "legacyCodes": [
+        "SG08022928"
+      ],
+      "desiredCodes": [
+        "SG08022928"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.1.68",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.1",
+      "year": 2025,
+      "currentCodes": [
+        "SG01010325",
+        "SG01010425",
+        "SG01020125",
+        "SG01020225",
+        "SG01020425"
+      ],
+      "legacyCodes": [
+        "SG01010325",
+        "SG01010425",
+        "SG01020125",
+        "SG01020225",
+        "SG01020425"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.1",
+      "year": 2026,
+      "currentCodes": [
+        "SG01010826",
+        "SG01010926",
+        "SG01020526",
+        "SG01020626",
+        "SG01020726",
+        "SG01020826",
+        "SG01020926"
+      ],
+      "legacyCodes": [
+        "SG01010826",
+        "SG01010926",
+        "SG01011527",
+        "SG01020526",
+        "SG01020626",
+        "SG01020726",
+        "SG01020826",
+        "SG01020926"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.1",
+      "year": 2027,
+      "currentCodes": [
+        "SG01011527",
+        "SG01021127",
+        "SG01021227",
+        "SG01021327"
+      ],
+      "legacyCodes": [
+        "SG01012028",
+        "SG01012128",
+        "SG01012228",
+        "SG01021127",
+        "SG01021227",
+        "SG01021327"
+      ],
+      "desiredCodes": [
+        "SG01021127"
+      ],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.1",
+      "year": 2028,
+      "currentCodes": [
+        "SG01012028",
+        "SG01012128",
+        "SG01012228",
+        "SG01021428",
+        "SG01021528",
+        "SG01021628"
+      ],
+      "legacyCodes": [
+        "SG01012729",
+        "SG01012829",
+        "SG01021428",
+        "SG01021528",
+        "SG01021628"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.1",
+      "year": 2029,
+      "currentCodes": [
+        "SG01012529",
+        "SG01012629",
+        "SG01012729",
+        "SG01012829",
+        "SG01021729"
+      ],
+      "legacyCodes": [
+        "SG01012529",
+        "SG01012629",
+        "SG01021729"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.2",
+      "year": 2025,
+      "currentCodes": [
+        "SG01030125",
+        "SG01030225",
+        "SG01030325",
+        "SG01030425"
+      ],
+      "legacyCodes": [
+        "SG01030125",
+        "SG01030225",
+        "SG01030325",
+        "SG01030425"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.2",
+      "year": 2026,
+      "currentCodes": [
+        "SG01030626",
+        "SG01030726",
+        "SG01030826",
+        "SG01030926"
+      ],
+      "legacyCodes": [
+        "SG01030626",
+        "SG01030726",
+        "SG01030826",
+        "SG01030926"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.2",
+      "year": 2027,
+      "currentCodes": [
+        "SG01031127",
+        "SG01031227",
+        "SG01031327",
+        "SG01031427"
+      ],
+      "legacyCodes": [
+        "SG01031127",
+        "SG01031227",
+        "SG01031327",
+        "SG01031427"
+      ],
+      "desiredCodes": [
+        "SG01031427"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.2",
+      "year": 2028,
+      "currentCodes": [
+        "SG01031728",
+        "SG01031828"
+      ],
+      "legacyCodes": [
+        "SG01031728",
+        "SG01031828"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.2",
+      "year": 2029,
+      "currentCodes": [
+        "SG01032129"
+      ],
+      "legacyCodes": [
+        "SG01032129"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.3",
+      "year": 2025,
+      "currentCodes": [
+        "SG01010125",
+        "SG01010225",
+        "SG01010625"
+      ],
+      "legacyCodes": [
+        "SG01010125",
+        "SG01010225",
+        "SG01010625"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.3",
+      "year": 2026,
+      "currentCodes": [
+        "SG01010726",
+        "SG01011226"
+      ],
+      "legacyCodes": [
+        "SG01010726",
+        "SG01011226"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.3",
+      "year": 2027,
+      "currentCodes": [
+        "SG01011327",
+        "SG01011827"
+      ],
+      "legacyCodes": [
+        "SG01011327",
+        "SG01011827"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.3",
+      "year": 2028,
+      "currentCodes": [
+        "SG01011928",
+        "SG01012428"
+      ],
+      "legacyCodes": [
+        "SG01011928",
+        "SG01012428"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.3",
+      "year": 2029,
+      "currentCodes": [
+        "SG01012529",
+        "SG01012929"
+      ],
+      "legacyCodes": [
+        "SG01012529",
+        "SG01012929"
+      ],
+      "desiredCodes": [
+        "SG01012929"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.4",
+      "year": 2025,
+      "currentCodes": [
+        "SG01010525",
+        "SG01020125",
+        "SG01020325"
+      ],
+      "legacyCodes": [
+        "SG01010525",
+        "SG01020125",
+        "SG01020325"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.4",
+      "year": 2026,
+      "currentCodes": [
+        "SG01011026",
+        "SG01020526",
+        "SG01020626",
+        "SG01020726",
+        "SG01020926"
+      ],
+      "legacyCodes": [
+        "SG01011026",
+        "SG01020526",
+        "SG01020626",
+        "SG01020726",
+        "SG01020926"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.4",
+      "year": 2027,
+      "currentCodes": [
+        "SG01011427",
+        "SG01011627",
+        "SG01021027",
+        "SG01021227",
+        "SG01031627"
+      ],
+      "legacyCodes": [
+        "SG01011427",
+        "SG01011627",
+        "SG01021027",
+        "SG01021227",
+        "SG01031627"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.4",
+      "year": 2028,
+      "currentCodes": [
+        "SG01012228",
+        "SG01021628",
+        "SG01032028"
+      ],
+      "legacyCodes": [
+        "SG01012228",
+        "SG01021628",
+        "SG01032028"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.4",
+      "year": 2029,
+      "currentCodes": [
+        "SG01032329",
+        "SG03022429"
+      ],
+      "legacyCodes": [
+        "SG01032329",
+        "SG03022429"
+      ],
+      "desiredCodes": [
+        "SG03022429"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.5",
+      "year": 2025,
+      "currentCodes": [
+        "SG02010225",
+        "SG02010425",
+        "SG02020125",
+        "SG02020225",
+        "SG02020325",
+        "SG02020425",
+        "SG02030125"
+      ],
+      "legacyCodes": [
+        "SG02010225",
+        "SG02010425",
+        "SG02020125",
+        "SG02020225",
+        "SG02020325",
+        "SG02020425",
+        "SG02030125"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.5",
+      "year": 2026,
+      "currentCodes": [
+        "SG02010726",
+        "SG02010826",
+        "SG02010926",
+        "SG02020526",
+        "SG02020626",
+        "SG02020726",
+        "SG02020826",
+        "SG02030726"
+      ],
+      "legacyCodes": [
+        "SG02010726",
+        "SG02010826",
+        "SG02010926",
+        "SG02020526",
+        "SG02020626",
+        "SG02020726",
+        "SG02020826",
+        "SG02030726"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.5",
+      "year": 2027,
+      "currentCodes": [
+        "SG02011227",
+        "SG02011327",
+        "SG02011427",
+        "SG02020927",
+        "SG02021027",
+        "SG02021127"
+      ],
+      "legacyCodes": [
+        "SG02011227",
+        "SG02011327",
+        "SG02011427",
+        "SG02020927",
+        "SG02021027"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.5",
+      "year": 2028,
+      "currentCodes": [
+        "SG02011628",
+        "SG02011728",
+        "SG02021228",
+        "SG02021328",
+        "SG02021428"
+      ],
+      "legacyCodes": [
+        "SG02011628",
+        "SG02011728",
+        "SG02021127",
+        "SG02021228",
+        "SG02021328",
+        "SG02021428"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.5",
+      "year": 2029,
+      "currentCodes": [
+        "SG02012129",
+        "SG02012229",
+        "SG02021529",
+        "SG02021629"
+      ],
+      "legacyCodes": [
+        "SG02012129",
+        "SG02012229",
+        "SG02021529",
+        "SG02021629"
+      ],
+      "desiredCodes": [
+        "SG02012529"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.6",
+      "year": 2025,
+      "currentCodes": [
+        "SG02010125",
+        "SG02010325",
+        "SG02020125",
+        "SG02020225",
+        "SG02020325",
+        "SG02020425",
+        "SG02030325",
+        "SG02030525"
+      ],
+      "legacyCodes": [
+        "SG02010125",
+        "SG02010325",
+        "SG02020125",
+        "SG02020225",
+        "SG02020325",
+        "SG02020425",
+        "SG02030325",
+        "SG02030525"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.6",
+      "year": 2026,
+      "currentCodes": [
+        "SG02010726",
+        "SG02011026",
+        "SG02020526",
+        "SG02020626",
+        "SG02020726",
+        "SG02020826",
+        "SG02031026",
+        "SG02031126"
+      ],
+      "legacyCodes": [
+        "SG02010726",
+        "SG02011026",
+        "SG02020526",
+        "SG02020626",
+        "SG02020726",
+        "SG02020826",
+        "SG02031026",
+        "SG02031126"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.6",
+      "year": 2027,
+      "currentCodes": [
+        "SG02011227",
+        "SG02021127",
+        "SG02031427",
+        "SG02031627",
+        "SG02031727"
+      ],
+      "legacyCodes": [
+        "SG02011227",
+        "SG02021127",
+        "SG02031427",
+        "SG02031627",
+        "SG02031727"
+      ],
+      "desiredCodes": [
+        "SG02011227"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.6",
+      "year": 2028,
+      "currentCodes": [
+        "SG02011628",
+        "SG02011728",
+        "SG02011928",
+        "SG02021228",
+        "SG02021328",
+        "SG02021428",
+        "SG02031828",
+        "SG02031928",
+        "SG02032128",
+        "SG02032228"
+      ],
+      "legacyCodes": [
+        "SG02011628",
+        "SG02011728",
+        "SG02011928",
+        "SG02021228",
+        "SG02021328",
+        "SG02021428",
+        "SG02031828",
+        "SG02031928",
+        "SG02032128",
+        "SG02032228"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.6",
+      "year": 2029,
+      "currentCodes": [
+        "SG02012329",
+        "SG02021529",
+        "SG02021629",
+        "SG02032329",
+        "SG02032429",
+        "SG02032629",
+        "SG02032729"
+      ],
+      "legacyCodes": [
+        "SG02012329",
+        "SG02021529",
+        "SG02021629",
+        "SG02032329",
+        "SG02032429",
+        "SG02032629",
+        "SG02032729"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.7",
+      "year": 2025,
+      "currentCodes": [
+        "SG02030225"
+      ],
+      "legacyCodes": [
+        "SG02030225"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.7",
+      "year": 2026,
+      "currentCodes": [
+        "SG02030826",
+        "SG02030926"
+      ],
+      "legacyCodes": [
+        "SG02030826",
+        "SG02030926"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.7",
+      "year": 2027,
+      "currentCodes": [
+        "SG02031327"
+      ],
+      "legacyCodes": [
+        "SG02031327"
+      ],
+      "desiredCodes": [
+        "SG02031327"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.7",
+      "year": 2028,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.7",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.8",
+      "year": 2025,
+      "currentCodes": [
+        "SG02030425"
+      ],
+      "legacyCodes": [
+        "SG02030425"
+      ],
+      "desiredCodes": [
+        "SG02030425"
+      ],
+      "missingYearTarget": 2000.0
+    },
+    {
+      "code": "1.2.8",
+      "year": 2026,
+      "currentCodes": [
+        "SG02030926"
+      ],
+      "legacyCodes": [
+        "SG02030926"
+      ],
+      "desiredCodes": [
+        "SG02030926"
+      ],
+      "missingYearTarget": 2000.0
+    },
+    {
+      "code": "1.2.8",
+      "year": 2027,
+      "currentCodes": [
+        "SG02031527"
+      ],
+      "legacyCodes": [
+        "SG02031527"
+      ],
+      "desiredCodes": [
+        "SG02031527"
+      ],
+      "missingYearTarget": 2000.0
+    },
+    {
+      "code": "1.2.8",
+      "year": 2028,
+      "currentCodes": [
+        "SG02032028"
+      ],
+      "legacyCodes": [
+        "SG02032028"
+      ],
+      "desiredCodes": [
+        "SG02032028"
+      ],
+      "missingYearTarget": 2000.0
+    },
+    {
+      "code": "1.2.8",
+      "year": 2029,
+      "currentCodes": [
+        "SG02032529"
+      ],
+      "legacyCodes": [
+        "SG02032529"
+      ],
+      "desiredCodes": [
+        "SG02032529"
+      ],
+      "missingYearTarget": 2000.0
+    },
+    {
+      "code": "1.2.9",
+      "year": 2025,
+      "currentCodes": [
+        "SG03010325",
+        "SG03010425",
+        "SG03020125",
+        "SG03030325"
+      ],
+      "legacyCodes": [
+        "SG03010325",
+        "SG03010425",
+        "SG03020125",
+        "SG03020726",
+        "SG03030325"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.2.9",
+      "year": 2026,
+      "currentCodes": [
+        "SG03010526",
+        "SG03010826",
+        "SG03020626",
+        "SG03020726",
+        "SG03030826"
+      ],
+      "legacyCodes": [
+        "SG03010526",
+        "SG03010826",
+        "SG03020626",
+        "SG03030826"
+      ],
+      "desiredCodes": [
+        "SG03010826"
+      ],
+      "missingYearTarget": 20.0
+    },
+    {
+      "code": "1.2.9",
+      "year": 2027,
+      "currentCodes": [
+        "SG03011027",
+        "SG03011127",
+        "SG03021127",
+        "SG03021227",
+        "SG03031127"
+      ],
+      "legacyCodes": [
+        "SG03011027",
+        "SG03011127",
+        "SG03021127",
+        "SG03031127"
+      ],
+      "desiredCodes": [
+        "SG03011127"
+      ],
+      "missingYearTarget": 30.0
+    },
+    {
+      "code": "1.2.9",
+      "year": 2028,
+      "currentCodes": [
+        "SG03031428"
+      ],
+      "legacyCodes": [
+        "SG03021227",
+        "SG03031428"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 30.0
+    },
+    {
+      "code": "1.2.9",
+      "year": 2029,
+      "currentCodes": [
+        "SG03031729"
+      ],
+      "legacyCodes": [
+        "SG03031729"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 30.0
+    },
+    {
+      "code": "1.2.11",
+      "year": 2025,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.11",
+      "year": 2026,
+      "currentCodes": [
+        "SG03010926"
+      ],
+      "legacyCodes": [
+        "SG03010926"
+      ],
+      "desiredCodes": [
+        "SG03010926"
+      ],
+      "missingYearTarget": 20.0
+    },
+    {
+      "code": "1.2.11",
+      "year": 2027,
+      "currentCodes": [
+        "SG03011227",
+        "SG03011327"
+      ],
+      "legacyCodes": [
+        "SG03011227",
+        "SG03011327"
+      ],
+      "desiredCodes": [
+        "SG03011227"
+      ],
+      "missingYearTarget": 30.0
+    },
+    {
+      "code": "1.2.11",
+      "year": 2028,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 30.0
+    },
+    {
+      "code": "1.2.11",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 30.0
+    },
+    {
+      "code": "1.2.12",
+      "year": 2025,
+      "currentCodes": [
+        "SG03020525"
+      ],
+      "legacyCodes": [
+        "SG03020525"
+      ],
+      "desiredCodes": [
+        "SG03020525"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.2.12",
+      "year": 2026,
+      "currentCodes": [
+        "SG03020926"
+      ],
+      "legacyCodes": [
+        "SG03020926"
+      ],
+      "desiredCodes": [
+        "SG03020926"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.2.12",
+      "year": 2027,
+      "currentCodes": [
+        "SG03021427"
+      ],
+      "legacyCodes": [
+        "SG03021427"
+      ],
+      "desiredCodes": [
+        "SG03021427"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.2.12",
+      "year": 2028,
+      "currentCodes": [
+        "SG03021928"
+      ],
+      "legacyCodes": [
+        "SG03021928"
+      ],
+      "desiredCodes": [
+        "SG03021928"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.2.12",
+      "year": 2029,
+      "currentCodes": [
+        "SG03022329"
+      ],
+      "legacyCodes": [
+        "SG03022329"
+      ],
+      "desiredCodes": [
+        "SG03022329"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.2.13",
+      "year": 2025,
+      "currentCodes": [
+        "SG03020525"
+      ],
+      "legacyCodes": [
+        "SG03020525"
+      ],
+      "desiredCodes": [
+        "SG03020525"
+      ],
+      "missingYearTarget": 2.0
+    },
+    {
+      "code": "1.2.13",
+      "year": 2026,
+      "currentCodes": [
+        "SG03020926"
+      ],
+      "legacyCodes": [
+        "SG03020926"
+      ],
+      "desiredCodes": [
+        "SG03020926"
+      ],
+      "missingYearTarget": 2.0
+    },
+    {
+      "code": "1.2.13",
+      "year": 2027,
+      "currentCodes": [
+        "SG03021427"
+      ],
+      "legacyCodes": [
+        "SG03021427"
+      ],
+      "desiredCodes": [
+        "SG03021427"
+      ],
+      "missingYearTarget": 2.0
+    },
+    {
+      "code": "1.2.13",
+      "year": 2028,
+      "currentCodes": [
+        "SG03021928"
+      ],
+      "legacyCodes": [
+        "SG03021928"
+      ],
+      "desiredCodes": [
+        "SG03021928"
+      ],
+      "missingYearTarget": 2.0
+    },
+    {
+      "code": "1.2.13",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.14",
+      "year": 2025,
+      "currentCodes": [
+        "SG03020125",
+        "SG03020425"
+      ],
+      "legacyCodes": [
+        "SG03020125",
+        "SG03020425"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 65.0
+    },
+    {
+      "code": "1.2.14",
+      "year": 2026,
+      "currentCodes": [
+        "SG03020626"
+      ],
+      "legacyCodes": [
+        "SG03020626"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 65.0
+    },
+    {
+      "code": "1.2.14",
+      "year": 2027,
+      "currentCodes": [
+        "SG03021127"
+      ],
+      "legacyCodes": [
+        "SG03021127"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 65.0
+    },
+    {
+      "code": "1.2.14",
+      "year": 2028,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 65.0
+    },
+    {
+      "code": "1.2.14",
+      "year": 2029,
+      "currentCodes": [
+        "SG03022129",
+        "SG03031629"
+      ],
+      "legacyCodes": [
+        "SG03022129",
+        "SG03031629"
+      ],
+      "desiredCodes": [
+        "SG03031629"
+      ],
+      "missingYearTarget": 65.0
+    },
+    {
+      "code": "1.2.15",
+      "year": 2025,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 85.0
+    },
+    {
+      "code": "1.2.15",
+      "year": 2026,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 85.0
+    },
+    {
+      "code": "1.2.15",
+      "year": 2027,
+      "currentCodes": [
+        "SG03021327"
+      ],
+      "legacyCodes": [
+        "SG03021327"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 85.0
+    },
+    {
+      "code": "1.2.15",
+      "year": 2028,
+      "currentCodes": [
+        "SG03021828"
+      ],
+      "legacyCodes": [
+        "SG03021828"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 85.0
+    },
+    {
+      "code": "1.2.15",
+      "year": 2029,
+      "currentCodes": [
+        "SG03031629"
+      ],
+      "legacyCodes": [
+        "SG03031629"
+      ],
+      "desiredCodes": [
+        "SG03031629"
+      ],
+      "missingYearTarget": 85.0
+    },
+    {
+      "code": "1.2.16",
+      "year": 2025,
+      "currentCodes": [
+        "SG03010125",
+        "SG03010225"
+      ],
+      "legacyCodes": [
+        "SG03010125",
+        "SG03010225"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.16",
+      "year": 2026,
+      "currentCodes": [
+        "SG03010626",
+        "SG03020626",
+        "SG03020726",
+        "SG03020826"
+      ],
+      "legacyCodes": [
+        "SG03010626",
+        "SG03020626",
+        "SG03020726",
+        "SG03020826"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.16",
+      "year": 2027,
+      "currentCodes": [
+        "SG03021127",
+        "SG03021227"
+      ],
+      "legacyCodes": [
+        "SG03021127",
+        "SG03021227"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.16",
+      "year": 2028,
+      "currentCodes": [
+        "SG03011428",
+        "SG03021628"
+      ],
+      "legacyCodes": [
+        "SG03011428",
+        "SG03021628"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.16",
+      "year": 2029,
+      "currentCodes": [
+        "SG03011829",
+        "SG03022129"
+      ],
+      "legacyCodes": [
+        "SG03011829",
+        "SG03022129"
+      ],
+      "desiredCodes": [
+        "SG03011829"
+      ],
+      "missingYearTarget": 2.0
+    },
+    {
+      "code": "1.2.17",
+      "year": 2025,
+      "currentCodes": [
+        "SG03020225",
+        "SG03030125",
+        "SG03030225"
+      ],
+      "legacyCodes": [
+        "SG03020225",
+        "SG03030125",
+        "SG03030225"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.17",
+      "year": 2026,
+      "currentCodes": [
+        "SG03030526",
+        "SG03030626",
+        "SG03030726"
+      ],
+      "legacyCodes": [
+        "SG03030526",
+        "SG03030626",
+        "SG03030726"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.17",
+      "year": 2027,
+      "currentCodes": [
+        "SG03030927",
+        "SG03031027"
+      ],
+      "legacyCodes": [
+        "SG03030927",
+        "SG03031027"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.17",
+      "year": 2028,
+      "currentCodes": [
+        "SG03011528",
+        "SG03021628",
+        "SG03021728",
+        "SG03031228",
+        "SG03031328"
+      ],
+      "legacyCodes": [
+        "SG03011528",
+        "SG03021728",
+        "SG03031228",
+        "SG03031328"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.17",
+      "year": 2029,
+      "currentCodes": [
+        "SG03011729",
+        "SG03022129",
+        "SG03022229",
+        "SG03022429",
+        "SG03031529"
+      ],
+      "legacyCodes": [
+        "SG03011729",
+        "SG03021628",
+        "SG03022129",
+        "SG03022229",
+        "SG03022429",
+        "SG03031529"
+      ],
+      "desiredCodes": [
+        "SG03011829"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.18",
+      "year": 2025,
+      "currentCodes": [
+        "SG04010125",
+        "SG04010225",
+        "SG04010325",
+        "SG04010425",
+        "SG04020125",
+        "SG04020225",
+        "SG04020325",
+        "SG04030125"
+      ],
+      "legacyCodes": [
+        "SG04010125",
+        "SG04010225",
+        "SG04010325",
+        "SG04010425",
+        "SG04020125",
+        "SG04020225",
+        "SG04020325",
+        "SG04030125"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.18",
+      "year": 2026,
+      "currentCodes": [
+        "SG04010826",
+        "SG04010926",
+        "SG04011026",
+        "SG04020626",
+        "SG04020726",
+        "SG04020826",
+        "SG04030326",
+        "SG04030426"
+      ],
+      "legacyCodes": [
+        "SG04010826",
+        "SG04010926",
+        "SG04011026",
+        "SG04020626",
+        "SG04020726",
+        "SG04020826",
+        "SG04030326",
+        "SG04030426"
+      ],
+      "desiredCodes": [
+        "SG04011026"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.18",
+      "year": 2027,
+      "currentCodes": [
+        "SG04011327",
+        "SG04011427",
+        "SG04011527",
+        "SG04011727",
+        "SG04021127",
+        "SG04021227",
+        "SG04021327",
+        "SG04030627"
+      ],
+      "legacyCodes": [
+        "SG04011327",
+        "SG04011427",
+        "SG04011527",
+        "SG04011727",
+        "SG04021127",
+        "SG04021227",
+        "SG04021327",
+        "SG04030627"
+      ],
+      "desiredCodes": [
+        "SG04011727"
+      ],
+      "missingYearTarget": 2.0
+    },
+    {
+      "code": "1.2.18",
+      "year": 2028,
+      "currentCodes": [
+        "SG04012028",
+        "SG04012128",
+        "SG04012228",
+        "SG04021628",
+        "SG04021728",
+        "SG04021828"
+      ],
+      "legacyCodes": [
+        "SG04012028",
+        "SG04012128",
+        "SG04012228",
+        "SG04021628",
+        "SG04021728",
+        "SG04021828"
+      ],
+      "desiredCodes": [
+        "SG04012228"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.18",
+      "year": 2029,
+      "currentCodes": [
+        "SG04012429",
+        "SG04012529",
+        "SG04012629"
+      ],
+      "legacyCodes": [
+        "SG04012429",
+        "SG04012529",
+        "SG04012629"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.19",
+      "year": 2025,
+      "currentCodes": [
+        "SG04010125",
+        "SG04020425",
+        "SG04020525",
+        "SG04030225"
+      ],
+      "legacyCodes": [
+        "SG04010125",
+        "SG04020425",
+        "SG04020525"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.19",
+      "year": 2026,
+      "currentCodes": [
+        "SG04010626",
+        "SG04010726",
+        "SG04010826",
+        "SG04010926",
+        "SG04011226",
+        "SG04020926",
+        "SG04021026"
+      ],
+      "legacyCodes": [
+        "SG04010626",
+        "SG04010726",
+        "SG04010826",
+        "SG04010926",
+        "SG04011226",
+        "SG04020926",
+        "SG04021026"
+      ],
+      "desiredCodes": [
+        "SG04011226"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.19",
+      "year": 2027,
+      "currentCodes": [
+        "SG04011627",
+        "SG04021427",
+        "SG04021527"
+      ],
+      "legacyCodes": [
+        "SG04011627",
+        "SG04021427",
+        "SG04021527"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.19",
+      "year": 2028,
+      "currentCodes": [
+        "SG04011928",
+        "SG04012028",
+        "SG04012128",
+        "SG04012228",
+        "SG04021928"
+      ],
+      "legacyCodes": [
+        "SG04011928",
+        "SG04012028",
+        "SG04012128",
+        "SG04012228",
+        "SG04021928"
+      ],
+      "desiredCodes": [
+        "SG04012228"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.19",
+      "year": 2029,
+      "currentCodes": [
+        "SG04022329"
+      ],
+      "legacyCodes": [
+        "SG04022329",
+        "SG04030225"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.20",
+      "year": 2025,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.20",
+      "year": 2026,
+      "currentCodes": [],
+      "legacyCodes": [
+        "SG04030827"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.20",
+      "year": 2027,
+      "currentCodes": [
+        "SG04030827"
+      ],
+      "legacyCodes": [
+        "SG04031028"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.20",
+      "year": 2028,
+      "currentCodes": [
+        "SG04031028"
+      ],
+      "legacyCodes": [],
+      "desiredCodes": [
+        "SG04031028"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.20",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.21",
+      "year": 2025,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.21",
+      "year": 2026,
+      "currentCodes": [
+        "SG04030526"
+      ],
+      "legacyCodes": [
+        "SG04030526"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.21",
+      "year": 2027,
+      "currentCodes": [
+        "SG04030727"
+      ],
+      "legacyCodes": [
+        "SG04030727"
+      ],
+      "desiredCodes": [
+        "SG04030727"
+      ],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.21",
+      "year": 2028,
+      "currentCodes": [
+        "SG04030928"
+      ],
+      "legacyCodes": [
+        "SG04030928"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.21",
+      "year": 2029,
+      "currentCodes": [
+        "SG04031129"
+      ],
+      "legacyCodes": [
+        "SG04031129"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 2.0
+    },
+    {
+      "code": "1.2.22",
+      "year": 2025,
+      "currentCodes": [
+        "SG05010125",
+        "SG05010225",
+        "SG05010325",
+        "SG05010425",
+        "SG05030225",
+        "SG05030325"
+      ],
+      "legacyCodes": [
+        "SG05010125",
+        "SG05010225",
+        "SG05010325",
+        "SG05010425",
+        "SG05030225",
+        "SG05030325"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.22",
+      "year": 2026,
+      "currentCodes": [
+        "SG05010726",
+        "SG05011026",
+        "SG05020426"
+      ],
+      "legacyCodes": [
+        "SG05010726",
+        "SG05011026",
+        "SG05020426"
+      ],
+      "desiredCodes": [
+        "SG05011026"
+      ],
+      "missingYearTarget": 2.0
+    },
+    {
+      "code": "1.2.22",
+      "year": 2027,
+      "currentCodes": [
+        "SG05011327",
+        "SG05020627",
+        "SG05020727"
+      ],
+      "legacyCodes": [
+        "SG05011327",
+        "SG05020627",
+        "SG05020727"
+      ],
+      "desiredCodes": [
+        "SG05011327"
+      ],
+      "missingYearTarget": 2.0
+    },
+    {
+      "code": "1.2.22",
+      "year": 2028,
+      "currentCodes": [
+        "SG05011828",
+        "SG05021028",
+        "SG05031328"
+      ],
+      "legacyCodes": [
+        "SG05011828",
+        "SG05011929",
+        "SG05012029",
+        "SG05021028",
+        "SG05031328"
+      ],
+      "desiredCodes": [
+        "SG05011828"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.22",
+      "year": 2029,
+      "currentCodes": [
+        "SG05011929",
+        "SG05012029",
+        "SG05031529"
+      ],
+      "legacyCodes": [
+        "SG05031529"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.23",
+      "year": 2025,
+      "currentCodes": [
+        "SG05010525",
+        "SG05020125",
+        "SG05020225",
+        "SG05020325",
+        "SG05030125",
+        "SG05030425"
+      ],
+      "legacyCodes": [
+        "SG05010525",
+        "SG05020125",
+        "SG05020225",
+        "SG05020325",
+        "SG05030125",
+        "SG05030425"
+      ],
+      "desiredCodes": [
+        "SG05010525"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.23",
+      "year": 2026,
+      "currentCodes": [
+        "SG05010826",
+        "SG05010926",
+        "SG05020526",
+        "SG05030626",
+        "SG05030726"
+      ],
+      "legacyCodes": [
+        "SG05010826",
+        "SG05010926",
+        "SG05020526",
+        "SG05030626",
+        "SG05030726"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.23",
+      "year": 2027,
+      "currentCodes": [
+        "SG05011127",
+        "SG05011227",
+        "SG05011327",
+        "SG05020827",
+        "SG05030927",
+        "SG05031027",
+        "SG05031127"
+      ],
+      "legacyCodes": [
+        "SG05011127",
+        "SG05011227",
+        "SG05011327",
+        "SG05020827",
+        "SG05030927",
+        "SG05031027",
+        "SG05031127"
+      ],
+      "desiredCodes": [
+        "SG05011327"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.23",
+      "year": 2028,
+      "currentCodes": [
+        "SG05011628",
+        "SG05011728",
+        "SG05011828",
+        "SG05020928"
+      ],
+      "legacyCodes": [
+        "SG05011628",
+        "SG05011728",
+        "SG05011828",
+        "SG05020928"
+      ],
+      "desiredCodes": [
+        "SG05011828"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.23",
+      "year": 2029,
+      "currentCodes": [
+        "SG05021129"
+      ],
+      "legacyCodes": [
+        "SG05021129"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.24",
+      "year": 2025,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.24",
+      "year": 2026,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.24",
+      "year": 2027,
+      "currentCodes": [
+        "SG05011427"
+      ],
+      "legacyCodes": [
+        "SG05011427"
+      ],
+      "desiredCodes": [
+        "SG05011427"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.24",
+      "year": 2028,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.24",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.25",
+      "year": 2025,
+      "currentCodes": [
+        "SG06010125",
+        "SG06010225",
+        "SG06010425",
+        "SG06020125",
+        "SG06020225",
+        "SG06020325",
+        "SG06020425",
+        "SG06020525",
+        "SG06030125",
+        "SG06030325",
+        "SG06030425",
+        "SG06030525"
+      ],
+      "legacyCodes": [
+        "SG06010125",
+        "SG06010225",
+        "SG06010425",
+        "SG06020125",
+        "SG06020225",
+        "SG06020325",
+        "SG06020425",
+        "SG06020525",
+        "SG06030125",
+        "SG06030325",
+        "SG06030425",
+        "SG06030525"
+      ],
+      "desiredCodes": [
+        "SG06010425"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.25",
+      "year": 2026,
+      "currentCodes": [
+        "SG06010626",
+        "SG06010826",
+        "SG06020726",
+        "SG06020826",
+        "SG06020926",
+        "SG06030626",
+        "SG06030726",
+        "SG06030926"
+      ],
+      "legacyCodes": [
+        "SG06010626",
+        "SG06010826",
+        "SG06020726",
+        "SG06020826",
+        "SG06020926",
+        "SG06030626",
+        "SG06030726",
+        "SG06030926"
+      ],
+      "desiredCodes": [
+        "SG06010826"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.25",
+      "year": 2027,
+      "currentCodes": [
+        "SG06011227",
+        "SG06021027",
+        "SG06021127",
+        "SG06021327",
+        "SG06031127",
+        "SG06031227",
+        "SG06031327",
+        "SG06031427",
+        "SG06031527"
+      ],
+      "legacyCodes": [
+        "SG06011227",
+        "SG06011628",
+        "SG06021027",
+        "SG06021127",
+        "SG06021327",
+        "SG06021428",
+        "SG06031127",
+        "SG06031227",
+        "SG06031327",
+        "SG06031427",
+        "SG06031527"
+      ],
+      "desiredCodes": [
+        "SG06011227"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.25",
+      "year": 2028,
+      "currentCodes": [
+        "SG06011628",
+        "SG06011828",
+        "SG06021428",
+        "SG06021528",
+        "SG06021628",
+        "SG06021728",
+        "SG06021828",
+        "SG06031728",
+        "SG06031828"
+      ],
+      "legacyCodes": [
+        "SG06011828",
+        "SG06021528",
+        "SG06021628",
+        "SG06021728",
+        "SG06021828",
+        "SG06031728",
+        "SG06031828"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.25",
+      "year": 2029,
+      "currentCodes": [
+        "SG06012229",
+        "SG06022129",
+        "SG06032129",
+        "SG06032229"
+      ],
+      "legacyCodes": [
+        "SG06012229",
+        "SG06022129",
+        "SG06032129",
+        "SG06032229"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.26",
+      "year": 2025,
+      "currentCodes": [
+        "SG06010325",
+        "SG06030225"
+      ],
+      "legacyCodes": [
+        "SG06010325",
+        "SG06010526",
+        "SG06010726",
+        "SG06030225"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.26",
+      "year": 2026,
+      "currentCodes": [
+        "SG06010526",
+        "SG06010726",
+        "SG06010926",
+        "SG06020626",
+        "SG06020926",
+        "SG06030826",
+        "SG06031026"
+      ],
+      "legacyCodes": [
+        "SG06010526",
+        "SG06010726",
+        "SG06010926",
+        "SG06020626",
+        "SG06020926",
+        "SG06030826",
+        "SG06031026"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.26",
+      "year": 2027,
+      "currentCodes": [
+        "SG06011027",
+        "SG06011127",
+        "SG06011327",
+        "SG06011427",
+        "SG06021227",
+        "SG06031327"
+      ],
+      "legacyCodes": [
+        "SG06011027",
+        "SG06011127",
+        "SG06011327",
+        "SG06011427",
+        "SG06011528",
+        "SG06021227",
+        "SG06031327",
+        "SG06031628"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.26",
+      "year": 2028,
+      "currentCodes": [
+        "SG06011528",
+        "SG06011728",
+        "SG06011928",
+        "SG06031628",
+        "SG06031928"
+      ],
+      "legacyCodes": [
+        "SG06011528",
+        "SG06011728",
+        "SG06011928",
+        "SG06021929",
+        "SG06022029",
+        "SG06022229",
+        "SG06031628",
+        "SG06031928",
+        "SG06032029"
+      ],
+      "desiredCodes": [
+        "SG06011828"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.26",
+      "year": 2029,
+      "currentCodes": [
+        "SG06012029",
+        "SG06012129",
+        "SG06021929",
+        "SG06022029",
+        "SG06022229",
+        "SG06032029"
+      ],
+      "legacyCodes": [
+        "SG06012029",
+        "SG06012129",
+        "SG06021929",
+        "SG06022029",
+        "SG06022229",
+        "SG06032029"
+      ],
+      "desiredCodes": [
+        "SG06012229"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.27",
+      "year": 2025,
+      "currentCodes": [
+        "SG06030425"
+      ],
+      "legacyCodes": [
+        "SG06030425"
+      ],
+      "desiredCodes": [
+        "SG06030425"
+      ],
+      "missingYearTarget": 4.0
+    },
+    {
+      "code": "1.2.27",
+      "year": 2026,
+      "currentCodes": [
+        "SG06030926"
+      ],
+      "legacyCodes": [
+        "SG06030926"
+      ],
+      "desiredCodes": [
+        "SG06030926"
+      ],
+      "missingYearTarget": 4.0
+    },
+    {
+      "code": "1.2.27",
+      "year": 2027,
+      "currentCodes": [
+        "SG06031327"
+      ],
+      "legacyCodes": [
+        "SG06031327"
+      ],
+      "desiredCodes": [
+        "SG06031327"
+      ],
+      "missingYearTarget": 4.0
+    },
+    {
+      "code": "1.2.27",
+      "year": 2028,
+      "currentCodes": [
+        "SG06031828"
+      ],
+      "legacyCodes": [
+        "SG06031828"
+      ],
+      "desiredCodes": [
+        "SG06031828"
+      ],
+      "missingYearTarget": 4.0
+    },
+    {
+      "code": "1.2.27",
+      "year": 2029,
+      "currentCodes": [
+        "SG06032229"
+      ],
+      "legacyCodes": [
+        "SG06032229"
+      ],
+      "desiredCodes": [
+        "SG06032229"
+      ],
+      "missingYearTarget": 4.0
+    },
+    {
+      "code": "1.2.28",
+      "year": 2025,
+      "currentCodes": [
+        "SG06030425"
+      ],
+      "legacyCodes": [
+        "SG06030425"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.28",
+      "year": 2026,
+      "currentCodes": [
+        "SG06030926"
+      ],
+      "legacyCodes": [
+        "SG06030926"
+      ],
+      "desiredCodes": [
+        "SG06030926"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.28",
+      "year": 2027,
+      "currentCodes": [
+        "SG06031327"
+      ],
+      "legacyCodes": [
+        "SG06031327"
+      ],
+      "desiredCodes": [
+        "SG06031327"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.28",
+      "year": 2028,
+      "currentCodes": [
+        "SG06031828"
+      ],
+      "legacyCodes": [
+        "SG06031828"
+      ],
+      "desiredCodes": [
+        "SG06031828"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.28",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.29",
+      "year": 2025,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.29",
+      "year": 2026,
+      "currentCodes": [
+        "SG06031026"
+      ],
+      "legacyCodes": [
+        "SG06031026"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.29",
+      "year": 2027,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.29",
+      "year": 2028,
+      "currentCodes": [
+        "SG06031928"
+      ],
+      "legacyCodes": [
+        "SG06031928"
+      ],
+      "desiredCodes": [
+        "SG06031928"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.29",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.30",
+      "year": 2025,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.30",
+      "year": 2026,
+      "currentCodes": [
+        "SG06010926"
+      ],
+      "legacyCodes": [
+        "SG06010926"
+      ],
+      "desiredCodes": [
+        "SG06010926"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.30",
+      "year": 2027,
+      "currentCodes": [
+        "SG06011327"
+      ],
+      "legacyCodes": [
+        "SG06011327"
+      ],
+      "desiredCodes": [
+        "SG06011327"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.30",
+      "year": 2028,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.30",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.31",
+      "year": 2025,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.31",
+      "year": 2026,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.31",
+      "year": 2027,
+      "currentCodes": [
+        "SG06011427"
+      ],
+      "legacyCodes": [
+        "SG06011427"
+      ],
+      "desiredCodes": [
+        "SG06011427"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.31",
+      "year": 2028,
+      "currentCodes": [
+        "SG06011928"
+      ],
+      "legacyCodes": [
+        "SG06011928"
+      ],
+      "desiredCodes": [
+        "SG06011928"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.31",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.32",
+      "year": 2025,
+      "currentCodes": [
+        "SG02010625",
+        "SG07010125",
+        "SG07010225",
+        "SG07010325",
+        "SG07010425",
+        "SG07020125",
+        "SG07020225",
+        "SG07030125",
+        "SG07030225",
+        "SG07030325",
+        "SG07030425"
+      ],
+      "legacyCodes": [
+        "SG02010625",
+        "SG07010125",
+        "SG07010225",
+        "SG07010325",
+        "SG07010425",
+        "SG07020125",
+        "SG07020225",
+        "SG07030125",
+        "SG07030225",
+        "SG07030325",
+        "SG07030425"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.32",
+      "year": 2026,
+      "currentCodes": [
+        "SG02011126",
+        "SG07010626",
+        "SG07010726",
+        "SG07010826",
+        "SG07010926",
+        "SG07020326",
+        "SG07020426",
+        "SG07020526",
+        "SG07030726",
+        "SG07030926"
+      ],
+      "legacyCodes": [
+        "SG02011126",
+        "SG07010626",
+        "SG07010726",
+        "SG07010826",
+        "SG07010926",
+        "SG07020326",
+        "SG07020426",
+        "SG07020526",
+        "SG07030726",
+        "SG07030926"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.32",
+      "year": 2027,
+      "currentCodes": [
+        "SG07011027",
+        "SG07011127",
+        "SG07011227",
+        "SG07011327",
+        "SG07011427",
+        "SG07020627",
+        "SG07020727",
+        "SG07031227",
+        "SG07031427",
+        "SG07031727"
+      ],
+      "legacyCodes": [
+        "SG07011027",
+        "SG07011127",
+        "SG07011227",
+        "SG07011327",
+        "SG07011427",
+        "SG07020627",
+        "SG07020727",
+        "SG07020928",
+        "SG07031227",
+        "SG07031427"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.32",
+      "year": 2028,
+      "currentCodes": [
+        "SG02012028",
+        "SG07011528",
+        "SG07011628",
+        "SG07011728",
+        "SG07011828",
+        "SG07020928",
+        "SG07031928"
+      ],
+      "legacyCodes": [
+        "SG02012028",
+        "SG07011528",
+        "SG07011628",
+        "SG07011728",
+        "SG07011828",
+        "SG07011929",
+        "SG07012029",
+        "SG07020928",
+        "SG07031727",
+        "SG07031928"
+      ],
+      "desiredCodes": [
+        "SG07011828"
+      ],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.32",
+      "year": 2029,
+      "currentCodes": [
+        "SG02012429",
+        "SG07011929",
+        "SG07012029",
+        "SG07021129",
+        "SG07021229",
+        "SG07032329"
+      ],
+      "legacyCodes": [
+        "SG02012429",
+        "SG07011929",
+        "SG07012029",
+        "SG07021129",
+        "SG07021229",
+        "SG07032329"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.33",
+      "year": 2025,
+      "currentCodes": [
+        "SG07010525"
+      ],
+      "legacyCodes": [
+        "SG07010525"
+      ],
+      "desiredCodes": [
+        "SG07010525"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.33",
+      "year": 2026,
+      "currentCodes": [
+        "SG07010826",
+        "SG07010926"
+      ],
+      "legacyCodes": [
+        "SG07010826",
+        "SG07010926"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.33",
+      "year": 2027,
+      "currentCodes": [
+        "SG07011327"
+      ],
+      "legacyCodes": [
+        "SG07011327"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.33",
+      "year": 2028,
+      "currentCodes": [
+        "SG07011728"
+      ],
+      "legacyCodes": [
+        "SG07011728"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.33",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.34",
+      "year": 2025,
+      "currentCodes": [
+        "SG07030525"
+      ],
+      "legacyCodes": [
+        "SG07030525"
+      ],
+      "desiredCodes": [
+        "SG07030525"
+      ],
+      "missingYearTarget": 5.0
+    },
+    {
+      "code": "1.2.34",
+      "year": 2026,
+      "currentCodes": [
+        "SG07031026"
+      ],
+      "legacyCodes": [
+        "SG07031026"
+      ],
+      "desiredCodes": [
+        "SG07031026"
+      ],
+      "missingYearTarget": 5.0
+    },
+    {
+      "code": "1.2.34",
+      "year": 2027,
+      "currentCodes": [
+        "SG07031527"
+      ],
+      "legacyCodes": [
+        "SG07031527"
+      ],
+      "desiredCodes": [
+        "SG07031527"
+      ],
+      "missingYearTarget": 5.0
+    },
+    {
+      "code": "1.2.34",
+      "year": 2028,
+      "currentCodes": [
+        "SG07032028"
+      ],
+      "legacyCodes": [
+        "SG07032028"
+      ],
+      "desiredCodes": [
+        "SG07032028"
+      ],
+      "missingYearTarget": 5.0
+    },
+    {
+      "code": "1.2.34",
+      "year": 2029,
+      "currentCodes": [
+        "SG07032429"
+      ],
+      "legacyCodes": [
+        "SG07032429"
+      ],
+      "desiredCodes": [
+        "SG07032429"
+      ],
+      "missingYearTarget": 5.0
+    },
+    {
+      "code": "1.2.35",
+      "year": 2025,
+      "currentCodes": [
+        "SG07030425"
+      ],
+      "legacyCodes": [
+        "SG07030425"
+      ],
+      "desiredCodes": [
+        "SG07030425"
+      ],
+      "missingYearTarget": 85.0
+    },
+    {
+      "code": "1.2.35",
+      "year": 2026,
+      "currentCodes": [
+        "SG07030926"
+      ],
+      "legacyCodes": [
+        "SG07030926"
+      ],
+      "desiredCodes": [
+        "SG07030926"
+      ],
+      "missingYearTarget": 85.0
+    },
+    {
+      "code": "1.2.35",
+      "year": 2027,
+      "currentCodes": [
+        "SG07031427"
+      ],
+      "legacyCodes": [
+        "SG07031427"
+      ],
+      "desiredCodes": [
+        "SG07031427"
+      ],
+      "missingYearTarget": 85.0
+    },
+    {
+      "code": "1.2.35",
+      "year": 2028,
+      "currentCodes": [
+        "SG07031928"
+      ],
+      "legacyCodes": [
+        "SG07031928"
+      ],
+      "desiredCodes": [
+        "SG07031928"
+      ],
+      "missingYearTarget": 85.0
+    },
+    {
+      "code": "1.2.35",
+      "year": 2029,
+      "currentCodes": [
+        "SG07032329"
+      ],
+      "legacyCodes": [
+        "SG07032329"
+      ],
+      "desiredCodes": [
+        "SG07032329"
+      ],
+      "missingYearTarget": 85.0
+    },
+    {
+      "code": "1.2.36",
+      "year": 2025,
+      "currentCodes": [
+        "SG07030125"
+      ],
+      "legacyCodes": [
+        "SG07030125"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.36",
+      "year": 2026,
+      "currentCodes": [
+        "SG07030826"
+      ],
+      "legacyCodes": [
+        "SG07030826"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.36",
+      "year": 2027,
+      "currentCodes": [
+        "SG07031327"
+      ],
+      "legacyCodes": [
+        "SG07031327"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.36",
+      "year": 2028,
+      "currentCodes": [
+        "SG07031828"
+      ],
+      "legacyCodes": [
+        "SG07031828"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.36",
+      "year": 2029,
+      "currentCodes": [
+        "SG07032229",
+        "SG07032629"
+      ],
+      "legacyCodes": [
+        "SG07032229",
+        "SG07032629"
+      ],
+      "desiredCodes": [
+        "SG07032629"
+      ],
+      "missingYearTarget": 2.0
+    },
+    {
+      "code": "1.2.37",
+      "year": 2025,
+      "currentCodes": [
+        "SG08010125",
+        "SG08010525",
+        "SG08020425"
+      ],
+      "legacyCodes": [
+        "SG08010125",
+        "SG08010525",
+        "SG08020425"
+      ],
+      "desiredCodes": [
+        "SG08010525"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.37",
+      "year": 2026,
+      "currentCodes": [
+        "SG08010926",
+        "SG08020926"
+      ],
+      "legacyCodes": [
+        "SG08010926",
+        "SG08020926"
+      ],
+      "desiredCodes": [
+        "SG08010926"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.37",
+      "year": 2027,
+      "currentCodes": [
+        "SG08011327",
+        "SG08021827"
+      ],
+      "legacyCodes": [
+        "SG08011327",
+        "SG08021827"
+      ],
+      "desiredCodes": [
+        "SG08011327"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.37",
+      "year": 2028,
+      "currentCodes": [
+        "SG08011728",
+        "SG08022628"
+      ],
+      "legacyCodes": [
+        "SG08011728",
+        "SG08022628"
+      ],
+      "desiredCodes": [
+        "SG08011728"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.37",
+      "year": 2029,
+      "currentCodes": [
+        "SG08012129",
+        "SG08023429"
+      ],
+      "legacyCodes": [
+        "SG08012129",
+        "SG08023429"
+      ],
+      "desiredCodes": [
+        "SG08012129"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.38",
+      "year": 2025,
+      "currentCodes": [
+        "SG08010225",
+        "SG08010325",
+        "SG08010425",
+        "SG08020125",
+        "SG08020225",
+        "SG08020325"
+      ],
+      "legacyCodes": [
+        "SG08010225",
+        "SG08010325",
+        "SG08010425",
+        "SG08020125",
+        "SG08020225",
+        "SG08020325"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.38",
+      "year": 2026,
+      "currentCodes": [
+        "SG08010626",
+        "SG08010726",
+        "SG08010826",
+        "SG08020626",
+        "SG08020726",
+        "SG08020826"
+      ],
+      "legacyCodes": [
+        "SG08010626",
+        "SG08010726",
+        "SG08010826",
+        "SG08020626",
+        "SG08020726",
+        "SG08020826"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.38",
+      "year": 2027,
+      "currentCodes": [
+        "SG08011027",
+        "SG08011127",
+        "SG08011227",
+        "SG08021627",
+        "SG08021727",
+        "SG08021927"
+      ],
+      "legacyCodes": [
+        "SG08011027",
+        "SG08011127",
+        "SG08011227",
+        "SG08021627",
+        "SG08021727",
+        "SG08021927"
+      ],
+      "desiredCodes": [
+        "SG08021927"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.38",
+      "year": 2028,
+      "currentCodes": [
+        "SG08011428",
+        "SG08011528",
+        "SG08011628",
+        "SG08022428",
+        "SG08022528",
+        "SG08022728"
+      ],
+      "legacyCodes": [
+        "SG08011428",
+        "SG08011528",
+        "SG08011628",
+        "SG08022428",
+        "SG08022528",
+        "SG08022728"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.38",
+      "year": 2029,
+      "currentCodes": [
+        "SG08011829",
+        "SG08011929",
+        "SG08012029",
+        "SG08023329",
+        "SG08023429",
+        "SG08023529",
+        "SG08023629"
+      ],
+      "legacyCodes": [
+        "SG08011829",
+        "SG08011929",
+        "SG08012029",
+        "SG08023329",
+        "SG08023429",
+        "SG08023529",
+        "SG08023629"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.39",
+      "year": 2025,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.39",
+      "year": 2026,
+      "currentCodes": [
+        "SG08021026"
+      ],
+      "legacyCodes": [
+        "SG08021026"
+      ],
+      "desiredCodes": [
+        "SG08021026"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.39",
+      "year": 2027,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.39",
+      "year": 2028,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.39",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.40",
+      "year": 2025,
+      "currentCodes": [
+        "SG08030125",
+        "SG08030225"
+      ],
+      "legacyCodes": [
+        "SG08030125",
+        "SG08030225"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.40",
+      "year": 2026,
+      "currentCodes": [
+        "SG08030326",
+        "SG08030426"
+      ],
+      "legacyCodes": [
+        "SG08030326",
+        "SG08030426"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.40",
+      "year": 2027,
+      "currentCodes": [
+        "SG08030527",
+        "SG08030627"
+      ],
+      "legacyCodes": [
+        "SG08030527",
+        "SG08030627"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.40",
+      "year": 2028,
+      "currentCodes": [
+        "SG08030728",
+        "SG08030828"
+      ],
+      "legacyCodes": [
+        "SG08030728",
+        "SG08030828"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.40",
+      "year": 2029,
+      "currentCodes": [
+        "SG08030929",
+        "SG08031029"
+      ],
+      "legacyCodes": [
+        "SG08030929",
+        "SG08031029"
+      ],
+      "desiredCodes": [
+        "SG08031029"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.41",
+      "year": 2025,
+      "currentCodes": [
+        "SG09010225",
+        "SG09010325"
+      ],
+      "legacyCodes": [
+        "SG09010225",
+        "SG09010325"
+      ],
+      "desiredCodes": [
+        "SG09010325"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.41",
+      "year": 2026,
+      "currentCodes": [
+        "SG09010626",
+        "SG09010726"
+      ],
+      "legacyCodes": [
+        "SG09010626",
+        "SG09010726"
+      ],
+      "desiredCodes": [
+        "SG09010726"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.41",
+      "year": 2027,
+      "currentCodes": [
+        "SG09010927",
+        "SG09011027"
+      ],
+      "legacyCodes": [
+        "SG09010927",
+        "SG09011027"
+      ],
+      "desiredCodes": [
+        "SG09011027"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.41",
+      "year": 2028,
+      "currentCodes": [
+        "SG09011228",
+        "SG09011328"
+      ],
+      "legacyCodes": [
+        "SG09011228",
+        "SG09011328"
+      ],
+      "desiredCodes": [
+        "SG09011328"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.41",
+      "year": 2029,
+      "currentCodes": [
+        "SG09011529",
+        "SG09011629"
+      ],
+      "legacyCodes": [
+        "SG09011529",
+        "SG09011629"
+      ],
+      "desiredCodes": [
+        "SG09011629"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.42",
+      "year": 2025,
+      "currentCodes": [
+        "SG09010125",
+        "SG09020125",
+        "SG09020225",
+        "SG09020325",
+        "SG09030125",
+        "SG09030225",
+        "SG09030325",
+        "SG09030425",
+        "SG09030525"
+      ],
+      "legacyCodes": [
+        "SG09010125",
+        "SG09010526",
+        "SG09020125",
+        "SG09020225",
+        "SG09020325",
+        "SG09030125",
+        "SG09030225",
+        "SG09030325",
+        "SG09030425",
+        "SG09030525"
+      ],
+      "desiredCodes": [
+        "SG09030325"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.42",
+      "year": 2026,
+      "currentCodes": [
+        "SG09010526",
+        "SG09020626",
+        "SG09020726",
+        "SG09030626",
+        "SG09030726",
+        "SG09030826",
+        "SG09030926",
+        "SG09031026"
+      ],
+      "legacyCodes": [
+        "SG09010526",
+        "SG09020626",
+        "SG09020726",
+        "SG09030626",
+        "SG09030726",
+        "SG09030826",
+        "SG09030926",
+        "SG09031026"
+      ],
+      "desiredCodes": [
+        "SG09030826"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.42",
+      "year": 2027,
+      "currentCodes": [
+        "SG09020927",
+        "SG09021027",
+        "SG09031227",
+        "SG09031327",
+        "SG09031427",
+        "SG09031527"
+      ],
+      "legacyCodes": [
+        "SG09020927",
+        "SG09021027",
+        "SG09031227",
+        "SG09031327",
+        "SG09031427",
+        "SG09031527"
+      ],
+      "desiredCodes": [
+        "SG09031227"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.42",
+      "year": 2028,
+      "currentCodes": [
+        "SG09021228",
+        "SG09021328",
+        "SG09031728",
+        "SG09031828",
+        "SG09031928",
+        "SG09032028"
+      ],
+      "legacyCodes": [
+        "SG09021228",
+        "SG09021328",
+        "SG09031728",
+        "SG09031828",
+        "SG09031928",
+        "SG09032028"
+      ],
+      "desiredCodes": [
+        "SG09031828"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.42",
+      "year": 2029,
+      "currentCodes": [
+        "SG09021529",
+        "SG09021629",
+        "SG09032229",
+        "SG09032329",
+        "SG09032429",
+        "SG09032529"
+      ],
+      "legacyCodes": [
+        "SG09021529",
+        "SG09021629",
+        "SG09032229",
+        "SG09032329",
+        "SG09032429",
+        "SG09032529"
+      ],
+      "desiredCodes": [
+        "SG09032329"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.43",
+      "year": 2025,
+      "currentCodes": [
+        "SG09030425"
+      ],
+      "legacyCodes": [
+        "SG09030425"
+      ],
+      "desiredCodes": [
+        "SG09030425"
+      ],
+      "missingYearTarget": 60.0
+    },
+    {
+      "code": "1.2.43",
+      "year": 2026,
+      "currentCodes": [
+        "SG09030926"
+      ],
+      "legacyCodes": [
+        "SG09030926"
+      ],
+      "desiredCodes": [
+        "SG09030926"
+      ],
+      "missingYearTarget": 60.0
+    },
+    {
+      "code": "1.2.43",
+      "year": 2027,
+      "currentCodes": [
+        "SG09031327"
+      ],
+      "legacyCodes": [
+        "SG09031327"
+      ],
+      "desiredCodes": [
+        "SG09031327"
+      ],
+      "missingYearTarget": 60.0
+    },
+    {
+      "code": "1.2.43",
+      "year": 2028,
+      "currentCodes": [
+        "SG09031728",
+        "SG09031828"
+      ],
+      "legacyCodes": [
+        "SG09031728",
+        "SG09031828"
+      ],
+      "desiredCodes": [
+        "SG09031828"
+      ],
+      "missingYearTarget": 60.0
+    },
+    {
+      "code": "1.2.43",
+      "year": 2029,
+      "currentCodes": [
+        "SG09032229",
+        "SG09032329"
+      ],
+      "legacyCodes": [
+        "SG09032229",
+        "SG09032329"
+      ],
+      "desiredCodes": [
+        "SG09032329"
+      ],
+      "missingYearTarget": 60.0
+    },
+    {
+      "code": "1.2.44",
+      "year": 2025,
+      "currentCodes": [
+        "SG09030525"
+      ],
+      "legacyCodes": [
+        "SG09030525"
+      ],
+      "desiredCodes": [
+        "SG09030525"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.44",
+      "year": 2026,
+      "currentCodes": [
+        "SG09031026"
+      ],
+      "legacyCodes": [
+        "SG09031026"
+      ],
+      "desiredCodes": [
+        "SG09031026"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.44",
+      "year": 2027,
+      "currentCodes": [
+        "SG09031427"
+      ],
+      "legacyCodes": [
+        "SG09031427"
+      ],
+      "desiredCodes": [
+        "SG09031427"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.44",
+      "year": 2028,
+      "currentCodes": [
+        "SG09031928"
+      ],
+      "legacyCodes": [
+        "SG09031928"
+      ],
+      "desiredCodes": [
+        "SG09031928"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.44",
+      "year": 2029,
+      "currentCodes": [
+        "SG09032429"
+      ],
+      "legacyCodes": [
+        "SG09032429"
+      ],
+      "desiredCodes": [
+        "SG09032429"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.45",
+      "year": 2025,
+      "currentCodes": [
+        "SG10010125",
+        "SG10010225",
+        "SG10010325"
+      ],
+      "legacyCodes": [
+        "SG10010125",
+        "SG10010225",
+        "SG10010325"
+      ],
+      "desiredCodes": [
+        "SG10010325"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.45",
+      "year": 2026,
+      "currentCodes": [
+        "SG10010526",
+        "SG10010626",
+        "SG10030426"
+      ],
+      "legacyCodes": [
+        "SG10010526",
+        "SG10010626",
+        "SG10030426"
+      ],
+      "desiredCodes": [
+        "SG10010626"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.45",
+      "year": 2027,
+      "currentCodes": [
+        "SG10010827",
+        "SG10030627"
+      ],
+      "legacyCodes": [
+        "SG10010827",
+        "SG10030627"
+      ],
+      "desiredCodes": [
+        "SG10010827"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.45",
+      "year": 2028,
+      "currentCodes": [
+        "SG10011028",
+        "SG10011128",
+        "SG10030828"
+      ],
+      "legacyCodes": [
+        "SG10011028",
+        "SG10011128",
+        "SG10030828"
+      ],
+      "desiredCodes": [
+        "SG10011128"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.45",
+      "year": 2029,
+      "currentCodes": [
+        "SG10011329",
+        "SG10011429",
+        "SG10031029"
+      ],
+      "legacyCodes": [
+        "SG10011329",
+        "SG10011429",
+        "SG10031029"
+      ],
+      "desiredCodes": [
+        "SG10011429"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.46",
+      "year": 2025,
+      "currentCodes": [
+        "SG10020225"
+      ],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.46",
+      "year": 2026,
+      "currentCodes": [
+        "SG10020326"
+      ],
+      "legacyCodes": [
+        "SG10020225",
+        "SG10020326"
+      ],
+      "desiredCodes": [
+        "SG10020426"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.46",
+      "year": 2027,
+      "currentCodes": [
+        "SG10020527",
+        "SG10020627"
+      ],
+      "legacyCodes": [
+        "SG10020527",
+        "SG10020627"
+      ],
+      "desiredCodes": [
+        "SG10020627"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.46",
+      "year": 2028,
+      "currentCodes": [
+        "SG10020728"
+      ],
+      "legacyCodes": [
+        "SG10020728"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.46",
+      "year": 2029,
+      "currentCodes": [
+        "SG10020829",
+        "SG10020929"
+      ],
+      "legacyCodes": [
+        "SG10020829",
+        "SG10020929"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.47",
+      "year": 2025,
+      "currentCodes": [
+        "SG10030125"
+      ],
+      "legacyCodes": [
+        "SG10030125"
+      ],
+      "desiredCodes": [
+        "SG10030125"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.47",
+      "year": 2026,
+      "currentCodes": [
+        "SG10030326"
+      ],
+      "legacyCodes": [
+        "SG10030326"
+      ],
+      "desiredCodes": [
+        "SG10030326"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.47",
+      "year": 2027,
+      "currentCodes": [
+        "SG10030527"
+      ],
+      "legacyCodes": [
+        "SG10030527"
+      ],
+      "desiredCodes": [
+        "SG10030527"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.47",
+      "year": 2028,
+      "currentCodes": [
+        "SG10030728"
+      ],
+      "legacyCodes": [
+        "SG10030728"
+      ],
+      "desiredCodes": [
+        "SG10030728"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.47",
+      "year": 2029,
+      "currentCodes": [
+        "SG10030929"
+      ],
+      "legacyCodes": [
+        "SG10030929"
+      ],
+      "desiredCodes": [
+        "SG10030929"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.48",
+      "year": 2025,
+      "currentCodes": [
+        "SG09020125",
+        "SG09020225",
+        "SG09020325"
+      ],
+      "legacyCodes": [
+        "SG09020125",
+        "SG09020225",
+        "SG09020325"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.48",
+      "year": 2026,
+      "currentCodes": [
+        "SG09020626",
+        "SG09020726"
+      ],
+      "legacyCodes": [
+        "SG09020626",
+        "SG09020726"
+      ],
+      "desiredCodes": [
+        "SG09020626",
+        "SG09020726"
+      ],
+      "missingYearTarget": 2.0
+    },
+    {
+      "code": "1.2.48",
+      "year": 2027,
+      "currentCodes": [
+        "SG09020927",
+        "SG09021027"
+      ],
+      "legacyCodes": [
+        "SG09020927",
+        "SG09021027"
+      ],
+      "desiredCodes": [
+        "SG09020927",
+        "SG09021027"
+      ],
+      "missingYearTarget": 2.0
+    },
+    {
+      "code": "1.2.48",
+      "year": 2028,
+      "currentCodes": [
+        "SG09021228",
+        "SG09021328"
+      ],
+      "legacyCodes": [
+        "SG09021228",
+        "SG09021328"
+      ],
+      "desiredCodes": [
+        "SG09021228",
+        "SG09021328"
+      ],
+      "missingYearTarget": 3.0
+    },
+    {
+      "code": "1.2.48",
+      "year": 2029,
+      "currentCodes": [
+        "SG09021529",
+        "SG09021629"
+      ],
+      "legacyCodes": [
+        "SG09021529",
+        "SG09021629"
+      ],
+      "desiredCodes": [
+        "SG09021529",
+        "SG09021629"
+      ],
+      "missingYearTarget": 3.0
+    },
+    {
+      "code": "1.2.49",
+      "year": 2025,
+      "currentCodes": [
+        "SG09010425"
+      ],
+      "legacyCodes": [
+        "SG09010425"
+      ],
+      "desiredCodes": [
+        "SG09010425"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.49",
+      "year": 2026,
+      "currentCodes": [
+        "SG09010826"
+      ],
+      "legacyCodes": [
+        "SG09010826"
+      ],
+      "desiredCodes": [
+        "SG09010826"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.49",
+      "year": 2027,
+      "currentCodes": [
+        "SG09011127"
+      ],
+      "legacyCodes": [
+        "SG09011127"
+      ],
+      "desiredCodes": [
+        "SG09011127"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.49",
+      "year": 2028,
+      "currentCodes": [
+        "SG08022928",
+        "SG09011428"
+      ],
+      "legacyCodes": [
+        "SG08022928",
+        "SG09011428"
+      ],
+      "desiredCodes": [
+        "SG09011428"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.49",
+      "year": 2029,
+      "currentCodes": [
+        "SG09011729"
+      ],
+      "legacyCodes": [
+        "SG09011729"
+      ],
+      "desiredCodes": [
+        "SG09011729"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.50",
+      "year": 2025,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.50",
+      "year": 2026,
+      "currentCodes": [
+        "SG01011126",
+        "SG07020526"
+      ],
+      "legacyCodes": [
+        "SG01011126",
+        "SG07020526"
+      ],
+      "desiredCodes": [
+        "SG01011126",
+        "SG07020526"
+      ],
+      "missingYearTarget": 4.0
+    },
+    {
+      "code": "1.2.50",
+      "year": 2027,
+      "currentCodes": [
+        "SG01011727",
+        "SG07020827",
+        "SG09031527"
+      ],
+      "legacyCodes": [
+        "SG01011727",
+        "SG07020827",
+        "SG09031527"
+      ],
+      "desiredCodes": [
+        "SG01011727",
+        "SG07020827",
+        "SG09031527"
+      ],
+      "missingYearTarget": 8.0
+    },
+    {
+      "code": "1.2.50",
+      "year": 2028,
+      "currentCodes": [
+        "SG01012328",
+        "SG07021028",
+        "SG09032028"
+      ],
+      "legacyCodes": [
+        "SG01012328",
+        "SG07021028",
+        "SG09032028"
+      ],
+      "desiredCodes": [
+        "SG01012328",
+        "SG07021028",
+        "SG09032028"
+      ],
+      "missingYearTarget": 6.0
+    },
+    {
+      "code": "1.2.50",
+      "year": 2029,
+      "currentCodes": [
+        "SG09032529"
+      ],
+      "legacyCodes": [
+        "SG09032529"
+      ],
+      "desiredCodes": [
+        "SG09032529"
+      ],
+      "missingYearTarget": 2.0
+    },
+    {
+      "code": "1.2.51",
+      "year": 2025,
+      "currentCodes": [
+        "SG01030525"
+      ],
+      "legacyCodes": [
+        "SG01030525"
+      ],
+      "desiredCodes": [
+        "SG01030525"
+      ],
+      "missingYearTarget": 6000.0
+    },
+    {
+      "code": "1.2.51",
+      "year": 2026,
+      "currentCodes": [
+        "SG01031026"
+      ],
+      "legacyCodes": [
+        "SG01031026"
+      ],
+      "desiredCodes": [
+        "SG01031026"
+      ],
+      "missingYearTarget": 6000.0
+    },
+    {
+      "code": "1.2.51",
+      "year": 2027,
+      "currentCodes": [
+        "SG01031527"
+      ],
+      "legacyCodes": [
+        "SG01031527"
+      ],
+      "desiredCodes": [
+        "SG01031527"
+      ],
+      "missingYearTarget": 6000.0
+    },
+    {
+      "code": "1.2.51",
+      "year": 2028,
+      "currentCodes": [
+        "SG01031928"
+      ],
+      "legacyCodes": [
+        "SG01031928"
+      ],
+      "desiredCodes": [
+        "SG01031928"
+      ],
+      "missingYearTarget": 6000.0
+    },
+    {
+      "code": "1.2.51",
+      "year": 2029,
+      "currentCodes": [
+        "SG01032229"
+      ],
+      "legacyCodes": [
+        "SG01032229"
+      ],
+      "desiredCodes": [
+        "SG01032229"
+      ],
+      "missingYearTarget": 6000.0
+    },
+    {
+      "code": "1.2.52",
+      "year": 2025,
+      "currentCodes": [
+        "SG02030625"
+      ],
+      "legacyCodes": [
+        "SG02030625"
+      ],
+      "desiredCodes": [
+        "SG02030625"
+      ],
+      "missingYearTarget": 1000.0
+    },
+    {
+      "code": "1.2.52",
+      "year": 2026,
+      "currentCodes": [
+        "SG02031226"
+      ],
+      "legacyCodes": [
+        "SG02031226"
+      ],
+      "desiredCodes": [
+        "SG02031226"
+      ],
+      "missingYearTarget": 1000.0
+    },
+    {
+      "code": "1.2.52",
+      "year": 2027,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [
+        "SG02031427"
+      ],
+      "missingYearTarget": 1000.0
+    },
+    {
+      "code": "1.2.52",
+      "year": 2028,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [
+        "SG02031928"
+      ],
+      "missingYearTarget": 1000.0
+    },
+    {
+      "code": "1.2.52",
+      "year": 2029,
+      "currentCodes": [
+        "SG02032829"
+      ],
+      "legacyCodes": [
+        "SG02032829"
+      ],
+      "desiredCodes": [
+        "SG02032829"
+      ],
+      "missingYearTarget": 1000.0
+    },
+    {
+      "code": "1.2.53",
+      "year": 2025,
+      "currentCodes": [
+        "SG03030425"
+      ],
+      "legacyCodes": [
+        "SG03030425"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.53",
+      "year": 2026,
+      "currentCodes": [
+        "SG03021026"
+      ],
+      "legacyCodes": [
+        "SG03021026"
+      ],
+      "desiredCodes": [
+        "SG03021026"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.53",
+      "year": 2027,
+      "currentCodes": [
+        "SG03021527"
+      ],
+      "legacyCodes": [
+        "SG03021527"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.53",
+      "year": 2028,
+      "currentCodes": [
+        "SG03022028"
+      ],
+      "legacyCodes": [
+        "SG03022028"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.53",
+      "year": 2029,
+      "currentCodes": [
+        "SG03022529"
+      ],
+      "legacyCodes": [
+        "SG03022529"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.54",
+      "year": 2025,
+      "currentCodes": [
+        "SG04010525"
+      ],
+      "legacyCodes": [
+        "SG04010525"
+      ],
+      "desiredCodes": [
+        "SG04010525"
+      ],
+      "missingYearTarget": 60000.0
+    },
+    {
+      "code": "1.2.54",
+      "year": 2026,
+      "currentCodes": [
+        "SG04011126"
+      ],
+      "legacyCodes": [
+        "SG04011126"
+      ],
+      "desiredCodes": [
+        "SG04011126"
+      ],
+      "missingYearTarget": 60000.0
+    },
+    {
+      "code": "1.2.54",
+      "year": 2027,
+      "currentCodes": [
+        "SG04011827"
+      ],
+      "legacyCodes": [
+        "SG04011827"
+      ],
+      "desiredCodes": [
+        "SG04011827"
+      ],
+      "missingYearTarget": 60000.0
+    },
+    {
+      "code": "1.2.54",
+      "year": 2028,
+      "currentCodes": [
+        "SG04012328"
+      ],
+      "legacyCodes": [
+        "SG04012328"
+      ],
+      "desiredCodes": [
+        "SG04012328"
+      ],
+      "missingYearTarget": 60000.0
+    },
+    {
+      "code": "1.2.54",
+      "year": 2029,
+      "currentCodes": [
+        "SG04012729"
+      ],
+      "legacyCodes": [
+        "SG04012729"
+      ],
+      "desiredCodes": [
+        "SG04012729"
+      ],
+      "missingYearTarget": 60000.0
+    },
+    {
+      "code": "1.2.55",
+      "year": 2025,
+      "currentCodes": [
+        "SG08020525"
+      ],
+      "legacyCodes": [
+        "SG08020525"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.55",
+      "year": 2026,
+      "currentCodes": [
+        "SG08021226"
+      ],
+      "legacyCodes": [
+        "SG08021226"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.55",
+      "year": 2027,
+      "currentCodes": [
+        "SG04021227",
+        "SG08022027"
+      ],
+      "legacyCodes": [
+        "SG04021227",
+        "SG08022027"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.55",
+      "year": 2028,
+      "currentCodes": [
+        "SG08022828"
+      ],
+      "legacyCodes": [
+        "SG08022828"
+      ],
+      "desiredCodes": [],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.55",
+      "year": 2029,
+      "currentCodes": [
+        "SG08023729"
+      ],
+      "legacyCodes": [
+        "SG08023729"
+      ],
+      "desiredCodes": [
+        "SG08031029"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.56",
+      "year": 2026,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [
+        "SG05010726"
+      ],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.56",
+      "year": 2028,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.56",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.57",
+      "year": 2025,
+      "currentCodes": [
+        "SG05030525"
+      ],
+      "legacyCodes": [
+        "SG05030525"
+      ],
+      "desiredCodes": [
+        "SG05030525"
+      ],
+      "missingYearTarget": 100.0
+    },
+    {
+      "code": "1.2.57",
+      "year": 2026,
+      "currentCodes": [
+        "SG05030826"
+      ],
+      "legacyCodes": [
+        "SG05030826"
+      ],
+      "desiredCodes": [
+        "SG05030826"
+      ],
+      "missingYearTarget": 100.0
+    },
+    {
+      "code": "1.2.57",
+      "year": 2027,
+      "currentCodes": [
+        "SG05031227"
+      ],
+      "legacyCodes": [
+        "SG05031227"
+      ],
+      "desiredCodes": [
+        "SG05031227"
+      ],
+      "missingYearTarget": 100.0
+    },
+    {
+      "code": "1.2.57",
+      "year": 2028,
+      "currentCodes": [
+        "SG05031428"
+      ],
+      "legacyCodes": [
+        "SG05031428"
+      ],
+      "desiredCodes": [
+        "SG05031428"
+      ],
+      "missingYearTarget": 100.0
+    },
+    {
+      "code": "1.2.57",
+      "year": 2029,
+      "currentCodes": [
+        "SG05031629"
+      ],
+      "legacyCodes": [
+        "SG05031629"
+      ],
+      "desiredCodes": [
+        "SG05031629"
+      ],
+      "missingYearTarget": 100.0
+    },
+    {
+      "code": "1.2.58",
+      "year": 2025,
+      "currentCodes": [
+        "SG05030525"
+      ],
+      "legacyCodes": [
+        "SG05030525"
+      ],
+      "desiredCodes": [
+        "SG05030525"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.58",
+      "year": 2026,
+      "currentCodes": [
+        "SG05030826"
+      ],
+      "legacyCodes": [
+        "SG05030826"
+      ],
+      "desiredCodes": [
+        "SG05030826"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.58",
+      "year": 2027,
+      "currentCodes": [
+        "SG05031227"
+      ],
+      "legacyCodes": [
+        "SG05031227"
+      ],
+      "desiredCodes": [
+        "SG05031227"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.58",
+      "year": 2028,
+      "currentCodes": [
+        "SG05031428"
+      ],
+      "legacyCodes": [
+        "SG05031428"
+      ],
+      "desiredCodes": [
+        "SG05031428"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.58",
+      "year": 2029,
+      "currentCodes": [
+        "SG05031629"
+      ],
+      "legacyCodes": [
+        "SG05031629"
+      ],
+      "desiredCodes": [
+        "SG05031629"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.60",
+      "year": 2025,
+      "currentCodes": [
+        "SG06010225"
+      ],
+      "legacyCodes": [
+        "SG06010225"
+      ],
+      "desiredCodes": [
+        "SG06010225"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.60",
+      "year": 2026,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.60",
+      "year": 2027,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.60",
+      "year": 2028,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.60",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.61",
+      "year": 2025,
+      "currentCodes": [
+        "SG07030425"
+      ],
+      "legacyCodes": [
+        "SG07030425"
+      ],
+      "desiredCodes": [
+        "SG07030425"
+      ],
+      "missingYearTarget": 1000.0
+    },
+    {
+      "code": "1.2.61",
+      "year": 2026,
+      "currentCodes": [
+        "SG07030826"
+      ],
+      "legacyCodes": [
+        "SG07030826"
+      ],
+      "desiredCodes": [
+        "SG07030926"
+      ],
+      "missingYearTarget": 1000.0
+    },
+    {
+      "code": "1.2.61",
+      "year": 2027,
+      "currentCodes": [
+        "SG07031227",
+        "SG07031627"
+      ],
+      "legacyCodes": [
+        "SG07031227",
+        "SG07031627"
+      ],
+      "desiredCodes": [
+        "SG07031427"
+      ],
+      "missingYearTarget": 1000.0
+    },
+    {
+      "code": "1.2.61",
+      "year": 2028,
+      "currentCodes": [
+        "SG07031928"
+      ],
+      "legacyCodes": [
+        "SG07031928"
+      ],
+      "desiredCodes": [
+        "SG07031928"
+      ],
+      "missingYearTarget": 1000.0
+    },
+    {
+      "code": "1.2.61",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [
+        "SG07032329"
+      ],
+      "missingYearTarget": 1000.0
+    },
+    {
+      "code": "1.2.62",
+      "year": 2025,
+      "currentCodes": [
+        "SG07030625"
+      ],
+      "legacyCodes": [
+        "SG07030625"
+      ],
+      "desiredCodes": [
+        "SG07030625"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.2.62",
+      "year": 2026,
+      "currentCodes": [
+        "SG07010826",
+        "SG07031126"
+      ],
+      "legacyCodes": [
+        "SG07010826",
+        "SG07031126"
+      ],
+      "desiredCodes": [
+        "SG07031126"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.2.62",
+      "year": 2027,
+      "currentCodes": [
+        "SG07031627"
+      ],
+      "legacyCodes": [
+        "SG07031627"
+      ],
+      "desiredCodes": [
+        "SG07031627"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.2.62",
+      "year": 2028,
+      "currentCodes": [
+        "SG07032128"
+      ],
+      "legacyCodes": [
+        "SG07032128"
+      ],
+      "desiredCodes": [
+        "SG07032128"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.2.62",
+      "year": 2029,
+      "currentCodes": [
+        "SG07032529"
+      ],
+      "legacyCodes": [
+        "SG07032529"
+      ],
+      "desiredCodes": [
+        "SG07032529"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.2.63",
+      "year": 2025,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.63",
+      "year": 2026,
+      "currentCodes": [
+        "SG08021126",
+        "SG08021326"
+      ],
+      "legacyCodes": [
+        "SG08021126",
+        "SG08021326"
+      ],
+      "desiredCodes": [
+        "SG08021326"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.63",
+      "year": 2027,
+      "currentCodes": [
+        "SG08022127"
+      ],
+      "legacyCodes": [
+        "SG08022127"
+      ],
+      "desiredCodes": [
+        "SG08022127"
+      ],
+      "missingYearTarget": 2.0
+    },
+    {
+      "code": "1.2.63",
+      "year": 2028,
+      "currentCodes": [
+        "SG08023028"
+      ],
+      "legacyCodes": [
+        "SG08023028"
+      ],
+      "desiredCodes": [
+        "SG08023028"
+      ],
+      "missingYearTarget": 2.0
+    },
+    {
+      "code": "1.2.63",
+      "year": 2029,
+      "currentCodes": [
+        "SG08023829"
+      ],
+      "legacyCodes": [
+        "SG08023829"
+      ],
+      "desiredCodes": [
+        "SG08023829"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.64",
+      "year": 2025,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.64",
+      "year": 2026,
+      "currentCodes": [
+        "SG08021426"
+      ],
+      "legacyCodes": [
+        "SG08021426"
+      ],
+      "desiredCodes": [
+        "SG08021426"
+      ],
+      "missingYearTarget": 5.0
+    },
+    {
+      "code": "1.2.64",
+      "year": 2027,
+      "currentCodes": [
+        "SG08022227"
+      ],
+      "legacyCodes": [
+        "SG08022227"
+      ],
+      "desiredCodes": [
+        "SG08022227"
+      ],
+      "missingYearTarget": 5.0
+    },
+    {
+      "code": "1.2.64",
+      "year": 2028,
+      "currentCodes": [
+        "SG08023128"
+      ],
+      "legacyCodes": [
+        "SG08023128"
+      ],
+      "desiredCodes": [
+        "SG08023128"
+      ],
+      "missingYearTarget": 5.0
+    },
+    {
+      "code": "1.2.64",
+      "year": 2029,
+      "currentCodes": [
+        "SG08023929"
+      ],
+      "legacyCodes": [
+        "SG08023929"
+      ],
+      "desiredCodes": [
+        "SG08023929"
+      ],
+      "missingYearTarget": 5.0
+    },
+    {
+      "code": "1.2.65",
+      "year": 2025,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.65",
+      "year": 2026,
+      "currentCodes": [
+        "SG08021526"
+      ],
+      "legacyCodes": [
+        "SG08021526"
+      ],
+      "desiredCodes": [
+        "SG08021526"
+      ],
+      "missingYearTarget": 3.0
+    },
+    {
+      "code": "1.2.65",
+      "year": 2027,
+      "currentCodes": [
+        "SG08022327"
+      ],
+      "legacyCodes": [
+        "SG08022327"
+      ],
+      "desiredCodes": [
+        "SG08022327"
+      ],
+      "missingYearTarget": 3.0
+    },
+    {
+      "code": "1.2.65",
+      "year": 2028,
+      "currentCodes": [
+        "SG08023228"
+      ],
+      "legacyCodes": [
+        "SG08023228"
+      ],
+      "desiredCodes": [
+        "SG08023228"
+      ],
+      "missingYearTarget": 3.0
+    },
+    {
+      "code": "1.2.65",
+      "year": 2029,
+      "currentCodes": [
+        "SG08024029"
+      ],
+      "legacyCodes": [
+        "SG08024029"
+      ],
+      "desiredCodes": [
+        "SG08024029"
+      ],
+      "missingYearTarget": 3.0
+    },
+    {
+      "code": "1.2.66",
+      "year": 2025,
+      "currentCodes": [
+        "SG09020425"
+      ],
+      "legacyCodes": [
+        "SG09020425"
+      ],
+      "desiredCodes": [
+        "SG09020425"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.66",
+      "year": 2026,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.66",
+      "year": 2027,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.66",
+      "year": 2028,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.66",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.67",
+      "year": 2025,
+      "currentCodes": [
+        "SG09020525"
+      ],
+      "legacyCodes": [
+        "SG09020525"
+      ],
+      "desiredCodes": [
+        "SG09020525"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.2.67",
+      "year": 2026,
+      "currentCodes": [
+        "SG09020826"
+      ],
+      "legacyCodes": [
+        "SG09020826"
+      ],
+      "desiredCodes": [
+        "SG09020826"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.2.67",
+      "year": 2027,
+      "currentCodes": [
+        "SG09021127"
+      ],
+      "legacyCodes": [
+        "SG09021127"
+      ],
+      "desiredCodes": [
+        "SG09021127"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.2.67",
+      "year": 2028,
+      "currentCodes": [
+        "SG09021428"
+      ],
+      "legacyCodes": [
+        "SG09021428"
+      ],
+      "desiredCodes": [
+        "SG09021428"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.2.67",
+      "year": 2029,
+      "currentCodes": [
+        "SG09021729"
+      ],
+      "legacyCodes": [
+        "SG09021729"
+      ],
+      "desiredCodes": [
+        "SG09021729"
+      ],
+      "missingYearTarget": 10.0
+    },
+    {
+      "code": "1.2.68",
+      "year": 2025,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.68",
+      "year": 2026,
+      "currentCodes": [
+        "SG09031126"
+      ],
+      "legacyCodes": [
+        "SG09031126"
+      ],
+      "desiredCodes": [
+        "SG09031126"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.68",
+      "year": 2027,
+      "currentCodes": [
+        "SG09031627"
+      ],
+      "legacyCodes": [
+        "SG09031627"
+      ],
+      "desiredCodes": [
+        "SG09031627"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.68",
+      "year": 2028,
+      "currentCodes": [
+        "SG09032128"
+      ],
+      "legacyCodes": [
+        "SG09032128"
+      ],
+      "desiredCodes": [
+        "SG09032128"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.68",
+      "year": 2029,
+      "currentCodes": [],
+      "legacyCodes": [],
+      "desiredCodes": [],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.69",
+      "year": 2025,
+      "currentCodes": [
+        "SG10020225"
+      ],
+      "legacyCodes": [
+        "SG10020225"
+      ],
+      "desiredCodes": [
+        "SG10020225"
+      ],
+      "missingYearTarget": 3.0
+    },
+    {
+      "code": "1.2.69",
+      "year": 2026,
+      "currentCodes": [
+        "SG10020326"
+      ],
+      "legacyCodes": [
+        "SG10020326"
+      ],
+      "desiredCodes": [
+        "SG10020326"
+      ],
+      "missingYearTarget": 3.0
+    },
+    {
+      "code": "1.2.69",
+      "year": 2027,
+      "currentCodes": [
+        "SG10020527"
+      ],
+      "legacyCodes": [
+        "SG10020527"
+      ],
+      "desiredCodes": [
+        "SG10020527"
+      ],
+      "missingYearTarget": 3.0
+    },
+    {
+      "code": "1.2.69",
+      "year": 2028,
+      "currentCodes": [
+        "SG10020728"
+      ],
+      "legacyCodes": [
+        "SG10020728"
+      ],
+      "desiredCodes": [
+        "SG10020728"
+      ],
+      "missingYearTarget": 3.0
+    },
+    {
+      "code": "1.2.69",
+      "year": 2029,
+      "currentCodes": [
+        "SG10020829"
+      ],
+      "legacyCodes": [
+        "SG10020829"
+      ],
+      "desiredCodes": [
+        "SG10020829"
+      ],
+      "missingYearTarget": 3.0
+    },
+    {
+      "code": "1.2.70",
+      "year": 2025,
+      "currentCodes": [
+        "SG10010425"
+      ],
+      "legacyCodes": [
+        "SG10010425"
+      ],
+      "desiredCodes": [
+        "SG10010425"
+      ],
+      "missingYearTarget": 1.0
+    },
+    {
+      "code": "1.2.70",
+      "year": 2026,
+      "currentCodes": [
+        "SG10010726"
+      ],
+      "legacyCodes": [
+        "SG10010726"
+      ],
+      "desiredCodes": [
+        "SG10010726"
+      ],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.70",
+      "year": 2027,
+      "currentCodes": [
+        "SG10010927"
+      ],
+      "legacyCodes": [
+        "SG10010927"
+      ],
+      "desiredCodes": [
+        "SG10010927"
+      ],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.70",
+      "year": 2028,
+      "currentCodes": [
+        "SG10011228"
+      ],
+      "legacyCodes": [
+        "SG10011228"
+      ],
+      "desiredCodes": [
+        "SG10011228"
+      ],
+      "missingYearTarget": 0.0
+    },
+    {
+      "code": "1.2.70",
+      "year": 2029,
+      "currentCodes": [
+        "SG10011529"
+      ],
+      "legacyCodes": [
+        "SG10011529"
+      ],
+      "desiredCodes": [
+        "SG10011529"
+      ],
+      "missingYearTarget": 0.0
+    }
+  ],
+  "legacyBaseline": "User-supplied 20260920backup.sql; only known association variants accepted; no historical cleanup is executed"
 }

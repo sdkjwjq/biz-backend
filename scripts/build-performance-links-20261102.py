@@ -18,18 +18,18 @@ def taskcode(year,ref):
 
 def main():
  data=json.loads((ROOT/'data/repairs/performance-links-20261102.json').read_text(encoding='utf-8'))
- rows=data['approved'];assert rows and len({(r['code'],r['year']) for r in rows})==len(rows)
+ rows=data['targets'];assert rows and len({(r['code'],r['year']) for r in rows})==len(rows)
  for r in rows:
   assert re.fullmatch(r'1\.[12]\.\d+',r['code']) and r['year'] in range(2025,2030)
-  assert not r['invalid'] and r['code'] not in data['percentageIndicatorsDeferred']
+  assert r['code'] not in data['percentageIndicatorsDeferred']
  seed="""SET NAMES utf8mb4;
 SET SESSION group_concat_max_len=16777216;
 DROP TEMPORARY TABLE IF EXISTS pl_plan;
-CREATE TEMPORARY TABLE pl_plan(code VARCHAR(64) COLLATE utf8mb4_bin,year INT,old_codes TEXT COLLATE utf8mb4_bin,new_codes TEXT COLLATE utf8mb4_bin,PRIMARY KEY(code,year));
+CREATE TEMPORARY TABLE pl_plan(code VARCHAR(64) COLLATE utf8mb4_bin,year INT,old_codes TEXT COLLATE utf8mb4_bin,new_codes TEXT COLLATE utf8mb4_bin,legacy_codes TEXT COLLATE utf8mb4_bin,missing_year_target DECIMAL(20,4),PRIMARY KEY(code,year));
 INSERT INTO pl_plan VALUES
-"""+',\n'.join('('+','.join([quote(r['code']),str(r['year']),quote(','.join(sorted(taskcode(r['year'],t) for t in r['current']))),quote(','.join(sorted(taskcode(r['year'],t) for t in r['proposed'])))])+')' for r in rows)+";\n"
+"""+',\n'.join('('+','.join([quote(r['code']),str(r['year']),quote(','.join(r['currentCodes'])),quote(','.join(r['desiredCodes'])),quote(','.join(r['legacyCodes'])),str(r['missingYearTarget'])])+')' for r in rows)+";\n"
  seed+='DROP TEMPORARY TABLE IF EXISTS pl_wanted;CREATE TEMPORARY TABLE pl_wanted(code VARCHAR(64) COLLATE utf8mb4_bin,year INT,task_code VARCHAR(64) COLLATE utf8mb4_bin,PRIMARY KEY(code,year,task_code));\n'
- wanted=[(r['code'],r['year'],taskcode(r['year'],t)) for r in rows for t in r['proposed']]
+ wanted=[(r['code'],r['year'],t) for r in rows for t in r['desiredCodes']]
  if wanted:seed+='INSERT INTO pl_wanted VALUES\n'+',\n'.join('('+','.join([quote(c),str(y),quote(t)])+')' for c,y,t in wanted)+';\n'
  resolve="""DROP TEMPORARY TABLE IF EXISTS pl_cells;
 CREATE TEMPORARY TABLE pl_cells AS SELECT a.*,p.perf_id,y.year_id FROM pl_plan a
@@ -85,6 +85,7 @@ CREATE TABLE IF NOT EXISTS sys_perf_links_20261102 (
  rel_hash CHAR(64),year_hash CHAR(64),perf_hash CHAR(64),task_hash CHAR(64),
  database_operator VARCHAR(288) NOT NULL,applied_at DATETIME(3) NOT NULL,rolled_back_at DATETIME(3) NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS sys_perf_links_20261102_years(year_id BIGINT PRIMARY KEY,perf_id BIGINT NOT NULL,year INT NOT NULL) ENGINE=InnoDB;
 """
  locks="""SELECT p.perf_id locked_performance FROM biz_performance p WHERE p.perf_id IN(SELECT perf_id FROM pl_cells) ORDER BY p.perf_id FOR UPDATE;
 SELECT y.year_id locked_year FROM biz_performance_year y WHERE y.perf_id IN(SELECT perf_id FROM pl_cells) ORDER BY y.year_id FOR UPDATE;
@@ -97,7 +98,7 @@ SELECT r.id locked_relation FROM rel_task_performance r WHERE r.perf_id IN(SELEC
 DELIMITER $$
 CREATE PROCEDURE performance_links_20261102()
 main:BEGIN
- DECLARE v_count INT DEFAULT 0;DECLARE v_add INT DEFAULT 0;DECLARE v_remove INT DEFAULT 0;
+ DECLARE v_count INT DEFAULT 0;DECLARE v_add INT DEFAULT 0;DECLARE v_remove INT DEFAULT 0;DECLARE v_cells INT DEFAULT 0;
  DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK;RESIGNAL;END;
  START TRANSACTION;
  IF EXISTS(SELECT 1 FROM sys_perf_links_20261102 WHERE id=1 AND state='ROLLED_BACK') THEN
@@ -107,12 +108,36 @@ main:BEGIN
   SELECT 'already_applied_preserving_later_changes' result;COMMIT;LEAVE main;
  END IF;
  IF EXISTS(SELECT 1 FROM bak_20261102_perf_links_rel) OR EXISTS(SELECT 1 FROM bak_20261102_perf_links_year)
- OR EXISTS(SELECT 1 FROM bak_20261102_perf_links_total) OR EXISTS(SELECT 1 FROM bak_20261102_perf_links_task) THEN
+ OR EXISTS(SELECT 1 FROM bak_20261102_perf_links_total) OR EXISTS(SELECT 1 FROM bak_20261102_perf_links_task)
+ OR EXISTS(SELECT 1 FROM sys_perf_links_20261102_years) THEN
   SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Unexpected nonempty performance-link backup; no business rows changed';
  END IF;
 """+resolve+locks+f"""
+ IF EXISTS(SELECT 1 FROM pl_plan a LEFT JOIN biz_performance p ON BINARY p.perf_code=BINARY a.code AND COALESCE(p.is_delete,0)=0
+ GROUP BY a.code,a.year HAVING COUNT(p.perf_id)<>1) THEN
+  SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Performance identity missing or duplicated; no rows committed';
+ END IF;
+ SELECT p.perf_id locked_config FROM biz_performance p WHERE p.perf_code IN(SELECT code FROM pl_plan) ORDER BY p.perf_id FOR UPDATE;
+ IF EXISTS(SELECT 1 FROM biz_performance_year y JOIN biz_performance p ON p.perf_id=y.perf_id JOIN pl_plan a ON BINARY a.code=BINARY p.perf_code AND a.year=y.year
+ GROUP BY p.perf_id,y.year HAVING COUNT(*)<>1 OR MIN(COALESCE(y.is_delete,0))<>0) THEN
+  SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='A performance year is duplicated or disabled; no rows committed';
+ END IF;
+ DROP TEMPORARY TABLE IF EXISTS pl_missing_years;
+ CREATE TEMPORARY TABLE pl_missing_years AS SELECT p.perf_id,a.year,a.missing_year_target,p.data_type FROM pl_plan a
+ JOIN biz_performance p ON BINARY p.perf_code=BINARY a.code AND COALESCE(p.is_delete,0)=0
+ LEFT JOIN biz_performance_year y ON y.perf_id=p.perf_id AND y.year=a.year WHERE y.year_id IS NULL AND a.new_codes<>'';
+ INSERT INTO biz_performance_year(perf_id,year,target_value,actual_value,data_type,is_delete)
+ SELECT perf_id,year,missing_year_target,0,data_type,0 FROM pl_missing_years;
+ INSERT INTO sys_perf_links_20261102_years SELECT y.year_id,y.perf_id,y.year FROM biz_performance_year y
+ JOIN pl_missing_years a ON a.perf_id=y.perf_id AND a.year=y.year;
+"""+resolve+f"""
  SELECT COUNT(*) INTO v_count FROM pl_cells;
- IF v_count<>{len(rows)} OR EXISTS(SELECT 1 FROM pl_cells GROUP BY code,year HAVING COUNT(*)<>1) THEN
+ IF v_count<>(SELECT COUNT(*) FROM pl_plan a WHERE EXISTS(SELECT 1 FROM biz_performance p JOIN biz_performance_year y ON y.perf_id=p.perf_id AND y.year=a.year AND COALESCE(y.is_delete,0)=0 WHERE BINARY p.perf_code=BINARY a.code AND COALESCE(p.is_delete,0)=0))
+ OR EXISTS(SELECT 1 FROM pl_cells GROUP BY code,year HAVING COUNT(*)<>1) THEN
+  SELECT a.code,a.year,COUNT(y.year_id) matched_annual_rows FROM pl_plan a
+  LEFT JOIN biz_performance p ON BINARY p.perf_code=BINARY a.code AND COALESCE(p.is_delete,0)=0
+  LEFT JOIN biz_performance_year y ON y.perf_id=p.perf_id AND y.year=a.year AND COALESCE(y.is_delete,0)=0
+  GROUP BY a.code,a.year HAVING COUNT(y.year_id)<>1 ORDER BY a.code,a.year;
   SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Performance/year identity is missing or duplicated; no rows committed';
  END IF;
  SELECT COUNT(*) INTO v_count FROM pl_desired;
@@ -120,34 +145,46 @@ main:BEGIN
   SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Desired task is missing, wrong-year, deleted, duplicated or excluded from aggregation';
  END IF;
  IF EXISTS(SELECT 1 FROM pl_cells c JOIN pl_current a ON a.perf_id=c.perf_id AND a.year_id=c.year_id
- WHERE a.row_count<>a.task_count OR (NOT(BINARY a.current_codes=BINARY c.old_codes) AND NOT(BINARY a.current_codes=BINARY c.new_codes))) THEN
-  SELECT c.code,c.year,a.current_codes,c.old_codes,c.new_codes FROM pl_cells c JOIN pl_current a ON a.perf_id=c.perf_id AND a.year_id=c.year_id
-  WHERE a.row_count<>a.task_count OR (NOT(BINARY a.current_codes=BINARY c.old_codes) AND NOT(BINARY a.current_codes=BINARY c.new_codes));
+ WHERE (a.row_count<>a.task_count AND NOT(BINARY a.current_codes=BINARY c.legacy_codes))
+ OR (NOT(BINARY a.current_codes=BINARY c.old_codes) AND NOT(BINARY a.current_codes=BINARY c.new_codes) AND NOT(BINARY a.current_codes=BINARY c.legacy_codes))) THEN
+  SELECT c.code,c.year,a.current_codes,c.old_codes,c.new_codes,c.legacy_codes FROM pl_cells c JOIN pl_current a ON a.perf_id=c.perf_id AND a.year_id=c.year_id
+  WHERE (a.row_count<>a.task_count AND NOT(BINARY a.current_codes=BINARY c.legacy_codes))
+  OR (NOT(BINARY a.current_codes=BINARY c.old_codes) AND NOT(BINARY a.current_codes=BINARY c.new_codes) AND NOT(BINARY a.current_codes=BINARY c.legacy_codes));
   SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Online performance links differ from the reviewed baseline; no rows committed';
  END IF;
+ DELETE c FROM pl_cells c JOIN pl_current a ON a.perf_id=c.perf_id AND a.year_id=c.year_id
+ WHERE BINARY a.current_codes=BINARY c.new_codes AND NOT EXISTS(SELECT 1 FROM sys_perf_links_20261102_years n WHERE n.year_id=c.year_id);
+ SELECT COUNT(*) INTO v_cells FROM pl_cells;
  IF EXISTS(SELECT 1 FROM biz_performance_submission s WHERE s.perf_id IN(SELECT perf_id FROM pl_cells)
  AND COALESCE(s.is_delete,0)=0 AND s.flow_status IN(10,20)) THEN
   SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='An affected performance has active approval; finish it before retrying';
  END IF;
  INSERT INTO bak_20261102_perf_links_total SELECT p.* FROM biz_performance p WHERE p.perf_id IN(SELECT perf_id FROM pl_cells);
- INSERT INTO bak_20261102_perf_links_year SELECT y.* FROM biz_performance_year y JOIN bak_20261102_perf_links_total b ON b.perf_id=y.perf_id;
+ INSERT INTO bak_20261102_perf_links_year SELECT y.* FROM biz_performance_year y JOIN bak_20261102_perf_links_total b ON b.perf_id=y.perf_id
+ WHERE NOT EXISTS(SELECT 1 FROM sys_perf_links_20261102_years n WHERE n.year_id=y.year_id);
  INSERT INTO bak_20261102_perf_links_rel SELECT r.* FROM rel_task_performance r JOIN bak_20261102_perf_links_total b ON b.perf_id=r.perf_id;
  DROP TEMPORARY TABLE IF EXISTS pl_task_ids;CREATE TEMPORARY TABLE pl_task_ids(task_id BIGINT PRIMARY KEY);
  INSERT IGNORE INTO pl_task_ids SELECT task_id FROM bak_20261102_perf_links_rel;
  INSERT IGNORE INTO pl_task_ids SELECT task_id FROM pl_desired;
  SELECT t.task_id locked_source_task FROM biz_task t JOIN pl_task_ids d ON d.task_id=t.task_id ORDER BY t.task_id FOR UPDATE;
  INSERT INTO bak_20261102_perf_links_task SELECT t.* FROM biz_task t JOIN pl_task_ids d ON d.task_id=t.task_id;
+ DROP TEMPORARY TABLE IF EXISTS pl_keep;
+ CREATE TEMPORARY TABLE pl_keep AS SELECT d.perf_id,d.year_id,d.task_id,MIN(r.id) keep_id FROM pl_desired d
+ JOIN rel_task_performance r ON r.perf_id=d.perf_id AND r.year_id=d.year_id AND r.task_id=d.task_id AND COALESCE(r.is_delete,0)=0
+ GROUP BY d.perf_id,d.year_id,d.task_id;
 """+log_prefix+f"""SELECT r.perf_id,p.perf_code,p.perf_name,c.year,'REMOVE',t.task_id,t.task_code,t.task_name,'{BATCH}',0,CONCAT({reason},CURRENT_USER()),NOW()
  FROM rel_task_performance r JOIN pl_cells c ON c.perf_id=r.perf_id AND c.year_id=r.year_id
  JOIN biz_task t ON t.task_id=r.task_id JOIN biz_performance p ON p.perf_id=r.perf_id
  LEFT JOIN pl_desired d ON d.perf_id=r.perf_id AND d.year_id=r.year_id AND d.task_id=r.task_id
- WHERE COALESCE(r.is_delete,0)=0 AND d.task_id IS NULL;
+ LEFT JOIN pl_keep k ON k.perf_id=r.perf_id AND k.year_id=r.year_id AND k.task_id=r.task_id
+ WHERE COALESCE(r.is_delete,0)=0 AND (d.task_id IS NULL OR r.id<>k.keep_id);
  SET v_remove=ROW_COUNT();
  UPDATE rel_task_performance r JOIN pl_cells c ON c.perf_id=r.perf_id AND c.year_id=r.year_id
  LEFT JOIN pl_desired d ON d.perf_id=r.perf_id AND d.year_id=r.year_id AND d.task_id=r.task_id
- SET r.is_delete=1 WHERE COALESCE(r.is_delete,0)=0 AND d.task_id IS NULL;
+ LEFT JOIN pl_keep k ON k.perf_id=r.perf_id AND k.year_id=r.year_id AND k.task_id=r.task_id
+ SET r.is_delete=1 WHERE COALESCE(r.is_delete,0)=0 AND (d.task_id IS NULL OR r.id<>k.keep_id);
  DROP TEMPORARY TABLE IF EXISTS pl_activate;
- CREATE TEMPORARY TABLE pl_activate AS SELECT d.*,MIN(r.id) id FROM pl_desired d
+ CREATE TEMPORARY TABLE pl_activate AS SELECT d.*,MIN(r.id) id FROM pl_desired d JOIN pl_cells c ON c.perf_id=d.perf_id AND c.year_id=d.year_id
  LEFT JOIN rel_task_performance r ON r.perf_id=d.perf_id AND r.year_id=d.year_id AND r.task_id=d.task_id
  GROUP BY d.perf_id,d.year_id,d.task_id,d.task_code,d.data_type
  HAVING SUM(CASE WHEN r.id IS NOT NULL AND COALESCE(r.is_delete,0)=0 THEN 1 ELSE 0 END)=0;
@@ -161,18 +198,20 @@ main:BEGIN
 """+recompute+"""UPDATE biz_performance_year y JOIN pl_values a ON a.year_id=y.year_id SET y.actual_value=a.value;
 """+total_values+"""UPDATE biz_performance p JOIN pl_totals a ON a.perf_id=p.perf_id
  SET p.current_value=a.value,p.update_time=GREATEST(NOW(),DATE_ADD(COALESCE(p.update_time,'1970-01-01'),INTERVAL 1 SECOND));
-"""+hashes+f"""INSERT INTO sys_perf_links_20261102 VALUES(1,'{data['sourceSha256']}','APPLIED',{len(rows)},v_add,v_remove,
+"""+hashes+f"""INSERT INTO sys_perf_links_20261102 VALUES(1,'{data['sourceSha256']}','APPLIED',v_cells,v_add,v_remove,
  @pl_rel_hash,@pl_year_hash,@pl_perf_hash,@pl_task_hash,CURRENT_USER(),NOW(3),NULL);
  INSERT INTO sys_release_migration(migration_key,description) VALUES('{KEY}','Confirmed 2025-2029 performance task links; blank removes; guarded exclusions; derived values recalculated');
  COMMIT;
- SELECT 'performance_links_applied' result,{len(rows)} annual_cells,v_add added,v_remove removed;
+ SELECT 'performance_links_applied' result,v_cells annual_cells,v_add added,v_remove removed,(SELECT COUNT(*) FROM sys_perf_links_20261102_years) initialized_years;
 END$$
 DELIMITER ;
 CALL performance_links_20261102();DROP PROCEDURE performance_links_20261102;
 """
- check=seed+resolve+recompute+total_values+hashes+"""SELECT 'migration_applied' check_name,COUNT(*) result FROM sys_perf_links_20261102 WHERE id=1 AND state='APPLIED';
+ check=seed+resolve+"""SELECT 'migration_applied' check_name,COUNT(*) result FROM sys_perf_links_20261102 WHERE id=1 AND state='APPLIED';
 SELECT 'relation_target_mismatch',COUNT(*) FROM pl_cells c JOIN pl_current a ON a.perf_id=c.perf_id AND a.year_id=c.year_id
  WHERE a.row_count<>a.task_count OR NOT(BINARY a.current_codes=BINARY c.new_codes);
+DELETE FROM pl_cells WHERE perf_id NOT IN(SELECT perf_id FROM bak_20261102_perf_links_total);
+"""+recompute+total_values+hashes+"""
 SELECT 'annual_value_mismatch',COUNT(*) FROM biz_performance_year y JOIN pl_values a ON a.year_id=y.year_id WHERE NOT(y.actual_value <=> a.value);
 SELECT 'total_value_mismatch',COUNT(*) FROM biz_performance p JOIN pl_totals a ON a.perf_id=p.perf_id WHERE NOT(p.current_value <=> a.value);
 SELECT 'task_source_changed',COUNT(*) FROM sys_perf_links_20261102 WHERE id=1 AND NOT(task_hash <=> @pl_task_hash);
@@ -209,6 +248,7 @@ main:BEGIN
  LEFT JOIN bak_20261102_perf_links_rel b ON b.id=r.id SET r.is_delete=1 WHERE b.id IS NULL;
  UPDATE rel_task_performance r JOIN bak_20261102_perf_links_rel b ON b.id=r.id SET r.is_delete=b.is_delete;
  UPDATE biz_performance_year y JOIN bak_20261102_perf_links_year b ON b.year_id=y.year_id SET y.actual_value=b.actual_value;
+ UPDATE biz_performance_year y JOIN sys_perf_links_20261102_years n ON n.year_id=y.year_id SET y.actual_value=0,y.is_delete=1;
  UPDATE biz_performance p JOIN bak_20261102_perf_links_total b ON b.perf_id=p.perf_id SET p.current_value=b.current_value,p.update_time=b.update_time;
  UPDATE sys_perf_links_20261102 SET state='ROLLED_BACK',rolled_back_at=NOW(3) WHERE id=1;
  COMMIT;

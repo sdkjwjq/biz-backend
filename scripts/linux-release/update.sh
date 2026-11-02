@@ -449,7 +449,7 @@ if [[ -f "$PACKAGE/sql/2026-11-02-performance-links.sql" ]]; then
       mismatch=$(awk -F '\t' -v name="$counter" '$1==name {print $2}' "$BACKUP/performance-links-check.log" | tr -d '\r')
       [[ "$mismatch" == 0 ]] || die "绩效关联迁移核对失败（$counter）；请查看 $BACKUP/performance-links-check.log"
     done
-    say "绩效关联调整完成：计划231个年度配置、新增29条、解除624条；任务原始值、年份及审核历史保留。详见 $BACKUP/performance-links-migration.log"
+    say "绩效关联调整完成；任务原始值、年份及审核历史保留。实际调整数及补齐年度数见 $BACKUP/performance-links-migration.log"
   else
     say "绩效分解表关联迁移已执行过，本次跳过，保留后续管理员调整"
   fi

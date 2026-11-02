@@ -32,6 +32,7 @@ SELECT l.perf_id,l.perf_code,l.perf_name,l.year,IF(l.action='ADD','REMOVE','ADD'
  LEFT JOIN bak_20261102_perf_links_rel b ON b.id=r.id SET r.is_delete=1 WHERE b.id IS NULL;
  UPDATE rel_task_performance r JOIN bak_20261102_perf_links_rel b ON b.id=r.id SET r.is_delete=b.is_delete;
  UPDATE biz_performance_year y JOIN bak_20261102_perf_links_year b ON b.year_id=y.year_id SET y.actual_value=b.actual_value;
+ UPDATE biz_performance_year y JOIN sys_perf_links_20261102_years n ON n.year_id=y.year_id SET y.actual_value=0,y.is_delete=1;
  UPDATE biz_performance p JOIN bak_20261102_perf_links_total b ON b.perf_id=p.perf_id SET p.current_value=b.current_value,p.update_time=b.update_time;
  UPDATE sys_perf_links_20261102 SET state='ROLLED_BACK',rolled_back_at=NOW(3) WHERE id=1;
  COMMIT;
