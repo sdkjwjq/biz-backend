@@ -110,6 +110,38 @@ class DetailedExportApiTest {
   budgets.copySection(2026,5,"annual","execution",110228L);
   try(var book=download("/data-exports/budget?scope=all&section=annual&f.year=2025&f.month=1",admin)){assertEquals(4,book.getSheet("预算月表").getPhysicalNumberOfRows());assertTrue(text(book).contains("execution"));assertEquals(4,book.getSheet("改革任务资金").getPhysicalNumberOfRows());}
  }
+ @Test void fourthGoalIdsCannotLeakUnselectedTaskEvidenceOrOverwriteTaskNames()throws Exception{
+  material();
+  db.update("INSERT INTO biz_level4_task(task_id,parent_id,phase,dept_id,leader_id,task_name,data_type,target_value,current_value,is_delete) VALUES(3,3,2026,991001,90101,'Goal sharing the selected task ID','1',1,1,0),(4,3,2026,991001,90101,'Goal sharing another task ID','1',1,1,0)");
+  db.update("INSERT INTO sys_file(file_id,file_name,file_path,file_url,file_suffix,upload_by) VALUES(42,'PRIVATE UNSELECTED MATERIAL.pdf','private-path','/private-url','pdf',?)",owner);
+  db.update("INSERT INTO biz_material_submission(sub_id,task_id,file_id,reported_value,submit_by,submit_dept_id,manage_dept_id,data_type,file_suffix,flow_status,is_delete) VALUES(52,4,42,7,?,991001,991001,'1','pdf',40,0)",owner);
+  db.update("INSERT INTO biz_audit_log(sub_id,operator_id,action_type,pre_status,post_status,comment) VALUES(52,?,'3',30,40,'PRIVATE UNSELECTED HISTORY')",other);
+  db.update("INSERT INTO sys_user_permission(user_id,access_mode,permissions_json,scopes_json) VALUES(?,'CUSTOM',?,?)",owner,"{\"tasks.read\":true,\"tasks.export\":true,\"tasks.materials\":true,\"tasks.history\":true}","{\"tasks\":{\"mode\":\"CUSTOM\",\"items\":[3],\"years\":[2026]}}");
+  db.update("UPDATE sys_permission_revision SET version=version+1");
+  for(String path:List.of("/data-exports/tasks?scope=all","/list-filters/tasks/export?f.keyword=ROUND3")){
+   try(var book=download(path,business)){
+    assertFalse(text(book).contains("PRIVATE UNSELECTED"),path);
+    assertEquals(2,book.getSheet("填报记录").getPhysicalNumberOfRows(),path);
+    assertEquals("Round task 3",value(book.getSheet("填报记录"),1,"任务名称"),path);
+    assertEquals("ROUND3",value(book.getSheet("佐证材料清单"),1,"任务编号"),path);
+    assertEquals(4,book.getSheet("四级目标").getPhysicalNumberOfRows(),path);
+   }
+  }
+ }
+ @Test void largeTaskAndSupervisionExportsDoNotRepeatSubmissionsAcrossSqlChunks()throws Exception{
+  material();
+  for(int i=0;i<498;i++)db.update("INSERT INTO biz_task(task_id,project_id,parent_id,phase,task_code,task_name,level,dept_id,leader_id,auditor_id,principal_id,target_value,current_value,progress,status,is_delete) VALUES(?,1,2,2026,?,?,3,991001,?,?,?,1,0,0,'0',0)",1000+i,"BULK"+i,"Bulk export task "+i,owner,reviewer,other);
+  db.update("INSERT INTO biz_level4_task(task_id,parent_id,phase,dept_id,leader_id,task_name,data_type,target_value,current_value,is_delete) VALUES(3,3,2026,991001,90101,'Overlapping fourth goal','1',1,1,0)");
+  for(String path:List.of("/data-exports/tasks?scope=all","/data-exports/supervision?scope=all","/list-filters/tasks/export")){
+   try(var book=download(path,admin)){
+    assertEquals(504,book.getSheet("任务明细").getPhysicalNumberOfRows(),path);
+    assertEquals(2,book.getSheet("填报记录").getPhysicalNumberOfRows(),path);
+    assertEquals(2,book.getSheet("审核记录").getPhysicalNumberOfRows(),path);
+    assertEquals(2,book.getSheet("佐证材料清单").getPhysicalNumberOfRows(),path);
+    assertEquals("Round task 3",value(book.getSheet("填报记录"),1,"任务名称"),path);
+   }
+  }
+ }
  @Test void reviewManagementExportsFormalRevisionsButNeverPrivateDrafts()throws Exception{
   var r=active();save(r,3,expert,true,"FORMAL OPINION","pass");save(r,3,expert,false,"PRIVATE DRAFT REVISION","reject");
   try(var book=download("/data-exports/review-tasks",admin)){assertTrue(text(book).contains("FORMAL OPINION"));assertTrue(text(book).contains("通过"));assertFalse(text(book).contains("PRIVATE DRAFT REVISION"));}

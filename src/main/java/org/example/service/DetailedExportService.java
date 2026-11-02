@@ -101,8 +101,10 @@ public class DetailedExportService {
         var children=byIds("SELECT * FROM biz_level4_task WHERE COALESCE(is_delete,0)=0 AND parent_id IN (%s) ORDER BY parent_id,task_id",ids);
         for(var child:children){var target=decimal(child.get("targetValue"));var value=decimal(child.get("currentValue"));var actual=target==null||target.signum()<=0||value==null?null:value.multiply(BigDecimal.valueOf(100)).divide(target,8,RoundingMode.HALF_UP);child.put("actualProgress",actual);child.put("countedProgress",actual==null?null:actual.min(BigDecimal.valueOf(100)));}
         book.sheet("四级目标","taskId:四级目标ID|parentId:三级任务ID|parentCode:三级任务编号|parentName:三级任务名称|phase:年度|taskName:四级目标名称|leaderId:负责人账号|leaderName:负责人|deptName:归口部门|targetValue:目标值|currentValue:原始填报值|actualProgress:实际完成率(%)|countedProgress:计入完成率(%)|progress:保存进度(%)|status:状态代码|"+TIMES,decorate(children,names,all,"parentId","parent"));
-        var submissionIds=new ArrayList<>(ids);for(var child:children){long key=id(child.get("taskId"));submissionIds.add(key);all.put(key,child);}
-        submissions(book,actor,"tasks","biz_material_submission","biz_audit_log","taskId",submissionIds,names,all);
+        // Submission.task_id references biz_task, never biz_level4_task. Their
+        // independent primary-key sequences overlap; mixing them leaks unrelated
+        // tasks' evidence and can repeat submissions across SQL batches.
+        submissions(book,actor,"tasks","biz_material_submission","biz_audit_log","taskId",ids,names,all);
     }
     private void submissions(AnalysisWorkbook book,Long actor,String module,String table,String logTable,String objectKey,List<Long> ids,Names names,Map<Long,Map<String,Object>> objects){
         if(access.allowed(actor,module+".history")){
@@ -197,7 +199,7 @@ public class DetailedExportService {
     private List<Map<String,Object>> decorate(List<Map<String,Object>> rows,Names names,Map<Long,Map<String,Object>> objects,String fk,String prefix){
         var result=new ArrayList<Map<String,Object>>();for(var value:rows){var row=names.enrich(value);var parent=objects.get(id(row.get(fk)));if(parent!=null){String key=prefix.equals("perf")?"perf":prefix.equals("ach")?"ach":"task";row.put(prefix+"Code",parent.get(key+"Code"));row.put(prefix+"Name",parent.get(key+"Name"));}result.add(row);}return result;
     }
-    private List<Map<String,Object>> byIds(String sql,List<Long> ids){var result=new ArrayList<Map<String,Object>>();for(int start=0;start<ids.size();start+=500){var batch=ids.subList(start,Math.min(start+500,ids.size()));String marks=String.join(",",Collections.nCopies(batch.size(),"?"));result.addAll(db.queryForList(sql.formatted(marks),batch.toArray()).stream().map(this::camelRow).toList());}return result;}
+    private List<Map<String,Object>> byIds(String sql,List<Long> ids){var result=new ArrayList<Map<String,Object>>();var unique=ids.stream().distinct().toList();for(int start=0;start<unique.size();start+=500){var batch=unique.subList(start,Math.min(start+500,unique.size()));String marks=String.join(",",Collections.nCopies(batch.size(),"?"));result.addAll(db.queryForList(sql.formatted(marks),batch.toArray()).stream().map(this::camelRow).toList());}return result;}
     private List<Map<String,Object>> sql(String sql){return db.queryForList(sql).stream().map(this::camelRow).collect(Collectors.toCollection(ArrayList::new));}
     private Map<String,Object> camelRow(Map<String,Object> source){var row=new LinkedHashMap<String,Object>();source.forEach((k,v)->{var key=new StringBuilder();boolean upper=false;for(char c:k.toCharArray()){if(c=='_'){upper=true;continue;}key.append(upper?Character.toUpperCase(c):c);upper=false;}row.put(key.toString(),v);});return row;}
     private static List<Long> ids(List<Map<String,Object>> rows,String key){return rows.stream().map(r->id(r.get(key))).filter(v->v>0).distinct().toList();}

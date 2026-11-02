@@ -62,5 +62,7 @@ final class AnalysisWorkbook implements AutoCloseable {
         if(value instanceof Collection<?> values)return String.join("、",values.stream().map(AnalysisWorkbook::format).toList());
         return value==null?"":String.valueOf(value);
     }
-    @Override public void close()throws IOException{try{book.close();}finally{book.dispose();}}
+    // dispose flushes pending streaming rows before deleting their temporary files.
+    // Running it after close tries to flush a closed writer when generation failed.
+    @Override public void close()throws IOException{try{book.dispose();}finally{book.close();}}
 }
