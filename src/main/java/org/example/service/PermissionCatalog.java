@@ -26,10 +26,10 @@ public final class PermissionCatalog {
         for(String module:List.of("dashboard","overview","audit","messages"))add(module,"read","查阅");
         add("messages","send","发送通知");add("expert","read","进入专家评审");add("expert","write","填写本人评语");
         add("management","refresh","业务重算／定时操作");
-        role("USER","普通用户",List.of("tasks.read","tasks.materials","tasks.fill","tasks.audit","tasks.withdraw","tasks.history","tasks.export","performance.read","performance.materials","performance.fill","performance.audit","performance.withdraw","performance.history","performance.export","dashboard.read","audit.read","messages.read"),business("tasks","performance"),false);
+        role("USER","普通用户",List.of("tasks.read","tasks.materials","tasks.fill","tasks.audit","tasks.withdraw","tasks.history","tasks.export","performance.read","performance.materials","performance.fill","performance.audit","performance.withdraw","performance.history","performance.export","audit.read","messages.read"),business("tasks","performance"),false);
         role("RESPONSIBLE","负责人",BUILTINS.get("USER").permissions(),business("tasks","performance"),false);
         role("LEADERSHIP","校级领导查阅",List.of("tasks.read","tasks.materials","tasks.history","tasks.export","performance.read","performance.materials","performance.history","performance.export","achievements.read","achievements.materials","achievements.history","core.read","records.read","records.export","budget.read","budget.materials","budget.export","budget.versions","dashboard.read","overview.read","messages.read"),merge(Map.of("tasks",Map.of("mode","LEADERSHIP"),"performance",Map.of("mode","LEADERSHIP")),all("achievements","core","records","budget")),true);
-        role("OFFICE","双高办",List.of("core.read","core.fill","budget.read","budget.fill","budget.materials","budget.export","budget.versions"),all("core","budget"),true);
+        role("OFFICE","双高办",List.of("dashboard.read","core.read","core.fill","budget.read","budget.fill","budget.materials","budget.export","budget.versions"),all("core","budget"),true);
         role("FINANCE","财务",List.of("budget.read","budget.fill","budget.materials","budget.export","budget.versions"),all("budget"),true);
         role("BUDGET_VIEWER_INTERNAL","负责人预算查阅",List.of("budget.read","budget.materials","budget.export","budget.versions"),all("budget"),true);
         role("ACHIEVEMENT_REPORTER","成果报送",List.of("achievements.read","achievements.materials","achievements.fill","achievements.history","achievements.delete","achievements.export"),all("achievements"),true);

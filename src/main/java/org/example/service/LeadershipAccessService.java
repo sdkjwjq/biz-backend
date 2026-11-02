@@ -269,6 +269,7 @@ public class LeadershipAccessService {
                 user.getDeptId() == null ? null : users.getDeptById(user.getDeptId())));
         result.put("canViewAuditCenter", !scope.leader() || duties || coreDuties || AchievementPermissionUtil.isAchievementAuditor(user));
         result.putAll(permissions.description(userId));
+        result.put("canViewDashboard",permissions.allowed(userId,"dashboard.read"));
         result.put("canViewExpertReviews",permissions.allowed(userId,"expert.read"));
         if (permissions.enforced(userId)) {
             result.put("canViewOverview",permissions.allowed(userId,"overview.read"));

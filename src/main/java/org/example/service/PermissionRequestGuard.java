@@ -32,6 +32,7 @@ public class PermissionRequestGuard {
             Long file=path.startsWith("/system/download/")?last(path):jdbc.queryForList("SELECT file_id FROM sys_file WHERE (file_path=? OR file_url=?) AND COALESCE(is_delete,0)=0",Long.class,path,path).stream().findFirst().orElse(null);
             if(file==null||!access.canFile(actor,file))deny("材料不存在或不在授权范围内");return;
         }
+        if(path.equals("/dashboard")||path.startsWith("/dashboard/"))access.require(actor,"dashboard.read");
         if(!access.enforced(actor)||state.admin())return; // 未部署权限结构时兼容旧入口；已迁移账号全部执行统一校验。
         if(path.equals("/biz/tasks/manage/update"))access.requireAdmin(actor); // 历史全字段接口不可用作委派移交入口。
         String action=action(path,get);

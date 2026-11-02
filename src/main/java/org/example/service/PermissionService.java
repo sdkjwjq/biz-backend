@@ -103,6 +103,9 @@ public class PermissionService {
         boolean admin="0".equals(u.getRole());if(admin)granted.addAll(PermissionCatalog.ACTIONS.keySet());
         // 账号、授权和他人评语管理不属于可委派的业务功能。
         granted.retainAll(PermissionCatalog.ACTIONS.keySet());
+        // School-wide dashboard is restricted by current identity, even for older
+        // stored templates or personal grants which used to include dashboard.read.
+        if(!dashboardAudience(u))granted.remove("dashboard.read");
         for(String module:List.of("tasks","performance","achievements","core","records","budget"))if(!granted.contains(module+".read"))granted.removeIf(k->k.startsWith(module+"."));
         if(!granted.contains("tasks.read"))granted.removeAll(List.of("expert.read","expert.write"));if(!granted.contains("expert.read"))granted.remove("expert.write");
         boolean configured=!"LEGACY".equals(policy.mode())||!policy.overrides().isEmpty()||!policy.scopes().isEmpty()||!policy.roles().isEmpty()||codes.stream().map(definitions::get).filter(Objects::nonNull).anyMatch(r->r.version()>0||!r.builtin());
@@ -139,6 +142,12 @@ public class PermissionService {
     }
     public boolean enforced(Long id){return id!=null&&installed();}
     public boolean configured(Long id){return id!=null&&state(id).configured();}
+    private boolean dashboardAudience(SysUser account){
+        if("0".equals(account.getRole()))return true;
+        var dept=department(account.getDeptId());
+        if(Objects.equals(account.getDeptId(),100L)&&dept!=null&&!Integer.valueOf(1).equals(dept.getIsDelete())&&!"1".equals(dept.getStatus()))return true;
+        return cached("leadershipIds",()->new HashSet<>(jdbc.queryForList("SELECT user_id FROM sys_leadership_access WHERE scope IN('ALL','DEPARTMENTS')",Long.class))).contains(account.getUserId());
+    }
     public boolean allowed(Long id,String permission){return id!=null&&state(id).permissions().contains(permission);}
     public void require(Long id,String permission){if(!allowed(id,permission))throw new AdminManagementException(403,"没有"+PermissionCatalog.ACTIONS.getOrDefault(permission,"此操作")+"权限");}
     @SuppressWarnings("unchecked")

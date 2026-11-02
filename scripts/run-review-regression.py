@@ -66,12 +66,14 @@ def main():
         subprocess.run([mysql, *connection, database], input=(root / "data/migrations/2026-10-28-transfer-reviewers.sql").read_bytes(), env=env, check=True)
         subprocess.run([mysql, *connection, database], input=(root / "data/migrations/2026-10-29-platform-notices.sql").read_bytes(), env=env, check=True)
         subprocess.run([mysql, *connection, database], input=(root / "data/migrations/2026-10-30-budget-and-review-result.sql").read_bytes(), env=env, check=True)
-        if method in ('reviewrounds','exports'):
+        if method in ('reviewrounds','exports','dashboardaccess'):
             subprocess.run([mysql, *connection, database], input=(root / "data/migrations/2026-11-01-review-rounds.sql").read_bytes(), env=env, check=True)
         env["SHUANGGAO_TEST_DB_USER"] = user
         env["SHUANGGAO_TEST_JDBC_URL"] = ("jdbc:mysql://127.0.0.1:3306/" + database
                                          + "?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai")
-        if method == "exports":
+        if method == "dashboardaccess":
+            selector = "DashboardAccessApiTest"
+        elif method == "exports":
             selector = "DetailedExportApiTest,org.example.service.AnalysisWorkbookTest"
         elif method == "reviewrounds":
             selector = "ReviewRoundApiTest"
