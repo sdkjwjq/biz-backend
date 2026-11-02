@@ -439,6 +439,22 @@ say '任务移交申请结构已核对，既有移交及通知记录保留'
 "${MYSQL[@]}" < "$PACKAGE/sql/2026-11-01-chen-self-review-check.sql" > "$BACKUP/chen-self-review-check.log"
 say "陈奥林17项按本人填报、本人手动审核核对；活动审批及后续管理员调整保留。逐项结果：$BACKUP/chen-self-review-migration.log"
 
+if [[ -f "$PACKAGE/sql/2026-11-02-performance-links.sql" ]]; then
+  applied=$("${MYSQL[@]}" -e "SELECT COUNT(*) FROM sys_release_migration WHERE migration_key='performance-links-workbook-20261102-v1'")
+  if [[ "$applied" == 0 ]]; then
+    say "按已确认的绩效分解表调整2025—2029年关联并重算当前完成值；待确认项目保留"
+    "${MYSQL[@]}" < "$PACKAGE/sql/2026-11-02-performance-links.sql" > "$BACKUP/performance-links-migration.log"
+    "${MYSQL[@]}" < "$PACKAGE/sql/2026-11-02-performance-links-check.sql" > "$BACKUP/performance-links-check.log"
+    for counter in relation_target_mismatch annual_value_mismatch total_value_mismatch task_source_changed post_migration_drift; do
+      mismatch=$(awk -F '\t' -v name="$counter" '$1==name {print $2}' "$BACKUP/performance-links-check.log" | tr -d '\r')
+      [[ "$mismatch" == 0 ]] || die "绩效关联迁移核对失败（$counter）；请查看 $BACKUP/performance-links-check.log"
+    done
+    say "绩效关联调整完成：计划231个年度配置、新增29条、解除624条；任务原始值、年份及审核历史保留。详见 $BACKUP/performance-links-migration.log"
+  else
+    say "绩效分解表关联迁移已执行过，本次跳过，保留后续管理员调整"
+  fi
+fi
+
 "${MYSQL[@]}" < "$PACKAGE/sql/2026-10-24-audit-history-index.sql" > "$BACKUP/audit-history-index.log"
 "${MYSQL[@]}" < "$PACKAGE/sql/2026-10-24-audit-history-index-check.sql" > "$BACKUP/audit-history-index-check.log"
 say '审核历史查询索引已核对，复用已有索引，不修改审核记录'

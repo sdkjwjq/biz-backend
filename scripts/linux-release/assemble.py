@@ -84,6 +84,12 @@ def main():
     for suffix in ['', '-check', '-rollback']:
         source=ROOT/('data/migrations/2026-11-02-task-transfer-request'+suffix+'.sql')
         (OUT/'sql'/source.name).write_text(source.read_text(encoding='utf-8'),encoding='utf-8',newline='\n')
+    for suffix in ['', '-check', '-rollback']:
+        source=ROOT/('data/migrations/2026-11-02-performance-links'+suffix+'.sql')
+        (OUT/'sql'/source.name).write_text(source.read_text(encoding='utf-8'),encoding='utf-8',newline='\n')
+    source=ROOT/'data/repairs/performance-links-20261102.json'
+    (OUT/'performance-links-change-list.json').write_text(source.read_text(encoding='utf-8'),encoding='utf-8',newline='\n')
+    (OUT/'performance-links-guide.txt').write_text((ROOT/'docs/20261102-performance-links.txt').read_text(encoding='utf-8'),encoding='utf-8',newline='\n')
     for name in ['review-rounds', 'chen-self-review']:
         for suffix in ['', '-check', '-rollback']:
             source=ROOT/('data/migrations/2026-11-01-'+name+suffix+'.sql')
@@ -263,6 +269,15 @@ DEALLOCATE PREPARE release_stmt;
     manifest['data_updates'] += ['sql/2026-11-01-review-rounds.sql', 'sql/2026-11-01-chen-self-review.sql']
     manifest['data_updates'].append('sql/2026-11-02-task-leader-completion.sql')
     manifest['data_updates'].append('sql/2026-11-02-task-transfer-request.sql')
+    manifest['data_updates'].append('sql/2026-11-02-performance-links.sql')
+    manifest['one_time_migrations'].append('performance-links-workbook-20261102-v1')
+    relation_change=json.loads((ROOT/'data/repairs/performance-links-20261102.json').read_text(encoding='utf-8'))
+    manifest['performance_links_workbook']={'source_sha256':relation_change['sourceSha256'],**relation_change['counts'],
+        'blank_cells_remove':True,'years':[2025,2026,2027,2028,2029],
+        'preserve_task_years_targets_owners_and_histories':True,'derived_values_recalculated':True,
+        'abort_on_unreviewed_relations_or_active_performance_approval':True,'instructions':'performance-links-guide.txt',
+        'changes':'performance-links-change-list.json','deployment_log':'performance-links-migration.log'}
+    manifest['data_update_backup_tables'] += ['bak_20261102_perf_links_'+part for part in ['rel','year','total','task']]
     manifest['task_transfer_requests'] = {'recipient_confirmation': True, 'current_duty_only': True,
         'active_audits_blocked': True, 'scope_checked': True, 'duplicate_pending_guard': True}
     manifest['task_owner_completion'] = {'candidates': 368, 'fixed_ids_and_identity_checks': True,

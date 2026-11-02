@@ -158,6 +158,31 @@ def online_backup_migration_rehearsal():
             assert run('CHECKSUM TABLE biz_task,bak_20261102_task_leader,sys_task_leader_repair_20261102')==before_repeat
             assert b'READY\t' not in run(completion.read_bytes()+(PACKAGE/'sql/2026-11-02-task-leader-completion-check.sql').read_bytes())
             checks.append('packaged-368-omitted-task-owner-repairs-repeat-safe-and-preserve-reviewers-values-submissions-and-audit-history')
+        workbook_links=PACKAGE/'sql/2026-11-02-performance-links.sql'
+        if workbook_links.exists():
+            before_tasks=run('SELECT * FROM biz_task ORDER BY task_id')
+            before_years=run('SELECT year_id,perf_id,year,target_value,data_type,is_delete FROM biz_performance_year ORDER BY year_id')
+            before_history=run('SELECT * FROM biz_performance_audit_log ORDER BY log_id')
+            before_core=run('SELECT * FROM biz_core_report ORDER BY report_id')
+            before_active=run('SELECT perf_id,year_id,task_id FROM rel_task_performance WHERE COALESCE(is_delete,0)=0 ORDER BY perf_id,year_id,task_id')
+            run(workbook_links.read_bytes())
+            link_check=run((PACKAGE/'sql/2026-11-02-performance-links-check.sql').read_bytes())
+            assert b'migration_applied\t1' in link_check
+            for counter in ['relation_target_mismatch','annual_value_mismatch','total_value_mismatch','task_source_changed','post_migration_drift']:
+                assert counter.encode()+b'\t0' in link_check,link_check[-2000:]
+            assert run('SELECT annual_cells,added,removed FROM sys_perf_links_20261102').strip()==b'231\t29\t624'
+            stable=run('CHECKSUM TABLE rel_task_performance,biz_performance,biz_performance_year,biz_performance_relation_log,sys_perf_links_20261102')
+            run(workbook_links.read_bytes())
+            assert run('CHECKSUM TABLE rel_task_performance,biz_performance,biz_performance_year,biz_performance_relation_log,sys_perf_links_20261102')==stable
+            assert run('SELECT * FROM biz_task ORDER BY task_id')==before_tasks
+            assert run('SELECT year_id,perf_id,year,target_value,data_type,is_delete FROM biz_performance_year ORDER BY year_id')==before_years
+            assert run('SELECT * FROM biz_performance_audit_log ORDER BY log_id')==before_history
+            assert run('SELECT * FROM biz_performance_submission ORDER BY sub_id')==submission_rows
+            assert run('SELECT * FROM biz_core_report ORDER BY report_id')==before_core
+            run((PACKAGE/'sql/2026-11-02-performance-links-rollback.sql').read_bytes())
+            assert run('SELECT perf_id,year_id,task_id FROM rel_task_performance WHERE COALESCE(is_delete,0)=0 ORDER BY perf_id,year_id,task_id')==before_active
+            assert run(value_projection)==old_values
+            checks.append('packaged-workbook-performance-links-forward-repeat-check-rollback-on-supplied-backup-preserves-targets-owners-task-values-and-histories')
     finally:
         assert re.fullmatch(r'biz_review_test_[0-9a-f]{32}',rehearsal)
         run('DROP DATABASE `'+rehearsal+'`',None)
