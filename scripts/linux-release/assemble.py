@@ -160,6 +160,8 @@ DEALLOCATE PREPARE release_stmt;
         source = ROOT / ('data/migrations/2026-10-24-audit-history-index'+suffix+'.sql')
         (OUT/'sql'/source.name).write_text(source.read_text(encoding='utf-8'),encoding='utf-8',newline='\n')
     for suffix in ['-candidates', '', '-check', '-rollback']:
+        source = ROOT / ('data/migrations/2026-11-02-task-leader-completion'+suffix+'.sql')
+        (OUT/'sql'/source.name).write_text(source.read_text(encoding='utf-8'),encoding='utf-8',newline='\n')
         source = ROOT / ('data/migrations/2026-10-29-task-leader-repair'+suffix+'.sql')
         (OUT/'sql'/source.name).write_text(source.read_text(encoding='utf-8'),encoding='utf-8',newline='\n')
         source = ROOT / ('data/migrations/2026-10-29-performance-leader-repair'+suffix+'.sql')
@@ -245,6 +247,11 @@ DEALLOCATE PREPARE release_stmt;
     manifest['budget_fillers'] = ['active-admin','active-office-department-100','active-finance-department-104']
     manifest['data_updates'] += ['sql/2026-10-29-'+name+'.sql' for name in ['task-leader-repair','performance-leader-repair','customer-assignments']]
     manifest['data_updates'] += ['sql/2026-11-01-review-rounds.sql', 'sql/2026-11-01-chen-self-review.sql']
+    manifest['data_updates'].append('sql/2026-11-02-task-leader-completion.sql')
+    manifest['task_owner_completion'] = {'candidates': 368, 'fixed_ids_and_identity_checks': True,
+        'preserve_recorded_transfers': True, 'preserve_reviewers_and_history': True,
+        'actual_applied_count': 'backup/task-leader-completion.log'}
+    manifest['task_tree_blank_restore_fix'] = True
     manifest['review_rounds'] = {'independent_experience': True, 'explicit_publication': True, 'fixed_task_ids': True, 'manual_pass_or_reject': True, 'legacy_read_only': True,
         'task_ui': 'original-home-task-tree-and-drawer', 'permission_source': 'signed-experience-and-round-scope',
         'pass_color': 'green', 'reject_color': 'red', 'business_actions_in_expert_mode': False}
@@ -253,6 +260,7 @@ DEALLOCATE PREPARE release_stmt;
     manifest['customer_configuration'].pop('chen_aolin_reviewers_unchanged')
     manifest['customer_configuration']['chen_aolin_manual_self_review_confirmed'] = 17
     manifest['data_update_backup_tables'].append('bak_20261101_chen_self_review')
+    manifest['data_update_backup_tables'].append('bak_20261102_task_leader')
     manifest['data_update_backup_tables'] += ['bak_20261029_task_leader','bak_20261029_performance_leader','bak_20261029_customer_task','bak_20261029_customer_performance']
     manifest['excluded_uncommitted_frontend_files'] = ['vite.config.js']
     manifest['frontend_working_changes'] = []

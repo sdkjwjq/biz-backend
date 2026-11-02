@@ -304,6 +304,17 @@ if [[ -f "$PACKAGE/sql/2026-10-29-task-leader-repair-candidates.sql" ]]; then
   say '历史任务负责人已定向核对修正；后续负责人移交、两级审核人及审核历史保留'
 fi
 
+if [[ -f "$PACKAGE/sql/2026-11-02-task-leader-completion-candidates.sql" ]]; then
+  cat "$PACKAGE/sql/2026-11-02-task-leader-completion-candidates.sql" \
+      "$PACKAGE/sql/2026-11-02-task-leader-completion.sql" | "${MYSQL[@]}" > "$BACKUP/task-leader-completion.log"
+  cat "$PACKAGE/sql/2026-11-02-task-leader-completion-candidates.sql" \
+      "$PACKAGE/sql/2026-11-02-task-leader-completion-check.sql" | "${MYSQL[@]}" > "$BACKUP/task-leader-completion-check.log"
+  remaining_owners=$(awk -F'\t' '$1=="READY"{print $2}' "$BACKUP/task-leader-completion-check.log")
+  [[ -z "$remaining_owners" || "$remaining_owners" == 0 ]] || die "任务负责人补修仍有待修正记录，请查看 task-leader-completion-check.log"
+  repaired_owners=$(awk -F'\t' '$1=="repaired_tasks"{print $2}' "$BACKUP/task-leader-completion.log")
+  say "遗漏任务负责人已定向补修 ${repaired_owners:-0} 项；已移交或配置变化的任务保留，逐项结果见 $BACKUP/task-leader-completion-check.log"
+fi
+
 if [[ -f "$PACKAGE/sql/2026-10-29-performance-leader-repair-candidates.sql" ]]; then
   cat "$PACKAGE/sql/2026-10-29-performance-leader-repair-candidates.sql" \
       "$PACKAGE/sql/2026-10-29-performance-leader-repair.sql" | "${MYSQL[@]}" > "$BACKUP/performance-leader-repair.log"

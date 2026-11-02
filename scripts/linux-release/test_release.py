@@ -141,6 +141,23 @@ def online_backup_migration_rehearsal():
         assert hashlib.sha256(run('SELECT * FROM biz_audit_log ORDER BY log_id')).hexdigest()==audit_logs
         assert b'platform_notice_tables\t4' in run((PACKAGE/'sql/2026-10-29-platform-notices-check.sql').read_bytes())
         checks.append('packaged-owner-and-customer-migrations-repeat-safe-and-preserve-values-submissions-and-audit-logs')
+        completion=PACKAGE/'sql/2026-11-02-task-leader-completion-candidates.sql'
+        if completion.exists():
+            forward=completion.read_bytes()+(PACKAGE/'sql/2026-11-02-task-leader-completion.sql').read_bytes()
+            task_fields=run('SELECT task_id,auditor_id,principal_id,dept_id,current_value,progress,status FROM biz_task ORDER BY task_id')
+            task_submissions=run('SELECT * FROM biz_material_submission ORDER BY sub_id')
+            result=run(forward)
+            assert b'repaired_tasks\t368' in result,result[-1000:]
+            assert run('SELECT task_id,leader_id FROM biz_task WHERE task_id IN(628,629) ORDER BY task_id').splitlines()==[b'628\t110234',b'629\t110234']
+            assert run('SELECT task_id,auditor_id,principal_id,dept_id,current_value,progress,status FROM biz_task ORDER BY task_id')==task_fields
+            assert run('SELECT * FROM biz_material_submission ORDER BY sub_id')==task_submissions
+            assert run(value_projection)==old_values
+            assert hashlib.sha256(run('SELECT * FROM biz_audit_log ORDER BY log_id')).hexdigest()==audit_logs
+            before_repeat=run('CHECKSUM TABLE biz_task,bak_20261102_task_leader,sys_task_leader_repair_20261102')
+            assert b'repaired_tasks\t0' in run(forward)
+            assert run('CHECKSUM TABLE biz_task,bak_20261102_task_leader,sys_task_leader_repair_20261102')==before_repeat
+            assert b'READY\t' not in run(completion.read_bytes()+(PACKAGE/'sql/2026-11-02-task-leader-completion-check.sql').read_bytes())
+            checks.append('packaged-368-omitted-task-owner-repairs-repeat-safe-and-preserve-reviewers-values-submissions-and-audit-history')
     finally:
         assert re.fullmatch(r'biz_review_test_[0-9a-f]{32}',rehearsal)
         run('DROP DATABASE `'+rehearsal+'`',None)
