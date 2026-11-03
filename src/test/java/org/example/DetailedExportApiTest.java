@@ -59,6 +59,7 @@ class DetailedExportApiTest {
  }
  String text(org.apache.poi.ss.usermodel.Workbook book){var out=new StringBuilder();for(var sheet:book)for(var row:sheet)for(var cell:row)out.append(cell.toString()).append('\n');return out.toString();}
  String value(org.apache.poi.ss.usermodel.Sheet s,int row,String name){var h=s.getRow(0);for(var c:h)if(c.toString().equals(name))return s.getRow(row).getCell(c.getColumnIndex()).toString();throw new AssertionError(name);}
+ void excludesColumns(org.apache.poi.ss.usermodel.Sheet sheet,String... names){var headers=new HashSet<String>();for(var cell:sheet.getRow(0))headers.add(cell.toString());for(String name:names)assertFalse(headers.contains(name),sheet.getSheetName()+" must not contain "+name);}
  void material(){
   db.update("UPDATE biz_task SET principal_id=?,auditor_id=?,leader_id=? WHERE task_id=3",other,reviewer,owner);
   db.update("INSERT INTO biz_level4_task(task_id,parent_id,phase,task_name,leader_id,dept_id,data_type,target_value,current_value,progress,is_delete) VALUES(31,3,2026,'Overcompleted goal',?,991001,'1',10,15,100,0)",owner);
@@ -76,6 +77,42 @@ class DetailedExportApiTest {
   }
   try(var filtered=download("/list-filters/tasks/export?f.keyword=ROUND3",admin)){assertEquals(4,filtered.getSheet("任务明细").getPhysicalNumberOfRows());assertTrue(text(filtered).contains("Evidence.pdf"));}
   try(var empty=download("/data-exports/tasks?scope=filtered&f.keyword=no-matches",admin)){assertEquals(1,empty.getSheet("任务明细").getPhysicalNumberOfRows());}
+ }
+ @Test void taskExportUsesTaskYearAndActualActionsWithoutUnrelatedOrInventedFields()throws Exception{
+  material();
+  db.update("UPDATE biz_task SET phase=2025,comment='CURRENT TASK DESCRIPTION',exp_level=NULL,actual_completion_date=NULL WHERE task_id=3");
+  db.update("UPDATE biz_material_submission SET submit_time='2026-06-05 10:00:00' WHERE sub_id=51");
+  db.update("UPDATE biz_audit_log SET action_type='通过' WHERE log_id=61");
+  for(String path:List.of("/data-exports/tasks","/list-filters/tasks/export?f.keyword=ROUND3","/data-exports/supervision"))try(var book=download(path,admin)){
+   var submitted=book.getSheet("填报记录");var logs=book.getSheet("审核记录");
+   assertEquals("2025.0",value(submitted,1,"建设年度"),path);assertTrue(value(submitted,1,"提交时间").startsWith("2026-06-05"));
+   assertEquals("2025.0",value(logs,1,"建设年度"));assertEquals("通过",value(logs,1,"操作"));assertEquals("Round task 3",value(logs,1,"任务名称"));
+   excludesColumns(submitted,"绩效ID","绩效编号","绩效名称","成果ID","成果名称","绩效填报值","填报说明");
+   excludesColumns(logs,"绩效ID","成果ID","核心填报ID","操作代码");
+   assertEquals("",value(book.getSheet("任务明细"),3,"预期成果级别"));assertEquals("",value(book.getSheet("任务明细"),3,"实际完成日期"));
+   assertEquals("CURRENT TASK DESCRIPTION",value(book.getSheet("任务明细"),3,"完成情况或说明"));
+   assertTrue(text(book.getSheet("导出说明").getWorkbook()).contains("历史填报单未单独保存文字说明"));
+  }
+ }
+ @Test void performanceAndAchievementHistoryHaveApplicableColumnsAndCompleteParentKeys()throws Exception{
+  db.update("INSERT INTO biz_performance(perf_id,project_id,parent_id,perf_code,perf_name,target_value,current_value,data_type,dept_id,leader_id,auditor_id,principal_id,is_delete) VALUES(701,1,0,'P-EXPORT','Export performance',10,3,'1',991001,?,?,?,0)",owner,reviewer,other);
+  db.update("INSERT INTO biz_performance_year(year_id,perf_id,year,target_value,actual_value,is_delete) VALUES(702,701,2026,10,3,0),(705,701,2025,10,2,0)");
+  db.update("INSERT INTO biz_performance_submission(sub_id,perf_id,year_id,year,actual_value,submit_by,flow_status,comment) VALUES(703,701,702,2026,3,?,30,'PERFORMANCE SUBMITTED TEXT'),(706,701,705,2025,2,?,30,'OLDER_YEAR_COMMENT')",owner,owner);
+  db.update("INSERT INTO biz_performance_audit_log(log_id,sub_id,operator_id,action_type,pre_status,post_status,comment) VALUES(704,703,?,'通过',20,30,'Performance archived'),(707,706,?,'通过',20,30,'OLDER_YEAR_AUDIT')",other,other);
+  try(var book=download("/data-exports/performance?scope=filtered&f.year=2026",admin)){
+   var submitted=book.getSheet("填报记录");var logs=book.getSheet("审核记录");assertEquals(2,submitted.getPhysicalNumberOfRows());assertEquals(2,logs.getPhysicalNumberOfRows());
+   assertEquals("3.0",value(submitted,1,"绩效填报值"));assertEquals("PERFORMANCE SUBMITTED TEXT",value(submitted,1,"填报说明"));
+   assertEquals("701",value(logs,1,"绩效ID"));assertEquals("P-EXPORT",value(logs,1,"绩效编号"));assertEquals("Export performance",value(logs,1,"绩效名称"));
+   assertEquals("702",value(logs,1,"绩效年度ID"));assertEquals("2026.0",value(logs,1,"填报年度"));assertEquals("通过",value(logs,1,"操作"));
+   excludesColumns(submitted,"任务ID","成果ID","任务填报值","提交部门ID");excludesColumns(logs,"任务ID","成果ID","核心填报ID");assertFalse(text(book).contains("OLDER_YEAR_"));
+  }
+  db.update("INSERT INTO biz_achievement(ach_id,category,level,ach_name,department,got_time,dept_id,comment,create_by,audit_status,is_delete) VALUES(801,1,'省级','Export achievement','Unit','2026-06-05',991001,'Current achievement',?,30,0)",owner);
+  db.update("INSERT INTO biz_achievement_submission(sub_id,ach_id,submit_by,flow_status,comment) VALUES(802,801,?,30,'ACHIEVEMENT SUBMITTED TEXT')",owner);
+  db.update("INSERT INTO biz_achievement_audit_log(log_id,sub_id,operator_id,action_type,pre_status,post_status,comment) VALUES(803,802,?,'归档',10,30,'Achievement archived')",other);
+  try(var book=download("/data-exports/achievements",admin)){
+   var submitted=book.getSheet("填报记录");var logs=book.getSheet("审核记录");assertEquals("801",value(logs,1,"成果ID"));assertEquals("Export achievement",value(logs,1,"成果名称"));assertEquals("归档",value(logs,1,"操作"));
+   assertEquals("ACHIEVEMENT SUBMITTED TEXT",value(submitted,1,"填报说明"));excludesColumns(submitted,"任务ID","绩效ID","任务填报值","绩效填报值","填报年度");excludesColumns(logs,"任务ID","绩效ID","核心填报ID");
+  }
  }
  @Test void allListModulesProduceWorkbooksAndRejectUnknownOrInvalidRequests()throws Exception{
   for(String module:org.example.service.DetailedExportService.TITLES.keySet())try(var book=download("/data-exports/"+module+"?scope=all",admin)){assertNotNull(book.getSheet("导出说明"),module);}
@@ -118,10 +155,11 @@ class DetailedExportApiTest {
   db.update("INSERT INTO biz_core_indicator VALUES(1,'2.1',1)");db.update("INSERT INTO biz_performance(perf_id,project_id,parent_id,perf_code,perf_name,target_value,current_value,data_type,dept_id,leader_id,auditor_id,principal_id,is_delete) VALUES(701,1,0,'2.1','Analysis indicator',10,3,'1',991001,?,?,?,0)",owner,reviewer,other);
   db.update("INSERT INTO biz_performance_year(year_id,perf_id,year,target_value,actual_value,is_delete) VALUES(702,701,2026,10,3,0)");
   db.update("INSERT INTO biz_core_report(report_id,indicator_id,record_year,record_month,performance_code,indicator_name,target_value,actual_value,comment,submit_by,flow_status,submit_time) VALUES(703,1,2026,5,'2.1','Frozen indicator',10,5,'Formal core value',?,30,NOW()),(704,1,2026,6,'2.1','Private indicator',10,9,'PRIVATE CORE DRAFT',?,0,NULL)",owner,other);
+  db.update("INSERT INTO biz_core_audit_log(log_id,report_id,operator_id,action,pre_status,post_status,comment) VALUES(707,703,?,'归档',20,30,'Core archived')",other);
   db.update("INSERT INTO biz_work_record(record_id,owner_id,owner_name,record_year,record_month,status,problems,next_focus,other_matters,delete_marker,create_time,update_time) VALUES(705,?,'Frozen owner',2026,5,1,'Record problems','Next focus','Other',0,NOW(),NOW()),(706,?,'Other owner',2026,6,0,'PRIVATE RECORD DRAFT','','',0,NOW(),NOW())",owner,other);
   db.update("INSERT INTO biz_work_record_entry(record_id,reform_task_id,reform_task_name,sort_order,key_progress,stage_results,typical_practices) VALUES(705,1,'Frozen reform',1,'Frozen progress','Stage results','Practices')");
   db.update("INSERT INTO biz_work_record_snapshot(record_id,statistics_json,generated_time) VALUES(705,?,NOW())","{\"year\":2026,\"month\":5,\"totalTasks\":12,\"newCompleted\":2,\"cumulativeCompleted\":5,\"completionRate\":41.67,\"tasks\":[{\"taskId\":3,\"taskCode\":\"FROZEN-CODE\",\"taskName\":\"Frozen task title\",\"completed\":true}]}");
-  try(var book=download("/data-exports/core",admin)){assertTrue(text(book).contains("Formal core value"));assertFalse(text(book).contains("PRIVATE CORE DRAFT"));}
+  try(var book=download("/data-exports/core",admin)){assertTrue(text(book).contains("Formal core value"));assertFalse(text(book).contains("PRIVATE CORE DRAFT"));var logs=book.getSheet("核心审核记录");assertEquals("归档",value(logs,1,"操作"));assertEquals("2.1",value(logs,1,"提交时指标编号"));assertEquals("Frozen indicator",value(logs,1,"提交时指标名称"));assertEquals("2026.0",value(logs,1,"填报年度"));assertEquals("5.0",value(logs,1,"填报月份"));excludesColumns(logs,"任务ID","绩效ID","成果ID","填报单ID","操作代码");}
   try(var book=download("/data-exports/records",admin)){assertTrue(text(book).contains("Frozen progress"));assertTrue(text(book).contains("FROZEN-CODE"));assertFalse(text(book).contains("PRIVATE RECORD DRAFT"));assertEquals("2.0",value(book.getSheet("冻结统计"),1,"本月完成数"));}
   try(var book=download("/data-exports/performance",admin)){assertTrue(text(book).contains("Analysis indicator"));assertEquals(2,book.getSheet("绩效年度值").getPhysicalNumberOfRows());}
  }

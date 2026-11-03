@@ -27,7 +27,6 @@ public class DetailedExportService {
     private static final String TIMES="createTime:创建时间|updateTime:更新时间";
     private static final String TASK="taskId:任务ID|parentId:上级任务ID|level:任务层级|taskCode:任务编号|taskName:任务名称|phase:建设年度|rootName:一级改革任务|parentName:上级目录|"+PEOPLE+"|targetValue:目标值|currentValue:完成值|progress:计入进度(%)|status:状态代码|statusText:任务状态|dataType:数据类型代码|dataTypeText:数据类型|isPriority:重点任务|isDifficult:困难任务|plannedCompletionDate:计划完成日期|actualCompletionDate:实际完成日期|expTarget:预期达成目标|expLevel:预期成果级别|expEffect:预期成效|expMaterialDesc:预期材料清单|comment:完成情况或说明|"+TIMES;
     private static final String SUB="subId:填报单ID|taskId:任务ID|taskCode:任务编号|taskName:任务名称|perfId:绩效ID|perfCode:绩效编号|perfName:绩效名称|achId:成果ID|achName:成果名称|year:填报年度|reportedValue:任务填报值|actualValue:绩效填报值|submitBy:提交人账号|submitName:提交人|submitDeptId:提交部门ID|submitDeptName:提交部门|submitTime:提交时间|flowStatus:流程状态代码|flowStatusText:流程状态|currentHandlerId:当前处理人账号|currentHandlerName:当前处理人|comment:填报说明";
-    private static final String LOG="logId:审核日志ID|subId:填报单ID|reportId:核心填报ID|taskId:任务ID|taskCode:任务编号|perfId:绩效ID|perfCode:绩效编号|achId:成果ID|achName:成果名称|operatorId:操作人账号|operatorName:操作人|actionType:操作代码|action:操作|preStatus:原状态代码|postStatus:后状态代码|comment:审核意见|createTime:操作时间";
     private final BusinessListFilterService filters;private final PermissionService access;private final JdbcTemplate db;
     private final ObjectMapper json;private final BudgetService budget;private final AuditListPageService audits;
     public DetailedExportService(BusinessListFilterService filters,PermissionService access,JdbcTemplate db,ObjectMapper json,BudgetService budget,AuditListPageService audits){this.filters=filters;this.access=access;this.db=db;this.json=json;this.budget=budget;this.audits=audits;}
@@ -86,7 +85,9 @@ public class DetailedExportService {
                     default -> throw new AdminManagementException(400,"不支持的导出模块");
                 }
             }
-            book.sheet("导出说明","item:项目|value:说明",List.of(Map.of("item","模块","value",TITLES.get(domain)),Map.of("item","范围","value",scope.equals("all")?"当前账号获准查看的全部记录，跨年度、跨分页；仍执行各模块权限及草稿隐私规则":"当前已生效筛选条件下的全部命中记录，不限当前页"),Map.of("item","时间","value",LocalDateTime.now(ZoneId.of("Asia/Shanghai")).toString()),Map.of("item","内容","value","各明细表通过ID及编号关联；不包含专家私有评语、密码、Token或附件正文。空值表示未填写或未设置，不代表零。")));
+            var notes=new ArrayList<Map<String,Object>>(List.of(Map.of("item","模块","value",TITLES.get(domain)),Map.of("item","范围","value",scope.equals("all")?"当前账号获准查看的全部记录，跨年度、跨分页；仍执行各模块权限及草稿隐私规则":"当前已生效筛选条件下的全部命中记录，不限当前页"),Map.of("item","时间","value",LocalDateTime.now(ZoneId.of("Asia/Shanghai")).toString()),Map.of("item","内容","value","各明细表通过ID及编号关联；不包含专家私有评语、密码、Token或附件正文。空值表示未填写或未设置，不代表零。")));
+            if(Set.of("tasks","supervision").contains(domain))notes.add(Map.of("item","任务字段口径","value","建设年度为任务所属年度，不是提交日期的年份。历史填报单未单独保存文字说明，当前完成情况见任务明细。未设置的成果级别、尚未归档的实际完成日期及目录不适用字段留空。"));
+            book.sheet("导出说明","item:项目|value:说明",notes);
             String file=TITLES.get(domain)+(scope.equals("all")?"-全量明细-":"-筛选明细-")+LocalDate.now()+".xlsx";
             response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");response.setHeader("Cache-Control","no-store");
             response.setHeader("Content-Disposition","attachment; filename*=UTF-8''"+URLEncoder.encode(file,StandardCharsets.UTF_8).replace("+","%20"));
@@ -110,12 +111,10 @@ public class DetailedExportService {
         if(access.allowed(actor,module+".history")){
         String fk=snake(objectKey);var rows=byIds("SELECT * FROM "+table+" WHERE COALESCE(is_delete,0)=0 AND "+fk+" IN (%s) ORDER BY "+fk+",sub_id",ids);
         rows=decorate(rows,names,objects,objectKey,module.equals("tasks")?"task":module.equals("performance")?"perf":"ach");
-        for(var row:rows)row.put("flowStatusText",flow(module,id(row.get("flowStatus"))));
-        book.sheet("填报记录",SUB,rows);
+        for(var row:rows){row.put("flowStatusText",flow(module,id(row.get("flowStatus"))));if(module.equals("tasks")){var task=objects.get(id(row.get("taskId")));if(task!=null)row.put("year",task.get("phase"));}}
+        book.sheet("填报记录",submissionColumns(module),rows);
         var logs=byIds("SELECT * FROM "+logTable+" WHERE sub_id IN (%s) ORDER BY sub_id,log_id",ids(rows,"subId"));
-        var bySub=rows.stream().collect(Collectors.toMap(r->id(r.get("subId")),r->r));
-        for(var log:logs){var sub=bySub.get(id(log.get("subId")));if(sub!=null)for(String key:List.of("taskId","taskCode","perfId","perfCode","achId","achName"))log.put(key,sub.get(key));}
-        book.sheet("审核记录",LOG,logs.stream().map(names::enrich).toList());
+        book.sheet("审核记录",auditColumns(module),auditRows(logs,rows,"subId",names));
         }
         if(module.equals("tasks")&&access.allowed(actor,"tasks.materials")){
             var files=byIds("SELECT s.sub_id,s.task_id,s.file_id,f.file_name,f.file_suffix,f.file_size,s.submit_time FROM biz_material_submission s LEFT JOIN sys_file f ON f.file_id=s.file_id AND COALESCE(f.is_delete,0)=0 WHERE COALESCE(s.is_delete,0)=0 AND s.task_id IN (%s) ORDER BY s.task_id,s.sub_id",ids);
@@ -134,8 +133,8 @@ public class DetailedExportService {
         var eligible=byIds("SELECT * FROM biz_performance_submission WHERE COALESCE(is_delete,0)=0 AND perf_id IN (%s) ORDER BY perf_id,sub_id",ids);
         eligible.removeIf(r->!validYears.contains(id(r.get("yearId"))));
         if(access.allowed(actor,"performance.history")){
-            var decorated=decorate(eligible,names,objects,"perfId","perf");decorated.forEach(r->r.put("flowStatusText",flow("performance",id(r.get("flowStatus")))));book.sheet("填报记录",SUB,decorated);
-            var logs=byIds("SELECT * FROM biz_performance_audit_log WHERE sub_id IN (%s) ORDER BY sub_id,log_id",ids(decorated,"subId"));book.sheet("审核记录",LOG,logs.stream().map(names::enrich).toList());
+            var decorated=decorate(eligible,names,objects,"perfId","perf");decorated.forEach(r->r.put("flowStatusText",flow("performance",id(r.get("flowStatus")))));book.sheet("填报记录",submissionColumns("performance"),decorated);
+            var logs=byIds("SELECT * FROM biz_performance_audit_log WHERE sub_id IN (%s) ORDER BY sub_id,log_id",ids(decorated,"subId"));book.sheet("审核记录",auditColumns("performance"),auditRows(logs,decorated,"subId",names));
         }
         var relations=byIds("SELECT * FROM rel_task_performance WHERE COALESCE(is_delete,0)=0 AND perf_id IN (%s) ORDER BY perf_id,task_id",ids);var taskObjects=access.visibleTasks(actor,null).stream().collect(Collectors.toMap(t->t.getTaskId(),t->filters.wireRow(t)));
         relations.removeIf(r->!validYears.contains(id(r.get("yearId")))||!taskObjects.containsKey(id(r.get("taskId"))));
@@ -156,7 +155,7 @@ public class DetailedExportService {
         var mappings=new HashMap<Long,String>();for(var mapping:db.queryForList("SELECT indicator_id,indicator_code FROM biz_core_indicator"))mappings.put(id(mapping.get("indicator_id")),String.valueOf(mapping.get("indicator_code")));
         reports.forEach(r->{r.put("flowStatusText",flow("core",id(r.get("flowStatus"))));r.put("mappingCurrent",Objects.equals(mappings.get(id(r.get("indicatorId"))),r.get("performanceCode")));});
         book.sheet("核心填报历史","reportId:填报ID|indicatorId:指标ID|recordYear:年度|recordMonth:月份|performanceCode:提交时指标编号|indicatorName:提交时名称|targetValue:提交时目标值|previousYearValue:上年末累计值|actualValue:本次累计值|comment:工作说明|submitBy:提交人账号|submitName:提交人|principalId:归口审核人账号|principalName:归口审核人|archiveHandlerId:归档人账号|archiveHandlerName:归档人|flowStatus:状态代码|flowStatusText:状态|mappingCurrent:是否当前映射|submitTime:提交时间|archiveTime:归档时间|"+TIMES,reports.stream().map(names::enrich).toList());
-        if(access.allowed(actor,"core.history"))book.sheet("核心审核记录",LOG,byIds("SELECT * FROM biz_core_audit_log WHERE report_id IN (%s) ORDER BY report_id,log_id",ids(reports,"reportId")).stream().map(names::enrich).toList());
+        if(access.allowed(actor,"core.history"))book.sheet("核心审核记录",auditColumns("core"),auditRows(byIds("SELECT * FROM biz_core_audit_log WHERE report_id IN (%s) ORDER BY report_id,log_id",ids(reports,"reportId")),reports,"reportId",names));
     }
     private void records(AnalysisWorkbook book,Long actor,List<Map<String,Object>> rows,Names names){
         // Existing document exports cover submitted records only; keep that boundary for Excel.
@@ -196,6 +195,34 @@ public class DetailedExportService {
         book.sheet("正式评语及历次修订","revisionId:修订ID|roundId:轮次ID|expertId:专家账号|expertName:提交时专家姓名|taskId:任务ID|taskCode:提交时任务编号|taskName:提交时任务名称|taskLevel:层级|revisionNo:正式版本|reviewText:评语|reviewResult:结论代码|resultText:评审结论|operatorId:实际操作人账号|operatorName:实际操作人|scopeJson:提交时范围和完成快照|createTime:提交时间",sql("SELECT * FROM biz_round_revision ORDER BY round_id,expert_id,task_id,revision_no").stream().map(r->{r.put("resultText","pass".equals(r.get("reviewResult"))?"通过":"不通过");return names.enrich(r);}).toList());
     }
     private Map<String,Object> flatten(Map<String,Object> row){var result=new LinkedHashMap<String,Object>();if(row.get("item")!=null)result.putAll(json.convertValue(row.get("item"),new TypeReference<LinkedHashMap<String,Object>>(){}));row.forEach((k,v)->{if(!k.equals("item"))result.put(k,v);});return result;}
+    private static String submissionColumns(String module){
+        String object=switch(module){
+            case "tasks"->"taskId:任务ID|taskCode:任务编号|taskName:任务名称|year:建设年度|reportedValue:任务填报值|submitDeptId:提交部门ID|submitDeptName:提交部门|";
+            case "performance"->"perfId:绩效ID|perfCode:绩效编号|perfName:绩效名称|yearId:绩效年度ID|year:填报年度|actualValue:绩效填报值|";
+            case "achievements"->"achId:成果ID|achName:成果名称|";
+            default->throw new IllegalArgumentException("Unsupported submission module: "+module);
+        };
+        return "subId:填报单ID|"+object+"submitBy:提交人账号|submitName:提交人|submitTime:提交时间|flowStatus:流程状态代码|flowStatusText:流程状态|currentHandlerId:当前处理人账号|currentHandlerName:当前处理人"+(module.equals("tasks")?"":"|comment:填报说明");
+    }
+    private static String auditColumns(String module){
+        String object=switch(module){
+            case "tasks"->"subId:填报单ID|taskId:任务ID|taskCode:任务编号|taskName:任务名称|year:建设年度|";
+            case "performance"->"subId:填报单ID|perfId:绩效ID|perfCode:绩效编号|perfName:绩效名称|yearId:绩效年度ID|year:填报年度|";
+            case "achievements"->"subId:填报单ID|achId:成果ID|achName:成果名称|";
+            case "core"->"reportId:核心填报ID|indicatorId:指标ID|performanceCode:提交时指标编号|indicatorName:提交时指标名称|recordYear:填报年度|recordMonth:填报月份|";
+            default->throw new IllegalArgumentException("Unsupported audit module: "+module);
+        };
+        return "logId:审核日志ID|"+object+"operatorId:操作人账号|operatorName:操作人|"+(module.equals("core")?"action":"actionType")+":操作|preStatus:原状态代码|postStatus:后状态代码|comment:审核意见|createTime:操作时间";
+    }
+    private List<Map<String,Object>> auditRows(List<Map<String,Object>> logs,List<Map<String,Object>> parents,String parentKey,Names names){
+        var index=parents.stream().collect(Collectors.toMap(row->id(row.get(parentKey)),row->row));
+        var result=new ArrayList<Map<String,Object>>();
+        for(var log:logs){var row=new LinkedHashMap<>(log);var parent=index.get(id(row.get(parentKey)));
+            if(parent!=null)for(String key:List.of("taskId","taskCode","taskName","perfId","perfCode","perfName","achId","achName","yearId","year","indicatorId","performanceCode","indicatorName","recordYear","recordMonth"))if(parent.get(key)!=null)row.putIfAbsent(key,parent.get(key));
+            result.add(names.enrich(row));
+        }
+        return result;
+    }
     private List<Map<String,Object>> decorate(List<Map<String,Object>> rows,Names names,Map<Long,Map<String,Object>> objects,String fk,String prefix){
         var result=new ArrayList<Map<String,Object>>();for(var value:rows){var row=names.enrich(value);var parent=objects.get(id(row.get(fk)));if(parent!=null){String key=prefix.equals("perf")?"perf":prefix.equals("ach")?"ach":"task";row.put(prefix+"Code",parent.get(key+"Code"));row.put(prefix+"Name",parent.get(key+"Name"));}result.add(row);}return result;
     }
