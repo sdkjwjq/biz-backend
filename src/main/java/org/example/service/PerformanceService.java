@@ -715,11 +715,16 @@ public class PerformanceService {
     }
 
     public long countTodoPerformanceAudits(Long userId) {
-        return AdminTestContext.enabled(userId)?performanceMapper.countAllPendingPerformanceSubmissions():auditCountScopes.visibleCount("performance",userId,performanceMapper.todoPerformanceCountGroups(userId));
+        return auditCountScopes.visibleCount("performance",userId,performanceMapper.todoPerformanceCountGroups(userId));
     }
 
     public Object getTodoPerformanceAudits(Long userId) {
-        return toPerformanceAuditVOs(AdminTestContext.enabled(userId) ? performanceMapper.getAllPendingPerformanceSubmissions() : performanceMapper.getTodoPerformanceSubmissions(userId));
+        return getTodoPerformanceAudits(userId, false);
+    }
+
+    public Object getTodoPerformanceAudits(Long userId, boolean allPending) {
+        if (allPending) permissions.requireAdmin(userId);
+        return toPerformanceAuditVOs(allPending ? performanceMapper.getAllPendingPerformanceSubmissions() : performanceMapper.getTodoPerformanceSubmissions(userId));
     }
 
     /** Same membership as the existing list, bounded to one deep-linked submission. */

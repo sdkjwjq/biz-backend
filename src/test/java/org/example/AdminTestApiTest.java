@@ -191,7 +191,8 @@ class AdminTestApiTest {
         String admin=login(ADMIN);Map<String,Object> body=fillTask();
         long id=pendingTask(admin,false);
         assertEquals(ADMIN,jdbc.queryForObject("SELECT submit_by FROM biz_material_submission WHERE sub_id=?",Long.class,id));
-        assertEquals(1,success(request(HttpMethod.GET,"/biz/audit/todo",admin,null)).size());
+        assertEquals(0,success(request(HttpMethod.GET,"/biz/audit/todo",admin,null)).size());
+        assertEquals(1,success(request(HttpMethod.GET,"/list-filters/audits?tab=all&responseMode=page&f.type=task",admin,null)).path("total").asInt());
         for(int stage:List.of(20,30,40)) {
             success(request(HttpMethod.POST,"/biz/audit",admin,Map.of("sub_id",id,"is_pass",true,"title","Synthetic approval")));
             assertEquals(stage,jdbc.queryForObject("SELECT flow_status FROM biz_material_submission WHERE sub_id=?",Integer.class,id));
@@ -215,8 +216,8 @@ class AdminTestApiTest {
         jdbc.update("INSERT INTO biz_performance_year(year_id,perf_id,year,target_value,data_type) VALUES(970002,970001,2026,10,'1')");
         String owner=login(OWNER),admin=login(ADMIN);
         success(request(HttpMethod.POST,"/performance/submit?pref_id=970001&year=2026&actual_value=3",owner,null));
-        assertEquals(1,success(request(HttpMethod.GET,"/performance/audit/todo",admin,null)).size());
-        assertEquals(1,success(request(HttpMethod.GET,"/performance/audit/todo",admin,null)).size());
+        assertEquals(0,success(request(HttpMethod.GET,"/performance/audit/todo",admin,null)).size());
+        assertEquals(1,success(request(HttpMethod.GET,"/list-filters/audits?tab=all&responseMode=page&f.type=performance",admin,null)).path("total").asInt());
         long id=jdbc.queryForObject("SELECT MAX(sub_id) FROM biz_performance_submission",Long.class);
         for(int stage:List.of(20,30)) {
             success(request(HttpMethod.POST,"/performance/audit",admin,Map.of("sub_id",id,"is_pass",true,"title","Synthetic")));
@@ -282,7 +283,8 @@ class AdminTestApiTest {
         JsonNode submitted=success(request(HttpMethod.POST,path+"/submit",admin,Map.of("version",1)));
         assertEquals(ADMIN,submitted.path("submitBy").asLong());
         String review="/core-indicators/reports/"+submitted.path("reportId").asLong()+"/audit";
-        assertEquals(1,success(request(HttpMethod.GET,"/core-indicators/audit/todo",admin,null)).size());
+        assertEquals(0,success(request(HttpMethod.GET,"/core-indicators/audit/todo",admin,null)).size());
+        assertEquals(1,success(request(HttpMethod.GET,"/list-filters/audits?tab=all&responseMode=page&f.type=core",admin,null)).path("total").asInt());
         assertEquals(20,success(request(HttpMethod.POST,review,admin,Map.of("version",0,"pass",true))).path("flowStatus").asInt());
         assertEquals(409,request(HttpMethod.POST,review,admin,Map.of("version",0,"pass",true)).getStatusCode().value());
         assertEquals(30,success(request(HttpMethod.POST,review,admin,Map.of("version",1,"pass",true))).path("flowStatus").asInt());

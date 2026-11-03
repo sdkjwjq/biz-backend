@@ -93,6 +93,7 @@ public class BusinessListFilterService {
     public List<Field> definitions(String domain,Long actor,MultiValueMap<String,String> params){
         if(domain.startsWith("admin-"))access.requireAdmin(actor);
         else if(domain.equals("audits")){
+            validateAuditTab(actor,params.getFirst("tab"));
             var p=access.state(actor).permissions();boolean todo=!"done".equals(params.getFirst("tab"));
             if(List.of("tasks","performance","achievements","core").stream().noneMatch(d->todo?p.contains(d+".audit")||p.contains(d+".archive"):p.contains(d+".history")))throw new AdminManagementException(403,"没有审核中心查阅权限");
         }else access.require(actor,switch(domain){case "tasks","supervision"->"tasks.read";case "performance"->"performance.read";case "achievements"->"achievements.read";case "records"->"records.read";case "core"->"core.read";case "notices"->"messages.read";case "budget-versions"->"budget.versions";case "budget"->"budget.read";default->throw new AdminManagementException(400,"不支持的查询模块");});
@@ -196,9 +197,13 @@ public class BusinessListFilterService {
     public record AuditWindowData(Data data,long taskTotal){}
     public AuditWindowData auditWindow(Long actor,int page,int size){var window=new AuditTaskWindow(page,size);var data=auditData(actor,"done",true,window);return new AuditWindowData(data,window.total);}
     private Data auditData(Long actor,String tab,boolean pageMode){return auditData(actor,tab,pageMode,null);}
+    private void validateAuditTab(Long actor,String tab){
+        if(tab!=null&&!Set.of("todo","all","done").contains(tab))throw new AdminManagementException(400,"审核页签不正确");
+        if("all".equals(tab))access.requireAdmin(actor);
+    }
     private Data auditData(Long actor,String tab,boolean pageMode,AuditTaskWindow window){
-        if(tab!=null&&!Set.of("todo","done").contains(tab))throw new AdminManagementException(400,"审核页签不正确");
-        boolean todo=!"done".equals(tab);var state=access.state(actor);var permissions=state.permissions();
+        validateAuditTab(actor,tab);
+        boolean todo=!"done".equals(tab),allPending="all".equals(tab);var state=access.state(actor);var permissions=state.permissions();
         List<Map<String,Object>> rows=new ArrayList<>();Map<String,String> persons=new HashMap<>(),departments=new HashMap<>();Map<Long,SysUser> people=new HashMap<>();
         for(var u:pageMode?jdbc.query("SELECT user_id,nick_name,dept_id FROM sys_user",org.springframework.jdbc.core.BeanPropertyRowMapper.newInstance(SysUser.class)):users.getAllUsers()){people.put(u.getUserId(),u);persons.put(str(u.getUserId()),u.getNickName());}
         for(var d:administration.departmentNames())departments.put(str(d.get("deptId")),str(d.get("deptName")));
@@ -211,11 +216,10 @@ public class BusinessListFilterService {
             List<?> source;
             if(domain.equals("tasks")){
                 if(pageMode){
-                    String projection="SELECT s.sub_id subId,s.task_id taskId,s.file_id fileId,s.submit_by submitBy,s.submit_dept_id submitDeptId,s.submit_time submitTime,s.flow_status flowStatus"+(todo?",CASE WHEN EXISTS(SELECT 1 FROM sys_file f WHERE f.file_id=s.file_id) THEN 0 ELSE 1 END _missingFile":"")+" FROM biz_material_submission s ";
+                    String projection="SELECT s.sub_id subId,s.task_id taskId,s.file_id fileId,s.submit_by submitBy,s.submit_dept_id submitDeptId,s.submit_time submitTime,s.flow_status flowStatus,s.current_handler_id currentHandlerId"+(todo?",CASE WHEN EXISTS(SELECT 1 FROM sys_file f WHERE f.file_id=s.file_id) THEN 0 ELSE 1 END _missingFile":"")+" FROM biz_material_submission s ";
                     List<Object> arguments=new ArrayList<>();String from;
                     if(todo){
-                        boolean test=org.example.utils.AdminTestContext.enabled(actor);
-                        from=(test?"JOIN biz_task t ON t.task_id=s.task_id AND COALESCE(t.is_delete,0)=0 ":"")+"WHERE s.is_delete=0 AND s.flow_status IN(10,20,30) AND "+(test?"s.current_handler_id IS NOT NULL":"s.current_handler_id=?");if(!test)arguments.add(actor);
+                        from=(allPending?"JOIN biz_task t ON t.task_id=s.task_id AND COALESCE(t.is_delete,0)=0 ":"")+"WHERE s.is_delete=0 AND s.flow_status IN(10,20,30) AND "+(allPending?"s.current_handler_id IS NOT NULL":"s.current_handler_id=?");if(!allPending)arguments.add(actor);
                     }else{from="WHERE s.is_delete=0 AND (s.flow_status=40 OR s.flow_status<0) AND "+(taskOrder.isEmpty()?"0=1":"s.task_id IN ("+String.join(",",Collections.nCopies(taskOrder.size(),"?"))+")");arguments.addAll(taskOrder.keySet());}
                     // Broken material hides only its task's history, exactly as before.
                     if(!todo)from+=" AND NOT EXISTS(SELECT 1 FROM biz_material_submission broken LEFT JOIN sys_file f ON f.file_id=broken.file_id WHERE broken.task_id=s.task_id AND broken.is_delete=0 AND f.file_id IS NULL)";
@@ -224,13 +228,13 @@ public class BusinessListFilterService {
                     if(window!=null){arguments.add(window.size);arguments.add((long)(window.page-1)*window.size);}
                     var projectionMapper=new org.springframework.jdbc.core.ColumnMapRowMapper();
                     source=jdbc.query(projection+from+ordering,(rs,ordinal)->{var mapped=projectionMapper.mapRow(rs,ordinal);mapped.put("submitTime",JdbcProjectionStream.legacyDate(rs,"submitTime"));return mapped;},arguments.toArray());
-                    if(todo){var broken=((List<Map<String,Object>>)source).stream().filter(r->id(r.get("_missingFile"))==1).toList();if(!broken.isEmpty())biz.getTodoAudits(actor);}
-                }else if(todo)source=biz.getTodoAudits(actor);
+                    if(todo){var broken=((List<Map<String,Object>>)source).stream().filter(r->id(r.get("_missingFile"))==1).toList();if(!broken.isEmpty())biz.getTodoAudits(actor,allPending);}
+                }else if(todo)source=biz.getTodoAudits(actor,allPending);
                 else if(taskRows.isEmpty())source=List.of();
                 else source=jdbc.queryForList("SELECT sub_id subId,task_id taskId,submit_by submitBy,submit_dept_id submitDeptId,submit_time submitTime,flow_status flowStatus FROM biz_material_submission WHERE COALESCE(is_delete,0)=0 AND (flow_status=40 OR flow_status<0) AND task_id IN ("+String.join(",",Collections.nCopies(taskRows.size(),"?"))+")",taskRows.keySet().toArray());
-            }else if(domain.equals("performance"))source=(List<?>)(todo?performance.getTodoPerformanceAudits(actor):performance.getPerformanceAuditRecords(actor));
-            else if(domain.equals("achievements"))source=(List<?>)(todo?achievements.getTodoAchievementAudits(actor):achievements.getAchievementAuditRecords(actor));
-            else source=core.audits(actor,todo);
+            }else if(domain.equals("performance"))source=(List<?>)(todo?performance.getTodoPerformanceAudits(actor,allPending):performance.getPerformanceAuditRecords(actor));
+            else if(domain.equals("achievements"))source=(List<?>)(todo?achievements.getTodoAchievementAudits(actor,allPending):achievements.getAchievementAuditRecords(actor));
+            else source=core.audits(actor,todo,allPending);
             var projected=new ArrayList<Map<String,Object>>();for(var value:source){var projectedRow=pageMode&&domain.equals("tasks")?new LinkedHashMap<>((Map<String,Object>)value):row(value);if(pageMode){if(domain.equals("tasks")){projectedRow.replaceAll((k,v)->v instanceof java.util.Date date?json.convertValue(new java.util.Date(date.getTime()),Object.class):v);projectedRow.remove("_missingFile");projectedRow.put("_taskProjection",true);}else projectedRow.put("_wireSource",value);}projected.add(projectedRow);}
             String objectKey=domain.equals("tasks")?"taskId":domain.equals("performance")?"perfId":domain.equals("achievements")?"achId":"indicatorId";
             var refs=projected.stream().map(r->new AuditReadScopeService.Ref(id(r.get(objectKey)),r.get("year")==null?null:(int)id(r.get("year")))).toList();var readable=pageMode&&domain.equals("tasks")&&!todo?new HashSet<>(refs):auditReadScopes.readable(actor,domain,refs);

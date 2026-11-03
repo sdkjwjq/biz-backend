@@ -490,7 +490,9 @@ class ReviewBatchRegressionApiTest {
     void administratorAuditPageAndBadgeUseSamePendingScope() throws Exception {
         seedManualPerformance("1");submitPerformance(2026,"3",login(USER));
         JsonNode page=body(request(HttpMethod.GET,"/list-filters/audits?tab=todo&responseMode=page&includeFields=false",login(ADMIN),null));
-        assertTrue(page.path("total").asInt()>0);assertEquals(page.path("total").asInt(),page.path("summary").path("todoCount").asInt());
+        assertEquals(0,page.path("total").asInt());assertEquals(page.path("total").asInt(),page.path("summary").path("todoCount").asInt());
+        JsonNode all=body(request(HttpMethod.GET,"/list-filters/audits?tab=all&responseMode=page&includeFields=false",login(ADMIN),null));
+        assertTrue(all.path("total").asInt()>0);assertEquals(0,all.path("summary").path("todoCount").asInt());
         assertEquals(0,body(request(HttpMethod.GET,"/list-filters/audits?tab=todo&responseMode=page&includeFields=false",login(USER),null)).path("total").asInt());
     }
 

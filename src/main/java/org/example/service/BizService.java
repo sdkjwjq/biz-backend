@@ -654,16 +654,21 @@ public class BizService {
      */
     public long countTodoAudits(Long userId) {
         if(userId==null)throw new IllegalArgumentException("userId为空");
-        long count=AdminTestContext.enabled(userId)?bizMapper.countAdminTestPendingAudits():auditCountScopes.visibleCount("tasks",userId,bizMapper.todoAuditCountGroups(userId));
+        long count=auditCountScopes.visibleCount("tasks",userId,bizMapper.todoAuditCountGroups(userId));
         if(count<0)throw new RuntimeException("审核材料记录不存在，请联系管理员核实");
         return count;
     }
 
     public List<BizAuditVO> getTodoAudits(Long userId) {
+        return getTodoAudits(userId, false);
+    }
+
+    public List<BizAuditVO> getTodoAudits(Long userId, boolean allPending) {
         try {
             if (userId == null)
                 throw new RuntimeException("userId为空");
-            return auditListToAuditVoList(AdminTestContext.enabled(userId) ? bizMapper.getAdminTestPendingAudits() : bizMapper.getTodoAudits(userId));
+            if (allPending) permissions.requireAdmin(userId);
+            return auditListToAuditVoList(allPending ? bizMapper.getAdminTestPendingAudits() : bizMapper.getTodoAudits(userId));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

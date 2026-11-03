@@ -92,7 +92,10 @@ public class AuditListPageService {
         }
         var missing=result.stream().filter(r->r.get("fileId")!=null&&str(r.get("filename")).isBlank()).map(r->number(r.get("fileId"))).distinct().toList();
         Map<Long,String> names=new HashMap<>();if(!missing.isEmpty())for(var file:users.getFilesByIds(missing))names.put(file.getFileId(),file.getFileName());
-        for(var item:result)if(item.get("fileId")!=null&&names.containsKey(number(item.get("fileId"))))item.put("filename",names.get(number(item.get("fileId"))));
+        for(var item:result){
+            item.put("assignedToMe",Objects.equals(actor,item.get("currentHandlerId")==null?null:number(item.get("currentHandlerId"))));
+            if(item.get("fileId")!=null&&names.containsKey(number(item.get("fileId"))))item.put("filename",names.get(number(item.get("fileId"))));
+        }
         return result;
     }
     @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
@@ -129,6 +132,7 @@ public class AuditListPageService {
             if(selected==null)missing();
         }else throw new AdminManagementException(400,"业务定位参数不正确");
         var item=new LinkedHashMap<>(selected);var sender=users.getUserById(number(item.get("submitBy")));
+        item.put("assignedToMe",Objects.equals(actor,item.get("currentHandlerId")==null?null:number(item.get("currentHandlerId"))));
         if(sender!=null){item.put("_submitName",sender.getNickName()==null?sender.getUserName():sender.getNickName());}
         Object dept=item.get("submitDeptId");if(dept==null)dept=item.get("deptId");
         if(dept!=null){var department=users.getDeptById(number(dept));if(department!=null)item.put("_deptName",department.getDeptName());}

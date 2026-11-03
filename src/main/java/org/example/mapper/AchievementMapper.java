@@ -136,6 +136,9 @@ public interface AchievementMapper {
     @Select("SELECT s.ach_id objectId,COUNT(*) amount FROM biz_achievement_submission s JOIN biz_achievement a ON a.ach_id=s.ach_id AND a.is_delete=0 WHERE s.is_delete=0 AND s.flow_status=10 GROUP BY s.ach_id")
     List<java.util.Map<String,Object>> todoAchievementCountGroups();
 
+    @Select("SELECT s.ach_id objectId,COUNT(*) amount FROM biz_achievement_submission s JOIN biz_achievement a ON a.ach_id=s.ach_id AND a.is_delete=0 WHERE s.is_delete=0 AND s.flow_status=10 AND s.current_handler_id=#{userId} GROUP BY s.ach_id")
+    List<java.util.Map<String,Object>> personalTodoAchievementCountGroups(Long userId);
+
 
 
     @Select("SELECT * FROM biz_achievement_submission WHERE (submit_by = #{userId} OR current_handler_id = #{userId}) " +

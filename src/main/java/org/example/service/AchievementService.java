@@ -399,14 +399,19 @@ public class AchievementService {
 
     public long countTodoAchievementAudits(Long userId) {
         if(!canAuditAchievement(userId))return 0L;
-        return AdminTestContext.enabled(userId)?achievementMapper.countAllTodoAchievementSubmissions():auditCountScopes.visibleCount("achievements",userId,achievementMapper.todoAchievementCountGroups());
+        return auditCountScopes.visibleCount("achievements",userId,achievementMapper.personalTodoAchievementCountGroups(userId));
     }
 
     public Object getTodoAchievementAudits(Long userId) {
+        return getTodoAchievementAudits(userId, false);
+    }
+
+    public Object getTodoAchievementAudits(Long userId, boolean allPending) {
+        if (allPending) permissions.requireAdmin(userId);
         if (!canAuditAchievement(userId)) {
             return new ArrayList<AchievementAuditVO>();
         }
-        return toAchievementAuditVOs(achievementMapper.getAllTodoAchievementSubmissions());
+        return toAchievementAuditVOs(allPending ? achievementMapper.getAllTodoAchievementSubmissions() : achievementMapper.getTodoAchievementSubmissions(userId));
     }
 
     /** Uses existing reviewer eligibility and source predicates without loading the history list. */

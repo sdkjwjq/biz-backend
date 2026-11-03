@@ -84,7 +84,7 @@ class ExpertReviewApiTest {
   assertEquals(json.valueToTree(old),json.valueToTree(performanceAuditService.getTodoPerformanceAudits(90102L)));
   jdbc.update("INSERT INTO biz_achievement(ach_id,category,level,ach_name,department,got_time,dept_id,create_by,audit_status,comment,is_competition,is_delete) VALUES(31,1,'Province','Joined achievement','Synthetic','2026-10-01',991001,90101,10,'Test',0,0)");
   jdbc.update("INSERT INTO biz_achievement_submission(sub_id,ach_id,submit_by,flow_status,current_handler_id,is_delete) VALUES(111,31,90101,10,110228,0),(112,31,90101,10,110228,0)");
-  var submissions=achievementAuditMapper.getAllTodoAchievementSubmissions();var expected=submissions.stream().map(row->achievementAuditMapper.getAchievementAuditVO(row.getSubId())).filter(Objects::nonNull).toList();
+  var submissions=achievementAuditMapper.getTodoAchievementSubmissions(110228L);var expected=submissions.stream().map(row->achievementAuditMapper.getAchievementAuditVO(row.getSubId())).filter(Objects::nonNull).toList();
   assertEquals(json.valueToTree(expected),json.valueToTree(achievementAuditService.getTodoAchievementAudits(110228L)));
  }
  @Autowired org.example.mapper.WorkShortcutMapper shortcutProjection;

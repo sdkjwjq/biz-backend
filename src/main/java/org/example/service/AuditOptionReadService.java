@@ -1,5 +1,4 @@
 package org.example.service;
-import org.example.utils.AdminTestContext;
 import org.springframework.stereotype.Service;
 import org.springframework.util.MultiValueMap;
 import java.util.*;
@@ -11,8 +10,8 @@ public class AuditOptionReadService {
  public AuditOptionReadService(PermissionService permissions,ReadScopeSql scopes,RemoteOptionPages pages){this.permissions=permissions;this.scopes=scopes;this.pages=pages;}
  public Map<String,Object> query(String key,Long actor,MultiValueMap<String,String> params){
   if(!Set.of("type","submitDeptId","submitBy","year","stage","root").contains(key))return null;
-  if(params.getFirst("tab")!=null&&!Set.of("todo","done").contains(params.getFirst("tab")))throw new AdminManagementException(400,"审核页签不正确");
-  boolean todo=!"done".equals(params.getFirst("tab")),test=AdminTestContext.enabled(actor);var rights=permissions.state(actor).permissions();var args=new ArrayList<Object>();var parts=new ArrayList<String>();
+  if(params.getFirst("tab")!=null&&!Set.of("todo","all","done").contains(params.getFirst("tab")))throw new AdminManagementException(400,"审核页签不正确");
+  boolean todo=!"done".equals(params.getFirst("tab")),test="all".equals(params.getFirst("tab"));if(test)permissions.requireAdmin(actor);var rights=permissions.state(actor).permissions();var args=new ArrayList<Object>();var parts=new ArrayList<String>();
   for(String domain:List.of("tasks","performance","achievements","core")){
    if(!rights.contains(domain+".read")||(todo?!(rights.contains(domain+".audit")||rights.contains(domain+".archive")):!rights.contains(domain+".history")))continue;
    if(key.equals("root")&&!domain.equals("tasks"))continue;
@@ -30,10 +29,10 @@ public class AuditOptionReadService {
      if(todo&&!test)args.add(actor);if(!todo){args.add(actor);args.add(actor);args.add(actor);}break;
     case "achievements":
      if(!org.example.utils.AchievementPermissionUtil.isAchievementAuditor(permissions.user(actor)))continue;
-     source="biz_achievement_submission s JOIN biz_achievement a ON a.ach_id=s.ach_id AND COALESCE(a.is_delete,0)=0";year="YEAR(a.got_time)";range=scopes.row(actor,domain,"a",null);predicate=todo?"s.flow_status=10":"(s.flow_status=30 OR s.flow_status<0)";break;
+     source="biz_achievement_submission s JOIN biz_achievement a ON a.ach_id=s.ach_id AND COALESCE(a.is_delete,0)=0";year="YEAR(a.got_time)";range=scopes.row(actor,domain,"a",null);predicate=todo?"s.flow_status=10"+(test?"":" AND s.current_handler_id=?"):"(s.flow_status=30 OR s.flow_status<0)";if(todo&&!test)args.add(actor);break;
     default:
      source="biz_core_report s JOIN biz_core_indicator c ON c.indicator_id=s.indicator_id";year="s.record_year";range=scopes.rowByYear(actor,"core","c",year);
-     predicate=todo?"s.flow_status IN(10,20) AND BINARY c.indicator_code=BINARY s.performance_code"+(test?"":" AND (s.current_handler_id=?"+(permissions.admin(actor)?" OR s.flow_status=20":"")+")"):
+     predicate=todo?"s.flow_status IN(10,20) AND BINARY c.indicator_code=BINARY s.performance_code"+(test?"":" AND s.current_handler_id=?"):
        "(s.flow_status=30 OR s.flow_status<0) AND EXISTS(SELECT 1 FROM biz_core_audit_log l WHERE l.report_id=s.report_id AND l.operator_id=? AND l.action IN('通过','退回'))";
      if(!todo||!test)args.add(actor);break;
    }

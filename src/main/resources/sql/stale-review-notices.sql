@@ -22,4 +22,10 @@ COALESCE(n.is_delete, 0) = 0 AND (
        AND s.flow_status = 10 AND COALESCE(s.is_delete, 0) = 0
        AND COALESCE(a.is_delete, 0) = 0
    ))
+  OR (n.source_type = '4' AND n.trigger_event = 'CORE_TODO'
+   AND NOT EXISTS (
+     SELECT 1 FROM biz_core_report r JOIN biz_core_indicator i ON i.indicator_id = r.indicator_id
+     WHERE r.report_id = n.source_id AND r.current_handler_id = n.to_user_id
+       AND r.flow_status IN (10, 20) AND BINARY r.performance_code = BINARY i.indicator_code
+   ))
 )

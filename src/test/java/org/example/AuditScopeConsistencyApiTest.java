@@ -75,28 +75,33 @@ class AuditScopeConsistencyApiTest {
     }
     String login(long id) throws Exception {return ok(HttpMethod.POST,"/system/login",null,Map.of("user_id",id,"password","review-fixture-password")).path("token").asText();}
     JsonNode page(String token,String extra) throws Exception {return ok(HttpMethod.GET,"/list-filters/audits?tab=todo&responseMode=page&includeFields=false&pageSize=10"+extra,token,null);}
+    JsonNode allPage(String token,String extra) throws Exception {return ok(HttpMethod.GET,"/list-filters/audits?tab=all&responseMode=page&includeFields=false&pageSize=10"+extra,token,null);}
 
-    @Test void administratorCountMatchesAllPagesAndBusinessKinds() throws Exception {
-        var first=page(admin,"");assertEquals(34,first.path("total").asInt());assertEquals(34,first.path("summary").path("todoCount").asInt());
+    @Test void administratorAllPendingIsSeparateFromPersonalBadgeAcrossPages() throws Exception {
+        var mine=page(admin,"");assertEquals(1,mine.path("total").asInt());assertEquals(1,mine.path("summary").path("todoCount").asInt());
+        assertTrue(mine.path("items").get(0).path("assignedToMe").asBoolean());
+        var first=allPage(admin,"");assertEquals(34,first.path("total").asInt());assertEquals(1,first.path("summary").path("todoCount").asInt());
         var ids=new HashSet<String>();var types=new HashSet<String>();
-        for(int n=1;n<=4;n++)for(var row:page(admin,"&page="+n).path("items")){assertTrue(ids.add(row.path("id").asText()));types.add(row.path("type").asText());}
+        for(int n=1;n<=4;n++)for(var row:allPage(admin,"&page="+n).path("items")){assertTrue(ids.add(row.path("id").asText()));types.add(row.path("type").asText());}
         assertEquals(34,ids.size());assertEquals(Set.of("task","performance","achievement","core"),types);
-        var filtered=page(admin,"&f.type=performance");assertEquals(1,filtered.path("total").asInt());assertEquals(34,filtered.path("summary").path("todoCount").asInt());
-        assertEquals(0,page(admin,"&f.keyword=not-found-in-fixtures").path("total").asInt());assertEquals(34,page(admin,"").path("total").asInt());
-        var options=ok(HttpMethod.GET,"/list-filters/audits/filter-options?tab=todo&field=type",admin,null);assertEquals(4,options.path("total").asInt());
+        var filtered=allPage(admin,"&f.type=performance");assertEquals(1,filtered.path("total").asInt());assertEquals(1,filtered.path("summary").path("todoCount").asInt());
+        assertEquals(0,allPage(admin,"&f.keyword=not-found-in-fixtures").path("total").asInt());assertEquals(34,allPage(admin,"").path("total").asInt());
+        var options=ok(HttpMethod.GET,"/list-filters/audits/filter-options?tab=all&field=type",admin,null);assertEquals(4,options.path("total").asInt());
         assertFalse(ok(HttpMethod.GET,"/list-filters/audits/locate?taskId=930002",admin,null).path("isViewMode").asBoolean());
         long tasks=ok(HttpMethod.GET,"/biz/audit/todo?countOnly=true",admin,null).asLong();
-        assertEquals(31,tasks);
+        assertEquals(0,tasks);
     }
 
     @Test void ordinaryAccountsCannotInheritAdministratorScopeOrSpoofIt() throws Exception {
         String outsider=login(910004),auditor=login(910003);
         assertEquals(0,page(outsider,"").path("total").asInt());assertEquals(32,page(auditor,"").path("total").asInt());
         assertEquals(0,page(outsider,"").path("summary").path("todoCount").asInt());
+        for(String path:List.of("/list-filters/audits?tab=all&responseMode=page","/list-filters/audits/filter-options?tab=all&definitions=true","/data-exports/audits?tab=all"))assertEquals(HttpStatus.FORBIDDEN,request(HttpMethod.GET,path,auditor,null).getStatusCode());
         assertTrue(Set.of(HttpStatus.FORBIDDEN,HttpStatus.NOT_FOUND).contains(request(HttpMethod.GET,"/list-filters/audits/locate?taskId=930003",outsider,null).getStatusCode()));
         HttpHeaders spoof=new HttpHeaders();spoof.set("Authorization",outsider);spoof.set("X-Admin-Test","1");
         assertEquals(HttpStatus.FORBIDDEN,http.exchange("http://127.0.0.1:"+port+"/api/list-filters/audits?responseMode=page",HttpMethod.GET,new HttpEntity<>(spoof),String.class).getStatusCode());
         jdbc.update("UPDATE sys_user SET role='1' WHERE user_id=110228");
+        assertEquals(HttpStatus.FORBIDDEN,request(HttpMethod.GET,"/list-filters/audits?tab=all&responseMode=page",admin,null).getStatusCode());
         for(var row:page(admin,"").path("items"))assertFalse(Set.of("task","performance").contains(row.path("type").asText()));
         jdbc.update("UPDATE sys_user SET status='0' WHERE user_id=110228");
         assertEquals(HttpStatus.FORBIDDEN,request(HttpMethod.GET,"/list-filters/audits?responseMode=page",admin,null).getStatusCode());
@@ -107,10 +112,59 @@ class AuditScopeConsistencyApiTest {
         long logs=jdbc.queryForObject("SELECT COUNT(*) FROM biz_audit_log",Long.class);
         ok(HttpMethod.POST,"/biz/audit",admin,Map.of("sub_id",sub,"is_pass",true,"title","Admin scope verification"));
         assertEquals(20,jdbc.queryForObject("SELECT flow_status FROM biz_material_submission WHERE sub_id=?",Integer.class,sub));
-        assertEquals(34,page(admin,"").path("total").asInt());
+        assertEquals(34,allPage(admin,"").path("total").asInt());
+        assertEquals(1,page(admin,"").path("total").asInt());
         assertEquals(31,page(login(910003),"").path("total").asInt()); // 30 other tasks plus the performance submission.
         assertEquals(logs+1,jdbc.queryForObject("SELECT COUNT(*) FROM biz_audit_log",Long.class));
         assertEquals(110228L,jdbc.queryForObject("SELECT operator_id FROM biz_audit_log WHERE sub_id=? ORDER BY log_id DESC LIMIT 1",Long.class,sub));
+    }
+
+    @Test void personalListAndSidebarCountsUseActualHandlerForEveryBusinessKind() throws Exception {
+        jdbc.update("UPDATE biz_material_submission SET current_handler_id=110228,flow_status=30 WHERE task_id=930002");
+        jdbc.update("UPDATE biz_performance_submission SET current_handler_id=110228,flow_status=20 WHERE sub_id=971001");
+        jdbc.update("UPDATE biz_core_report SET current_handler_id=110228,flow_status=20 WHERE flow_status=10");
+        var mine=page(admin,"");assertEquals(4,mine.path("total").asInt());assertEquals(4,mine.path("summary").path("todoCount").asInt());
+        var kinds=new HashSet<String>();for(var row:mine.path("items")){assertEquals(110228,row.path("currentHandlerId").asLong());assertTrue(row.path("assignedToMe").asBoolean());kinds.add(row.path("type").asText());}
+        assertEquals(Set.of("task","performance","achievement","core"),kinds);
+        long sum=0;for(String prefix:List.of("/biz","/performance","/achievement","/core-indicators"))sum+=ok(HttpMethod.GET,prefix+"/audit/todo?countOnly=true",admin,null).asLong();
+        assertEquals(4,sum);assertEquals(34,allPage(admin,"").path("total").asInt());assertEquals(4,allPage(admin,"").path("summary").path("todoCount").asInt());
+        assertEquals(0,page(admin,"&f.type=task&f.keyword=no-such-task").path("total").asInt());
+        assertEquals(4,page(admin,"&f.type=task&f.keyword=no-such-task").path("summary").path("todoCount").asInt());
+    }
+
+    @Test void allPendingReadsNeverGenerateMessagesAndStaleForwardedTodosDoNotAlertAdmin() throws Exception {
+        long core=jdbc.queryForObject("SELECT report_id FROM biz_core_report WHERE flow_status=10",Long.class);
+        // A legacy/broadcast copy must not count as a real personal approval notification.
+        jdbc.update("INSERT INTO sys_notice(from_user_id,to_user_id,type,trigger_event,title,content,source_type,source_id,is_read,is_delete,create_time) VALUES(910001,110228,'1','任务审核','任务审核','obsolete broadcast','0',930003,'0',0,NOW()),(910001,110228,'1','CORE_TODO','核心指标待归口审核','obsolete broadcast','4',?,'0',0,NOW()),(910001,110228,'1','绩效审核','绩效待审核','obsolete broadcast','2',971001,'0',0,NOW())",core);
+        long notices=jdbc.queryForObject("SELECT COUNT(*) FROM sys_notice",Long.class);
+        long unread=ok(HttpMethod.GET,"/system/notice?countOnly=true",admin,null).asLong();
+        for(int i=0;i<2;i++){allPage(admin,"");ok(HttpMethod.GET,"/list-filters/audits/filter-options?tab=all&field=type",admin,null);}
+        assertEquals(notices,jdbc.queryForObject("SELECT COUNT(*) FROM sys_notice",Long.class));
+        assertEquals(unread,ok(HttpMethod.GET,"/system/notice?countOnly=true",admin,null).asLong());
+        var messages=ok(HttpMethod.GET,"/system/notice",admin,null);
+        assertFalse(messages.toString().contains("obsolete broadcast"));
+        // A result notification remains visible even though the associated business is no longer pending.
+        jdbc.update("INSERT INTO sys_notice(from_user_id,to_user_id,type,trigger_event,title,content,source_type,source_id,is_read,is_delete,create_time) VALUES(910002,110228,'1','CORE_RESULT','核心指标已归档','keep result notification','4',?,'0',0,NOW())",core);
+        assertEquals(unread+1,ok(HttpMethod.GET,"/system/notice?countOnly=true",admin,null).asLong());
+    }
+
+    @Test void administratorReceivesReminderOnlyAfterRealReviewersForwardToArchive() throws Exception {
+        long sub=jdbc.queryForObject("SELECT sub_id FROM biz_material_submission WHERE task_id=930002",Long.class);
+        long initial=page(admin,"").path("total").asLong();
+        assertEquals(0,ok(HttpMethod.GET,"/biz/audit/todo?countOnly=true",admin,null).asLong());
+        ok(HttpMethod.POST,"/biz/audit",login(910003),Map.of("sub_id",sub,"is_pass",true,"title","专业群审核通过"));
+        assertEquals(initial,page(admin,"").path("total").asLong());
+        assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM sys_notice WHERE to_user_id=110228 AND source_type='0' AND source_id=930002 AND trigger_event='任务审核' AND is_delete=0",Long.class));
+        long unread=ok(HttpMethod.GET,"/system/notice?countOnly=true",admin,null).asLong();
+        ok(HttpMethod.POST,"/biz/audit",login(910002),Map.of("sub_id",sub,"is_pass",true,"title","归口审核通过"));
+        assertEquals(initial+1,page(admin,"").path("total").asLong());
+        assertEquals(1,ok(HttpMethod.GET,"/biz/audit/todo?countOnly=true",admin,null).asLong());
+        assertEquals(unread+1,ok(HttpMethod.GET,"/system/notice?countOnly=true",admin,null).asLong());
+        ok(HttpMethod.POST,"/biz/audit",admin,Map.of("sub_id",sub,"is_pass",true,"title","双高办归档"));
+        assertEquals(initial,page(admin,"").path("total").asLong());
+        assertEquals(0,ok(HttpMethod.GET,"/biz/audit/todo?countOnly=true",admin,null).asLong());
+        assertEquals(unread,ok(HttpMethod.GET,"/system/notice?countOnly=true",admin,null).asLong());
+        assertEquals(33,allPage(admin,"").path("total").asInt());
     }
 
     @Test void taskHistoryExcludesEarlierAndOrphanEvidenceWithoutChangingRawLogs() throws Exception {
