@@ -132,11 +132,13 @@ class AuditScopeConsistencyApiTest {
         String group=login(910003),principal=login(910002),owner=login(910001);
         ok(HttpMethod.POST,"/biz/audit",group,Map.of("sub_id",sub,"is_pass",true,"title","Professional approved"));
         ok(HttpMethod.POST,"/biz/audit",principal,Map.of("sub_id",sub,"is_pass",false,"title","Please supplement the supporting material"));
+        assertEquals(10,jdbc.queryForObject("SELECT flow_status FROM biz_material_submission WHERE sub_id=?",Integer.class,sub));
+        ok(HttpMethod.POST,"/biz/audit",group,Map.of("sub_id",sub,"is_pass",false,"title","Please supplement the supporting material"));
         assertEquals(-10,jdbc.queryForObject("SELECT flow_status FROM biz_material_submission WHERE sub_id=?",Integer.class,sub));
         assertEquals(1,jdbc.queryForObject("SELECT is_delete FROM biz_material_submission WHERE sub_id=?",Integer.class,sub));
         JsonNode history=ok(HttpMethod.GET,"/biz/audit/task/930002",owner,null);assertEquals(1,history.size());assertEquals(sub,history.get(0).path("subId").asLong());
-        JsonNode logs=ok(HttpMethod.GET,"/biz/audit/logs/"+sub,owner,null);assertEquals(2,logs.size());assertTrue(logs.toString().contains("Please supplement the supporting material"));
-        assertEquals(20,logs.get(0).path("preStatus").asInt());assertEquals(-10,logs.get(0).path("postStatus").asInt());
+        JsonNode logs=ok(HttpMethod.GET,"/biz/audit/logs/"+sub,owner,null);assertEquals(3,logs.size());assertTrue(logs.toString().contains("Please supplement the supporting material"));
+        assertEquals(10,logs.get(0).path("preStatus").asInt());assertEquals(-10,logs.get(0).path("postStatus").asInt());
         assertEquals(0,ok(HttpMethod.GET,"/biz/audit/todo?countOnly=true",principal,null).asInt());
         // The base fixture shares a first-level task, so its second reporter can
         // legitimately read peer tasks. Constrain this account to a distinct task.
@@ -144,5 +146,17 @@ class AuditScopeConsistencyApiTest {
         var denied=request(HttpMethod.GET,"/biz/audit/logs/"+sub,login(910004),null);
         assertTrue(Set.of(HttpStatus.FORBIDDEN,HttpStatus.NOT_FOUND).contains(denied.getStatusCode()) || (denied.getStatusCode().is2xxSuccessful() && json.readTree(denied.getBody()).path("code").asInt()>=400),denied.getStatusCode()+" "+denied.getBody());
         assertFalse(denied.getBody().contains("Please supplement the supporting material"));
+    }
+
+    @Test void stepBackAtBothReviewLevelsKeepsOriginalSubmissionAndResumesFullChain()throws Exception{
+        long sub=jdbc.queryForObject("SELECT sub_id FROM biz_material_submission WHERE task_id=930002",Long.class);
+        String group=login(910003),principal=login(910002);
+        for(var decision:List.of(new Object[]{group,true,20},new Object[]{principal,true,30},new Object[]{admin,false,20},new Object[]{principal,false,10},new Object[]{group,true,20},new Object[]{principal,true,30},new Object[]{admin,true,40})){
+            ok(HttpMethod.POST,"/biz/audit",(String)decision[0],Map.of("sub_id",sub,"is_pass",decision[1],"title","Step-back acceptance"));
+            assertEquals(decision[2],jdbc.queryForObject("SELECT flow_status FROM biz_material_submission WHERE sub_id=?",Integer.class,sub));
+            assertEquals(0,jdbc.queryForObject("SELECT is_delete FROM biz_material_submission WHERE sub_id=?",Integer.class,sub));
+        }
+        assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM biz_material_submission WHERE task_id=930002",Integer.class));
+        assertEquals(7,ok(HttpMethod.GET,"/biz/audit/logs/"+sub,login(910001),null).size());
     }
 }

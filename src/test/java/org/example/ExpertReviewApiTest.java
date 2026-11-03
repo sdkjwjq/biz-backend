@@ -242,9 +242,12 @@ class ExpertReviewApiTest {
   for(int i=0;i<20;i++){var item=new org.example.entity.BizMaterialSubmission();item.setSubId((long)i);item.setFileId(41L);item.setTaskId(i%2==0?3L:4L);source.add(item);}
   var original=source.stream().map(auditProjection::auditToAuditVo).toList();
   var batched=auditProjection.auditListToAuditVoList(source);
-  assertEquals(json.valueToTree(original),json.valueToTree(batched));
-  assertEquals(2,batched.get(0).getSub_list().size());assertEquals(101L,batched.get(0).getSub_list().get(0).getTask_id());
-  assertTrue(batched.get(1).getSub_list().isEmpty());
+  assertEquals(20,batched.size());
+  // Historical submissions cannot borrow current goal values; only the newest active task record can.
+  for(int i=0;i<18;i++){assertTrue(batched.get(i).getSub_list().isEmpty());assertEquals("retained.pdf",batched.get(i).getFilename());}
+  assertEquals(json.valueToTree(original.get(18)),json.valueToTree(batched.get(18)));
+  assertEquals(2,batched.get(18).getSub_list().size());assertEquals(101L,batched.get(18).getSub_list().get(0).getTask_id());
+  assertTrue(batched.get(19).getSub_list().isEmpty());
  }
  @Test void auditFiltersRespectCurrentHandlerAndCannotExposeOtherModules()throws Exception{
   jdbc.update("INSERT INTO sys_file(file_id,file_name,file_path,file_url,file_suffix,upload_by,is_delete) VALUES(41,'testA.pdf','/target/testA','/uploads/testA','pdf',90101,0),(42,'testB.pdf','/target/testB','/uploads/testB','pdf',90101,0)");

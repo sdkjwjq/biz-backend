@@ -54,16 +54,20 @@ public interface BudgetMapper {
             "import_time = #{importTime}, update_time = #{updateTime}, is_delete = #{isDelete} WHERE sheet_id = #{sheetId}")
     void updateSheet(BizBudgetSheet sheet);
 
+    /** 总预算页面按资金来源汇总（排除「合计」行，避免与各建设内容重复）。 */
+    @Select("SELECT source, COALESCE(SUM(amount),0) amount FROM biz_budget_total WHERE item <> '合计' GROUP BY source")
+    List<java.util.Map<String,Object>> totalBySource();
+
     @Update("UPDATE biz_budget_sheet SET locked = #{locked}, update_time = NOW() WHERE sheet_id = #{sheetId}")
     void updateLock(Long sheetId, Integer locked);
 
     @Update("UPDATE biz_budget_sheet SET update_time=#{updateTime} WHERE sheet_id=#{sheetId}")
     void updateEditTime(@Param("sheetId") Long sheetId, @Param("updateTime") java.util.Date updateTime);
 
-    @Update("UPDATE biz_budget_source_item SET annual_plan=#{annualPlan},arrived=#{arrived} WHERE item_id=#{itemId} AND sheet_id=#{sheetId}")
+    @Update("UPDATE biz_budget_source_item SET annual_plan=#{annualPlan},available=#{available},carryover=#{carryover},arrived=#{arrived} WHERE item_id=#{itemId} AND sheet_id=#{sheetId}")
     void updateEditableSource(BizBudgetSourceItem item);
 
-    @Update("UPDATE biz_budget_task_item SET goods=#{goods},capital=#{capital},other=#{other},goods_budget=#{goodsBudget},budget_amount=#{budgetAmount},capital_budget=#{capitalBudget},other_budget=#{otherBudget} WHERE item_id=#{itemId} AND sheet_id=#{sheetId}")
+    @Update("UPDATE biz_budget_task_item SET amount=#{amount},goods=#{goods},capital=#{capital},other=#{other},goods_budget=#{goodsBudget},budget_amount=#{budgetAmount},capital_budget=#{capitalBudget},other_budget=#{otherBudget} WHERE item_id=#{itemId} AND sheet_id=#{sheetId}")
     void updateEditableTask(BizBudgetTaskItem item);
 
     @Delete("DELETE FROM biz_budget_source_item WHERE sheet_id = #{sheetId}")

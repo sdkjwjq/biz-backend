@@ -163,6 +163,38 @@ public class CoreIndicatorService {
  private BigDecimal decimal(Object value){if(value==null)return null;try{return new BigDecimal(String.valueOf(value));}catch(NumberFormatException e){return null;}}
  private void textCell(Row row,int column,Object value){if(value==null)return;String text=String.valueOf(value);if(!text.isBlank())row.createCell(column).setCellValue(text);}
  private void numberCell(Row row,int column,Object value){if(value==null)return;String text=String.valueOf(value);if(text.isBlank())return;try{row.createCell(column).setCellValue(new BigDecimal(text).doubleValue());}catch(NumberFormatException e){row.createCell(column).setCellValue(text);}}
+ /** 预算表「指标名称」列与核心指标的对照关系：去掉前置指标编号与【新增】标记后按名称匹配，另保留编号匹配。 */
+ public Map<String,Long> indicatorLookup(){
+  Map<String,Long> result=new LinkedHashMap<>();
+  for(var row:jdbc.queryForList("SELECT c.indicator_id indicatorId,c.indicator_code indicatorCode,p.perf_name perfName FROM biz_core_indicator c LEFT JOIN biz_performance p ON BINARY p.perf_code=BINARY c.indicator_code AND COALESCE(p.is_delete,0)=0 ORDER BY c.sort_order")){
+   Long id=number(row.get("indicatorId"));
+   String code=row.get("indicatorCode")==null?"":String.valueOf(row.get("indicatorCode")).trim();
+   if(!code.isEmpty())result.putIfAbsent("code:"+code,id);
+   String name=row.get("perfName")==null?"":normalizeLabel(String.valueOf(row.get("perfName")));
+   if(!name.isEmpty())result.putIfAbsent("name:"+name,id);
+  }
+  return result;
+ }
+ /** 指标名称归一化：去掉「1.1.5 」这类前置编号和「【新增】」，便于预算表按名称关联核心指标。 */
+ public static String normalizeLabel(String value){
+  if(value==null)return "";
+  String text=value.replace('\u3000',' ').trim().replaceFirst("^\\s*\\d+(?:\\.\\d+)+\\s*","");
+  return text.replace("【新增】","").trim();
+ }
+  /** 年度预算执行「截至当前累计完成值」：不限年份，取截至今天的最近一次归档。 */
+  public Map<String,Object> effectiveLatest(Long indicator){
+   Long actor=permissions.actor();
+   LocalDate today=LocalDate.now(ZoneId.of("Asia/Shanghai"));
+   // Apply the same indicator AND year scope as effective(), before selecting the latest result.
+   List<Integer> years=new ArrayList<>();
+   for(int year=2025;year<=Math.min(2029,today.getYear());year++)
+    if(actor==null||!permissions.enforced(actor)||permissions.canRead(actor,"core",indicator,year))years.add(year);
+   if(years.isEmpty())return null;
+   List<Object> args=new ArrayList<>();args.add(indicator);args.addAll(years);args.add(today.getYear());args.add(today.getMonthValue());
+   String slots=String.join(",",Collections.nCopies(years.size(),"?"));
+   List<Map<String,Object>> rows=jdbc.queryForList(SELECT+"WHERE r.indicator_id=? AND r.flow_status=30 AND "+CURRENT+" AND r.record_year IN ("+slots+") AND (r.record_year<? OR r.record_month<=?) ORDER BY r.record_year DESC,r.record_month DESC,r.archive_time DESC,r.report_id DESC LIMIT 1",args.toArray());
+   return rows.isEmpty()?null:rows.get(0);
+  }
  /** 预算读取只能取同年、不晚于所选月份的归档快照，后续月份不得提前引用。 */
  public Map<String,Object> effective(Long indicator,int year,int month){Long actor=permissions.actor();if(actor!=null&&permissions.enforced(actor)&&!permissions.canRead(actor,"core",indicator,year))return null;List<Map<String,Object>> rows=jdbc.queryForList(SELECT+"WHERE r.indicator_id=? AND r.record_year=? AND r.record_month<=? AND r.flow_status=30 AND "+CURRENT+" ORDER BY r.record_month DESC,r.archive_time DESC,r.report_id DESC LIMIT 1",indicator,year,month);return rows.isEmpty()?null:rows.get(0);}
  private void log(Long id,Long actor,String action,int before,int after,String comment){AdminTestContext.record(actor,"CORE_REPORT",id,"核心指标填报 "+id,action);jdbc.update("INSERT INTO biz_core_audit_log(report_id,operator_id,action,pre_status,post_status,comment) VALUES(?,?,?,?,?,?)",id,actor,action,before,after,comment);}

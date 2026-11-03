@@ -458,6 +458,18 @@ say '独立评审任务结构已核对；旧意见保留只读，不自动产生
 transfer_errors=$(awk -F'\t' '$2!="0"{print $1 "=" $2}' "$BACKUP/task-transfer-request-check.log")
 [[ -z "$transfer_errors" ]] || die "任务移交申请核对失败：$transfer_errors"
 say '任务移交申请结构已核对，既有移交及通知记录保留'
+# These confirmed data additions run once, after the complete pre-update backup.
+for module in budget-annual-sheets budget-execution-sheets platform-notice-read-sync; do
+  migration_key="20261103-$module-v1"
+  if [[ -f "$PACKAGE/sql/2026-11-03-$module.sql" ]]; then
+    applied=$("${MYSQL[@]}" -e "SELECT COUNT(*) FROM sys_release_migration WHERE migration_key='$migration_key'")
+    if [[ "$applied" == 0 ]]; then
+      "${MYSQL[@]}" < "$PACKAGE/sql/2026-11-03-$module.sql" > "$BACKUP/$module-migration.log"
+      "${MYSQL[@]}" -e "INSERT INTO sys_release_migration(migration_key,description) VALUES('$migration_key','Confirmed annual budget copies and notification read synchronization')"
+    fi
+  fi
+done
+
 "${MYSQL[@]}" < "$PACKAGE/sql/2026-11-01-chen-self-review.sql" > "$BACKUP/chen-self-review-migration.log"
 "${MYSQL[@]}" < "$PACKAGE/sql/2026-11-01-chen-self-review-check.sql" > "$BACKUP/chen-self-review-check.log"
 say "陈奥林17项按本人填报、本人手动审核核对；活动审批及后续管理员调整保留。逐项结果：$BACKUP/chen-self-review-migration.log"

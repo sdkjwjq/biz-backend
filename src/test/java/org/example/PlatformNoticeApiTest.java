@@ -145,4 +145,12 @@ class PlatformNoticeApiTest {
             assertEquals(404,call(HttpMethod.GET,"/platform-notices/"+id+"/attachments/"+file,login(OTHER),null).getStatusCode().value());
         }finally{java.nio.file.Files.deleteIfExists(path);}
     }
+
+    @Test void repeatedConfirmationSynchronizesLegacyUnreadInboxWithoutDuplicatingLogs()throws Exception{
+        long id=publish(login(ADMIN),true);String user=login(USER);var opened=open(id,user,"read-sync");confirm(opened,user);
+        jdbc.update("UPDATE sys_notice SET is_read='0' WHERE source_type='5' AND source_id=?",id);
+        confirm(opened,user);
+        assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM sys_notice WHERE source_type='5' AND source_id=? AND is_read<>'1'",Integer.class,id));
+        assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM sys_platform_notice_view_log WHERE notice_id=? AND action='CONFIRM'",Integer.class,id));
+    }
 }

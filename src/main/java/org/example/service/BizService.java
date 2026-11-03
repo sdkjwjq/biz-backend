@@ -22,6 +22,7 @@ import java.util.*;
  */
 @Service
 public class BizService {
+    @org.springframework.beans.factory.annotation.Autowired private PermissionManagementService permissionManagement;
     @org.springframework.beans.factory.annotation.Autowired private AuditCountScopeService auditCountScopes;
 
     private static final BigDecimal ONE_HUNDRED = BigDecimal.valueOf(100);
@@ -866,7 +867,8 @@ public class BizService {
                         }
                         return resultMsg;
                     } else {
-                        return rejectAuditToSubmitter(bizMaterialSubmission, userId, 20, bizAuditDTO.getTitle());
+                        return rejectToPreviousReviewer(bizMaterialSubmission, userId, 20,
+                                task.getAuditorId(), "专业群审核人", bizAuditDTO.getTitle());
                     }
                 } else if (bizMaterialSubmission.getFlowStatus() == 30) {
                     if (bizAuditDTO.getIs_pass()) {
@@ -926,7 +928,9 @@ public class BizService {
                         System.out.println("审批完成");
                         return "审批完成";
                     } else {
-                        return rejectAuditToSubmitter(bizMaterialSubmission, userId, 30, bizAuditDTO.getTitle());
+                        return rejectToPreviousReviewer(bizMaterialSubmission, userId, 30,
+                                bizMapper.getTaskPrincipalId(bizMaterialSubmission.getTaskId()),
+                                "归口部门审核人", bizAuditDTO.getTitle());
                     }
                 } else if (bizMaterialSubmission.getFlowStatus() == -20) {
                     if (bizAuditDTO.getIs_pass()) {
@@ -1561,6 +1565,58 @@ public class BizService {
                 "nextHandlerId", backHandlerId,
                 "performance", "已触发刷新");
         return resultMsg;
+    }
+
+    /**
+     * 逐级退回：把材料退回给上一级审核人，而不是直接退回提交人。
+     * 管理员（30）驳回 → 退回归口部门负责人（20）；归口部门（20）驳回 → 退回专业群审核人（10）。
+     * 单据保持进行中（不删除、不恢复任务快照），由上一级审核人重新审核后继续向上流转。
+     */
+    private Object rejectToPreviousReviewer(BizMaterialSubmission submission, Long userId,
+                                            Integer fromStatus, Long previousHandlerId,
+                                            String previousRoleLabel, String comment) {
+        Integer toStatus = fromStatus == 30 ? 20 : 10;
+        if (previousHandlerId == null) {
+            throw new RuntimeException(previousRoleLabel + "未设置，无法退回");
+        }
+        SysUser previousUser;
+        try {
+            previousUser = sysMapper.getUserById(previousHandlerId);
+        } catch (Exception e) {
+            previousUser = null;
+        }
+        if (previousUser == null || !"1".equals(previousUser.getStatus()) || Integer.valueOf(1).equals(previousUser.getIsDelete())) {
+            throw new RuntimeException(previousRoleLabel + "账号不存在、停用或已删除，无法退回");
+        }
+        BizTask task = bizMapper.getTaskById(submission.getTaskId());
+        if (task == null) throw new RuntimeException("任务不存在");
+        // A return must never create a pending item that its recipient cannot process.
+        permissionManagement.requireHandler(previousHandlerId, "tasks", task.getTaskId(), task.getPhase(), toStatus);
+        submission.setCurrentHandlerId(previousHandlerId);
+        submission.setFlowStatus(toStatus);
+        bizMapper.updateAudit(submission);
+
+        sendNotice(userId,
+                previousHandlerId,
+                "任务退回",
+                "任务退回",
+                fromStatus == 30 ? "管理员退回了该任务材料，请重新审核" : "归口部门退回了该任务材料，请重新审核",
+                "0",
+                submission.getTaskId());
+
+        createAuditLog(submission.getSubId(), userId, "退回", fromStatus, toStatus, comment);
+
+        BusinessLogUtil.info("任务审核",
+                "result", "逐级退回",
+                "operatorId", userId,
+                "taskId", submission.getTaskId(),
+                "subId", submission.getSubId(),
+                "preStatus", fromStatus,
+                "postStatus", toStatus,
+                "nextHandlerId", previousHandlerId);
+
+        System.out.println("逐级退回，" + fromStatus + " -> " + toStatus + "，退回给" + previousHandlerId);
+        return "已退回至" + previousRoleLabel + "：" + previousUser.getUserName();
     }
 
     private void restoreFromAuditSnapshots(BizMaterialSubmission submission) {

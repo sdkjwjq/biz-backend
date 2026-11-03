@@ -84,6 +84,9 @@ def main():
     for suffix in ['', '-check', '-rollback']:
         source=ROOT/('data/migrations/2026-11-02-task-transfer-request'+suffix+'.sql')
         (OUT/'sql'/source.name).write_text(source.read_text(encoding='utf-8'),encoding='utf-8',newline='\n')
+    for name in ['budget-annual-sheets','budget-execution-sheets','platform-notice-read-sync','platform-notice-read-sync-check']:
+        source=ROOT/('data/migrations/2026-11-03-'+name+'.sql')
+        (OUT/'sql'/source.name).write_text(source.read_text(encoding='utf-8'),encoding='utf-8',newline='\n')
     for suffix in ['', '-check', '-rollback']:
         source=ROOT/('data/migrations/2026-11-02-performance-links'+suffix+'.sql')
         (OUT/'sql'/source.name).write_text(source.read_text(encoding='utf-8'),encoding='utf-8',newline='\n')

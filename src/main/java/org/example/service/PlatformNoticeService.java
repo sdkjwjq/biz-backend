@@ -156,12 +156,18 @@ public class PlatformNoticeService {
     @Transactional public void confirm(long id,ReadAction input,Long actor){
         var n=get(id,true);var r=receipt(id,actor,true);
         if(!"PUBLISHED".equals(n.get("status")))throw new AdminManagementException(409,"通知状态已变化，请重新加载");
+        if(r.get("confirmed_at")!=null){markInboxRead(id,actor,r);return;}
         if(input.contentVersion()==null||input.contentVersion()!=number(n.get("contentVersion")))throw new AdminManagementException(409,"通知版本已变化，请重新阅读");
         if(r.get("first_opened_at")==null||input.viewKey()==null||!input.viewKey().equals(r.get("view_key")))throw new AdminManagementException(409,"请先打开并阅读通知，再确认已阅");
-        if(r.get("confirmed_at")!=null)return;
         jdbc.update("UPDATE sys_platform_notice_recipient SET confirmed_at=NOW(3),confirmed_version=? WHERE notice_id=? AND user_id=?",n.get("contentVersion"),id,actor);
         jdbc.update("INSERT INTO sys_platform_notice_view_log(notice_id,user_id,action,request_key,content_version) VALUES(?,?,'CONFIRM',?,?)",id,actor,UUID.randomUUID().toString(),n.get("contentVersion"));
-        jdbc.update("UPDATE sys_notice SET is_read='1' WHERE notice_id=? AND to_user_id=?",r.get("inbox_id"),actor);
+        markInboxRead(id,actor,r);
+    }
+    /** 确认记录与收件箱已读状态对齐：即使之前已确认过，也把消息中心里的那条标记为已读。 */
+    private void markInboxRead(long id,Long actor,Map<String,Object> receipt){
+        Object inbox=receipt.get("inbox_id");
+        if(inbox!=null)jdbc.update("UPDATE sys_notice SET is_read='1' WHERE notice_id=? AND to_user_id=? AND COALESCE(is_read,'0')<>'1'",inbox,actor);
+        jdbc.update("UPDATE sys_notice SET is_read='1' WHERE source_type='5' AND source_id=? AND to_user_id=? AND COALESCE(is_read,'0')<>'1'",id,actor);
     }
     public boolean protectedInbox(long inbox,Long actor){if(!installed())return false;return jdbc.queryForObject("SELECT EXISTS(SELECT 1 FROM sys_platform_notice_recipient r JOIN sys_platform_notice n ON n.notice_id=r.notice_id WHERE r.inbox_id=? AND r.user_id=? AND r.confirmed_at IS NULL AND n.important=1 AND "+ACTIVE+")",Integer.class,inbox,actor)==1;}
     public long upload(MultipartFile file,Long actor)throws Exception{

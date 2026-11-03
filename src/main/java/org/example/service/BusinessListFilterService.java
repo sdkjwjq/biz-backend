@@ -116,7 +116,7 @@ public class BusinessListFilterService {
                     case "records":recordFields(f,rows,names,names);break;
                     case "core":coreFields(f,rows,names);break;
                     case "notices":noticeFields(f,rows,names);break;
-                    case "budget":years(f,false);months(f);multi(f,"task","改革任务",true,rows,names);multi(f,"source","资金来源",true,rows,names);add(f,"expense","支出类别","multi",false,"执行情况",opts("goods","商品和服务支出","capital","资本性支出","other","其他支出"));select(f,"hasExpense","有无支出",false,"yes","有","no","无","unknown","缺值");plain(f,"ratio","年度执行率（%）","number",false,"执行情况");break;
+                    case "budget":years(f,false);multi(f,"task","改革任务",false,rows,names);multi(f,"source","资金来源",false,rows,names);add(f,"expense","支出类别","multi",false,"执行情况",opts("goods","商品和服务支出","capital","资本性支出","other","其他支出"));select(f,"hasExpense","有无支出",false,"yes","有","no","无","unknown","缺值");plain(f,"ratio","年度执行率（%）","number",false,"执行情况");break;
                     default:throw new AdminManagementException(400,"不支持的查询模块");
                 }return f;
             }
@@ -263,7 +263,7 @@ public class BusinessListFilterService {
     }
     private Map<String,Object> budgetQuery(Long actor,MultiValueMap<String,String> params){
         access.require(actor,"budget.read");
-        int year=positive(params.getFirst("f.year"),2026),month=positive(params.getFirst("f.month"),LocalDate.now(ZoneId.of("Asia/Shanghai")).getMonthValue());
+        int year=positive(params.getFirst("f.year"),2026),month=positive(params.getFirst("f.month"),positive(params.getFirst("month"),5));
         if(year<2025||year>2029||month>12)throw new AdminManagementException(400,"请选择有效的建设年度和月份");
         if(!access.budgetScope(actor,year))throw new AdminManagementException(403,"无权查看该年度预算");
         if(params.getOrDefault("f.expense",List.of()).stream().anyMatch(v->!Set.of("goods","capital","other").contains(v)))throw new AdminManagementException(400,"支出类别不正确");
@@ -277,8 +277,8 @@ public class BusinessListFilterService {
             BigDecimal denominator="execution".equals(section)?task.getBudgetAmount():task.getAmount();
             r.put("ratio",sum==null||denominator==null||denominator.signum()<=0?null:sum.multiply(BigDecimal.valueOf(100)).divide(denominator,8,RoundingMode.HALF_UP));rows.add(r);
         }
-        List<Field> f=new ArrayList<>();years(f,false);months(f);multi(f,"task","改革任务",true,rows,tasks);
-        f.add(new Field("source","资金来源","multi",true,"基础",sources.entrySet().stream().map(e->Map.<String,Object>of("value",e.getKey(),"label",e.getValue())).toList()));
+        List<Field> f=new ArrayList<>();years(f,false);if(params.containsKey("f.month"))months(f,false,"填报期间");multi(f,"task","改革任务",false,rows,tasks);
+        f.add(new Field("source","资金来源","multi",false,"归属与人员",sources.entrySet().stream().map(e->Map.<String,Object>of("value",e.getKey(),"label",e.getValue())).toList()));
         add(f,"expense","支出类别","multi",false,"执行情况",opts("goods","商品和服务支出","capital","资本性支出","other","其他支出"));
         select(f,"hasExpense","有无支出",false,"yes","有支出","no","无支出","unknown","待核实");plain(f,"ratio","年度预算执行率（%）","number",false,"执行情况");
         var query=new ListFilterQuery(params,f);var taskFields=f.stream().filter(x->!Set.of("source","expense").contains(x.key())).toList();
@@ -454,6 +454,7 @@ public class BusinessListFilterService {
     private List<Map<String,Object>> achievementRows(Long actor){var result=new ArrayList<Map<String,Object>>();for(var a:achievements.listAllAchievements(actor)){var r=row(a);r.put("id",a.getAchId());r.put("item",a);String date=date(a.getGotTime());r.put("year",date.isEmpty()?null:date.substring(0,4));r.put("keyword",a.getAchName());r.put("material",flag(a.getFileId()!=null));r.put("competition",str(a.getIsCompetition()));r.put("professionalReview","unknown");r.put("grade",List.of("teDengJiang","yiDengJiang","erDengJiang","sanDengJiang","jinJiang","yinJiang","tongJiang","youShengJiang","budDengDengCi").stream().filter(k->id(r.get(k))>0).toList());result.add(r);}return result;}
 
     private void months(List<Field> f){List<Map<String,Object>> values=new ArrayList<>();for(int m=1;m<=12;m++)values.add(Map.of("value",String.valueOf(m),"label",m+"月"));add(f,"month","月份","select",true,"基础",values);}
+    private void months(List<Field> f,boolean basic,String group){List<Map<String,Object>> values=new ArrayList<>();for(int m=1;m<=12;m++)values.add(Map.of("value",String.valueOf(m),"label",m+"月"));add(f,"month","月份","select",basic,group,values);}
     private List<Map<String,Object>> coreRows(Long actor,int year,int month){List<Map<String,Object>> rows=new ArrayList<>();var monthly=core.selectedMonthReports(actor,year,month);var archived=core.effectiveResults(actor,year,month);for(var item:core.list(actor,year,null)){
         var r=new LinkedHashMap<>(item);r.put("id",item.get("indicatorId"));r.put("year",year);r.put("month",month);r.put("keyword",str(item.get("indicatorCode"))+" "+str(item.get("indicatorName")));r.put("root",item.get("sortOrder"));
         var latest=monthly.getOrDefault(id(item.get("indicatorId")),Map.of());long state=id(latest.get("flowStatus"));
@@ -462,7 +463,7 @@ public class BusinessListFilterService {
         BigDecimal t=target==null?null:new BigDecimal(str(target)),a=actual==null?null:new BigDecimal(str(actual));boolean valid=t!=null&&t.signum()>0&&a!=null;r.put("attainment",valid?(a.compareTo(t)>=0?"met":"unmet"):"unknown");r.put("ratio",valid?a.multiply(BigDecimal.valueOf(100)).divide(t,8,RoundingMode.HALF_UP):null);
         r.put("item",item);rows.add(r);
     }return rows;}
-    private void coreFields(List<Field> f,List<Map<String,Object>> r,Map<String,String> p){years(f,false);months(f);select(f,"periodStatus","所选月份填报状态",true,"empty","尚未正式填报","pending","待审核","archived","已归档","returned","已退回／撤回","other","其他");plain(f,"keyword","编号／名称","text",true,"基础");multi(f,"root","一级改革任务序号",false,r,Map.of());multi(f,"submitBy","所选月份填报人",false,r,p);multi(f,"principalId","归口审核人",false,r,p);select(f,"stage","待审阶段",false,"10","待归口审核","20","待双高办归档");select(f,"archived","截至所选月份有效归档",false,"yes","已有归档","no","尚未归档");select(f,"attainment","期满目标达成",false,"met","已达标","unmet","未达标","unknown","待核实");plain(f,"ratio","归档达成比例（%）","number",false,"归档结果");}
+    private void coreFields(List<Field> f,List<Map<String,Object>> r,Map<String,String> p){years(f,false);months(f,false,"填报期间");select(f,"periodStatus","所选月份填报状态",true,"empty","尚未正式填报","pending","待审核","archived","已归档","returned","已退回／撤回","other","其他");plain(f,"keyword","编号／名称","text",true,"基础");multi(f,"root","一级改革任务序号",false,r,Map.of());multi(f,"submitBy","所选月份填报人",false,r,p);multi(f,"principalId","归口审核人",false,r,p);select(f,"stage","待审阶段",false,"10","待归口审核","20","待双高办归档");select(f,"archived","截至所选月份有效归档",false,"yes","已有归档","no","尚未归档");select(f,"attainment","期满目标达成",false,"met","已达标","unmet","未达标","unknown","待核实");plain(f,"ratio","归档达成比例（%）","number",false,"归档结果");}
     private List<Map<String,Object>> recordRows(Long actor,Integer year,List<SysUser> sourceAccounts){List<Map<String,Object>> rows=new ArrayList<>();List<BizWorkRecord> visible=records.filterRows(actor,year);
         Map<Long,List<Map<String,Object>>> entries=new HashMap<>();if(!visible.isEmpty()){String markers=String.join(",",Collections.nCopies(visible.size(),"?"));for(var e:jdbc.queryForList("SELECT record_id,reform_task_id,reform_task_name,key_progress,stage_results,typical_practices FROM biz_work_record_entry WHERE record_id IN ("+markers+")",visible.stream().map(BizWorkRecord::getRecordId).toArray()))entries.computeIfAbsent(id(e.get("record_id")),k->new ArrayList<>()).add(e);}
         Map<Long,SysUser> accounts=sourceAccounts.stream().collect(Collectors.toMap(SysUser::getUserId,u->u));

@@ -74,8 +74,8 @@ class TaskTransferRequestApiTest {
   assertEquals(0,db.queryForObject("SELECT COUNT(*) FROM sys_platform_notice",Integer.class));db.update("DELETE FROM biz_material_submission");long id=create("auditor").path("requestId").asLong();activeAudit();
   assertEquals(409,call(HttpMethod.POST,"/task-transfer/"+id+"/accept",cleared(90105),Map.of()).getStatusCode().value());assertEquals(owner,db.queryForObject("SELECT auditor_id FROM biz_task WHERE task_id=3",Long.class));assertEquals("PENDING",db.queryForObject("SELECT status FROM biz_task_transfer_request WHERE request_id=?",String.class,id));
  }
- @Test void recipientsNeedActiveAccountsSameDutyAndProspectiveScope()throws Exception{
-  for(String clause:List.of("UPDATE sys_user SET is_delete=1 WHERE user_id=90105","UPDATE sys_user SET status='0' WHERE user_id=90105","UPDATE biz_task SET leader_id=90103 WHERE task_id=4")){
+ @Test void recipientsNeedActiveAccountsAndProspectiveScope()throws Exception{
+  for(String clause:List.of("UPDATE sys_user SET is_delete=1 WHERE user_id=90105","UPDATE sys_user SET status='0' WHERE user_id=90105")){
    db.update(clause);assertTrue(call(HttpMethod.POST,"/task-transfer/request",business,Map.of("taskId",3,"fieldType","leader","toUserId",90105,"reason","invalid recipient")).getStatusCode().value()>=400);db.update("UPDATE sys_user SET status='1',is_delete=0 WHERE user_id=90105");db.update("UPDATE biz_task SET leader_id=90105 WHERE task_id=4");
   }
   db.update("INSERT INTO sys_user_permission(user_id,access_mode,permissions_json,scopes_json) VALUES(90105,'CUSTOM','{\"tasks.read\":true,\"tasks.fill\":true}','{\"tasks\":{\"mode\":\"CUSTOM\",\"items\":[4],\"years\":[2026]}}')");
@@ -105,5 +105,24 @@ class TaskTransferRequestApiTest {
  @Test void candidatesAreTaskBoundAndCannotLeakOtherTaskLogs()throws Exception{
   var candidates=get("/task-transfer/users?taskId=3&fieldType=leader",business);assertTrue(candidates.toString().contains("90105"));assertFalse(candidates.toString().contains("90101"));var missing=call(HttpMethod.GET,"/task-transfer/users?fieldType=leader",business,null);assertEquals(400,missing.getStatusCode().value(),missing.getBody());
   var directory=call(HttpMethod.POST,"/task-transfer/request",business,Map.of("taskId",1,"fieldType","leader","toUserId",90105,"reason","directory"));assertEquals(400,directory.getStatusCode().value(),directory.getBody());
+ }
+
+ @Test void batchCreateIsAtomicAndBatchAcceptanceReportsIndependentFailures()throws Exception{
+  var input=Map.of("taskIds",List.of(3,5),"fieldType","leader","toUserId",90105,"reason","Batch duties");
+  var created=ok(call(HttpMethod.POST,"/task-transfer/batch",business,input));assertEquals(2,created.size());
+  assertEquals(2,db.queryForObject("SELECT COUNT(*) FROM sys_platform_notice",Integer.class));
+  String receiver=cleared(90105);db.update("UPDATE biz_task SET leader_id=90103 WHERE task_id=5");
+  var result=ok(call(HttpMethod.POST,"/task-transfer/batch-accept",receiver,Map.of("requestIds",List.of(created.get(0).path("requestId").asLong(),created.get(1).path("requestId").asLong()))));
+  assertEquals(1,result.path("done").size());assertEquals(1,result.path("failed").size());
+  assertEquals(90105L,db.queryForObject("SELECT leader_id FROM biz_task WHERE task_id=3",Long.class));assertEquals(90103L,db.queryForObject("SELECT leader_id FROM biz_task WHERE task_id=5",Long.class));
+ }
+ @Test void invalidBatchRollsBackAndRecipientsCanInspectOnlyTheirPendingTasks()throws Exception{
+  var input=Map.of("taskIds",List.of(3,4),"fieldType","leader","toUserId",90105,"reason","Mixed owner");
+  assertEquals(403,call(HttpMethod.POST,"/task-transfer/batch",business,input).getStatusCode().value());
+  assertEquals(0,db.queryForObject("SELECT COUNT(*) FROM biz_task_transfer_request",Integer.class));assertEquals(0,db.queryForObject("SELECT COUNT(*) FROM sys_platform_notice",Integer.class));
+  long id=create("leader").path("requestId").asLong();recipient=cleared(90105);
+  assertEquals(3,get("/task-transfer/"+id+"/task",recipient).path("taskId").asInt());
+  assertEquals(404,call(HttpMethod.GET,"/task-transfer/"+id+"/task",cleared(owner),null).getStatusCode().value());
+  activeAudit();assertEquals(0,get("/task-transfer/pending",recipient).size());assertEquals("EXPIRED",db.queryForObject("SELECT status FROM biz_task_transfer_request WHERE request_id=?",String.class,id));
  }
 }
