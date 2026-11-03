@@ -6,7 +6,10 @@ ROOT=Path(__file__).resolve().parents[2];P=ROOT.parent
 EVIDENCE=Path(os.environ['WORKFLOW_EVIDENCE']).resolve()
 FRONTEND=Path(os.environ['WORKFLOW_FRONTEND_DIST']).resolve()
 JAR=Path(os.environ['WORKFLOW_BACKEND_JAR']).resolve()
-OUT=P/'releases/shuanggao-update-20261103-r5'
+RELEASE_NAME=os.environ.get('RELEASE_NAME','shuanggao-update-20261103-r6')
+assert re.fullmatch(r'shuanggao-update-\d{8}(?:-r\d+)?',RELEASE_NAME)
+OUT=P/'releases'/RELEASE_NAME
+ACCEPTANCE=Path(os.environ['WORKFLOW_ACCEPTANCE']).resolve()
 BASE=P/'releases/shuanggao-update-20261103-r3'
 def sha(path):return hashlib.sha256(path.read_bytes()).hexdigest()
 def head(repo):return subprocess.check_output(['git','rev-parse','HEAD'],cwd=repo,text=True).strip()
@@ -40,19 +43,37 @@ def main():
                     workflow_maintenance={'taskCandidates':25,'deletedAchievementCandidates':2,'rawAuditLogsPreserved':True,'frontendMaintenanceLogs':False,'serverPrivateRollbackReport':True,'noSchemaChanges':True,'cumulativeBusinessMigrationsExecuted':False})
     (OUT/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
     extra=json.loads((EVIDENCE/'extra-results.json').read_text());assert extra['passed']
-    (OUT/'verification.json').write_text(json.dumps({'liveBackupRehearsal':{k:v for k,v in result.items() if k not in ['rawAndBusinessDigestsUnchanged','evidenceDirectory']},'regression':regression,'extra':extra,'browser':browser,'frontend':{'lint':True,'unit':36,'build':True},'scope':'frontend/backend plus guarded pending-handler repair; no old business migrations'},ensure_ascii=False,indent=2),encoding='utf-8')
+    acceptance=json.loads((ACCEPTANCE/'validation.json').read_text(encoding='utf-8'))
+    acceptance_browser=json.loads((ACCEPTANCE/'browser-results.json').read_text(encoding='utf-8'))
+    acceptance_qa=json.loads((ACCEPTANCE/'report-qa.json').read_text(encoding='utf-8'))
+    acceptance_cleanup=json.loads((ACCEPTANCE/'cleanup.json').read_text(encoding='utf-8'))
+    current_regression=json.loads((ACCEPTANCE.parent/'workflow-acceptance-20261103-final/regression-results.json').read_text())
+    assert acceptance['passed'] and acceptance['realAccounts']==5 and acceptance['screenSteps']==43
+    assert acceptance_browser['passed'] and not acceptance_browser['errors'] and not acceptance_browser['network']
+    assert acceptance_qa['passed'] and acceptance_cleanup['isolatedDatabaseRemoved'] and current_regression['passed']
+    assert sha(JAR)==acceptance['candidateJarSha256'] and sha(FRONTEND/'index.html')==acceptance['candidateIndexSha256']
+    report=json.loads((ACCEPTANCE/'report-result.json').read_text(encoding='utf-8'))
+    report_file=Path(report['html']);assert sha(report_file)==report['sha256']
+    shutil.copy2(report_file,OUT/'acceptance-report.html')
+    (OUT/'verification.json').write_text(json.dumps({'liveBackupRehearsal':{k:v for k,v in result.items() if k not in ['rawAndBusinessDigestsUnchanged','evidenceDirectory']},'previousRegressionBaseline':regression,'previousExtraBaseline':extra,'previousBrowserBaseline':browser,'currentTargetedRegression':current_regression,'currentFrontend':{'lint':True,'unit':39,'build':True},'acceptedFrontendRun':acceptance,'reportQa':acceptance_qa,'cleanup':acceptance_cleanup,'scope':'frontend/backend with returned history plus guarded pending-handler repair; no old business migrations'},ensure_ascii=False,indent=2),encoding='utf-8')
     provenance={'backendCommit':head(ROOT),'frontendCommit':head(P/'biz'),'backendJarSha256':sha(JAR),'frontendIndexSha256':sha(FRONTEND/'index.html'),'excludedUncommittedFiles':['biz/vite.config.js','biz-backend/src/test/java/org/example/AchievementFlowApiTest.java','biz-backend/src/test/java/org/example/AuditFlowApiTest.java'],'build':'clean committed sources plus verified current changes; runtime database password removed before packaging'}
     (OUT/'build-provenance.json').write_text(json.dumps(provenance,indent=2),encoding='utf-8')
-    (OUT/'README.md').write_text('''# 20261103-r5 更新说明
+    manifest['workflow_maintenance']['returnedSubmissionHistoryVisible']=True
+    manifest['workflow_maintenance']['inactiveSubmissionAuditControlsClosed']=True
+    manifest['acceptance']={'accounts':5,'screenshots':43,'report':'acceptance-report.html','frontendPageClicks':True,'oldAuditRowsPreserved':787,'candidateByteIdenticalToAcceptedRun':True}
+    (OUT/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
+    readme='''# RELEASE_NAME 更新说明
 
-适用于已更新至20261103-r2及之后版本的服务器。包含导出修复、审核步骤显示及当前处理人核对修正。
+适用于已更新至20261103-r2及之后版本的服务器，替代此前未安装的r5包。包含导出修复、审核步骤显示、退回历史显示及当前处理人核对修正。
 保留服务器当前业务数据。首次核对25条任务待办及2条已删除成果的待审残留；已处理记录跳过，活动配置冲突时停止。
 不执行旧的业务迁移，不重算任务或绩效，不改写原审核日志，不在前台展示维护记录。
+退回、撤回及替换记录保留只读历史；重新提交使用独立审批单，从专业群审核重新开始。已失效或已归档记录不提供审核提交入口。
+本包程序与五个实际账号、43张前端操作截图的验收候选程序逐字节一致。报告见 acceptance-report.html。
 
 直接复制整个文件夹后执行：
 
 ```bash
-cd /root/biz-backend/shuanggao-update-20261103-r5
+cd /root/biz-backend/RELEASE_NAME
 chmod -R go-rwx .
 sha256sum -c SHA256SUMS --quiet && bash update.sh --check && bash update.sh --update
 ```
@@ -60,7 +81,8 @@ sha256sum -c SHA256SUMS --quiet && bash update.sh --check && bash update.sh --up
 检查和更新各需输入一次服务器MySQL root密码。检查不修改数据库；更新会先停止后端写入并完整备份，再核对、修正和替换程序。
 更新失败自动恢复更新前数据库及程序。成功后按输出的 --rollback-workflow 命令回退；有后续审批、配置或相关通知变化时拒绝覆盖，保留现有业务。
 服务器维护文件保存在本次备份目录中，仅服务器管理员可读。不要用旧全库覆盖更新后新增的业务。
-''',encoding='utf-8',newline='\n')
+'''
+    (OUT/'README.md').write_text(readme.replace('RELEASE_NAME',RELEASE_NAME),encoding='utf-8',newline='\n')
     files=sorted(p for p in OUT.rglob('*') if p.is_file() and p.name!='SHA256SUMS')
     (OUT/'SHA256SUMS').write_text(''.join(sha(p)+'  '+p.relative_to(OUT).as_posix()+'\n' for p in files),encoding='ascii',newline='\n')
     archive=OUT.with_suffix('.tar.gz')
