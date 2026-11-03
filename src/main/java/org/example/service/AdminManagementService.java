@@ -353,7 +353,7 @@ public class AdminManagementService {
                         item.get("targetName"), item.get("operatorId"), item.get("operatorName"), item.get("reason"), item.get("createTime")};
                 for (int c = 0; c < values.length; c++) row.createCell(c).setCellValue(string(values[c]));
             }
-            for (int i = 0; i < headers.length; i++) sheet.autoSizeColumn(i);
+            org.example.utils.SpreadsheetSupport.setColumnWidths(sheet,18,20,18,22,48,22,20,65,24);
             String name = URLEncoder.encode("管理员操作记录.xlsx", StandardCharsets.UTF_8).replace("+", "%20");
             response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
             response.setHeader("Content-Disposition", "attachment; filename*=UTF-8''" + name);

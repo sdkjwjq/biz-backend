@@ -11,7 +11,7 @@ import java.util.*;
 
 /** Streaming, explicitly selected columns. Text is always a string, never a formula. */
 final class AnalysisWorkbook implements AutoCloseable {
-    final SXSSFWorkbook book=new SXSSFWorkbook(100);
+    final SXSSFWorkbook book=org.example.utils.SpreadsheetSupport.streamingWorkbook(100);
     private final CellStyle header,body;
     private final List<Map<String,Object>> continuations=new ArrayList<>();
     private static final ZoneId ZONE=ZoneId.of("Asia/Shanghai");

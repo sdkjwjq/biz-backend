@@ -15,6 +15,7 @@ public class BizApplication {
      * @param args 命令行参数
      */
     public static void main(String[] args) {
+        org.example.utils.SpreadsheetSupport.configure();
         SpringApplication.run(BizApplication.class, args);
     }
 }

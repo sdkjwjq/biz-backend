@@ -92,11 +92,11 @@ public class OperationFilterPageService {
     }
     private LocalDate day(String value){if(value==null||value.trim().isEmpty())return null;try{return LocalDate.parse(value);}catch(RuntimeException e){throw new AdminManagementException(400,"日期格式必须为yyyy-MM-dd");}}
     private void write(HttpServletResponse response,Consumer<Consumer<List<Map<String,Object>>>> source){
-        SXSSFWorkbook workbook=new SXSSFWorkbook(100);
+        SXSSFWorkbook workbook=org.example.utils.SpreadsheetSupport.streamingWorkbook(100);
         try(workbook){
-            var sheet=workbook.createSheet("管理员操作记录");sheet.trackAllColumnsForAutoSizing();String[] headers={"模块","动作","对象类型","对象ID","对象名称","操作人ID","操作人","原因","时间"};Row header=sheet.createRow(0);for(int c=0;c<headers.length;c++)header.createCell(c).setCellValue(headers[c]);int[] index={1};
+            var sheet=workbook.createSheet("管理员操作记录");String[] headers={"模块","动作","对象类型","对象ID","对象名称","操作人ID","操作人","原因","时间"};Row header=sheet.createRow(0);for(int c=0;c<headers.length;c++)header.createCell(c).setCellValue(headers[c]);int[] index={1};
             source.accept(batch->{for(var item:batch){Row row=sheet.createRow(index[0]++);Object[] values={item.get("module"),item.get("action"),item.get("targetType"),item.get("targetId"),item.get("targetName"),item.get("operatorId"),item.get("operatorName"),item.get("reason"),item.get("createTime")};for(int c=0;c<values.length;c++)row.createCell(c).setCellValue(str(values[c]));}});
-            for(int c=0;c<headers.length;c++)sheet.autoSizeColumn(c);response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");response.setHeader("Content-Disposition","attachment; filename*=UTF-8''"+URLEncoder.encode("管理员操作记录.xlsx",StandardCharsets.UTF_8).replace("+","%20"));workbook.write(response.getOutputStream());
+            org.example.utils.SpreadsheetSupport.setColumnWidths(sheet,18,20,18,22,48,22,20,65,24);response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");response.setHeader("Content-Disposition","attachment; filename*=UTF-8''"+URLEncoder.encode("管理员操作记录.xlsx",StandardCharsets.UTF_8).replace("+","%20"));workbook.write(response.getOutputStream());
         }catch(IOException e){throw new AdminManagementException(500,"操作记录导出失败");}finally{workbook.dispose();}
     }
     private static Field field(String key,String type){return new Field(key,key,type,true,"",List.of());}

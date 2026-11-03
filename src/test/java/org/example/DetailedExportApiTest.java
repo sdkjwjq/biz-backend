@@ -83,6 +83,26 @@ class DetailedExportApiTest {
   assertEquals(403,call(HttpMethod.GET,"/data-exports/admin-users",business,null).getStatusCode().value());
   String a=switchTo(admin,"EXPERT");assertEquals(403,call(HttpMethod.GET,"/data-exports/tasks",a,null).getStatusCode().value());
  }
+ @Autowired org.example.service.AdminManagementService management;
+ @Test void operationExportPathsKeepEveryRowAcrossStreamingFlushes()throws Exception{
+  var rows=new ArrayList<Map<String,Object>>();
+  for(int i=0;i<205;i++){
+   db.update("INSERT INTO sys_admin_operation_log(module,action,target_type,target_id,target_name,operator_id,reason) VALUES('TASK','UPDATE','TASK',?,? ,110228,'fontless operation export')",String.valueOf(i),"操作对象 "+i);
+   rows.add(Map.of("module","TASK","action","UPDATE","targetType","TASK","targetId",String.valueOf(i),"targetName","操作对象 "+i,"operatorId",110228,"operatorName","管理员","reason","fontless operation export"));
+  }
+  for(String path:List.of("/admin/operations/export","/admin/operations/export?f.module=TASK")){
+   int expected=path.contains("f.module")?205:get("/admin/operations",admin).path("total").asInt();
+   var h=new HttpHeaders();h.set("Authorization",admin);
+   var result=http.exchange("http://127.0.0.1:"+port+"/api"+path,HttpMethod.POST,new HttpEntity<>(h),byte[].class);
+   assertEquals(200,result.getStatusCode().value(),new String(result.getBody(),java.nio.charset.StandardCharsets.UTF_8));
+   try(var book=org.apache.poi.ss.usermodel.WorkbookFactory.create(new java.io.ByteArrayInputStream(result.getBody()))){
+    assertEquals(expected+1,book.getSheetAt(0).getPhysicalNumberOfRows(),path);assertTrue(text(book).contains("操作对象 204"));
+   }
+  }
+  var response=new org.springframework.mock.web.MockHttpServletResponse();
+  management.writeOperationExport(rows,response,110228L);
+  try(var book=org.apache.poi.ss.usermodel.WorkbookFactory.create(new java.io.ByteArrayInputStream(response.getContentAsByteArray()))){assertEquals(206,book.getSheetAt(0).getPhysicalNumberOfRows());}
+ }
  @Test void taskScopeExportPermissionChangesAndDisabledOldTokensAreEnforced()throws Exception{
   material();db.update("INSERT INTO sys_user_permission(user_id,access_mode,permissions_json,scopes_json) VALUES(?,'CUSTOM',?,?)",owner,"{\"tasks.read\":true,\"tasks.export\":true,\"tasks.materials\":true,\"tasks.history\":true}","{\"tasks\":{\"mode\":\"CUSTOM\",\"items\":[3],\"years\":[2026]}}");db.update("UPDATE sys_permission_revision SET version=version+1");
   try(var book=download("/data-exports/tasks",business)){assertEquals(4,book.getSheet("任务明细").getPhysicalNumberOfRows());assertFalse(text(book).contains("ROUND4"));assertFalse(text(book).contains("ROUND5"));}
