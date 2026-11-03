@@ -78,7 +78,7 @@ def main():
     assert frontend_dist.is_relative_to(ROOT.parent.resolve()) and (frontend_dist/'index.html').is_file()
     shutil.copytree(frontend_dist,OUT/'frontend',dirs_exist_ok=True)
     shutil.copy2(ROOT.parent/'biz/public/templates/budget-template.xlsx',OUT/'templates/budget-template.xlsx')
-    for name in ['update.sh','schema-check.sh','database-restore.sh','README.md']:
+    for name in ['update.sh','schema-check.sh','database-restore.sh','audit-workflow-maintenance.sh','README.md']:
         text=(Path(__file__).parent/name).read_text(encoding='utf-8')
         (OUT/name).write_text(text,encoding='utf-8',newline='\n')
     for suffix in ['', '-check', '-rollback']:

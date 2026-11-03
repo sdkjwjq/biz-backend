@@ -31,7 +31,7 @@ const fs = require('node:fs/promises'), path = require('node:path'), assert = re
     await page.goto(base + '/home/works?taskId=930002');
     const drawer = page.getByRole('dialog', { name: '任务详情与反馈', exact: true });
     await expect(drawer).toBeVisible();
-    await expect(drawer.locator('.log-section')).toContainText('已完成归档');
+    await expect(drawer.locator('.log-section')).toContainText('本轮专业群通过');
     await expect(drawer.locator('.el-loading-mask:visible')).toHaveCount(0);
     return drawer;
   }
@@ -49,6 +49,7 @@ const fs = require('node:fs/promises'), path = require('node:path'), assert = re
   try {
     const admin = await login(110228), principal = await login(910002);
     const before = await record(admin); assert.equal(before.flowStatus, 20);
+    if (process.env.SHUANGGAO_BASELINE_FRONTEND) {
     const baseline = await pageFor(admin), old = await openTask(baseline, process.env.SHUANGGAO_BASELINE_FRONTEND);
     await expect(steps(old).nth(2)).toContainText('进行中');
     await expect(steps(old).nth(3)).toContainText('2026-05-20');
@@ -56,17 +57,19 @@ const fs = require('node:fs/promises'), path = require('node:path'), assert = re
     await baseline.screenshot({ path: path.join(out, 'before-mixed-archive.png'), fullPage: true });
     checks.push('Baseline reproduces the premature archive description using a pre-submission log under the same submission ID');
     await baseline.context().close();
+    }
     const current = await pageFor(admin); let drawer = await openTask(current);
     await pending(drawer); await expect(steps(drawer).nth(2)).toContainText('进行中');
     await expect(steps(drawer).nth(3)).toContainText('待流转');
     assert.equal((await record(admin)).flowStatus, 20);
     await current.screenshot({ path: path.join(out, 'after-current-cycle.png'), fullPage: true });
-    checks.push('Current task shows the pending principal stage and pending archive, retaining the legacy archive in historical logs');
+    await expect(drawer.locator('.log-section')).not.toContainText('已完成归档');
+    checks.push('Current task shows only current-cycle evidence, without legacy archive text or maintenance notices');
     await current.goto(state.frontend + '/home/works/performance?perfId=950001&year=2026');
     const related = current.locator('.related-tasks-table, .el-table').filter({ hasText: '仅用户A可见的三级任务' });
     await related.getByRole('button', { name: '查看', exact: true }).click();
     drawer = current.getByRole('dialog').filter({ has: current.locator('.drawer-title').filter({ hasText: '任务详情与反馈' }) });
-    await expect(drawer).toBeVisible(); await expect(drawer.locator('.log-section')).toContainText('已完成归档');
+    await expect(drawer).toBeVisible(); await expect(drawer.locator('.log-section')).toContainText('本轮专业群通过');
     await pending(drawer); await current.screenshot({ path: path.join(out, 'performance-linked-task.png'), fullPage: true });
     checks.push('Performance-linked task drawer uses the same current-cycle workflow evidence');
     const reviewer = await pageFor(principal), reviewDrawer = await openTask(reviewer);

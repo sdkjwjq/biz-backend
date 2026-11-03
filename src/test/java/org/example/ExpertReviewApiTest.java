@@ -166,8 +166,15 @@ class ExpertReviewApiTest {
  @Test void taskFilterExportRechecksAuthorizationAndExportsOnlyMatchingLeaves()throws Exception{
   jdbc.update("UPDATE sys_user_permission SET permissions_json='{\"tasks.export\":true}' WHERE user_id=90103");
   var response=http.exchange("http://127.0.0.1:"+port+"/api/list-filters/tasks/export?f.year=2026",HttpMethod.GET,new HttpEntity<>(null,headers(a,false)),byte[].class);assertEquals(200,response.getStatusCode().value());
-  try(var book=new org.apache.poi.xssf.usermodel.XSSFWorkbook(new java.io.ByteArrayInputStream(response.getBody()))){assertEquals(1,book.getSheetAt(0).getLastRowNum());assertEquals("EXPERT3",book.getSheetAt(0).getRow(1).getCell(2).getStringCellValue());}
-  assertEquals(400,get("/list-filters/tasks/export?f.deptId=991002",a).getStatusCode().value());
+  try(var book=new org.apache.poi.xssf.usermodel.XSSFWorkbook(new java.io.ByteArrayInputStream(response.getBody()))){
+   var sheet=book.getSheet("任务明细");assertEquals(3,sheet.getLastRowNum());
+   int code=-1;for(var cell:sheet.getRow(0))if("任务编号".equals(cell.getStringCellValue()))code=cell.getColumnIndex();assertTrue(code>=0);
+   Set<String> codes=new HashSet<>();for(int i=1;i<=sheet.getLastRowNum();i++)codes.add(sheet.getRow(i).getCell(code).getStringCellValue());
+   // Detailed exports include navigation ancestors, but never unauthorized sibling tasks.
+   assertEquals(Set.of("EXPERT1","EXPERT2","EXPERT3"),codes);
+  }
+  var outside=http.exchange("http://127.0.0.1:"+port+"/api/list-filters/tasks/export?f.deptId=991002",HttpMethod.GET,new HttpEntity<>(null,headers(a,false)),byte[].class);assertEquals(200,outside.getStatusCode().value());
+  try(var book=new org.apache.poi.xssf.usermodel.XSSFWorkbook(new java.io.ByteArrayInputStream(outside.getBody()))){assertEquals(0,book.getSheet("任务明细").getLastRowNum());}
   jdbc.update("UPDATE sys_user_permission SET permissions_json='{\"tasks.export\":false}' WHERE user_id=90103");assertEquals(403,get("/list-filters/tasks/export",a).getStatusCode().value());
  }
  @Test void administrativeFiltersArePrivateAndRespectRoleAssignments()throws Exception{

@@ -16,6 +16,22 @@ public class BizApplication {
      */
     public static void main(String[] args) {
         org.example.utils.SpreadsheetSupport.configure();
+        if (args.length == 3 && args[0].equals("--audit-workflow-maintenance")) {
+            var app = new SpringApplication(BizApplication.class);
+            app.setWebApplicationType(org.springframework.boot.WebApplicationType.NONE);
+            app.setDefaultProperties(java.util.Map.of("workflow.maintenance", "true", "spring.main.banner-mode", "off"));
+            int result=0;
+            try (var context=app.run()) {
+                var maintenance=context.getBean(org.example.service.AuditWorkflowMaintenance.class);
+                var path=java.nio.file.Path.of(args[2]);
+                if(args[1].equals("rollback"))maintenance.rollback(path);
+                else System.out.println("WORKFLOW_MAINTENANCE_OK "+maintenance.run(args[1],path));
+            } catch(Exception error) {
+                System.err.println("WORKFLOW_MAINTENANCE_FAILED "+error.getMessage());result=1;
+            }
+            System.exit(result);
+            return;
+        }
         SpringApplication.run(BizApplication.class, args);
     }
 }

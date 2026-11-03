@@ -266,7 +266,7 @@ void updateLevel4Task(BizLevel4Task task);
             "post_status AS postStatus, " +
             "comment, " +
             "create_time AS createTime " +
-            "FROM biz_audit_log WHERE sub_id = #{subId} " +
+            "FROM biz_audit_log l WHERE sub_id = #{subId} AND " + TaskAuditEvidenceSql.VALID + " " +
             "ORDER BY create_time DESC, log_id DESC")
     List<BizAuditLog> getAuditLogsBySubId(@Param("subId") Long subId);
 

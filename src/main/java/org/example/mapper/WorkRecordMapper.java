@@ -56,8 +56,8 @@ public interface WorkRecordMapper {
     // 四级历史记录只用于识别缺失的三级汇总证据，不单独增加三级任务完成数。
     @Select("<script>SELECT t.task_id parent_task_id,s.task_id source_task_id,s.sub_id,s.reported_value,"
             + "s.flow_status,s.submit_time,"
-            + "(SELECT MIN(l.create_time) FROM biz_audit_log l WHERE l.sub_id=s.sub_id AND l.post_status=40) archive_time,"
-            + "(SELECT l.post_status FROM biz_audit_log l WHERE l.sub_id=s.sub_id AND l.create_time &lt;= #{cutoff} "
+            + "(SELECT MIN(l.create_time) FROM biz_audit_log l WHERE l.sub_id=s.sub_id AND l.create_time>=s.submit_time AND l.post_status=40) archive_time,"
+            + "(SELECT l.post_status FROM biz_audit_log l WHERE l.sub_id=s.sub_id AND l.create_time>=s.submit_time AND l.create_time &lt;= #{cutoff} "
             + "ORDER BY l.create_time DESC,l.log_id DESC LIMIT 1) cutoff_status,"
             + "(SELECT sn.previous_status FROM biz_audit_snapshot sn WHERE sn.sub_id=s.sub_id "
             + "AND sn.target_type='TASK' AND sn.target_id=t.task_id ORDER BY sn.snapshot_id LIMIT 1) previous_status "

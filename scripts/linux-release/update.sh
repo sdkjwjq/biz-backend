@@ -25,6 +25,7 @@ die() { printf '错误：%s\n' "$*" >&2; exit 1; }
 say() { printf '[更新] %s\n' "$*"; }
 need() { command -v "$1" >/dev/null || die "缺少命令 $1；尚未更新程序"; }
 source "$PACKAGE/database-restore.sh"
+source "$PACKAGE/audit-workflow-maintenance.sh"
 
 database_credentials() {
   if [[ -n ${MYSQL_PWD:-} ]]; then DB_PASSWORD=$MYSQL_PWD
@@ -121,6 +122,7 @@ cleanup() {
         unset MYSQL_PWD DB_PASSWORD; exit 1
       fi
     fi
+    if [[ $WORKFLOW_APPLIED == 1 ]]; then rm -f -- "$WORKFLOW_MARKER"; fi
     (set -Eeuo pipefail; restore_files)
     local restored=$?
     if [[ $restored == 0 ]]; then say '旧程序已恢复'
@@ -139,6 +141,25 @@ for command in bash readlink mysql mysqldump gzip tar sha256sum curl flock cp mv
 exec 9> "$BACKEND/.release.lock"
 flock -n 9 || die '另一更新/回滚正在运行'
 MODE=${1:---update}
+if [[ "$MODE" == --rollback-workflow ]]; then
+  [[ $# == 2 ]] || die '需要指定本次更新备份目录'
+  BACKUP=$(readlink -f "$2")
+  [[ "$BACKUP" == "$BACKEND"/backups/release-* && -f "$BACKUP/state.sh" && -f "$BACKUP/workflow-maintenance.json" && -f "$BACKUP/old.jar" ]] || die '备份目录缺少本次待办维护记录'
+  [[ "$(stat -c %u "$BACKUP/state.sh")" == 0 ]] || die '备份必须属于 root'
+  (cd "$PACKAGE"; sha256sum -c SHA256SUMS --quiet) || die '更新包校验失败'
+  source "$BACKUP/state.sh"
+  database_credentials
+  stop_app
+  if ! workflow_command rollback "$BACKUP/workflow-maintenance.json" > "$BACKUP/workflow-rollback.log" 2>&1; then
+    start_old; health || true
+    die "已有业务或配置变化，未回滚；详见 $BACKUP/workflow-rollback.log"
+  fi
+  if [[ ! -f "$BACKUP/workflow-marker-existing" ]]; then rm -f -- "$WORKFLOW_MARKER"; fi
+  restore_files
+  say '待办及应用回滚完成；其余新增业务数据保留'
+  unset MYSQL_PWD DB_PASSWORD
+  exit 0
+fi
 if [[ "$MODE" == --rollback || "$MODE" == --rollback-database ]]; then
   [[ $# == 2 ]] || die '用法：bash update.sh --rollback /root/biz-backend/backups/备份目录'
   BACKUP=$(readlink -f "$2")
@@ -146,6 +167,7 @@ if [[ "$MODE" == --rollback || "$MODE" == --rollback-database ]]; then
   [[ "$(stat -c %u "$BACKUP/state.sh")" == 0 ]] || die '备份配置必须属于 root'
   # This file is generated with Bash %q, contains only saved executable/argv, and is root-only.
   source "$BACKUP/state.sh"
+  [[ ! -f "$BACKUP/workflow-maintenance.json" ]] || die '该更新请使用 --rollback-workflow，避免覆盖更新后的业务数据'
   if [[ "$MODE" == --rollback-database ]]; then
     database_credentials
     gzip -t "$BACKUP/database.sql.gz" || die '更新前数据库备份损坏，未停止服务'
@@ -226,6 +248,7 @@ if [[ $RESTORE_BACKUP == 1 ]]; then
   restore_kb=$(du -k "$PACKAGE/restore/20260920backup.sql" | awk '{print $1}')
   [[ $mysql_free_kb -gt $((db_kb + restore_kb*8 + 524288)) ]] || die 'MySQL 数据分区空间不足以建立恢复暂存库'
 fi
+workflow_preflight || die '待办配置存在冲突，请查看核对文件'
 [[ "$MODE" == --update ]] || { say '只读检查通过；尚未停止服务或修改数据库'; FINISHED=1; exit 0; }
 
 BACKUP="$BACKEND/backups/release-$(date +%Y%m%d-%H%M%S)-$$"
@@ -459,6 +482,8 @@ fi
 "${MYSQL[@]}" < "$PACKAGE/sql/2026-10-24-audit-history-index-check.sql" > "$BACKUP/audit-history-index-check.log"
 say '审核历史查询索引已核对，复用已有索引，不修改审核记录'
 
+workflow_apply
+
 # The backend is stopped and the complete database has already been backed up.
 # Retire review requests only; preserve completed-result messages and audit history.
 "${MYSQL[@]}" < "$PACKAGE/sql/backup-stale-notices.sql" > "$BACKUP/restore-notice-flags.sql"
@@ -512,5 +537,5 @@ if [[ $RESTORE_BACKUP == 1 ]]; then printf '%s\n' "$BACKUP" > "$RESTORE_MARKER";
 FINISHED=1
 say "更新成功。备份：$BACKUP"
 say "访问 http://172.19.2.81/ 并刷新浏览器。前端模板位于 $WEB/templates；纪实 Word 模板内置 JAR。"
-if [[ $DB_REPLACED == 1 ]]; then say "回滚命令（数据库及应用）：bash '$PACKAGE/update.sh' --rollback-database '$BACKUP'"
+if [[ $DB_REPLACED == 1 ]]; then say "回滚命令（保留新增业务）：bash '$PACKAGE/update.sh' --rollback-workflow '$BACKUP'"
 else say "回滚命令：bash '$PACKAGE/update.sh' --rollback '$BACKUP'"; fi

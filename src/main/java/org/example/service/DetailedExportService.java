@@ -113,7 +113,7 @@ public class DetailedExportService {
         rows=decorate(rows,names,objects,objectKey,module.equals("tasks")?"task":module.equals("performance")?"perf":"ach");
         for(var row:rows){row.put("flowStatusText",flow(module,id(row.get("flowStatus"))));if(module.equals("tasks")){var task=objects.get(id(row.get("taskId")));if(task!=null)row.put("year",task.get("phase"));}}
         book.sheet("填报记录",submissionColumns(module),rows);
-        var logs=byIds("SELECT * FROM "+logTable+" WHERE sub_id IN (%s) ORDER BY sub_id,log_id",ids(rows,"subId"));
+        var logs=byIds("SELECT l.* FROM "+logTable+" l WHERE "+(module.equals("tasks")?org.example.mapper.TaskAuditEvidenceSql.VALID+" AND ":"")+"sub_id IN (%s) ORDER BY sub_id,log_id",ids(rows,"subId"));
         book.sheet("审核记录",auditColumns(module),auditRows(logs,rows,"subId",names));
         }
         if(module.equals("tasks")&&access.allowed(actor,"tasks.materials")){

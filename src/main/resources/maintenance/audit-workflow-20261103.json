@@ -1,0 +1,241 @@
+{
+  "batch": "audit-workflow-20261103-v1",
+  "sourceSha256": "6a888ccc6bb47968430b6b164f2e8e8ff70e351160e89d55bbd8a4042df959db",
+  "tasks": [
+    {
+      "subId": 144,
+      "taskId": 606,
+      "taskCode": "SG10010526",
+      "year": 2026,
+      "oldHandler": 120052,
+      "newHandler": 110802,
+      "submitTime": "2026-05-27 08:20:58.000000"
+    },
+    {
+      "subId": 148,
+      "taskId": 420,
+      "taskCode": "SG07010726",
+      "year": 2026,
+      "oldHandler": 120311,
+      "newHandler": 110364,
+      "submitTime": "2026-06-01 09:57:18.000000"
+    },
+    {
+      "subId": 180,
+      "taskId": 48,
+      "taskCode": "SG01010826",
+      "year": 2026,
+      "oldHandler": 110009,
+      "newHandler": 120796,
+      "submitTime": "2026-06-08 06:49:16.000000"
+    },
+    {
+      "subId": 182,
+      "taskId": 76,
+      "taskCode": "SG01020726",
+      "year": 2026,
+      "oldHandler": 121360,
+      "newHandler": 110314,
+      "submitTime": "2026-06-08 06:54:15.000000"
+    },
+    {
+      "subId": 185,
+      "taskId": 117,
+      "taskCode": "SG02010826",
+      "year": 2026,
+      "oldHandler": 120311,
+      "newHandler": 110255,
+      "submitTime": "2026-06-08 07:01:22.000000"
+    },
+    {
+      "subId": 186,
+      "taskId": 139,
+      "taskCode": "SG02020526",
+      "year": 2026,
+      "oldHandler": 121360,
+      "newHandler": 120311,
+      "submitTime": "2026-06-08 07:02:45.000000"
+    },
+    {
+      "subId": 187,
+      "taskId": 140,
+      "taskCode": "SG02020626",
+      "year": 2026,
+      "oldHandler": 111020,
+      "newHandler": 110255,
+      "submitTime": "2026-06-08 07:04:23.000000"
+    },
+    {
+      "subId": 189,
+      "taskId": 206,
+      "taskCode": "SG03021026",
+      "year": 2026,
+      "oldHandler": 110379,
+      "newHandler": 120311,
+      "submitTime": "2026-06-08 07:07:50.000000"
+    },
+    {
+      "subId": 190,
+      "taskId": 226,
+      "taskCode": "SG03030526",
+      "year": 2026,
+      "oldHandler": 121360,
+      "newHandler": 110274,
+      "submitTime": "2026-06-08 07:09:01.000000"
+    },
+    {
+      "subId": 208,
+      "taskId": 628,
+      "taskCode": "SG10030326",
+      "year": 2026,
+      "oldHandler": 110379,
+      "newHandler": 120311,
+      "submitTime": "2026-06-08 07:59:08.000000"
+    },
+    {
+      "subId": 210,
+      "taskId": 629,
+      "taskCode": "SG10030426",
+      "year": 2026,
+      "oldHandler": 120311,
+      "newHandler": 110802,
+      "submitTime": "2026-06-08 08:00:16.000000"
+    },
+    {
+      "subId": 211,
+      "taskId": 608,
+      "taskCode": "SG10010726",
+      "year": 2026,
+      "oldHandler": 111020,
+      "newHandler": 110802,
+      "submitTime": "2026-06-08 08:01:29.000000"
+    },
+    {
+      "subId": 212,
+      "taskId": 353,
+      "taskCode": "SG06010626",
+      "year": 2026,
+      "oldHandler": 120030,
+      "newHandler": 120385,
+      "submitTime": "2026-06-08 08:04:02.000000"
+    },
+    {
+      "subId": 213,
+      "taskId": 398,
+      "taskCode": "SG06030726",
+      "year": 2026,
+      "oldHandler": 110029,
+      "newHandler": 110255,
+      "submitTime": "2026-06-08 08:14:36.000000"
+    },
+    {
+      "subId": 214,
+      "taskId": 401,
+      "taskCode": "SG06031026",
+      "year": 2026,
+      "oldHandler": 120030,
+      "newHandler": 110255,
+      "submitTime": "2026-06-08 08:19:41.000000"
+    },
+    {
+      "subId": 219,
+      "taskId": 273,
+      "taskCode": "SG04020826",
+      "year": 2026,
+      "oldHandler": 121360,
+      "newHandler": 110274,
+      "submitTime": "2026-06-08 17:17:50.000000"
+    },
+    {
+      "subId": 221,
+      "taskId": 375,
+      "taskCode": "SG06020626",
+      "year": 2026,
+      "oldHandler": 120030,
+      "newHandler": 110255,
+      "submitTime": "2026-06-08 17:21:30.000000"
+    },
+    {
+      "subId": 233,
+      "taskId": 74,
+      "taskCode": "SG01020526",
+      "year": 2026,
+      "oldHandler": 121111,
+      "newHandler": 110314,
+      "submitTime": "2026-06-09 09:35:42.000000"
+    },
+    {
+      "subId": 234,
+      "taskId": 204,
+      "taskCode": "SG03020826",
+      "year": 2026,
+      "oldHandler": 110314,
+      "newHandler": 210011,
+      "submitTime": "2026-06-09 09:37:24.000000"
+    },
+    {
+      "subId": 235,
+      "taskId": 272,
+      "taskCode": "SG04020726",
+      "year": 2026,
+      "oldHandler": 121360,
+      "newHandler": 110274,
+      "submitTime": "2026-06-09 09:38:40.000000"
+    },
+    {
+      "subId": 242,
+      "taskId": 47,
+      "taskCode": "SG01010726",
+      "year": 2026,
+      "oldHandler": 110009,
+      "newHandler": 120796,
+      "submitTime": "2026-06-24 12:53:13.000000"
+    },
+    {
+      "subId": 243,
+      "taskId": 142,
+      "taskCode": "SG02020826",
+      "year": 2026,
+      "oldHandler": 121360,
+      "newHandler": 120311,
+      "submitTime": "2026-06-24 13:07:03.000000"
+    },
+    {
+      "subId": 244,
+      "taskId": 120,
+      "taskCode": "SG02011126",
+      "year": 2026,
+      "oldHandler": 110029,
+      "newHandler": 110255,
+      "submitTime": "2026-06-24 13:11:08.000000"
+    },
+    {
+      "subId": 250,
+      "taskId": 183,
+      "taskCode": "SG03010526",
+      "year": 2026,
+      "oldHandler": 121360,
+      "newHandler": 110274,
+      "submitTime": "2026-06-25 09:36:37.000000"
+    },
+    {
+      "subId": 252,
+      "taskId": 184,
+      "taskCode": "SG03010626",
+      "year": 2026,
+      "oldHandler": 121360,
+      "newHandler": 110274,
+      "submitTime": "2026-06-25 16:59:39.000000"
+    }
+  ],
+  "deletedAchievements": [
+    {
+      "subId": 69,
+      "achId": 75
+    },
+    {
+      "subId": 70,
+      "achId": 76
+    }
+  ]
+}

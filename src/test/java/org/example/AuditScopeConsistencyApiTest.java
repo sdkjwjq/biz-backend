@@ -112,4 +112,18 @@ class AuditScopeConsistencyApiTest {
         assertEquals(logs+1,jdbc.queryForObject("SELECT COUNT(*) FROM biz_audit_log",Long.class));
         assertEquals(110228L,jdbc.queryForObject("SELECT operator_id FROM biz_audit_log WHERE sub_id=? ORDER BY log_id DESC LIMIT 1",Long.class,sub));
     }
+
+    @Test void taskHistoryExcludesEarlierAndOrphanEvidenceWithoutChangingRawLogs() throws Exception {
+        long sub=jdbc.queryForObject("SELECT sub_id FROM biz_material_submission WHERE task_id=930002",Long.class);
+        jdbc.update("UPDATE biz_material_submission SET submit_time='2026-06-24 12:53:13',flow_status=20,current_handler_id=910002 WHERE sub_id=?",sub);
+        jdbc.update("DELETE FROM biz_audit_log WHERE sub_id=?",sub);
+        jdbc.update("INSERT INTO biz_audit_log(sub_id,operator_id,action_type,pre_status,post_status,comment,create_time) VALUES(?,110228,'通过',30,40,'old archive','2026-05-20 17:13:05'),(?,910003,'通过',10,20,'current group approval','2026-06-25 09:28:17')",sub,sub);
+        JsonNode logs=ok(HttpMethod.GET,"/biz/audit/logs/"+sub,admin,null);
+        assertEquals(1,logs.size());assertEquals(20,logs.get(0).path("postStatus").asInt());
+        assertEquals(2,jdbc.queryForObject("SELECT COUNT(*) FROM biz_audit_log WHERE sub_id=?",Integer.class,sub));
+        jdbc.update("INSERT INTO biz_audit_log(sub_id,operator_id,action_type,pre_status,post_status,comment,create_time) VALUES(999900,110228,'通过',30,40,'orphan archive','2026-05-20 17:13:05')");
+        jdbc.update("INSERT INTO biz_material_submission(sub_id,task_id,file_id,reported_value,data_type,submit_by,submit_time,flow_status,current_handler_id,is_delete) VALUES(999900,930003,940001,3,'1',910001,'2026-07-01',20,910002,0)");
+        assertEquals(0,ok(HttpMethod.GET,"/biz/audit/logs/999900",admin,null).size());
+        assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM biz_audit_log WHERE sub_id=999900",Integer.class));
+    }
 }

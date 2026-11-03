@@ -22,6 +22,7 @@ import org.example.utils.BusinessLogUtil;
  * 负责执行定期提醒、清理等后台任务
  */
 @Service
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name="workflow.maintenance",havingValue="false",matchIfMissing=true)
 public class ScheduledTaskService {
 
     private Long ADMIN_ID = 110228L;

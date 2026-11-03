@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/scheduled")
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name="workflow.maintenance",havingValue="false",matchIfMissing=true)
 public class ScheduledTaskController {
 
     @Autowired
