@@ -721,7 +721,7 @@ public class BizService {
         try {
             if (subId == null)
                 throw new RuntimeException("subId为空");
-            BizMaterialSubmission submission = bizMapper.getAuditBySubId(subId);
+            BizMaterialSubmission submission = bizMapper.getAuditBySubIdIncludingDeleted(subId);
             if (submission == null)
                 throw new RuntimeException("审批单不存在");
 
@@ -1886,8 +1886,13 @@ public class BizService {
         for(int start=0;start<taskIds.size();start+=500)
             for(var goal:bizMapper.getForthLevelTasksByParentIds(taskIds.subList(start,Math.min(start+500,taskIds.size()))))
                 goals.computeIfAbsent(goal.getParentId(),id->new ArrayList<>()).add(goal);
+        Map<Long,Long> newest=new HashMap<>();
+        for(var audit:audits)newest.merge(audit.getTaskId(),audit.getSubId(),Math::max);
         for (BizMaterialSubmission audit : audits) {
-            auditVos.add(auditToAuditVo(audit,files.get(audit.getFileId()),goals.getOrDefault(audit.getTaskId(),List.of())));
+            // Only the latest active submission can use current goal values. Historical
+            // submissions retain their own reported aggregate, never today's goal values.
+            boolean current=!Integer.valueOf(1).equals(audit.getIsDelete()) && Objects.equals(newest.get(audit.getTaskId()),audit.getSubId());
+            auditVos.add(auditToAuditVo(audit,files.get(audit.getFileId()),current?goals.getOrDefault(audit.getTaskId(),List.of()):List.of()));
         }
         return auditVos;
     }

@@ -369,7 +369,7 @@ void updateLevel4Task(BizLevel4Task task);
      * @param taskId 任务ID
      * @return 审批单列表
      */
-    @Select("SELECT * FROM biz_material_submission WHERE task_id = #{taskId} AND is_delete = 0 ORDER BY sub_id DESC")
+    @Select("SELECT * FROM biz_material_submission WHERE task_id = #{taskId} ORDER BY sub_id DESC")
     List<BizMaterialSubmission> getAuditsByTaskId(@Param("taskId") Long taskId);
 
     /**

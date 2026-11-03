@@ -122,8 +122,27 @@ class AuditScopeConsistencyApiTest {
         assertEquals(1,logs.size());assertEquals(20,logs.get(0).path("postStatus").asInt());
         assertEquals(2,jdbc.queryForObject("SELECT COUNT(*) FROM biz_audit_log WHERE sub_id=?",Integer.class,sub));
         jdbc.update("INSERT INTO biz_audit_log(sub_id,operator_id,action_type,pre_status,post_status,comment,create_time) VALUES(999900,110228,'通过',30,40,'orphan archive','2026-05-20 17:13:05')");
-        jdbc.update("INSERT INTO biz_material_submission(sub_id,task_id,file_id,reported_value,data_type,submit_by,submit_time,flow_status,current_handler_id,is_delete) VALUES(999900,930003,940001,3,'1',910001,'2026-07-01',20,910002,0)");
+        jdbc.update("INSERT INTO biz_material_submission(sub_id,task_id,file_id,reported_value,data_type,submit_by,submit_dept_id,manage_dept_id,file_suffix,submit_time,flow_status,current_handler_id,is_delete) VALUES(999900,930003,940001,3,'1',910001,920001,920001,'pdf','2026-07-01',20,910002,0)");
         assertEquals(0,ok(HttpMethod.GET,"/biz/audit/logs/999900",admin,null).size());
         assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM biz_audit_log WHERE sub_id=999900",Integer.class));
+    }
+
+    @Test void realPrincipalReturnRetainsReadableHistoryWithoutReopeningTheTodo() throws Exception {
+        long sub=jdbc.queryForObject("SELECT sub_id FROM biz_material_submission WHERE task_id=930002",Long.class);
+        String group=login(910003),principal=login(910002),owner=login(910001);
+        ok(HttpMethod.POST,"/biz/audit",group,Map.of("sub_id",sub,"is_pass",true,"title","Professional approved"));
+        ok(HttpMethod.POST,"/biz/audit",principal,Map.of("sub_id",sub,"is_pass",false,"title","Please supplement the supporting material"));
+        assertEquals(-10,jdbc.queryForObject("SELECT flow_status FROM biz_material_submission WHERE sub_id=?",Integer.class,sub));
+        assertEquals(1,jdbc.queryForObject("SELECT is_delete FROM biz_material_submission WHERE sub_id=?",Integer.class,sub));
+        JsonNode history=ok(HttpMethod.GET,"/biz/audit/task/930002",owner,null);assertEquals(1,history.size());assertEquals(sub,history.get(0).path("subId").asLong());
+        JsonNode logs=ok(HttpMethod.GET,"/biz/audit/logs/"+sub,owner,null);assertEquals(2,logs.size());assertTrue(logs.toString().contains("Please supplement the supporting material"));
+        assertEquals(20,logs.get(0).path("preStatus").asInt());assertEquals(-10,logs.get(0).path("postStatus").asInt());
+        assertEquals(0,ok(HttpMethod.GET,"/biz/audit/todo?countOnly=true",principal,null).asInt());
+        // The base fixture shares a first-level task, so its second reporter can
+        // legitimately read peer tasks. Constrain this account to a distinct task.
+        jdbc.update("INSERT INTO sys_user_permission(user_id,access_mode,permissions_json,scopes_json,version) VALUES(910004,'CUSTOM','{\"tasks.read\":true,\"tasks.history\":true}','{\"tasks\":{\"mode\":\"CUSTOM\",\"items\":[930003]}}',1) ON DUPLICATE KEY UPDATE access_mode=VALUES(access_mode),permissions_json=VALUES(permissions_json),scopes_json=VALUES(scopes_json),version=version+1");
+        var denied=request(HttpMethod.GET,"/biz/audit/logs/"+sub,login(910004),null);
+        assertTrue(Set.of(HttpStatus.FORBIDDEN,HttpStatus.NOT_FOUND).contains(denied.getStatusCode()) || (denied.getStatusCode().is2xxSuccessful() && json.readTree(denied.getBody()).path("code").asInt()>=400),denied.getStatusCode()+" "+denied.getBody());
+        assertFalse(denied.getBody().contains("Please supplement the supporting material"));
     }
 }
