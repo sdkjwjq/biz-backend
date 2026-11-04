@@ -26,6 +26,10 @@ public class FilterOptionReadService {
         switch(domain){
             case "tasks","supervision":{
                 var range=scopes.tasks(actor,"t",year,false);args.addAll(range.args());base=" FROM biz_task t WHERE t.level=3 AND (t.is_delete IS NULL OR t.is_delete<>1) AND ("+range.sql()+")";if(year!=null){base+=" AND t.phase=?";args.add(year);}
+                if(domain.equals("supervision")&&!permissions.supervisesAllReadableTasks(actor)){
+                    base+=" AND (t.auditor_id=? OR t.principal_id=? OR EXISTS(SELECT 1 FROM biz_material_submission s WHERE s.task_id=t.task_id AND COALESCE(s.is_delete,0)=0 AND s.flow_status IN(10,20) AND s.current_handler_id=?))";
+                    args.add(actor);args.add(actor);args.add(actor);
+                }
                 if(Set.of("deptId","leaderId").contains(key)){expr=key.equals("deptId")?"t.dept_id":"t.leader_id";label=key.equals("deptId")?dept(expr):person(expr);return new Source("SELECT DISTINCT "+id(expr)+" value,"+label+" label"+base,args);}
                 if(key.equals("parent"))return new Source("SELECT DISTINCT "+id("t.parent_id")+" value,COALESCE((SELECT p.task_name FROM biz_task p WHERE p.task_id=t.parent_id AND p.level<=3 AND (p.is_delete IS NULL OR p.is_delete<>1)),"+id("t.parent_id")+") label"+base,args);
                 if(key.equals("root"))return taskRoots(base,args);

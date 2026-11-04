@@ -19,7 +19,7 @@ public final class PermissionCatalog {
             add(module,"export","导出");
             if(!List.of("records","budget").contains(module)){add(module,"audit","审核");add(module,"archive","归档");add(module,"withdraw","撤回");add(module,"history","审核记录");}
         }
-        add("tasks","create","新增任务");add("tasks","transfer","任务移交");add("tasks","finish","完结任务");add("tasks","attributes","任务标记与日期");
+        add("tasks","create","新增任务");add("tasks","transfer","任务移交");add("tasks","finish","完结任务");add("tasks","attributes","任务标记与日期");add("tasks","supervise","任务督办");
         add("performance","transfer","绩效移交");add("performance","relations","绩效关联管理");
         add("achievements","delete","删除成果");add("records","delete","删除已提交纪实");
         add("budget","lock","锁定／解锁");add("budget","versions","历史版本");add("budget","restore","恢复版本");

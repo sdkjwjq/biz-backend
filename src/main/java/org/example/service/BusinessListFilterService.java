@@ -96,7 +96,7 @@ public class BusinessListFilterService {
             validateAuditTab(actor,params.getFirst("tab"));
             var p=access.state(actor).permissions();boolean todo=!"done".equals(params.getFirst("tab"));
             if(List.of("tasks","performance","achievements","core").stream().noneMatch(d->todo?p.contains(d+".audit")||p.contains(d+".archive"):p.contains(d+".history")))throw new AdminManagementException(403,"没有审核中心查阅权限");
-        }else access.require(actor,switch(domain){case "tasks","supervision"->"tasks.read";case "performance"->"performance.read";case "achievements"->"achievements.read";case "records"->"records.read";case "core"->"core.read";case "notices"->"messages.read";case "budget-versions"->"budget.versions";case "budget"->"budget.read";default->throw new AdminManagementException(400,"不支持的查询模块");});
+        }else access.require(actor,switch(domain){case "tasks"->"tasks.read";case "supervision"->"tasks.supervise";case "performance"->"performance.read";case "achievements"->"achievements.read";case "records"->"records.read";case "core"->"core.read";case "notices"->"messages.read";case "budget-versions"->"budget.versions";case "budget"->"budget.read";default->throw new AdminManagementException(400,"不支持的查询模块");});
         List<Map<String,Object>> rows=List.of();Map<String,String> names=Map.of(),persons=Map.of(),departments=Map.of();
         switch(domain){
             case "admin-users":return accountFields(rows,Map.of(),Map.of());
@@ -169,14 +169,14 @@ public class BusinessListFilterService {
         if(domain.equals("admin-operations")){access.requireAdmin(actor);return operationData(actor,false);}
         if(domain.equals("admin-departments")){access.requireAdmin(actor);return departmentData();}
         if(domain.equals("budget-versions")){access.require(actor,"budget.versions");return versionData(actor);}
-        access.require(actor,switch(domain){case "tasks"->"tasks.read";case "performance"->"performance.read";case "achievements"->"achievements.read";case "core"->"core.read";case "records"->"records.read";case "notices"->"messages.read";case "supervision"->"tasks.read";default->throw new AdminManagementException(400,"不支持的查询模块");});
+        access.require(actor,switch(domain){case "tasks"->"tasks.read";case "performance"->"performance.read";case "achievements"->"achievements.read";case "core"->"core.read";case "records"->"records.read";case "notices"->"messages.read";case "supervision"->"tasks.supervise";default->throw new AdminManagementException(400,"不支持的查询模块");});
         Integer y=null;if(year!=null&&!year.isBlank()&&!year.equals("missing")){try{y=Integer.valueOf(year);}catch(Exception e){throw new AdminManagementException(400,"年度不正确");}if(y<2025||y>2029)throw new AdminManagementException(400,"请选择2025—2029年度");}
         List<Map<String,Object>> rows;List<Field> fields=new ArrayList<>();List<Map<String,Object>> catalog=new ArrayList<>();
         Map<String,String> person=new HashMap<>(),dept=new HashMap<>();
         var accounts=users.getAllUsers();
         for(var u:accounts)person.put(str(u.getUserId()),u.getNickName()==null?str(u.getUserName()):u.getNickName());
         // Names are returned only for IDs encountered in authorized rows.
-        if(domain.equals("tasks")||domain.equals("supervision")){var source=access.visibleTasks(actor,null);Map<Long,Map<String,Object>> snapshots=new HashMap<>();for(var task:source){var snapshot=row(task);snapshots.put(task.getTaskId(),snapshot);catalog.add(wireRow(task,snapshot));}rows=withinYear(tasks(actor,source,snapshots),year);taskFields(fields,rows,person,dept);if(domain.equals("supervision"))plain(fields,"overdueDays","逾期天数","number",false,"进度与时间");}
+        if(domain.equals("tasks")||domain.equals("supervision")){var source=access.visibleTasks(actor,null);Map<Long,Map<String,Object>> snapshots=new HashMap<>();for(var task:source){var snapshot=row(task);if(Integer.valueOf(3).equals(task.getLevel()))snapshot.put("canSupervise",access.canSuperviseTask(actor,task));snapshots.put(task.getTaskId(),snapshot);catalog.add(wireRow(task,snapshot));}rows=withinYear(tasks(actor,source,snapshots),year);if(domain.equals("supervision"))rows=rows.stream().filter(r->Boolean.TRUE.equals(r.get("canSupervise"))).toList();taskFields(fields,rows,person,dept);if(domain.equals("supervision"))plain(fields,"overdueDays","逾期天数","number",false,"进度与时间");}
         else if(domain.equals("performance")){rows=performances(actor,y,catalog);performanceFields(fields,rows,person,dept);}
         else if(domain.equals("achievements")){rows=withinYear(achievementRows(actor),year);rows.forEach(r->catalog.add(wireRow(r.get("item"))));achievementFields(fields,rows,person,dept);}
         else if(domain.equals("core")){int selectedMonth=month==null||month.isBlank()?LocalDate.now(ZoneId.of("Asia/Shanghai")).getMonthValue():positive(month,1);if(selectedMonth>12)throw new AdminManagementException(400,"月份不正确");rows=coreRows(actor,y==null?2026:y,selectedMonth);coreFields(fields,rows,person);}

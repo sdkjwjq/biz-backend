@@ -99,6 +99,9 @@ public class PermissionService {
         Set<String> codes=new LinkedHashSet<>();if("LEGACY".equals(policy.mode()))codes.addAll(automaticRoles(u));codes.addAll(policy.roles());
         List<PermissionCatalog.Role> active=codes.stream().map(definitions::get).filter(Objects::nonNull).filter(PermissionCatalog.Role::enabled).filter(r->!reviewRoundsInstalled()||!r.code().equals("EXPERT")).toList();
         Set<String> granted=new LinkedHashSet<>();active.forEach(r->granted.addAll(r.permissions()));
+        // Task reviewers and configured school leaders may supervise their readable tasks.
+        // A personal deny still takes precedence; this does not grant arbitrary message sending.
+        if(supervisionAudience(u))granted.add("tasks.supervise");
         policy.overrides().forEach((k,v)->{if(Boolean.TRUE.equals(v))granted.add(k);else granted.remove(k);});
         boolean admin="0".equals(u.getRole());if(admin)granted.addAll(PermissionCatalog.ACTIONS.keySet());
         // 账号、授权和他人评语管理不属于可委派的业务功能。
@@ -147,6 +150,30 @@ public class PermissionService {
         var dept=department(account.getDeptId());
         if(Objects.equals(account.getDeptId(),100L)&&dept!=null&&!Integer.valueOf(1).equals(dept.getIsDelete())&&!"1".equals(dept.getStatus()))return true;
         return cached("leadershipIds",()->new HashSet<>(jdbc.queryForList("SELECT user_id FROM sys_leadership_access WHERE scope IN('ALL','DEPARTMENTS')",Long.class))).contains(account.getUserId());
+    }
+    private boolean supervisionAudience(SysUser account){
+        Long id=account.getUserId();
+        if("0".equals(account.getRole()))return true;
+        if(cached("leadershipIds",()->new HashSet<>(jdbc.queryForList("SELECT user_id FROM sys_leadership_access WHERE scope IN('ALL','DEPARTMENTS')",Long.class))).contains(id))return true;
+        return !taskSupervisionDutyIds(id).isEmpty();
+    }
+    private Set<Long> taskSupervisionDutyIds(Long id){
+        return cached("taskSupervisionDutyIds:"+id,()->new HashSet<>(jdbc.queryForList(
+                "SELECT t.task_id FROM biz_task t WHERE t.level=3 AND COALESCE(t.is_delete,0)<>1 AND (t.auditor_id=? OR t.principal_id=?) " +
+                "UNION SELECT s.task_id FROM biz_material_submission s JOIN biz_task t ON t.task_id=s.task_id " +
+                "WHERE t.level=3 AND COALESCE(t.is_delete,0)<>1 AND COALESCE(s.is_delete,0)=0 AND s.flow_status IN(10,20) AND s.current_handler_id=?",
+                Long.class,id,id,id)));
+    }
+    public boolean canSuperviseTask(Long actor,BizTask task){
+        if(task==null||!Integer.valueOf(3).equals(task.getLevel())||Integer.valueOf(1).equals(task.getIsDelete())||!allowed(actor,"tasks.supervise"))return false;
+        return supervisesAllReadableTasks(actor)||taskSupervisionDutyIds(actor).contains(task.getTaskId());
+    }
+    public boolean supervisesAllReadableTasks(Long actor){
+        if(!allowed(actor,"tasks.supervise"))return false;
+        var state=state(actor);
+        return state.admin()||cached("leadershipIds",()->new HashSet<>(jdbc.queryForList("SELECT user_id FROM sys_leadership_access WHERE scope IN('ALL','DEPARTMENTS')",Long.class))).contains(actor)
+                ||state.roles().stream().anyMatch(role->role.permissions().contains("tasks.supervise"))
+                ||Boolean.TRUE.equals(state.policy().overrides().get("tasks.supervise"));
     }
     public boolean allowed(Long id,String permission){return id!=null&&state(id).permissions().contains(permission);}
     public void require(Long id,String permission){if(!allowed(id,permission))throw new AdminManagementException(403,"没有"+PermissionCatalog.ACTIONS.getOrDefault(permission,"此操作")+"权限");}
