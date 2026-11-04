@@ -38,6 +38,7 @@ class AuditScopeConsistencyApiTest {
     @Autowired JdbcTemplate jdbc;
     @Autowired ObjectMapper json;
     String admin;
+    @Autowired org.example.service.LegacyReviewReturnRepair legacyReturns;
 
     @BeforeEach void seed() throws Exception {
         jdbc.execute((ConnectionCallback<Void>) c->{assertTrue(c.getCatalog().matches("biz_review_test_[0-9a-f]{32}"));
@@ -212,5 +213,76 @@ class AuditScopeConsistencyApiTest {
         }
         assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM biz_material_submission WHERE task_id=930002",Integer.class));
         assertEquals(7,ok(HttpMethod.GET,"/biz/audit/logs/"+sub,login(910001),null).size());
+    }
+
+    private long legacyReturn(long task, int from, String time) {
+        long sub=jdbc.queryForObject("SELECT MAX(sub_id) FROM biz_material_submission WHERE task_id=?",Long.class,task);
+        jdbc.update("UPDATE biz_task SET status='1',current_value=3,progress=30 WHERE task_id=?",task);
+        jdbc.update("UPDATE biz_material_submission SET submit_time='2026-06-08 06:49:16',flow_status=-10,current_handler_id=910001,is_delete=1 WHERE sub_id=?",sub);
+        jdbc.update("INSERT INTO biz_audit_log(sub_id,operator_id,action_type,pre_status,post_status,comment,create_time) VALUES(?,110228,'通过',30,40,'Old legacy archive','2026-05-20 17:13:05'),(?,910003,'通过',10,20,'Original group pass','2026-06-08 18:35:42'),(?,110228,'退回',?,-10,'Actual return',?)",sub,sub,sub,from,time);
+        return sub;
+    }
+
+    @Test void recentLegacyReturnsAreReopenedAtPreviousReviewerWithoutInventedLogsOrChangedValues()throws Exception{
+        long principal=legacyReturn(930002,30,"2026-11-03 17:14:35"),group=legacyReturn(930003,20,"2026-11-04 08:00:00");
+        jdbc.update("INSERT INTO sys_notice(from_user_id,to_user_id,type,title,content,source_type,source_id,trigger_event,is_read,is_delete,create_time) VALUES(110228,910001,'1','任务退回','Old wrong recipient','0',930002,'任务退回','0',0,'2026-11-03 17:14:35')");
+        var beforeLogs=json.writeValueAsString(jdbc.queryForList("SELECT * FROM biz_audit_log ORDER BY log_id"));
+        var beforeValues=json.writeValueAsString(jdbc.queryForList("SELECT task_id,current_value,progress FROM biz_task ORDER BY task_id"));
+        int beforeManagementLogs=jdbc.queryForObject("SELECT COUNT(*) FROM sys_admin_operation_log",Integer.class);
+        var directory=java.nio.file.Files.createTempDirectory("legacy-return-test-");
+        try{
+            var check=legacyReturns.run("check",directory.resolve("check.json"));assertEquals(2,check.get("changes"));assertEquals(0,check.get("blocked"));
+            assertEquals(-10,jdbc.queryForObject("SELECT flow_status FROM biz_material_submission WHERE sub_id=?",Integer.class,principal));
+            legacyReturns.run("apply",directory.resolve("apply.json"));
+            assertEquals(20,jdbc.queryForObject("SELECT flow_status FROM biz_material_submission WHERE sub_id=?",Integer.class,principal));
+            assertEquals(910002L,jdbc.queryForObject("SELECT current_handler_id FROM biz_material_submission WHERE sub_id=?",Long.class,principal));
+            assertEquals(10,jdbc.queryForObject("SELECT flow_status FROM biz_material_submission WHERE sub_id=?",Integer.class,group));
+            assertEquals(910003L,jdbc.queryForObject("SELECT current_handler_id FROM biz_material_submission WHERE sub_id=?",Long.class,group));
+            assertEquals(0,jdbc.queryForObject("SELECT SUM(is_delete) FROM biz_material_submission WHERE sub_id IN(?,?)",Integer.class,principal,group));
+            assertEquals(beforeLogs,json.writeValueAsString(jdbc.queryForList("SELECT * FROM biz_audit_log ORDER BY log_id")));
+            assertEquals(beforeValues,json.writeValueAsString(jdbc.queryForList("SELECT task_id,current_value,progress FROM biz_task ORDER BY task_id")));
+            assertEquals("2",jdbc.queryForObject("SELECT status FROM biz_task WHERE task_id=930002",String.class));
+            assertEquals("2",jdbc.queryForObject("SELECT status FROM biz_task WHERE task_id=930001",String.class));
+            assertEquals(1,jdbc.queryForObject("SELECT is_delete FROM sys_notice WHERE content='Old wrong recipient'",Integer.class));
+            int notices=jdbc.queryForObject("SELECT COUNT(*) FROM sys_notice",Integer.class);
+            assertEquals(0,legacyReturns.run("apply",directory.resolve("repeat.json")).get("changes"));
+            assertEquals(notices,jdbc.queryForObject("SELECT COUNT(*) FROM sys_notice",Integer.class));
+            assertEquals(1,ok(HttpMethod.GET,"/biz/audit/todo?countOnly=true",login(910002),null).asInt());
+            assertEquals(beforeManagementLogs,jdbc.queryForObject("SELECT COUNT(*) FROM sys_admin_operation_log",Integer.class));
+            ok(HttpMethod.POST,"/biz/audit",login(910002),Map.of("sub_id",principal,"is_pass",true,"title","Re-review original submission"));
+            ok(HttpMethod.POST,"/biz/audit",admin,Map.of("sub_id",principal,"is_pass",true,"title","Archive after real re-review"));
+            assertEquals(40,jdbc.queryForObject("SELECT flow_status FROM biz_material_submission WHERE sub_id=?",Integer.class,principal));
+        } finally {try(var files=java.nio.file.Files.list(directory)){for(var file:files.toList())java.nio.file.Files.delete(file);}java.nio.file.Files.delete(directory);}
+    }
+
+    @Test void legacyRepairLeavesEarlierReturnsWithdrawalsAndNewerSubmissionsClosed()throws Exception{
+        long old=legacyReturn(930002,30,"2026-11-02 23:59:59"),withdrawn=legacyReturn(930003,30,"2026-11-03 17:00:00"),resubmitted=legacyReturn(930004,20,"2026-11-03 17:00:00");
+        jdbc.update("INSERT INTO biz_audit_log(sub_id,operator_id,action_type,pre_status,post_status,comment,create_time) VALUES(?,910001,'撤回提交',20,-20,'Latest withdrawal','2026-11-04 09:00:00')",withdrawn);
+        jdbc.update("INSERT INTO biz_material_submission(task_id,file_id,reported_value,data_type,submit_by,submit_dept_id,manage_dept_id,file_suffix,submit_time,flow_status,current_handler_id,is_delete) VALUES(930004,940001,3,'1',910001,920001,920001,'pdf','2026-11-04 09:00:00',10,910003,0)");
+        var directory=java.nio.file.Files.createTempDirectory("legacy-return-excluded-");
+        try {assertEquals(0,legacyReturns.run("apply",directory.resolve("apply.json")).get("changes"));
+            assertEquals(3,jdbc.queryForObject("SELECT COUNT(*) FROM biz_material_submission WHERE sub_id IN(?,?,?) AND flow_status=-10 AND is_delete=1",Integer.class,old,withdrawn,resubmitted));
+        }finally{try(var files=java.nio.file.Files.list(directory)){for(var file:files.toList())java.nio.file.Files.delete(file);}java.nio.file.Files.delete(directory);}
+    }
+
+    @Test void legacyRepairBlocksIncompleteEvidenceAndInvalidRecipientWithoutPartialChanges()throws Exception{
+        long good=legacyReturn(930002,30,"2026-11-03 17:00:00"),bad=legacyReturn(930003,20,"2026-11-03 17:00:00");
+        jdbc.update("UPDATE biz_task SET auditor_id=NULL,current_value=0 WHERE task_id=930003");
+        var directory=java.nio.file.Files.createTempDirectory("legacy-return-blocked-");
+        try {assertEquals(1,legacyReturns.run("check",directory.resolve("check.json")).get("blocked"));
+            assertThrows(IllegalStateException.class,()->legacyReturns.run("apply",directory.resolve("apply.json")));
+            assertEquals(2,jdbc.queryForObject("SELECT COUNT(*) FROM biz_material_submission WHERE sub_id IN(?,?) AND flow_status=-10 AND is_delete=1",Integer.class,good,bad));
+        }finally{try(var files=java.nio.file.Files.list(directory)){for(var file:files.toList())java.nio.file.Files.delete(file);}java.nio.file.Files.delete(directory);}
+    }
+
+    @Test void legacyRepairRollsBackIfThePrivateBackupReportCannotBeWritten()throws Exception{
+        long sub=legacyReturn(930002,30,"2026-11-03 17:00:00");
+        int notices=jdbc.queryForObject("SELECT COUNT(*) FROM sys_notice",Integer.class);
+        var directory=java.nio.file.Files.createTempDirectory("legacy-return-report-failure-");
+        try {assertThrows(java.io.IOException.class,()->legacyReturns.run("apply",directory.resolve("missing/report.json")));
+            assertEquals(-10,jdbc.queryForObject("SELECT flow_status FROM biz_material_submission WHERE sub_id=?",Integer.class,sub));
+            assertEquals("1",jdbc.queryForObject("SELECT status FROM biz_task WHERE task_id=930002",String.class));
+            assertEquals(notices,jdbc.queryForObject("SELECT COUNT(*) FROM sys_notice",Integer.class));
+        }finally{java.nio.file.Files.delete(directory);}
     }
 }
