@@ -181,11 +181,15 @@ public class BudgetService {
         validateExcel(file);
         String part = normalizeSection(section);
 
+        BizBudgetSheet sheet = budgetMapper.getSheetForUpdate(year, month, part);
+        if (sheet != null && Integer.valueOf(1).equals(sheet.getLocked())) {
+            throw new AdminManagementException(409, "预算已锁定，请先由管理员解锁后再导入");
+        }
+
         ParsedBudget parsed = parse(file);
         Long fileId = saveFile(file, userId);
         Date now = new Date();
 
-        BizBudgetSheet sheet = budgetMapper.getSheetForUpdate(year, month, part);
         if (sheet == null) {
             sheet = new BizBudgetSheet();
             sheet.setYear(year);
@@ -327,7 +331,11 @@ public class BudgetService {
 
     @Transactional
     public BudgetSheetVO updateLock(Integer year, Integer month, String section, Boolean locked, Long userId) {
-        if(permissions.enforced(userId))permissions.require(userId,"budget.lock");else validateAdmin(userId);
+        if (Boolean.TRUE.equals(locked)) {
+            if(permissions.enforced(userId))permissions.require(userId,"budget.lock");else validateAdmin(userId);
+        } else {
+            validateUnlockAdmin(userId);
+        }
         validateYearMonth(year, month);
         String part = normalizeSection(section);
         BizBudgetSheet sheet = budgetMapper.getSheetForUpdate(year, month, part);
@@ -595,6 +603,15 @@ public class BudgetService {
         if (user == null || !"0".equals(user.getRole()) || !"1".equals(user.getStatus())
                 || Integer.valueOf(1).equals(user.getIsDelete())) {
             throw new RuntimeException("仅管理员可以操作预算");
+        }
+    }
+
+    /** 解锁预算只允许管理员操作；即使配置了 budget.lock 权限也不允许解锁。 */
+    private void validateUnlockAdmin(Long userId) {
+        SysUser user = userId == null ? null : sysMapper.getUserById(userId);
+        if (user == null || !"0".equals(user.getRole()) || !"1".equals(user.getStatus())
+                || Integer.valueOf(1).equals(user.getIsDelete())) {
+            throw new AdminManagementException(403, "仅管理员可以解锁预算，请联系管理员");
         }
     }
 

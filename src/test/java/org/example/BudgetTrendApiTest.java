@@ -329,6 +329,7 @@ class BudgetTrendApiTest {
         jdbc.update("UPDATE biz_budget_task_item SET core_output='Keep original indicator',target_value='23',achieved='7',budget_amount=77,goods_budget=55 WHERE sheet_id=970001");
         var output=new org.springframework.mock.web.MockHttpServletResponse();budgets.exportBudget(2026,1,"annual",output);
         var file=new org.springframework.mock.web.MockMultipartFile("file","annual.xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",output.getContentAsByteArray());
+        budgets.updateLock(2026,1,"annual",false,ADMIN);
         var imported=budgets.importBudget(2026,1,"annual",file,ADMIN);
         var task=imported.getTasks().get(0);
         assertEquals(10,task.getAmount().intValue());assertEquals(1,task.getGoods().intValue());

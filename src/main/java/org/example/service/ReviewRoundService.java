@@ -35,7 +35,7 @@ public class ReviewRoundService {
  private Map<String,Object> info(BizTask t){return map("taskId",t.getTaskId(),"parentId",t.getParentId(),"taskCode",t.getTaskCode(),"taskName",t.getTaskName(),"level",t.getLevel(),"year",t.getPhase(),"targetValue",t.getTargetValue(),"currentValue",t.getCurrentValue(),"progress",t.getProgress(),"status",t.getStatus(),"dataType",t.getDataType());}
  private String status(Map<String,Object> r){return !published(r)?"DRAFT":now().isBefore(date(r.get("starts_at")))?"UPCOMING":inPeriod(r)?"ACTIVE":"ENDED";}
  private Map<String,Object> view(Map<String,Object> r){var v=new LinkedHashMap<>(r);v.put("status",status(r));v.put("startsAt",date(r.get("starts_at")).toString());v.put("endsAt",date(r.get("ends_at")).toString());return v;}
- public record RoundInput(String name,Integer year,LocalDateTime startsAt,LocalDateTime endsAt,String description,Long version,String reason){}
+ @com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true) public record RoundInput(String name,Integer year,LocalDateTime startsAt,LocalDateTime endsAt,String description,Long version,String reason){}
  public record Members(Long version,List<Long> userIds,String reason){}
  public record ScopeInput(Long version,List<Long> userIds,List<Long> taskIds,String reason){}
  public record Change(Long version,String reason){}

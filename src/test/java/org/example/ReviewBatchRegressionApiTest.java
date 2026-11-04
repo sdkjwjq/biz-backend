@@ -240,6 +240,9 @@ class ReviewBatchRegressionApiTest {
             assertEquals("IMPORT", versions.get(0).path("operationType").asText());
             assertTrue(versions.get(0).path("current").asBoolean());
 
+            assertEquals(HttpStatus.CONFLICT,uploadBudget(admin,2029,11,secondFile).getStatusCode());
+            assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM biz_budget_import_version",Integer.class));
+            assertEquals(HttpStatus.OK,request(HttpMethod.POST,"/budget/lock?year=2029&month=11&locked=false",admin,null).getStatusCode());
             JsonNode second = body(uploadBudget(admin, 2029, 11, secondFile));
             assertEquals(0, decimal(second.path("sources").get(0).path("available")).compareTo(new BigDecimal("222.50")));
             versions = body(request(HttpMethod.GET, "/budget/versions?year=2029&month=11", admin, null));
@@ -273,6 +276,7 @@ class ReviewBatchRegressionApiTest {
                     .path("budget").path("sources").get(0).path("available")).compareTo(new BigDecimal("222.50")),
                     "恢复后原第二版快照必须保持不变");
 
+            assertEquals(HttpStatus.OK,request(HttpMethod.POST,"/budget/lock?year=2029&month=11&locked=false",admin,null).getStatusCode());
             jdbc.execute("CREATE TRIGGER review_budget_version_failure BEFORE INSERT ON biz_budget_import_version "
                     + "FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='budget version rollback failure'");
             try {
@@ -301,6 +305,7 @@ class ReviewBatchRegressionApiTest {
                 jdbc.update("UPDATE sys_user SET dept_id=? WHERE user_id=?",dept,USER);
                 JsonNode access=body(request(HttpMethod.GET,"/system/access",token,null));
                 assertTrue(access.path("canViewBudget").asBoolean());assertTrue(access.path("canFillBudget").asBoolean());assertFalse(access.path("isAdmin").asBoolean());
+                if(dept==100L)assertEquals(HttpStatus.OK,request(HttpMethod.POST,"/budget/lock?year=2026&month=9&locked=false",login(ADMIN),null).getStatusCode());
                 assertTrue(body(uploadBudget(token,2026,9,file)).has("sheet"));
                 JsonNode versions=body(request(HttpMethod.GET,"/budget/versions?year=2026&month=9",token,null));assertTrue(versions.isArray());
                 long version=versions.get(0).path("versionId").asLong();
@@ -337,6 +342,26 @@ class ReviewBatchRegressionApiTest {
         jdbc.update("UPDATE biz_achievement SET audit_status=30 WHERE ach_id=?",id);
         assertTrue(body(request(HttpMethod.GET,"/achievement/"+id,uploader,null)).path("rejectionReason").isNull());
         assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM biz_achievement_audit_log WHERE post_status<0",Integer.class));
+    }
+
+    @Test void lockedBudgetRejectsEveryImporterBeforeWritingAndOnlyAdminCanUnlock() throws Exception {
+        jdbc.update("INSERT INTO sys_dept(dept_id,dept_name,status,is_delete) VALUES(104,'Synthetic finance','0',0)");
+        jdbc.update("UPDATE sys_user SET dept_id=104 WHERE user_id=?",USER);
+        String finance=login(USER),admin=login(ADMIN);Path file=budgetWorkbook("locked-import",123.45);
+        try {
+            var imported=body(uploadBudget(finance,2029,10,file));assertEquals(1,imported.path("sheet").path("locked").asInt());
+            int versions=jdbc.queryForObject("SELECT COUNT(*) FROM biz_budget_import_version",Integer.class),files=jdbc.queryForObject("SELECT COUNT(*) FROM sys_file",Integer.class);
+            for(String token:List.of(finance,admin)){
+                var rejected=uploadBudget(token,2029,10,file);assertEquals(HttpStatus.CONFLICT,rejected.getStatusCode());assertTrue(rejected.getBody().contains("预算已锁定"));
+            }
+            assertEquals(versions,jdbc.queryForObject("SELECT COUNT(*) FROM biz_budget_import_version",Integer.class));assertEquals(files,jdbc.queryForObject("SELECT COUNT(*) FROM sys_file",Integer.class));
+            jdbc.update("INSERT INTO sys_user_permission(user_id,access_mode,permissions_json,scopes_json,version) VALUES(?,'CUSTOM','{\"budget.read\":true,\"budget.fill\":true,\"budget.lock\":true}','{\"budget\":{\"mode\":\"ALL\"}}',1) ON DUPLICATE KEY UPDATE access_mode=VALUES(access_mode),permissions_json=VALUES(permissions_json),scopes_json=VALUES(scopes_json),version=version+1",USER);
+            assertEquals(HttpStatus.FORBIDDEN,request(HttpMethod.POST,"/budget/lock?year=2029&month=10&locked=false",finance,null).getStatusCode());
+            assertEquals(HttpStatus.OK,request(HttpMethod.POST,"/budget/lock?year=2029&month=10&locked=false",admin,null).getStatusCode());
+            assertEquals(0,body(request(HttpMethod.GET,"/budget?year=2029&month=10",admin,null)).path("sheet").path("locked").asInt());
+            assertEquals(1,body(uploadBudget(finance,2029,10,file)).path("sheet").path("locked").asInt());
+            assertEquals(versions+1,jdbc.queryForObject("SELECT COUNT(*) FROM biz_budget_import_version",Integer.class));
+        } finally {Files.deleteIfExists(file);}
     }
 
     private ResponseEntity<String> uploadBudget(String token, int year, int month, Path file) {

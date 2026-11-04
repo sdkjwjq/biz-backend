@@ -48,6 +48,15 @@ class ReviewRoundApiTest {
  JsonNode detail(JsonNode r,long task,String token)throws Exception{return get("/review-work/"+id(r)+"/tasks/"+task,token);}
  Map<String,Object> opinion(JsonNode d,boolean submit,String text,String result){return Map.of("roundVersion",d.path("round").path("version").asLong(),"version",d.path("version").asLong(),"text",text,"result",result,"scopeToken",d.path("scopeToken").asText(),"submit",submit);}
  JsonNode save(JsonNode r,long task,String token,boolean submit,String text,String result)throws Exception{return ok(call(HttpMethod.POST,"/review-work/"+id(r)+"/tasks/"+task,token,opinion(detail(r,task,token),submit,text,result)));}
+ @Test void roundEditAcceptsLegacyBodyIdButKeepsVersionAndUrlTargetChecks()throws Exception{
+  var r=round(2026,now().plusHours(1),now().plusHours(2));
+  Map<String,Object> payload=new LinkedHashMap<>();payload.put("id",id(r)+1000);payload.put("name","Updated round");payload.put("year",2026);payload.put("startsAt",r.path("startsAt").asText());payload.put("endsAt",r.path("endsAt").asText());payload.put("description","Updated through original edit form");payload.put("version",r.path("version").asLong());payload.put("reason","修正评审说明");
+  var edited=ok(call(HttpMethod.PUT,"/admin/review-tasks/"+id(r),admin,payload));
+  assertEquals(id(r),id(edited));assertEquals("Updated round",edited.path("name").asText());assertEquals(r.path("version").asLong()+1,edited.path("version").asLong());
+  assertEquals(409,call(HttpMethod.PUT,"/admin/review-tasks/"+id(r),admin,payload).getStatusCode().value());
+  assertEquals(1,db.queryForObject("SELECT COUNT(*) FROM biz_review_round",Integer.class));
+  assertEquals(1,db.queryForObject("SELECT COUNT(*) FROM sys_admin_operation_log WHERE action='ROUND_UPDATE'",Integer.class));
+ }
  @Test void loginChoiceAndServerModeCannotBeBypassed()throws Exception{
   String pending=login(110228);assertEquals("SELECT",get("/system/review-context",pending).path("experience").asText());assertEquals(403,call(HttpMethod.GET,"/biz/tasks",pending,null).getStatusCode().value());
   String chosen=switchTo(pending,"BUSINESS");assertEquals(401,call(HttpMethod.GET,"/system/review-context",pending,null).getStatusCode().value());assertEquals(200,call(HttpMethod.GET,"/admin/review-tasks",chosen,null).getStatusCode().value());
