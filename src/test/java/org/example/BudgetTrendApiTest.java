@@ -315,6 +315,29 @@ class BudgetTrendApiTest {
         assertEquals(403,request(HttpMethod.POST,"/budget/copy-section?year=2026&month=3&from=annual&to=execution",login(OWNER),null).getStatusCode().value());
     }
 
+    @Test void blankYearTemplateHasCompleteStructureAndCanBeImported() throws Exception {
+        var output=new org.springframework.mock.web.MockHttpServletResponse();budgets.templateBudget(2028,5,"execution",output);
+        try(var workbook=org.apache.poi.ss.usermodel.WorkbookFactory.create(new java.io.ByteArrayInputStream(output.getContentAsByteArray()))){
+            var sheet=workbook.getSheetAt(0);
+            assertEquals("2028年年度预算执行模板",sheet.getSheetName());
+            assertEquals("学校自筹资金",sheet.getRow(0).getCell(12).getStringCellValue());
+            assertTrue(sheet.getMergedRegions().stream().anyMatch(r->r.getFirstRow()==0&&r.getFirstColumn()==12&&r.getLastColumn()==13));
+            for(var row:sheet)for(var cell:row)assertNotEquals(org.apache.poi.ss.usermodel.CellType.NUMERIC,cell.getCellType(),"Template must not contain business amounts or fake zeros");
+        }
+        var imported=budgets.importBudget(2028,5,"execution",new org.springframework.mock.web.MockMultipartFile("file","template.xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",output.getContentAsByteArray()),ADMIN);
+        assertEquals(5,imported.getSources().size());assertEquals(10,imported.getTasks().size());
+    }
+
+    @Test void mergedSourceColumnsRoundTripEveryFundingSource() throws Exception {
+        month(1,1);jdbc.update("UPDATE biz_budget_source_item SET source_name='学校自筹资金' WHERE sheet_id=970001");
+        jdbc.update("INSERT INTO biz_budget_source_item(sheet_id,source_key,source_name,display_order,annual_plan) VALUES(970001,'central','中央财政投入资金',2,321)");
+        var output=new org.springframework.mock.web.MockHttpServletResponse();budgets.exportBudget(2026,1,"annual",output);
+        var imported=budgets.importBudget(2026,2,"annual",new org.springframework.mock.web.MockMultipartFile("file","roundtrip.xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",output.getContentAsByteArray()),ADMIN);
+        assertEquals(2,imported.getSources().size());
+        assertEquals(321,imported.getSources().stream().filter(s->s.getSourceKey().equals("central")).findFirst().orElseThrow().getAnnualPlan().intValue());
+        assertEquals(120,imported.getSources().stream().filter(s->s.getSourceKey().equals("school")).findFirst().orElseThrow().getAnnualPlan().intValue());
+    }
+
     @Test void exportedExecutionReimportsActualAmountInsteadOfReadonlyBudgetAmount() throws Exception {
         month(1,1);jdbc.update("UPDATE biz_budget_source_item SET source_name='学校自筹资金' WHERE sheet_id=970001");var execution=budgets.copySection(2026,1,"annual","execution",ADMIN);jdbc.update("UPDATE biz_budget_task_item SET amount=8 WHERE sheet_id=?",execution.getSheet().getSheetId());
         var output=new org.springframework.mock.web.MockHttpServletResponse();budgets.exportBudget(2026,1,"execution",output);

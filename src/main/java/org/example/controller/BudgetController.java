@@ -117,6 +117,19 @@ public class BudgetController {
         }
     }
 
+    @GetMapping("/template")
+    public Object templateBudget(@RequestParam("year") Integer year,
+                                 @RequestParam(value="month", defaultValue="5") Integer month,
+                                 @RequestParam(value="section", defaultValue="annual") String section,
+                                 HttpServletResponse response) {
+        try {
+            budgetService.templateBudget(year, month, section, response);
+            return null;
+        } catch (Exception e) {
+            var authorizationError=org.example.config.PermissionErrors.response(e);if(authorizationError!=null)return authorizationError;
+            return new ErrorVO(e.getMessage(), 500);
+        }
+    }
     @GetMapping("/versions")
     public Object versions(@RequestParam("year") Integer year,
                            @RequestParam("month") Integer month,

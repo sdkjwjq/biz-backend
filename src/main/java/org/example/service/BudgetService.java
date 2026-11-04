@@ -421,13 +421,55 @@ public class BudgetService {
     public void exportBudget(Integer year, Integer month, String section, HttpServletResponse response) throws IOException {
         BudgetSheetVO vo = getBudget(year, month, section);
         boolean execution="execution".equals(section);
-        String tableName=year+"年"+(execution?"年度预算执行":"年度预算");
+        writeBudgetWorkbook(vo, year, execution, year+"年"+(execution?"年度预算执行":"年度预算"), false, response);
+    }
+
+    /** 下载与页面同列的导入模板：结构与年度预算执行表一致，金额与指标值留空。 */
+    public void templateBudget(Integer year, Integer month, String section, HttpServletResponse response) throws IOException {
+        validateYearMonth(year, month);
+        String part=normalizeSection(section);
+        boolean execution="execution".equals(part);
+        var sheet=budgetMapper.getSheet(year, month, part);
+        BudgetSheetVO source=sheet==null?new BudgetSheetVO():toVO(sheet);
+        BudgetSheetVO template=blankBudget(source);
+        writeBudgetWorkbook(template, year, execution, year+"年"+(execution?"年度预算执行模板":"年度预算模板"), true, response);
+    }
+
+    private BudgetSheetVO blankBudget(BudgetSheetVO source) {
+        BudgetSheetVO vo=new BudgetSheetVO();
+        List<BizBudgetSourceItem> sources=new java.util.ArrayList<>();
+        if(source.getSources()!=null)for(BizBudgetSourceItem item:source.getSources()){
+            BizBudgetSourceItem copy=new BizBudgetSourceItem();
+            copy.setSourceKey(item.getSourceKey());
+            copy.setSourceName(item.getSourceName());
+            copy.setDisplayOrder(item.getDisplayOrder());
+            sources.add(copy);
+        }
+        List<BizBudgetTaskItem> tasks=new java.util.ArrayList<>();
+        if(source.getTasks()!=null)for(BizBudgetTaskItem item:source.getTasks()){
+            BizBudgetTaskItem copy=new BizBudgetTaskItem();
+            copy.setTaskIndex(item.getTaskIndex());
+            copy.setTaskName(item.getTaskName());
+            tasks.add(copy);
+        }
+        vo.setSources(sources);
+        vo.setTasks(tasks);
+        if(sources.isEmpty()) {
+            String[] names={"中央财政投入资金","地方财政投入资金","举办方投入资金","行业企业支持资金","学校自筹资金"};
+            for(int i=0;i<names.length;i++){var item=new BizBudgetSourceItem();item.setSourceName(names[i]);item.setSourceKey(sourceKey(names[i]));item.setDisplayOrder(i+1);sources.add(item);}
+        }
+        if(tasks.isEmpty())for(int i=1;i<=10;i++){var item=new BizBudgetTaskItem();item.setTaskIndex(i);item.setTaskName("改革任务"+i);tasks.add(item);}
+        return vo;
+    }
+
+    private void writeBudgetWorkbook(BudgetSheetVO vo, Integer year, boolean execution, String tableName, boolean template, HttpServletResponse response) throws IOException {
         try (Workbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet(tableName);
             writeRow(sheet, 0, "", execution ? "采集信息的维度" : "资金来源", "", "合计数");
             List<BizBudgetSourceItem> sources = vo.getSources();
             for (int i = 0; i < sources.size(); i++) {
-                sheet.getRow(0).createCell(4 + i).setCellValue(sources.get(i).getSourceName());
+                // 页面上每个资金来源列宽等于两个任务列，导出时按两列一组放置，与下方任务列对齐
+                sheet.getRow(0).createCell(4 + i * 2).setCellValue(sources.get(i).getSourceName());
             }
             writeSourceRow(sheet, 1, "预算安排（万元）", "五年项目总预算", sources, "fiveYearTotal");
             writeSourceRow(sheet, 2, "", year + "年可使用资金", sources, "available");
@@ -476,9 +518,23 @@ public class BudgetService {
             }
             // 左侧分组标签纵向合并，和页面表格保持一致的层级
             mergeGroupLabels(sheet, base, execution, row - 1);
+            // 每个资金来源横向合并两列，与页面「资金来源列宽 = 2 个任务列」一致
+            mergeSourceColumns(sheet, 0, 5, sources.size());
             // 统一列宽/换行/边框，保证长任务名与长指标名称完整显示
-            styleBudgetSheet(workbook, sheet, base, execution, row - 1, tasks.size());
+            int dataColumns=Math.max(sources.size()*2,tasks.size());
+            styleBudgetSheet(workbook, sheet, base, execution, row - 1, dataColumns, template);
 
+            if (template) {
+                // 模板只保留列结构：金额与指标值留空，避免被误认为已有数据
+                for (int r = 1; r < row; r++) {
+                    Row dataRow = sheet.getRow(r);
+                    if (dataRow == null) continue;
+                    for (int c = 3; c < 4 + dataColumns; c++) {
+                        Cell cell = dataRow.getCell(c);
+                        if (cell != null && cell.getCellType() == org.apache.poi.ss.usermodel.CellType.NUMERIC) cell.setBlank();
+                    }
+                }
+            }
             String filename = tableName + ".xlsx";
             response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
             response.setHeader("Content-Disposition", "attachment; filename=\"" + URLEncoder.encode(filename, StandardCharsets.UTF_8.name()) + "\"");
@@ -901,7 +957,7 @@ public class BudgetService {
         row.createCell(3).setCellValue(sources.stream().map(getter).filter(Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add).doubleValue());
         for (int i = 0; i < sources.size(); i++) {
             BigDecimal value = getter.apply(sources.get(i));
-            row.createCell(4 + i).setCellValue(value == null ? 0 : value.doubleValue());
+            row.createCell(4 + i * 2).setCellValue(value == null ? 0 : value.doubleValue());
         }
     }
 
@@ -977,6 +1033,9 @@ public class BudgetService {
         // 上半张表：预算安排（万元）纵向合并 4 行
         labelCell(sheet, 1, "预算安排（万元）");
         sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(1, 4, 0, 0));
+        // 上半张表：标签跨 B、C 两列合并，与页面表头 colspan=2 一致
+        sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(0, 0, 1, 2));
+        for (int r = 1; r <= 5; r++) sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(r, r, 1, 2));
         int amountRow = headerRow + (execution ? 2 : 1);
         labelCell(sheet, headerRow, "资金支持方向");
         sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(headerRow, amountRow, 0, 0));
@@ -985,10 +1044,22 @@ public class BudgetService {
         int expenseEnd = expenseStart + expenseCount - 1;
         labelCell(sheet, expenseStart, "支出经济分类");
         sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(expenseStart, expenseEnd, 0, 0));
+        // 下半张表：每一行的标签同样跨 B、C 两列
+        for (int r = headerRow; r <= lastRow; r++) sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(r, r, 1, 2));
         int effectStart = expenseEnd + 1;
         if (execution) {
             labelCell(sheet, effectStart, "资金使用有效性：选取一个最具代表性的核心产出指标");
             sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(effectStart, lastRow, 0, 0));
+        }
+    }
+
+    /** 上表每个资金来源占两列（与页面一致），横向合并后写入左格。 */
+    private void mergeSourceColumns(Sheet sheet, int firstRow, int lastRow, int sourceCount) {
+        for (int r = firstRow; r <= lastRow; r++) {
+            for (int i = 0; i < sourceCount; i++) {
+                int first = 4 + i * 2;
+                sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(r, r, first, first + 1));
+            }
         }
     }
 
@@ -1000,7 +1071,7 @@ public class BudgetService {
         cell.setCellValue(value);
     }
 
-    private void styleBudgetSheet(Workbook workbook, Sheet sheet, int headerRow, boolean execution, int lastRow, int taskCount) {
+    private void styleBudgetSheet(Workbook workbook, Sheet sheet, int headerRow, boolean execution, int lastRow, int taskCount, boolean template) {
         // 导出不加任何装饰样式（无颜色填充、无边框、无加粗），只保留列宽、数字格式与自动换行
         sheet.setColumnWidth(0, 20 * 256);
         sheet.setColumnWidth(1, 30 * 256);
@@ -1018,13 +1089,28 @@ public class BudgetService {
         textStyle.setVerticalAlignment(VerticalAlignment.CENTER);
         textStyle.setWrapText(true);
 
+        // 模板与页面表格保持一致：金额右对齐、文字左对齐、标签与表头居中
+        CellStyle numberStyle = workbook.createCellStyle();
+        numberStyle.setDataFormat(workbook.createDataFormat().getFormat("#,##0.00"));
+        numberStyle.setAlignment(HorizontalAlignment.RIGHT);
+        numberStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+
+        CellStyle textLeftStyle = workbook.createCellStyle();
+        textLeftStyle.setAlignment(HorizontalAlignment.LEFT);
+        textLeftStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+        textLeftStyle.setWrapText(true);
+
         for (int r = 0; r <= lastRow; r++) {
             Row row = sheet.getRow(r);
             if (row == null) row = sheet.createRow(r);
+            boolean moneyRow = (r >= 1 && r <= 5) || (r >= headerRow + 1 && r <= headerRow + 5);
+            boolean textRow = r >= headerRow + 6;
             for (int c = 0; c < 4 + taskCount; c++) {
                 Cell cell = row.getCell(c);
                 if (cell == null) cell = row.createCell(c);
-                if (cell.getCellType() == CellType.NUMERIC) cell.setCellStyle(moneyStyle);
+                if (template && moneyRow && c >= 3) cell.setCellStyle(numberStyle);
+                else if (template && textRow && c >= 4) cell.setCellStyle(textLeftStyle);
+                else if (cell.getCellType() == CellType.NUMERIC) cell.setCellStyle(moneyStyle);
                 else cell.setCellStyle(textStyle);
             }
             fitTextRowHeight(sheet, r, 0, 3 + taskCount);
