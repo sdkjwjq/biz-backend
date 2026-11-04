@@ -364,7 +364,7 @@ class CoreIndicatorApiTest {
     }
     @Test void previousYearArchiveAndDepartmentAreDisplayedAndPrefilledWithoutBanningLaterReports()throws Exception{
         oldCoreArchive(2025,12,6);oldCoreArchive(2026,1,8);String token=login(ADMIN);
-        var row=ok(request(HttpMethod.GET,"/core-indicators?year=2026&month=1",token,null)).get(0);assertEquals("Synthetic department",row.path("deptName").asText());assertEquals(6,row.path("previousYearResult").path("actualValue").asInt());assertEquals(8,row.path("effectiveResult").path("actualValue").asInt());
+        var row=ok(request(HttpMethod.GET,"/core-indicators?year=2026&month=1",token,null)).get(0);assertEquals("Synthetic department",row.path("deptName").asText());assertEquals(LEADER,row.path("principalId").asLong());assertEquals("Reporter "+LEADER,row.path("principalName").asText());assertTrue(row.path("deptLeaderName").isNull());assertEquals(6,row.path("previousYearResult").path("actualValue").asInt());assertEquals(8,row.path("effectiveResult").path("actualValue").asInt());
         var created=draft(token,1);assertEquals(6,created.path("previousYearValue").asInt());assertEquals(0,created.path("flowStatus").asInt());assertEquals(2,jdbc.queryForObject("SELECT COUNT(*) FROM biz_core_report WHERE flow_status=30",Integer.class));assertEquals(7,jdbc.queryForObject("SELECT current_value FROM biz_performance WHERE perf_id=960001",Integer.class));
     }
     @Test void priorYearValuesAreNotLeakedOutsideCoreReadScope()throws Exception{
