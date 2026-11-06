@@ -70,7 +70,7 @@ public class DetailedExportService {
                 if(selected!=null)matched.removeIf(r->!selected.contains(id(r.get("id"))));
                 var rows=matched.stream().map(this::flatten).map(names::enrich).toList();
                 switch(domain){
-                    case "tasks","supervision" -> tasks(book,actor,rows,catalog,names);
+                    case "tasks","supervision" -> tasks(book,actor,rows,catalog,names,scope);
                     case "performance" -> performances(book,actor,rows,names,params);
                     case "achievements" -> achievements(book,actor,rows,names);
                     case "core" -> core(book,actor,rows,names,params);
@@ -86,7 +86,7 @@ public class DetailedExportService {
                 }
             }
             var notes=new ArrayList<Map<String,Object>>(List.of(Map.of("item","模块","value",TITLES.get(domain)),Map.of("item","范围","value",scope.equals("all")?"当前账号获准查看的全部记录，跨年度、跨分页；仍执行各模块权限及草稿隐私规则":"当前已生效筛选条件下的全部命中记录，不限当前页"),Map.of("item","时间","value",LocalDateTime.now(ZoneId.of("Asia/Shanghai")).toString()),Map.of("item","内容","value","各明细表通过ID及编号关联；不包含专家私有评语、密码、Token或附件正文。空值表示未填写或未设置，不代表零。")));
-            if(Set.of("tasks","supervision").contains(domain))notes.add(Map.of("item","任务字段口径","value","建设年度为任务所属年度，不是提交日期的年份。历史填报单未单独保存文字说明，当前完成情况见任务明细。未设置的成果级别、尚未归档的实际完成日期及目录不适用字段留空。"));
+            if(Set.of("tasks","supervision").contains(domain))notes.add(Map.of("item","任务字段口径","value","建设年度为任务所属年度。一级、二级目录的当前筛选范围进度只平均本次命中的三级任务；全部下级任务进度使用完整获准目录数据。三级任务两列相同，均为后端保存进度。任务总数仅统计命中的三级任务。旧审批单未保存的原始四级值不推算。"));
             book.sheet("导出说明","item:项目|value:说明",notes);
             String file=TITLES.get(domain)+(scope.equals("all")?"-全量明细-":"-筛选明细-")+LocalDate.now()+".xlsx";
             response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");response.setHeader("Cache-Control","no-store");
@@ -94,11 +94,24 @@ public class DetailedExportService {
             book.write(response.getOutputStream());
         }
     }
-    private void tasks(AnalysisWorkbook book,Long actor,List<Map<String,Object>> leaves,List<Map<String,Object>> catalog,Names names){
+    private void tasks(AnalysisWorkbook book,Long actor,List<Map<String,Object>> leaves,List<Map<String,Object>> catalog,Names names,String scope){
         var all=catalog.stream().collect(Collectors.toMap(r->id(r.get("taskId")),r->r,(a,b)->a,LinkedHashMap::new));
+        Map<Long,long[]> filtered=new HashMap<>(),complete=new HashMap<>();
+        for(var leaf:leaves)if(id(leaf.get("level"))==3){
+            long key=id(leaf.get("taskId"));long progress=id(leaf.get("progress"));Set<Long> path=new HashSet<>();
+            while(key>0&&path.add(key)){filtered.computeIfAbsent(key,k->new long[2]);
+                var aggregate=filtered.get(key);aggregate[0]+=progress;aggregate[1]++;
+                var node=all.get(key);key=node==null?0:id(node.get("parentId"));}
+        }
+        for(var leaf:catalog)if(id(leaf.get("level"))==3){
+            long key=id(leaf.get("taskId")),progress=id(leaf.get("progress"));Set<Long> path=new HashSet<>();
+            while(key>0&&path.add(key)){var aggregate=complete.computeIfAbsent(key,k->new long[2]);aggregate[0]+=progress;aggregate[1]++;
+                var node=all.get(key);key=node==null?0:id(node.get("parentId"));}
+        }
         Set<Long> wanted=new HashSet<>();for(var leaf:leaves){long key=id(leaf.get("taskId"));Set<Long> seen=new HashSet<>();while(key>0&&seen.add(key)){wanted.add(key);var row=all.get(key);key=row==null?0:id(row.get("parentId"));}}
-        var rows=new ArrayList<Map<String,Object>>();for(var raw:catalog)if(wanted.contains(id(raw.get("taskId")))){var row=names.enrich(raw);var parent=all.get(id(row.get("parentId")));row.put("parentName",parent==null?null:parent.get("taskName"));var current=row;Set<Long> seen=new HashSet<>();while(current!=null&&seen.add(id(current.get("taskId")))){if(id(current.get("level"))==1){row.put("rootName",current.get("taskName"));break;}current=all.get(id(current.get("parentId")));}rows.add(row);}
-        book.sheet("任务明细",TASK,rows);var ids=ids(leaves,"taskId");
+        var rows=new ArrayList<Map<String,Object>>();for(var raw:catalog)if(wanted.contains(id(raw.get("taskId")))){var row=names.enrich(raw);var parent=all.get(id(row.get("parentId")));row.put("parentName",parent==null?null:parent.get("taskName"));var current=row;Set<Long> seen=new HashSet<>();while(current!=null&&seen.add(id(current.get("taskId")))){if(id(current.get("level"))==1){row.put("rootName",current.get("taskName"));break;}current=all.get(id(current.get("parentId")));}long[] aggregate=filtered.get(id(row.get("taskId"))),whole=complete.get(id(row.get("taskId")));row.put("filteredProgress",aggregate==null||aggregate[1]==0?null:Math.min(100,Math.max(0,Math.round((double)aggregate[0]/aggregate[1]))));row.put("allProgress",whole==null||whole[1]==0?row.get("progress"):Math.min(100,Math.max(0,Math.round((double)whole[0]/whole[1]))));rows.add(row);}
+        String columns=scope.equals("filtered")?TASK.replace("progress:计入进度(%)","filteredProgress:当前筛选范围进度(%)|allProgress:全部下级任务进度(%)"):TASK;
+        book.sheet("任务明细",columns,rows);var ids=ids(leaves,"taskId");
         var children=byIds("SELECT * FROM biz_level4_task WHERE COALESCE(is_delete,0)=0 AND parent_id IN (%s) ORDER BY parent_id,task_id",ids);
         for(var child:children){var target=decimal(child.get("targetValue"));var value=decimal(child.get("currentValue"));var actual=target==null||target.signum()<=0||value==null?null:value.multiply(BigDecimal.valueOf(100)).divide(target,8,RoundingMode.HALF_UP);child.put("actualProgress",actual);child.put("countedProgress",actual==null?null:actual.min(BigDecimal.valueOf(100)));}
         book.sheet("四级目标","taskId:四级目标ID|parentId:三级任务ID|parentCode:三级任务编号|parentName:三级任务名称|phase:年度|taskName:四级目标名称|leaderId:负责人账号|leaderName:负责人|deptName:归口部门|targetValue:目标值|currentValue:原始填报值|actualProgress:实际完成率(%)|countedProgress:计入完成率(%)|progress:保存进度(%)|status:状态代码|"+TIMES,decorate(children,names,all,"parentId","parent"));

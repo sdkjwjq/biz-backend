@@ -423,9 +423,11 @@ void updateLevel4Task(BizLevel4Task task);
      * @param snapshot 审批快照
      */
     @Insert("INSERT INTO biz_audit_snapshot(" +
-            "sub_id, target_type, target_id, previous_value, previous_status, previous_comment, create_time" +
+            "sub_id, target_type, target_id, previous_value, previous_status, previous_comment, " +
+            "submitted_value, submitted_comment, submitted_name, submitted_target_value, submitted_data_type, create_time" +
             ") VALUES(" +
-            "#{subId}, #{targetType}, #{targetId}, #{previousValue}, #{previousStatus}, #{previousComment}, #{createTime}" +
+            "#{subId}, #{targetType}, #{targetId}, #{previousValue}, #{previousStatus}, #{previousComment}, " +
+            "#{submittedValue}, #{submittedComment}, #{submittedName}, #{submittedTargetValue}, #{submittedDataType}, #{createTime}" +
             ")")
     @Options(useGeneratedKeys = true, keyProperty = "snapshotId", keyColumn = "snapshot_id")
     void createAuditSnapshot(BizAuditSnapshot snapshot);
@@ -437,6 +439,11 @@ void updateLevel4Task(BizLevel4Task task);
      */
     @Select("SELECT * FROM biz_audit_snapshot WHERE sub_id = #{subId} ORDER BY snapshot_id")
     List<BizAuditSnapshot> getAuditSnapshotsBySubId(@Param("subId") Long subId);
+
+    @Select("<script>SELECT * FROM biz_audit_snapshot WHERE sub_id IN " +
+            "<foreach collection='subIds' item='id' open='(' separator=',' close=')'>#{id}</foreach> " +
+            "ORDER BY sub_id, snapshot_id</script>")
+    List<BizAuditSnapshot> getAuditSnapshotsBySubIds(@Param("subIds") List<Long> subIds);
 
     /**
      * 获取某审批单下指定对象快照

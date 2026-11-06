@@ -18,5 +18,11 @@ public class BizAuditSnapshot {
     private BigDecimal previousValue;
     private String previousStatus;
     private String previousComment;
+    // Immutable content submitted with this approval, never restored into the live task.
+    private BigDecimal submittedValue;
+    private String submittedComment;
+    private String submittedName;
+    private BigDecimal submittedTargetValue;
+    private String submittedDataType;
     private Date createTime;
 }

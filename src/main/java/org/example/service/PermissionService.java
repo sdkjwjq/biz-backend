@@ -109,6 +109,9 @@ public class PermissionService {
         // School-wide dashboard is restricted by current identity, even for older
         // stored templates or personal grants which used to include dashboard.read.
         if(!dashboardAudience(u))granted.remove("dashboard.read");
+        // Dedicated department achievement accounts never inherit a budget or task role.
+        if(AchievementPermissionUtil.isAchievementUploadAccount(u,department(u.getDeptId())))
+            granted.removeIf(code->!code.startsWith("achievements."));
         for(String module:List.of("tasks","performance","achievements","core","records","budget"))if(!granted.contains(module+".read"))granted.removeIf(k->k.startsWith(module+"."));
         if(!granted.contains("tasks.read"))granted.removeAll(List.of("expert.read","expert.write"));if(!granted.contains("expert.read"))granted.remove("expert.write");
         boolean configured=!"LEGACY".equals(policy.mode())||!policy.overrides().isEmpty()||!policy.scopes().isEmpty()||!policy.roles().isEmpty()||codes.stream().map(definitions::get).filter(Objects::nonNull).anyMatch(r->r.version()>0||!r.builtin());

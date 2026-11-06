@@ -14,7 +14,7 @@
 
 ## 快速开始
 
-新电脑首次恢复原有数据并启动当前版本，请先按[仓库根目录的完整首次运行说明](../README.md)执行。当前推荐入口是 `scripts/initialize-database.ps1`，它导入原有 `data/20260920backup.sql` 并补齐当前结构；下方接口文档继续保留。
+新电脑首次恢复原有数据时，在本仓库目录运行 `powershell -File scripts/initialize-database.ps1 -Database biz_test`，按提示输入本机 MySQL 密码。脚本会先核对输入文件及 SHA-256，再导入快照、依次执行迁移并验证结构。快照 `data/20260920backup.sql` 含实际业务资料，需由项目负责人单独提供并放在该路径；它不随 Git 仓库分发。不要在已有业务库上运行初始化脚本。下方接口文档继续保留。
 
 ### 环境要求
 

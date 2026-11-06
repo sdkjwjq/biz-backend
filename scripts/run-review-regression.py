@@ -72,6 +72,9 @@ def main():
         env["SHUANGGAO_TEST_JDBC_URL"] = ("jdbc:mysql://127.0.0.1:3306/" + database
                                          + "?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai")
         subprocess.run([mysql,*connection,database],input=(root / "data/migrations/2026-11-02-task-transfer-request.sql").read_bytes(),env=env,check=True)
+        subprocess.run([mysql,*connection,database],
+                       input=(root / "data/migrations/2026-11-06-task-submitted-details.sql").read_bytes(),
+                       env=env,check=True)
         if method == "transferrequests":
             selector = "TaskTransferRequestApiTest"
         elif method == "dashboardaccess":

@@ -6,6 +6,7 @@ import org.example.entity.BizAchievementSubmission;
 import org.example.entity.SysDept;
 import org.example.entity.SysNotice;
 import org.example.entity.SysUser;
+import org.example.entity.SysFile;
 import org.example.entity.dto.BizAuditDTO;
 import org.example.entity.vo.AchievementAuditVO;
 import org.example.mapper.AchievementMapper;
@@ -16,6 +17,8 @@ import org.example.utils.BusinessLogUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -42,6 +45,22 @@ public class AchievementService {
     @Autowired
     private LeadershipAccessService leadershipAccess;
     @Autowired private PermissionService permissions;
+    @Autowired private SysService sysService;
+
+    public Object uploadEvidence(MultipartFile file, HttpServletRequest request) {
+        Long actor = org.example.utils.JWTUtil.getUserIdFromToken(request.getHeader("Authorization"));
+        if (!canUploadAchievement(actor) || (permissions.enforced(actor) && !permissions.allowed(actor, "achievements.fill"))) {
+            throw new AdminManagementException(403, "没有成果填报权限");
+        }
+        if (file == null || file.isEmpty() || file.getSize() > 10L * 1024 * 1024) {
+            throw new AdminManagementException(400, "成果材料必须为不超过10MB的文件");
+        }
+        String name = Objects.toString(file.getOriginalFilename(), "").toLowerCase(java.util.Locale.ROOT);
+        if (!name.matches("(?s).*\\.(pdf|doc|docx)")) {
+            throw new AdminManagementException(400, "成果材料仅支持PDF、DOC、DOCX格式");
+        }
+        return sysService.uploadFile(file, 0L, request);
+    }
 
     private SysUser getActiveUser(Long userId) {
         if (userId == null) {
@@ -147,6 +166,7 @@ public class AchievementService {
             throw new RuntimeException("新增成果信息不能为空");
         }
         validateAchievement(achievement);
+        validateEvidenceOwner(achievement.getFileId(), createBy, null);
         Date now = new Date();
         achievement.setCreateBy(createBy);
         if (AdminTestContext.enabled(createBy) && achievement.getDeptId() != null) {
@@ -221,6 +241,7 @@ public class AchievementService {
         if (!primaryAdmin && (!Objects.equals(existing.getCreateBy(), userId) || !Objects.equals(existing.getDeptId(), user.getDeptId()))) {
             throw new RuntimeException("仅允许修改本部门账号创建的成果");
         }
+        validateEvidenceOwner(achievement.getFileId(), userId, existing.getFileId());
         try {
             achievement.setAchId(id);
             achievement.setCreateBy(existing.getCreateBy());
@@ -280,6 +301,15 @@ public class AchievementService {
         }
         if (achievement.getGotTime() == null) {
             throw new RuntimeException("成果颁发时间不能为空");
+        }
+    }
+
+    private void validateEvidenceOwner(Long fileId, Long actor, Long preservedFileId) {
+        if (fileId == null) return;
+        SysFile evidence = sysMapper.getFileById(fileId);
+        if (evidence == null || Integer.valueOf(1).equals(evidence.getIsDelete())
+                || (!Objects.equals(fileId, preservedFileId) && !Objects.equals(evidence.getUploadBy(), actor))) {
+            throw new AdminManagementException(403, "成果材料不存在或不属于当前填报人");
         }
     }
 

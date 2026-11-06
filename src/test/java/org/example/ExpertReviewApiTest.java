@@ -243,10 +243,11 @@ class ExpertReviewApiTest {
   var original=source.stream().map(auditProjection::auditToAuditVo).toList();
   var batched=auditProjection.auditListToAuditVoList(source);
   assertEquals(20,batched.size());
-  // Historical submissions cannot borrow current goal values; only the newest active task record can.
+  // Neither historical nor current submissions may borrow live goal values when no submitted snapshot exists.
   for(int i=0;i<18;i++){assertTrue(batched.get(i).getSub_list().isEmpty());assertEquals("retained.pdf",batched.get(i).getFilename());}
   assertEquals(json.valueToTree(original.get(18)),json.valueToTree(batched.get(18)));
-  assertEquals(2,batched.get(18).getSub_list().size());assertEquals(101L,batched.get(18).getSub_list().get(0).getTask_id());
+  assertTrue(batched.get(18).getSub_list().isEmpty());
+  assertEquals(Boolean.FALSE,batched.get(18).getHistoricalDetailsAvailable());
   assertTrue(batched.get(19).getSub_list().isEmpty());
  }
  @Test void auditFiltersRespectCurrentHandlerAndCannotExposeOtherModules()throws Exception{

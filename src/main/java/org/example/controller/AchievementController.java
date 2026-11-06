@@ -5,12 +5,14 @@ import org.example.entity.BizAchievement;
 import org.example.entity.dto.BizAuditDTO;
 import org.example.entity.vo.ErrorVO;
 import org.example.service.AchievementService;
+import org.example.service.AdminManagementException;
 import org.example.utils.JWTUtil;
 import org.example.utils.AchievementQuantityDeserializer.InvalidQuantityException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -21,6 +23,11 @@ import java.util.List;
 @RestController
 @RequestMapping("/achievement")
 public class AchievementController {
+
+    @ExceptionHandler(AdminManagementException.class)
+    public ResponseEntity<ErrorVO> handleAccessOrValidationError(AdminManagementException exception) {
+        return ResponseEntity.status(exception.getCode()).body(new ErrorVO(exception.getMessage(), exception.getCode()));
+    }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorVO> handleQuantityParseError(HttpMessageNotReadableException exception) {
@@ -36,6 +43,12 @@ public class AchievementController {
 
     @Autowired
     private AchievementService achievementService;
+
+    /** New achievements have no task ID; their evidence is authorized as an achievement. */
+    @PostMapping("/upload")
+    public Object uploadEvidence(@RequestParam("file") MultipartFile file, HttpServletRequest request) {
+        return achievementService.uploadEvidence(file, request);
+    }
 
     /**
      * 根据成果ID查询单条标志性成果信息

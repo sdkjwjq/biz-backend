@@ -462,7 +462,10 @@ public class BizService {
 
             bizMapper.createAudit(bizMaterialSubmission);
             Long subId = resolveCreatedSubId(bizMaterialSubmission);
-            createAuditSnapshot(newTaskSnapshot(subId, task));
+            BizAuditSnapshot submittedTask = newTaskSnapshot(subId, task);
+            submittedTask.setSubmittedValue(rv);
+            submittedTask.setSubmittedComment(bizSubDTO.getComment());
+            createAuditSnapshot(submittedTask);
 
             // 提交后任务进入"审核中"，并把 current_value 覆盖写为本次填报值
             BizTask bizTask = bizMapper.getTaskById(bizSubDTO.getTask_id());
@@ -570,7 +573,10 @@ public class BizService {
 
         bizMapper.createAudit(bizMaterialSubmission);
         Long subId = resolveCreatedSubId(bizMaterialSubmission);
-        pendingSnapshots.add(newTaskSnapshot(null, task));
+        BizAuditSnapshot submittedTask = newTaskSnapshot(null, task);
+        submittedTask.setSubmittedValue(rv);
+        submittedTask.setSubmittedComment(bizSubDTOs.getComment());
+        pendingSnapshots.add(submittedTask);
         saveAuditSnapshots(subId, pendingSnapshots);
 
         // 提交后任务进入"审核中"，并把 current_value 覆盖写为本次填报值
@@ -961,6 +967,14 @@ public class BizService {
 // ... existing code ...
 
 
+    private void requireResubmissionFile(BizMaterialSubmission oldSubmission, SysFile file, Long actor) {
+        if (Integer.valueOf(1).equals(file.getIsDelete()) ||
+                (!Objects.equals(file.getFileId(), oldSubmission.getFileId()) &&
+                        !Objects.equals(file.getUploadBy(), actor))) {
+            throw new RuntimeException("佐证材料不存在或不属于当前填报人");
+        }
+    }
+
     /**
      * 退回重新提交材料
      * @param resubDTOBiz 重新提交数据
@@ -1000,6 +1014,7 @@ public class BizService {
                 if (sysFile == null) {
                     throw new RuntimeException("该文件不存在");
                 }
+                requireResubmissionFile(oldSubmission, sysFile, userId);
 
                 if (oldSubmission.getIsDelete() == null || oldSubmission.getIsDelete() == 0) {
                     oldSubmission.setIsDelete(1);
@@ -1021,7 +1036,10 @@ public class BizService {
                 newSubmission.setIsDelete(0);
                 bizMapper.createAudit(newSubmission);
                 Long newSubId = resolveCreatedSubId(newSubmission);
-                createAuditSnapshot(newTaskSnapshot(newSubId, task));
+                BizAuditSnapshot submittedTask = newTaskSnapshot(newSubId, task);
+                submittedTask.setSubmittedValue(rv);
+                submittedTask.setSubmittedComment(resubDTOBiz.getComment());
+                createAuditSnapshot(submittedTask);
 
                 BizTask bizTask = bizMapper.getTaskById(oldSubmission.getTaskId());
                 if (bizTask != null) {
@@ -1078,6 +1096,7 @@ public class BizService {
             if (sysFile == null) {
                 throw new RuntimeException("该文件不存在");
             }
+            requireResubmissionFile(oldSubmission, sysFile, userId);
 
             if (oldSubmission.getIsDelete() == null || oldSubmission.getIsDelete() == 0) {
                 oldSubmission.setIsDelete(1);
@@ -1099,7 +1118,10 @@ public class BizService {
             newSubmission.setIsDelete(0);
             bizMapper.createAudit(newSubmission);
             Long newSubId = resolveCreatedSubId(newSubmission);
-            pendingSnapshots.add(newTaskSnapshot(null, task));
+            BizAuditSnapshot submittedTask = newTaskSnapshot(null, task);
+            submittedTask.setSubmittedValue(rv);
+            submittedTask.setSubmittedComment(resubDTOBiz.getComment());
+            pendingSnapshots.add(submittedTask);
             saveAuditSnapshots(newSubId, pendingSnapshots);
 
             // 重新提交后恢复任务状态为"审核中"，并覆盖写 current_value
@@ -1420,7 +1442,12 @@ public class BizService {
             if ("2".equals(level4Task.getDataType()) && reportedValue.compareTo(ONE_HUNDRED) > 0) {
                 throw new RuntimeException("百分比任务填报值不能超过100");
             }
-            pendingSnapshots.add(newLevel4TaskSnapshot(null, level4Task));
+            BizAuditSnapshot submittedSnapshot = newLevel4TaskSnapshot(null, level4Task);
+            submittedSnapshot.setSubmittedValue(reportedValue);
+            submittedSnapshot.setSubmittedName(level4Task.getTaskName());
+            submittedSnapshot.setSubmittedTargetValue(level4Task.getTargetValue());
+            submittedSnapshot.setSubmittedDataType(level4Task.getDataType());
+            pendingSnapshots.add(submittedSnapshot);
             level4Task.setCurrentValue(reportedValue);
             level4Task.setStatus("1");
             level4Task.setUpdateTime(new Date());
@@ -1892,10 +1919,11 @@ public class BizService {
      * @return 审批视图对象
      */
     public BizAuditVO auditToAuditVo(BizMaterialSubmission audit){
-        return auditToAuditVo(audit,sysMapper.getFileById(audit.getFileId()),bizMapper.getForthLevelTasksByParentId(audit.getTaskId()));
+        return auditListToAuditVoList(List.of(audit)).get(0);
     }
 
-    private BizAuditVO auditToAuditVo(BizMaterialSubmission audit,SysFile file,List<BizLevel4Task> level4Tasks){
+    private BizAuditVO auditToAuditVo(BizMaterialSubmission audit, SysFile file,
+                                      List<BizAuditSnapshot> snapshots, boolean hasLevel4){
         BizAuditVO bizAuditVO = new BizAuditVO();
         bizAuditVO.setSubId(audit.getSubId());
         bizAuditVO.setTaskId(audit.getTaskId());
@@ -1911,21 +1939,27 @@ public class BizService {
         bizAuditVO.setFlowStatus(audit.getFlowStatus());
         bizAuditVO.setCurrentHandlerId(audit.getCurrentHandlerId());
         bizAuditVO.setIsDelete(audit.getIsDelete());
-//        获取三级任务的子任务列表
-        decorateLevel4Progress(level4Tasks);
-        List<BizSubForthDTO> subForthDTOs = new ArrayList();
-        for (BizLevel4Task level4Task : level4Tasks) {
+        BizAuditSnapshot taskSnapshot = snapshots.stream().filter(s -> "TASK".equals(s.getTargetType())).findFirst().orElse(null);
+        bizAuditVO.setComment(taskSnapshot == null ? null : taskSnapshot.getSubmittedComment());
+        List<BizSubForthDTO> subForthDTOs = new ArrayList<>();
+        for (BizAuditSnapshot snapshot : snapshots) {
+            if (!"LEVEL4_TASK".equals(snapshot.getTargetType()) || snapshot.getSubmittedValue() == null) continue;
             BizSubForthDTO subForthDTO = new BizSubForthDTO();
-            subForthDTO.setTask_id(level4Task.getTaskId());
-            subForthDTO.setReported_value(level4Task.getCurrentValue());
-            subForthDTO.setData_type(level4Task.getDataType());
-            subForthDTO.setTask_name(level4Task.getTaskName());
-            subForthDTO.setTarget_value(level4Task.getTargetValue());
-            subForthDTO.setActual_progress(level4Task.getActualProgress());
-            subForthDTO.setCounted_progress(level4Task.getCountedProgress());
+            subForthDTO.setTask_id(snapshot.getTargetId());
+            subForthDTO.setReported_value(snapshot.getSubmittedValue());
+            subForthDTO.setData_type(snapshot.getSubmittedDataType());
+            subForthDTO.setTask_name(snapshot.getSubmittedName());
+            subForthDTO.setTarget_value(snapshot.getSubmittedTargetValue());
+            if (snapshot.getSubmittedTargetValue() != null && snapshot.getSubmittedTargetValue().signum() > 0) {
+                BigDecimal actual = actualLevel4Progress(snapshot.getSubmittedValue(), snapshot.getSubmittedTargetValue());
+                subForthDTO.setActual_progress(actual.setScale(2, RoundingMode.HALF_UP));
+                subForthDTO.setCounted_progress(countedLevel4Progress(actual).setScale(2, RoundingMode.HALF_UP));
+            }
             subForthDTOs.add(subForthDTO);
         }
         bizAuditVO.setSub_list(subForthDTOs);
+        bizAuditVO.setHistoricalDetailsAvailable(!hasLevel4 || (!subForthDTOs.isEmpty() &&
+                subForthDTOs.size() == snapshots.stream().filter(s -> "LEVEL4_TASK".equals(s.getTargetType())).count()));
 
         return bizAuditVO;
     }
@@ -1940,20 +1974,25 @@ public class BizService {
         if (audits.isEmpty()) return auditVos;
         List<Long> fileIds=audits.stream().map(BizMaterialSubmission::getFileId).filter(Objects::nonNull).distinct().toList();
         List<Long> taskIds=audits.stream().map(BizMaterialSubmission::getTaskId).filter(Objects::nonNull).distinct().toList();
+        List<Long> subIds=audits.stream().map(BizMaterialSubmission::getSubId).filter(Objects::nonNull).distinct().toList();
         Map<Long,SysFile> files=new HashMap<>();
-        Map<Long,List<BizLevel4Task>> goals=new HashMap<>();
+        Map<Long,List<BizAuditSnapshot>> snapshots=new HashMap<>();
+        Set<Long> level4Parents=new HashSet<>();
         for(int start=0;start<fileIds.size();start+=500)
             for(var file:sysMapper.getFilesByIds(fileIds.subList(start,Math.min(start+500,fileIds.size()))))files.put(file.getFileId(),file);
         for(int start=0;start<taskIds.size();start+=500)
             for(var goal:bizMapper.getForthLevelTasksByParentIds(taskIds.subList(start,Math.min(start+500,taskIds.size()))))
-                goals.computeIfAbsent(goal.getParentId(),id->new ArrayList<>()).add(goal);
-        Map<Long,Long> newest=new HashMap<>();
-        for(var audit:audits)newest.merge(audit.getTaskId(),audit.getSubId(),Math::max);
+                level4Parents.add(goal.getParentId());
+        for(int start=0;start<subIds.size();start+=500)
+            for(var snapshot:bizMapper.getAuditSnapshotsBySubIds(subIds.subList(start,Math.min(start+500,subIds.size()))))
+                snapshots.computeIfAbsent(snapshot.getSubId(),id->new ArrayList<>()).add(snapshot);
         for (BizMaterialSubmission audit : audits) {
-            // Only the latest active submission can use current goal values. Historical
-            // submissions retain their own reported aggregate, never today's goal values.
-            boolean current=!Integer.valueOf(1).equals(audit.getIsDelete()) && Objects.equals(newest.get(audit.getTaskId()),audit.getSubId());
-            auditVos.add(auditToAuditVo(audit,files.get(audit.getFileId()),current?goals.getOrDefault(audit.getTaskId(),List.of()):List.of()));
+            // Never substitute live goal values for an old submission's original contents.
+            List<BizAuditSnapshot> submissionSnapshots = snapshots.getOrDefault(audit.getSubId(),List.of());
+            boolean hadLevel4 = level4Parents.contains(audit.getTaskId()) || submissionSnapshots.stream()
+                    .anyMatch(snapshot -> "LEVEL4_TASK".equals(snapshot.getTargetType()));
+            auditVos.add(auditToAuditVo(audit,files.get(audit.getFileId()),
+                    submissionSnapshots,hadLevel4));
         }
         return auditVos;
     }

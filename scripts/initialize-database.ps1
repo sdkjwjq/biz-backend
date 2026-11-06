@@ -55,7 +55,10 @@ $files = @($manifest.snapshot.path) + @($manifest.migrations) + @($manifest.veri
 foreach ($file in $files) {
     $path = Get-SqlPath $file
     $text = Get-Content -Raw -Encoding UTF8 -LiteralPath $path
-    if ($text -match '(?im)^\s*(?:USE\s|(?:CREATE|DROP|ALTER)\s+DATABASE\b|SOURCE\s|\\\.)') {
+    if ($text -match '(?im)^\s*(?:USE\s|(?:CREATE|DROP|ALTER)\s+DATABASE\b|\\\.)' -or
+        # SOURCE is a mysql client command with one file argument. A SQL column
+        # named `source` (for example `source INT`) must not match this guard.
+        $text -match '(?im)^\s*SOURCE\s+(?!(?:INT|INTEGER|BIGINT|SMALLINT|TINYINT|VARCHAR|CHAR|TEXT|LONGTEXT|DECIMAL|NUMERIC|DATE|DATETIME|TIMESTAMP|BOOLEAN|BOOL|JSON|BLOB|VARBINARY)\b)[^\s,;()]+\s*;?\s*(?:--[^\r\n]*)?$') {
         throw "SQL must stay in the selected database and cannot include other files: $file"
     }
 }

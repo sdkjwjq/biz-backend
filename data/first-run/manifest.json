@@ -32,6 +32,7 @@
     "data/migrations/2026-11-03-platform-notice-read-sync.sql",
     "data/migrations/2026-11-03-budget-execution-sheets.sql",
     "data/migrations/2026-11-03-budget-annual-sheets.sql",
+    "data/migrations/2026-11-06-task-submitted-details.sql",
     "data/first-run/restore-task-times.sql"
   ],
   "verification": "data/first-run/verify.sql"

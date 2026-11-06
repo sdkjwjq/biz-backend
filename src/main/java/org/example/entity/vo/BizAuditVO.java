@@ -39,6 +39,9 @@ public class BizAuditVO {
     private Integer isDelete; // 0:存在 1:删除
 
     private List<BizSubForthDTO> sub_list;
+    private String comment;
+    /** False for legacy submissions whose original level-four values were never saved. */
+    private Boolean historicalDetailsAvailable;
 
 
 }

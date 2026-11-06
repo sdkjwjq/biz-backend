@@ -458,6 +458,10 @@ say '独立评审任务结构已核对；旧意见保留只读，不自动产生
 transfer_errors=$(awk -F'\t' '$2!="0"{print $1 "=" $2}' "$BACKUP/task-transfer-request-check.log")
 [[ -z "$transfer_errors" ]] || die "任务移交申请核对失败：$transfer_errors"
 say '任务移交申请结构已核对，既有移交及通知记录保留'
+"${MYSQL[@]}" < "$PACKAGE/sql/2026-11-06-task-submitted-details-check.sql" > "$BACKUP/task-submitted-details-check.log"
+snapshot_columns=$("${MYSQL[@]}" -N -e "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='biz_audit_snapshot' AND COLUMN_NAME IN ('submitted_value','submitted_comment','submitted_name','submitted_target_value','submitted_data_type')")
+[[ "$snapshot_columns" == 5 ]] || die "任务提交明细结构核对失败：仅找到 $snapshot_columns/5 个字段"
+say '任务提交明细结构已核对；旧审批单未留存的原始值不推算'
 # These confirmed data additions run once, after the complete pre-update backup.
 for module in budget-annual-sheets budget-execution-sheets platform-notice-read-sync; do
   migration_key="20261103-$module-v1"

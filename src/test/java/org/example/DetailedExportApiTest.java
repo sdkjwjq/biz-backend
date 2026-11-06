@@ -91,7 +91,18 @@ class DetailedExportApiTest {
    excludesColumns(logs,"绩效ID","成果ID","核心填报ID","操作代码");
    assertEquals("",value(book.getSheet("任务明细"),3,"预期成果级别"));assertEquals("",value(book.getSheet("任务明细"),3,"实际完成日期"));
    assertEquals("CURRENT TASK DESCRIPTION",value(book.getSheet("任务明细"),3,"完成情况或说明"));
-   assertTrue(text(book.getSheet("导出说明").getWorkbook()).contains("历史填报单未单独保存文字说明"));
+   assertTrue(text(book.getSheet("导出说明").getWorkbook()).contains("旧审批单未保存的原始四级值不推算"));
+  }
+ }
+ @Test void filteredTaskExportShowsBothDirectoryProgressScopes()throws Exception{
+  db.update("UPDATE biz_task SET progress=20 WHERE task_id=3");
+  db.update("UPDATE biz_task SET progress=80 WHERE task_id=4");
+  try(var book=download("/list-filters/tasks/export?f.keyword=ROUND3",admin)){
+   var sheet=book.getSheet("任务明细");
+   assertEquals(4,sheet.getPhysicalNumberOfRows());
+   assertEquals("20.0",value(sheet,1,"当前筛选范围进度(%)"));
+   assertNotEquals(value(sheet,1,"当前筛选范围进度(%)"),value(sheet,1,"全部下级任务进度(%)"));
+   assertEquals(value(sheet,3,"当前筛选范围进度(%)"),value(sheet,3,"全部下级任务进度(%)"));
   }
  }
  @Test void performanceAndAchievementHistoryHaveApplicableColumnsAndCompleteParentKeys()throws Exception{
