@@ -20,6 +20,10 @@ public class AchievementAuditVO {
     private Long deptId;
     private Long fileId;
     private String achievementComment;
+    /** False for legacy submissions whose original achievement text was not frozen. */
+    private Boolean historicalDetailsAvailable;
+    /** A legacy first submission may retain its original text in the submit log. */
+    private Boolean historicalCommentAvailable;
     private Long submitBy;
     private Date submitTime;
     private Integer flowStatus;

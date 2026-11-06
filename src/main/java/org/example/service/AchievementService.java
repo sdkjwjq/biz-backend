@@ -199,6 +199,7 @@ public class AchievementService {
             submission.setComment(achievement.getComment());
             submission.setIsDelete(0);
             achievementMapper.createAchievementSubmission(submission);
+            freezeAchievementSubmission(submission.getSubId(), achId);
             createAchievementAuditLog(submission.getSubId(), createBy, "submit", 0, 10, achievement.getComment());
             sendNotice(createBy, ADMIN_ID, "成果归档审核", "成果待归档审核",
                     "成果「" + achievement.getAchName() + "」已提交，请进行归档审核", "3", submission.getSubId());
@@ -241,6 +242,16 @@ public class AchievementService {
         if (!primaryAdmin && (!Objects.equals(existing.getCreateBy(), userId) || !Objects.equals(existing.getDeptId(), user.getDeptId()))) {
             throw new RuntimeException("仅允许修改本部门账号创建的成果");
         }
+        if (Integer.valueOf(10).equals(existing.getAuditStatus()) || achievementMapper.countPendingAchievementSubmissions(id) > 0) {
+            throw new AdminManagementException(409, "成果正在审核中，不能修改；请等待审核结果");
+        }
+        boolean archived = Integer.valueOf(30).equals(existing.getAuditStatus());
+        if (archived) {
+            SysUser handler = getActiveUser(ADMIN_ID);
+            if (handler == null || !"1".equals(handler.getStatus())) {
+                throw new AdminManagementException(409, "归档审核账号已失效，请联系管理员");
+            }
+        }
         validateEvidenceOwner(achievement.getFileId(), userId, existing.getFileId());
         try {
             achievement.setAchId(id);
@@ -248,16 +259,33 @@ public class AchievementService {
             achievement.setDeptId(primaryAdmin
                     ? (achievement.getDeptId() != null ? achievement.getDeptId() : existing.getDeptId())
                     : user.getDeptId());
-            achievement.setAuditStatus(existing.getAuditStatus());
-            achievement.setCurrentHandlerId(existing.getCurrentHandlerId());
-            achievement.setUpdateTime(new Date());
+            achievement.setAuditStatus(archived ? 10 : existing.getAuditStatus());
+            achievement.setCurrentHandlerId(archived ? ADMIN_ID : existing.getCurrentHandlerId());
+            Date now = new Date();
+            achievement.setUpdateTime(now);
             achievementMapper.updateAchievement(achievement);
+            if (archived) {
+                var submission = new BizAchievementSubmission();
+                submission.setAchId(id);
+                submission.setSubmitBy(userId);
+                submission.setSubmitTime(now);
+                submission.setFlowStatus(10);
+                submission.setCurrentHandlerId(ADMIN_ID);
+                submission.setComment(achievement.getComment());
+                submission.setIsDelete(0);
+                achievementMapper.createAchievementSubmission(submission);
+                freezeAchievementSubmission(submission.getSubId(), id);
+                createAchievementAuditLog(submission.getSubId(), userId, "submit", 30, 10, "已归档成果修订送审");
+                sendNotice(userId, ADMIN_ID, "成果归档审核", "成果修订待审核",
+                        "成果「" + achievement.getAchName() + "」修改后重新提交，请进行归档审核", "3", submission.getSubId());
+            }
             BusinessLogUtil.info("成果修改",
                     "result", "成功",
                     "userId", userId,
                     "achId", id,
                     "achName", achievement.getAchName());
         } catch (Exception e) {
+            if (e instanceof RuntimeException runtime) throw runtime;
             throw new RuntimeException(e);
         }
     }
@@ -281,6 +309,7 @@ public class AchievementService {
         submission.setAchId(achId);submission.setSubmitBy(achievement.getCreateBy());submission.setSubmitTime(now);
         submission.setFlowStatus(10);submission.setCurrentHandlerId(ADMIN_ID);submission.setComment(achievement.getComment());submission.setIsDelete(0);
         achievementMapper.createAchievementSubmission(submission);
+        freezeAchievementSubmission(submission.getSubId(), achId);
         int previous=achievement.getAuditStatus();achievement.setAuditStatus(10);achievement.setCurrentHandlerId(ADMIN_ID);achievement.setUpdateTime(now);
         achievementMapper.updateAchievementAuditState(achievement);
         createAchievementAuditLog(submission.getSubId(),actor,"submit",previous,10,"修改后重新提交");
@@ -301,6 +330,12 @@ public class AchievementService {
         }
         if (achievement.getGotTime() == null) {
             throw new RuntimeException("成果颁发时间不能为空");
+        }
+    }
+
+    private void freezeAchievementSubmission(Long subId, Long achId) {
+        if (subId == null || achievementMapper.snapshotAchievementSubmission(subId, achId) != 1) {
+            throw new AdminManagementException(409, "成果提交内容冻结失败，未生成审核单，请重试");
         }
     }
 

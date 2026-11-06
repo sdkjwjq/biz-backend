@@ -34,6 +34,7 @@ NEW_SOURCES = [
     'data/migrations/2026-10-30-budget-and-review-result.sql',
     'data/migrations/2026-11-01-review-rounds.sql',
     'data/migrations/2026-11-02-task-transfer-request.sql',
+    'data/migrations/2026-11-06-achievement-submission-snapshot.sql',
 ]
 ADDITIONS = {
     ('biz_budget_sheet','section'): "varchar(16) NOT NULL DEFAULT 'annual'",
@@ -92,6 +93,9 @@ def main():
     for suffix in ['', '-check', '-rollback']:
         source=ROOT/('data/migrations/2026-11-06-task-submitted-details'+suffix+'.sql')
         (OUT/'sql'/source.name).write_text(source.read_text(encoding='utf-8'),encoding='utf-8',newline='\n')
+    for suffix in ['', '-check', '-rollback']:
+        source=ROOT/('data/migrations/2026-11-06-achievement-submission-snapshot'+suffix+'.sql')
+        (OUT/'sql'/source.name).write_text(source.read_text(encoding='utf-8'),encoding='utf-8',newline='\n')
     for name in ['budget-annual-sheets','budget-execution-sheets','platform-notice-read-sync','platform-notice-read-sync-check']:
         source=ROOT/('data/migrations/2026-11-03-'+name+'.sql')
         (OUT/'sql'/source.name).write_text(source.read_text(encoding='utf-8'),encoding='utf-8',newline='\n')
@@ -130,7 +134,7 @@ def main():
             assert name not in added_tables
             added_tables.add(name)
             creates.append(re.sub(r'^CREATE TABLE(?: IF NOT EXISTS)?','CREATE TABLE IF NOT EXISTS',match.group(0)))
-    assert len(added_tables)==40
+    assert len(added_tables)==41
     assert {'biz_budget_total','biz_review_round','biz_review_member','biz_review_scope','biz_round_opinion','biz_round_revision','biz_task_transfer_request'} <= added_tables
     sql='-- Additive structure only. No historical data repair, account writes or seed records.\n'+ '\n\n'.join(creates)+'\n'
     for (table,column),definition in ADDITIONS.items():

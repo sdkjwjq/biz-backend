@@ -462,6 +462,10 @@ say '任务移交申请结构已核对，既有移交及通知记录保留'
 snapshot_columns=$("${MYSQL[@]}" -N -e "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='biz_audit_snapshot' AND COLUMN_NAME IN ('submitted_value','submitted_comment','submitted_name','submitted_target_value','submitted_data_type')")
 [[ "$snapshot_columns" == 5 ]] || die "任务提交明细结构核对失败：仅找到 $snapshot_columns/5 个字段"
 say '任务提交明细结构已核对；旧审批单未留存的原始值不推算'
+snapshot_table=$("${MYSQL[@]}" -N -e "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='biz_achievement_submission_snapshot'")
+[[ "$snapshot_table" == 1 ]] || die '成果提交快照表缺失，更新已停止'
+"${MYSQL[@]}" < "$PACKAGE/sql/2026-11-06-achievement-submission-snapshot-check.sql" > "$BACKUP/achievement-submission-snapshot-check.log"
+say '成果提交快照结构已核对；旧审批单原文未留存的部分不推算'
 # These confirmed data additions run once, after the complete pre-update backup.
 for module in budget-annual-sheets budget-execution-sheets platform-notice-read-sync; do
   migration_key="20261103-$module-v1"

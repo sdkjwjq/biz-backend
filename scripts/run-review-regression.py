@@ -63,6 +63,7 @@ def main():
         subprocess.run([mysql, *connection, database], input=(root / 'data/migrations/2026-10-12-core-indicators.sql').read_bytes(), env=env, check=True)
         subprocess.run([mysql, *connection, database], input=(root / 'data/migrations/2026-10-14-core-indicator-report-mapping.sql').read_bytes(), env=env, check=True)
         subprocess.run([mysql, *connection, database], input=(root / 'data/migrations/2026-10-24-permissions-expert-reviews.sql').read_bytes(), env=env, check=True)
+        subprocess.run([mysql, *connection, database], input=(root / 'data/migrations/2026-11-06-achievement-submission-snapshot.sql').read_bytes(), env=env, check=True)
         subprocess.run([mysql, *connection, database], input=(root / "data/migrations/2026-10-28-transfer-reviewers.sql").read_bytes(), env=env, check=True)
         subprocess.run([mysql, *connection, database], input=(root / "data/migrations/2026-10-29-platform-notices.sql").read_bytes(), env=env, check=True)
         subprocess.run([mysql, *connection, database], input=(root / "data/migrations/2026-10-30-budget-and-review-result.sql").read_bytes(), env=env, check=True)

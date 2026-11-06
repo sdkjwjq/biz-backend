@@ -108,6 +108,12 @@ public interface AchievementMapper {
     @Options(useGeneratedKeys = true, keyProperty = "subId", keyColumn = "sub_id")
     void createAchievementSubmission(BizAchievementSubmission submission);
 
+    /** Freeze the submitted achievement fields after the submission row is created. */
+    @Insert("INSERT INTO biz_achievement_submission_snapshot(sub_id,ach_id,category,level,ach_name,department,got_time,dept_id,file_id,achievement_comment,is_competition,te_deng_jiang,yi_deng_jiang,er_deng_jiang,san_deng_jiang,jin_jiang,yin_jiang,tong_jiang,you_sheng_jiang,bud_deng_deng_ci) " +
+            "SELECT #{subId},ach_id,category,level,ach_name,department,got_time,dept_id,file_id,comment,is_competition,te_deng_jiang,yi_deng_jiang,er_deng_jiang,san_deng_jiang,jin_jiang,yin_jiang,tong_jiang,you_sheng_jiang,bud_deng_deng_ci FROM biz_achievement WHERE ach_id=#{achId} AND is_delete=0")
+    int snapshotAchievementSubmission(@org.apache.ibatis.annotations.Param("subId") Long subId,
+                                      @org.apache.ibatis.annotations.Param("achId") Long achId);
+
     @Update("UPDATE biz_achievement_submission SET ach_id=#{achId}, submit_by=#{submitBy}, submit_time=#{submitTime}, " +
             "flow_status=#{flowStatus}, current_handler_id=#{currentHandlerId}, comment=#{comment}, is_delete=#{isDelete} " +
             "WHERE sub_id=#{subId}")
@@ -148,15 +154,27 @@ public interface AchievementMapper {
     @Select("SELECT * FROM biz_achievement_submission WHERE is_delete = 0 AND (flow_status = 30 OR flow_status < 0) ORDER BY submit_time DESC")
     List<BizAchievementSubmission> getAllAchievementSubmissionRecords();
 
-    @Select("SELECT s.sub_id AS subId, s.ach_id AS achId, a.category, a.level, a.ach_name AS achName, " +
-            "a.department, a.got_time AS gotTime, a.dept_id AS deptId, a.file_id AS fileId, " +
-            "a.comment AS achievementComment, s.submit_by AS submitBy, s.submit_time AS submitTime, " +
+    String AUDIT_DETAIL_SELECT = "SELECT s.sub_id AS subId, s.ach_id AS achId, " +
+            "CASE WHEN d.sub_id IS NOT NULL THEN d.category WHEN s.flow_status=10 THEN a.category END AS category, " +
+            "CASE WHEN d.sub_id IS NOT NULL THEN d.level WHEN s.flow_status=10 THEN a.level END AS level, " +
+            "CASE WHEN d.sub_id IS NOT NULL THEN d.ach_name WHEN s.flow_status=10 THEN a.ach_name ELSE '历史名称未留存' END AS achName, " +
+            "CASE WHEN d.sub_id IS NOT NULL THEN d.department WHEN s.flow_status=10 THEN a.department END AS department, " +
+            "CASE WHEN d.sub_id IS NOT NULL THEN d.got_time WHEN s.flow_status=10 THEN a.got_time END AS gotTime, " +
+            "CASE WHEN d.sub_id IS NOT NULL THEN d.dept_id WHEN s.flow_status=10 THEN a.dept_id END AS deptId, " +
+            "CASE WHEN d.sub_id IS NOT NULL THEN d.file_id WHEN s.flow_status=10 THEN a.file_id END AS fileId, " +
+            "CASE WHEN d.sub_id IS NOT NULL THEN d.achievement_comment WHEN s.flow_status=10 THEN a.comment " +
+            "ELSE (SELECT l.comment FROM biz_achievement_audit_log l WHERE l.sub_id=s.sub_id AND l.action_type='submit' AND l.pre_status=0 AND l.post_status=10 ORDER BY l.log_id DESC LIMIT 1) END AS achievementComment, " +
+            "(d.sub_id IS NOT NULL) AS historicalDetailsAvailable, " +
+            "(d.sub_id IS NOT NULL OR EXISTS(SELECT 1 FROM biz_achievement_audit_log l WHERE l.sub_id=s.sub_id AND l.action_type='submit' AND l.pre_status=0 AND l.post_status=10)) AS historicalCommentAvailable, " +
+            "s.submit_by AS submitBy, s.submit_time AS submitTime, " +
             "s.flow_status AS flowStatus, s.current_handler_id AS currentHandlerId, s.comment, s.is_delete AS isDelete " +
-            "FROM biz_achievement_submission s JOIN biz_achievement a ON s.ach_id = a.ach_id " +
-            "WHERE s.sub_id = #{subId}")
+            "FROM biz_achievement_submission s JOIN biz_achievement a ON s.ach_id=a.ach_id " +
+            "LEFT JOIN biz_achievement_submission_snapshot d ON d.sub_id=s.sub_id ";
+
+    @Select(AUDIT_DETAIL_SELECT + "WHERE s.sub_id = #{subId}")
     AchievementAuditVO getAchievementAuditVO(Long subId);
 
-    @Select("<script>SELECT s.sub_id AS subId, s.ach_id AS achId, a.category, a.level, a.ach_name AS achName, a.department, a.got_time AS gotTime, a.dept_id AS deptId, a.file_id AS fileId, a.comment AS achievementComment, s.submit_by AS submitBy, s.submit_time AS submitTime, s.flow_status AS flowStatus, s.current_handler_id AS currentHandlerId, s.comment, s.is_delete AS isDelete FROM biz_achievement_submission s JOIN biz_achievement a ON s.ach_id = a.ach_id WHERE s.sub_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach></script>")
+    @Select("<script>" + AUDIT_DETAIL_SELECT + "WHERE s.sub_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach></script>")
     List<AchievementAuditVO> getAchievementAuditVOs(@org.apache.ibatis.annotations.Param("ids") List<Long> ids);
 
     @Insert("INSERT INTO biz_achievement_audit_log(sub_id, operator_id, action_type, pre_status, post_status, comment, create_time) " +
