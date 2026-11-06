@@ -73,6 +73,11 @@ public class ReviewTaskReadService {
         if(current.getLevel()<3){current.setTargetValue(null);current.setCurrentValue(null);current.setProgress((int)context.leaves().stream().map(context.catalog()::get).filter(t->rounds.isDescendant(t,task,context.catalog())).mapToInt(t->t.getProgress()==null?0:t.getProgress()).average().orElse(0));}
         var goals=current.getLevel()==3?tasks.getForthLevelTasksByParentId(task):new ArrayList<BizLevel4Task>();biz.decorateLevel4Progress(goals);
         List<org.example.entity.vo.BizAuditVO> submissions=current.getLevel()==3?biz.auditListToAuditVoList(tasks.getAuditsByTaskId(task)):List.of();
+        // The task row may have been restored after a later return. Expert review
+        // shows the latest archived submission's frozen completion description.
+        if(current.getLevel()==3)submissions.stream()
+                .filter(s->Integer.valueOf(40).equals(s.getFlowStatus()) && s.getComment()!=null)
+                .findFirst().ifPresent(s->current.setComment(s.getComment()));
         var logs=current.getLevel()==3?db.queryForList("SELECT l.log_id logId,l.sub_id subId,l.operator_id operatorId,l.action_type actionType,l.pre_status preStatus,l.post_status postStatus,l.comment,l.create_time createTime FROM biz_audit_log l JOIN biz_material_submission s ON s.sub_id=l.sub_id AND l.create_time>=s.submit_time WHERE s.task_id=? ORDER BY l.create_time DESC,l.log_id DESC",task):List.<Map<String,Object>>of();
         var children=current.getLevel()==1?projected.stream().filter(t->t.getLevel()==3&&rounds.isDescendant(context.catalog().get(t.getTaskId()),task,context.catalog())).toList():List.of();
         Set<Long> people=new HashSet<>(),departments=new HashSet<>();for(var t:projected){for(Long u:Arrays.asList(t.getLeaderId(),t.getAuditorId(),t.getPrincipalId()))if(u!=null)people.add(u);if(t.getDeptId()!=null)departments.add(t.getDeptId());}

@@ -111,6 +111,14 @@ public class DetailedExportService {
         Set<Long> wanted=new HashSet<>();for(var leaf:leaves){long key=id(leaf.get("taskId"));Set<Long> seen=new HashSet<>();while(key>0&&seen.add(key)){wanted.add(key);var row=all.get(key);key=row==null?0:id(row.get("parentId"));}}
         var rows=new ArrayList<Map<String,Object>>();for(var raw:catalog)if(wanted.contains(id(raw.get("taskId")))){var row=names.enrich(raw);var parent=all.get(id(row.get("parentId")));row.put("parentName",parent==null?null:parent.get("taskName"));var current=row;Set<Long> seen=new HashSet<>();while(current!=null&&seen.add(id(current.get("taskId")))){if(id(current.get("level"))==1){row.put("rootName",current.get("taskName"));break;}current=all.get(id(current.get("parentId")));}long[] aggregate=filtered.get(id(row.get("taskId"))),whole=complete.get(id(row.get("taskId")));row.put("filteredProgress",aggregate==null||aggregate[1]==0?null:Math.min(100,Math.max(0,Math.round((double)aggregate[0]/aggregate[1]))));row.put("allProgress",whole==null||whole[1]==0?row.get("progress"):Math.min(100,Math.max(0,Math.round((double)whole[0]/whole[1]))));rows.add(row);}
         String columns=scope.equals("filtered")?TASK.replace("progress:计入进度(%)","filteredProgress:当前筛选范围进度(%)|allProgress:全部下级任务进度(%)"):TASK;
+        // The current task row can contain an older comment after a return.
+        // For analysis, use the most recent archived submission snapshot.
+        var comments=new HashMap<Long,String>();
+        var taskIds=ids(rows,"taskId");
+        for(var snapshot:byIds("SELECT s.task_id, sn.submitted_comment FROM biz_material_submission s JOIN (SELECT task_id,MAX(sub_id) sub_id FROM biz_material_submission WHERE COALESCE(is_delete,0)=0 AND flow_status=40 AND task_id IN (%s) GROUP BY task_id) latest ON latest.sub_id=s.sub_id JOIN biz_audit_snapshot sn ON sn.sub_id=s.sub_id AND sn.target_type='TASK'",taskIds)){
+            if(snapshot.get("submittedComment")!=null)comments.put(id(snapshot.get("taskId")),String.valueOf(snapshot.get("submittedComment")));
+        }
+        for(var row:rows)if(comments.containsKey(id(row.get("taskId"))))row.put("comment",comments.get(id(row.get("taskId"))));
         book.sheet("任务明细",columns,rows);var ids=ids(leaves,"taskId");
         var children=byIds("SELECT * FROM biz_level4_task WHERE COALESCE(is_delete,0)=0 AND parent_id IN (%s) ORDER BY parent_id,task_id",ids);
         for(var child:children){var target=decimal(child.get("targetValue"));var value=decimal(child.get("currentValue"));var actual=target==null||target.signum()<=0||value==null?null:value.multiply(BigDecimal.valueOf(100)).divide(target,8,RoundingMode.HALF_UP);child.put("actualProgress",actual);child.put("countedProgress",actual==null?null:actual.min(BigDecimal.valueOf(100)));}
