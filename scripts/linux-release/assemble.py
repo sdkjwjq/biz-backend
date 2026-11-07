@@ -224,7 +224,23 @@ DEALLOCATE PREPARE release_stmt;
     base=(ROOT/'data/biz.sql').read_text(encoding='utf-8')
     tables=set(re.findall(r'CREATE TABLE\s+`?(\w+)',base))|added_tables
     selection=','.join("'"+name+"'" for name in sorted(tables))
-    columns=query('SELECT TABLE_NAME,COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ('+selection+') ORDER BY TABLE_NAME,ORDINAL_POSITION')
+    schema_base = os.environ.get('RELEASE_SCHEMA_BASE')
+    if schema_base:
+        # An earlier verified release can supply the unchanged baseline when the
+        # local test database is unavailable. Only the explicitly known new table
+        # may be added; any other schema drift must stop packaging.
+        prior = Path(schema_base).resolve()
+        assert prior.is_relative_to((ROOT.parent/'releases').resolve())
+        prior_columns = (prior/'sql/required-columns.tsv').read_text(encoding='utf-8').splitlines()
+        prior_tables = {line.split('\t')[0] for line in prior_columns}
+        new_table = 'biz_achievement_submission_snapshot'
+        assert prior_tables == tables - {new_table}
+        table_sql = (ROOT/'data/migrations/2026-11-06-achievement-submission-snapshot.sql').read_text(encoding='utf-8')
+        new_columns = re.findall(r'(?m)^  (\w+) (?:BIGINT|INT|TINYINT|VARCHAR|DATETIME)\b', table_sql)
+        assert len(new_columns) == 21 and len(set(new_columns)) == 21
+        columns = '\n'.join(prior_columns + [new_table+'\t'+column for column in new_columns])+'\n'
+    else:
+        columns=query('SELECT TABLE_NAME,COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ('+selection+') ORDER BY TABLE_NAME,ORDINAL_POSITION')
     assert {line.split('\t')[0] for line in columns.splitlines()}==tables
     additional = {('biz_ownership_change_log','auditor_before_id'), ('biz_ownership_change_log','auditor_after_id'), ('sys_user', 'force_password_change'), *[('biz_work_record', c) for c in ['delete_marker','deleted_by','deleted_time','delete_reason']], *[('biz_audit_snapshot', c) for c in ['submitted_value','submitted_comment','submitted_name','submitted_target_value','submitted_data_type']]}
     columns = '\n'.join(sorted(set(columns.splitlines()) | {'\t'.join(pair) for pair in additional}))+'\n'
@@ -232,7 +248,12 @@ DEALLOCATE PREPARE release_stmt;
     allowed='\n'.join(line for line in columns.splitlines() if line.split('\t')[0] in added_tables or tuple(line.split('\t')) in ADDITIONS or tuple(line.split('\t')) in additional)+'\n'
     (OUT/'sql/allowed-additions.tsv').write_text(allowed,encoding='utf-8',newline='\n')
     new_selection=','.join("'"+name+"'" for name in sorted(added_tables))
-    unique=query("SELECT TABLE_NAME,GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX SEPARATOR ',') FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND NON_UNIQUE=0 AND TABLE_NAME IN ("+new_selection+") GROUP BY TABLE_NAME,INDEX_NAME ORDER BY TABLE_NAME,INDEX_NAME")
+    if schema_base:
+        prior_unique = (prior/'sql/required-unique.tsv').read_text(encoding='utf-8').splitlines()
+        assert new_table+'\tsub_id' not in prior_unique
+        unique = '\n'.join(prior_unique + [new_table+'\tsub_id'])+'\n'
+    else:
+        unique=query("SELECT TABLE_NAME,GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX SEPARATOR ',') FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND NON_UNIQUE=0 AND TABLE_NAME IN ("+new_selection+") GROUP BY TABLE_NAME,INDEX_NAME ORDER BY TABLE_NAME,INDEX_NAME")
     unique = unique.replace('biz_work_record\towner_id,record_year,record_month\n', 'biz_work_record\towner_id,record_year,record_month,delete_marker\n')
     (OUT/'sql/required-unique.tsv').write_text(unique,encoding='utf-8',newline='\n')
     manifest={

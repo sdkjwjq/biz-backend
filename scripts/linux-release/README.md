@@ -1,13 +1,13 @@
-# 双高平台更新包 20261029
+# 双高平台更新包 20261107
 
 适用环境：Java 17、MySQL 8、Bash 4.2+。服务器不需要安装 Python 或 Node。
 
 ## 一键更新
 
-将完整文件夹 `shuanggao-update-20261029` 上传到 `/root/biz-backend/`，不要覆盖旧更新包，然后执行：
+将完整文件夹 `shuanggao-update-20261107` 上传到 `/root/biz-backend/`，不要覆盖旧更新包，然后执行：
 
 ```bash
-cd /root/biz-backend/shuanggao-update-20261029
+cd /root/biz-backend/shuanggao-update-20261107
 chmod -R go-rwx .
 sha256sum -c SHA256SUMS --quiet &&
 bash update.sh --check &&
@@ -35,6 +35,12 @@ bash update.sh --update
 迁移或启动失败时，脚本会自动恢复本次更新前的完整数据库和应用文件。更新成功后输出备份路径及准确回滚命令。
 
 ## 本次主要内容
+
+- 审核中心显示本次审批单保存的补正正文，避免审核人看到任务上的旧说明。
+- 多人同时审核且单据已流转到下一节点时，旧页面提示刷新，不再显示 Java 异常。
+- 包含此前已完成的成果、通知、附件、纪实导出等修复；保留线上现有业务数据与审核历史。
+
+以下为累计版本功能，线上已执行的一次性迁移会跳过：
 
 - 依确认的绩效分解表调整2025—2029年任务关联：空白解除，受影响年度及总完成值按原规则重算；人数比例、年度有疑问及不参与汇总的相关配置保留，详见 `performance-links-guide.txt`。
 - 本人职责支持申请移交，接收人确认后生效，也可填写原因拒绝；重要通知、待确认红点和任务行移交日志接入现有平台。管理员原有直接移交保留。
@@ -106,7 +112,7 @@ bash update.sh --update
 本包包含数据迁移，成功后应使用脚本输出的数据库及应用完整回滚命令：
 
 ```bash
-bash /root/biz-backend/shuanggao-update-20261029/update.sh --rollback-database /root/biz-backend/backups/release-实际时间-PID
+bash /root/biz-backend/shuanggao-update-20261107/update.sh --rollback-database /root/biz-backend/backups/release-实际时间-PID
 ```
 
 回滚前脚本会额外保存当时的数据库到 `before-rollback-*.sql.gz`，再恢复更新前数据库、JAR 和前端。不要把回滚命令当作重启命令。
