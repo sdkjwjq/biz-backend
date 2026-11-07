@@ -57,6 +57,23 @@ public class WorkRecordExportService {
                 for (var entry : values.entrySet()) text = text.replace("{{"+entry.getKey()+"}}", entry.getValue());
                 if (!text.equals(paragraph.getText())) replace(paragraph,text);
             }
+            // The template's empty paragraph with a page break can land on a new
+            // page in LibreOffice, producing an entirely blank page after the cover.
+            // Put the break on the first content heading instead.
+            for (XWPFParagraph paragraph : new ArrayList<>(doc.getParagraphs())) {
+                boolean explicitPageBreak = paragraph.getRuns().stream().flatMap(run -> run.getCTR().getBrList().stream())
+                        .anyMatch(br -> br.getType() != null && "page".equals(br.getType().toString()));
+                if (explicitPageBreak && paragraph.getText().isBlank()) {
+                    doc.removeBodyElement(doc.getPosOfParagraph(paragraph));
+                }
+            }
+            for (XWPFParagraph paragraph : doc.getParagraphs()) {
+                String text = paragraph.getText();
+                if (text.startsWith("一、基本情况")) paragraph.setPageBreak(true);
+                if (text.startsWith("一、") || text.startsWith("二、") || text.startsWith("三、")
+                        || text.startsWith("四、") || text.startsWith("五、")
+                        || text.startsWith("表1.") || text.startsWith("表2.")) paragraph.setKeepNext(true);
+            }
             List<List<String>> tasks = new ArrayList<>(); int index=1;
             for (TaskSummary task : stats.tasks()) tasks.add(Arrays.asList(String.valueOf(index++),task.taskCode(),task.taskName(),task.leaderName(),
                     task.auditState()+(task.verificationReason()==null || task.verificationReason().isBlank() ? "" : "\n"+task.verificationReason()),""));
@@ -90,6 +107,9 @@ public class WorkRecordExportService {
         while(table.getNumberOfRows()>1) table.removeRow(1);
         table.getRow(0).setRepeatHeader(true);
         formatTableRow(table.getRow(0));
+        for (XWPFTableCell cell : table.getRow(0).getTableCells()) {
+            for (XWPFParagraph paragraph : cell.getParagraphs()) paragraph.setKeepNext(true);
+        }
         for(List<String> values : rows) {
             XWPFTableRow row = new XWPFTableRow((org.openxmlformats.schemas.wordprocessingml.x2006.main.CTRow) prototype.copy(),table);
             if(row.getCtRow().isSetTrPr()) row.getCtRow().unsetTrPr();

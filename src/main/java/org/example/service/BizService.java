@@ -773,8 +773,12 @@ public class BizService {
         Long subId = bizAuditDTO.getSub_id();
         try {
             BizMaterialSubmission bizMaterialSubmission = bizMapper.getAuditBySubIdIncludingDeletedForUpdate(subId);
-            if (bizMaterialSubmission == null || Integer.valueOf(1).equals(bizMaterialSubmission.getIsDelete())) {
-                throw new RuntimeException("该任务不存在");
+            if (bizMaterialSubmission == null) {
+                throw new AdminManagementException(404, "审批单不存在，请刷新列表");
+            }
+            if (Integer.valueOf(1).equals(bizMaterialSubmission.getIsDelete())
+                    || !Arrays.asList(10, 20, 30, -20, -30).contains(bizMaterialSubmission.getFlowStatus())) {
+                throw new AdminManagementException(409, "该审批单已被处理，请刷新列表后查看审核记录");
             }
 
             Long currentHandlerId = bizMaterialSubmission.getCurrentHandlerId();
@@ -961,6 +965,7 @@ public class BizService {
                 throw new RuntimeException("您不是该任务的当前审批人，无法操作");
             }
         } catch (RuntimeException e) {
+            if (e instanceof AdminManagementException) throw e;
             throw new RuntimeException(e);
         }
     }
