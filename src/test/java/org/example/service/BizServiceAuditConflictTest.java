@@ -1,6 +1,7 @@
 package org.example.service;
 
 import org.example.entity.BizMaterialSubmission;
+import org.example.entity.BizTask;
 import org.example.entity.dto.BizAuditDTO;
 import org.example.mapper.BizMapper;
 import org.junit.jupiter.api.Test;
@@ -50,5 +51,30 @@ class BizServiceAuditConflictTest {
 
         assertEquals(409, assertThrows(AdminManagementException.class,
                 () -> service.audit(decision, 110228L)).getCode());
+    }
+
+    @Test
+    void previousReviewerGetsRefreshPromptAfterApprovalMovesToNextStage() {
+        BizMapper mapper = mock(BizMapper.class);
+        BizMaterialSubmission pending = new BizMaterialSubmission();
+        pending.setSubId(182L);
+        pending.setTaskId(1L);
+        pending.setIsDelete(0);
+        pending.setFlowStatus(20);
+        pending.setCurrentHandlerId(120796L);
+        when(mapper.getAuditBySubIdIncludingDeletedForUpdate(182L)).thenReturn(pending);
+        when(mapper.getTaskById(1L)).thenReturn(new BizTask());
+        when(mapper.getTaskPrincipalId(1L)).thenReturn(120796L);
+
+        BizService service = new BizService();
+        ReflectionTestUtils.setField(service, "bizMapper", mapper);
+        BizAuditDTO decision = new BizAuditDTO();
+        decision.setSub_id(182L);
+        decision.setIs_pass(true);
+
+        AdminManagementException error = assertThrows(AdminManagementException.class,
+                () -> service.audit(decision, 120221L));
+        assertEquals(409, error.getCode());
+        assertEquals("该审批单的处理人或状态已变化，请刷新列表后查看最新进度", error.getMessage());
     }
 }

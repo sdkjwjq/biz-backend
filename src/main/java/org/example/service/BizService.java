@@ -962,7 +962,7 @@ public class BizService {
                     throw new RuntimeException("不支持的审批流程状态：" + bizMaterialSubmission.getFlowStatus());
                 }
             } else {
-                throw new RuntimeException("您不是该任务的当前审批人，无法操作");
+                throw new AdminManagementException(409, "该审批单的处理人或状态已变化，请刷新列表后查看最新进度");
             }
         } catch (RuntimeException e) {
             if (e instanceof AdminManagementException) throw e;
