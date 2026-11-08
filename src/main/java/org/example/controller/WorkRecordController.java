@@ -60,6 +60,11 @@ public class WorkRecordController {
         return records.delete(user(request), id, body);
     }
 
+    @PostMapping("/delete-batch")
+    public Object deleteBatch(HttpServletRequest request, @RequestBody JsonNode body) {
+        return records.deleteBatch(user(request), body);
+    }
+
     @PostMapping("/{id}/save")
     public Object save(HttpServletRequest request, @PathVariable Long id, @RequestBody JsonNode body) {
         return records.save(user(request), id, body, false);

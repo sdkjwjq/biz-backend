@@ -152,7 +152,7 @@ public interface WorkRecordMapper {
     int saveBody(@Param("record") BizWorkRecord record);
 
     @Update("UPDATE biz_work_record SET delete_marker=record_id,deleted_by=#{userId},deleted_time=#{time},delete_reason=#{reason},version=version+1 "
-            + "WHERE record_id=#{id} AND delete_marker=0 AND status=1 AND version=#{version}")
+            + "WHERE record_id=#{id} AND delete_marker=0 AND status=#{status} AND version=#{version}")
     int markDeleted(@Param("id") Long id, @Param("version") long version, @Param("userId") Long userId,
-                    @Param("reason") String reason, @Param("time") Date time);
+                    @Param("reason") String reason, @Param("time") Date time, @Param("status") int status);
 }

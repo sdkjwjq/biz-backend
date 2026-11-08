@@ -60,26 +60,75 @@ public class WorkRecordService {
     public Capabilities capabilities(Long userId) {
         SysUser user = user(userId);
         List<Integer> years = fillableYears(user);
-        if (permissions.enforced(userId)) {boolean fill=permissions.allowed(userId,"records.fill"),read=permissions.allowed(userId,"records.read"),others=read&&permissions.scopeRules(permissions.state(userId),"records").stream().anyMatch(r->!List.of("OWN","NONE").contains(String.valueOf(r.get("mode"))));return new Capabilities(fill&&!years.isEmpty(),others,permissions.allowed(userId,"records.export"),read&&records.ownSubmitted(userId)>0,fill?years:List.of(),read&&records.ownRecords(userId)>0,permissions.allowed(userId,"records.delete"));}
+        if (permissions.enforced(userId)) {boolean fill=permissions.allowed(userId,"records.fill"),read=permissions.allowed(userId,"records.read"),others=read&&permissions.scopeRules(permissions.state(userId),"records").stream().anyMatch(r->!List.of("OWN","NONE").contains(String.valueOf(r.get("mode"))));return new Capabilities(fill&&!years.isEmpty(),others,permissions.allowed(userId,"records.export"),read&&records.ownSubmitted(userId)>0,fill?years:List.of(),read&&records.ownRecords(userId)>0,permissions.allowed(userId,"records.delete"),userId);}
         boolean export = "0".equals(user.getRole()) || viewers.contains(userId) || leadershipAccess.isLeader(userId);
         return new Capabilities(!years.isEmpty(), export || !years.isEmpty(), export,
-                records.ownSubmitted(userId) > 0, years, records.ownRecords(userId) > 0, "0".equals(user.getRole()));
+                records.ownSubmitted(userId) > 0, years, records.ownRecords(userId) > 0, "0".equals(user.getRole()), userId);
     }
 
-    /** 仅删除已提交纪实；正文、条目及冻结快照保留。 */
+    /** 本人可以删除草稿；已提交纪实仅由有删除权限的账号删除。均保留正文及快照。 */
     @Transactional
     public Map<String, String> delete(Long userId, Long id, JsonNode body) {
-        if (!"0".equals(user(userId).getRole())&&!(permissions.enforced(userId)&&permissions.allowed(userId,"records.delete"))) throw new WorkRecordException(403, "没有删除工作纪实权限");
+        SysUser actor = user(userId);
         long expectedVersion = version(body);
-        String reason = text(body, "reason").strip();
-        if (reason.codePoints().noneMatch(cp -> !Character.isWhitespace(cp) && !Character.isSpaceChar(cp))) throw new WorkRecordException(400, "请填写删除原因");
         BizWorkRecord record = records.lock(id);
-        if (record == null || (record.getStatus() != 1 && !userId.equals(record.getOwnerId()))) throw new WorkRecordException(404, "纪实不存在或无权操作");
-        if (record.getStatus() != 1) throw new WorkRecordException(409, "仅支持删除已提交纪实");
-        if (record.getVersion() != expectedVersion) throw new WorkRecordException(409, "纪实已变更，请刷新后重新确认删除");
-        if (records.markDeleted(id, expectedVersion, userId, reason, Date.from(clock.instant())) != 1) throw new WorkRecordException(409, "纪实已变更，请刷新后重试");
-        BusinessLogUtil.info("工作纪实删除", "userId", userId, "recordId", id, "ownerId", record.getOwnerId());
+        validateDelete(actor, userId, record, expectedVersion);
+        markDeleted(userId, record, expectedVersion, deleteReason(body, record));
         return Map.of("message", "纪实已删除，填报人可重新填报该月份");
+    }
+
+    @Transactional
+    public Map<String, Object> deleteBatch(Long userId, JsonNode body) {
+        SysUser actor = user(userId);
+        JsonNode items = body == null ? null : body.get("items");
+        if (items == null || !items.isArray() || items.isEmpty() || items.size() > 500)
+            throw new WorkRecordException(400, "请选择1～500条需要删除的工作纪实");
+        Map<Long, Long> versions = new TreeMap<>();
+        for (JsonNode item : items) {
+            JsonNode id = item.get("recordId");
+            if (id == null || !id.isIntegralNumber() || !id.canConvertToLong() || id.asLong() <= 0)
+                throw new WorkRecordException(400, "纪实编号不正确");
+            if (versions.putIfAbsent(id.asLong(), version(item)) != null)
+                throw new WorkRecordException(400, "不能重复选择同一份纪实");
+        }
+        List<BizWorkRecord> selected = new ArrayList<>();
+        List<String> reasons = new ArrayList<>();
+        for (var item : versions.entrySet()) {
+            BizWorkRecord record = records.lock(item.getKey());
+            validateDelete(actor, userId, record, item.getValue());
+            selected.add(record);
+            reasons.add(deleteReason(body, record));
+        }
+        for (int index = 0; index < selected.size(); index++) {
+            BizWorkRecord record = selected.get(index);
+            markDeleted(userId, record, versions.get(record.getRecordId()), reasons.get(index));
+        }
+        return Map.of("message", "已删除" + selected.size() + "份工作纪实", "count", selected.size());
+    }
+
+    private void validateDelete(SysUser actor, Long userId, BizWorkRecord record, long expectedVersion) {
+        if (record == null) throw new WorkRecordException(404, "纪实不存在或无权操作");
+        if (Integer.valueOf(0).equals(record.getStatus())) {
+            if (!userId.equals(record.getOwnerId())) throw new WorkRecordException(404, "纪实不存在或无权操作");
+        } else if (Integer.valueOf(1).equals(record.getStatus())) {
+            if (!"0".equals(actor.getRole()) && !(permissions.enforced(userId) && permissions.allowed(userId, "records.delete")))
+                throw new WorkRecordException(403, "没有删除已提交纪实权限");
+        } else throw new WorkRecordException(409, "纪实状态已变更，请刷新后重试");
+        if (record.getVersion() != expectedVersion) throw new WorkRecordException(409, "纪实已变更，请刷新后重新确认删除");
+    }
+
+    private String deleteReason(JsonNode body, BizWorkRecord record) {
+        if (Integer.valueOf(0).equals(record.getStatus())) return "本人删除草稿";
+        String reason = text(body, "reason").strip();
+        if (reason.codePoints().noneMatch(cp -> !Character.isWhitespace(cp) && !Character.isSpaceChar(cp)))
+            throw new WorkRecordException(400, "请填写删除原因");
+        return reason;
+    }
+
+    private void markDeleted(Long userId, BizWorkRecord record, long version, String reason) {
+        if (records.markDeleted(record.getRecordId(), version, userId, reason, Date.from(clock.instant()), record.getStatus()) != 1)
+            throw new WorkRecordException(409, "纪实已变更，请刷新后重试");
+        BusinessLogUtil.info("工作纪实删除", "userId", userId, "recordId", record.getRecordId(), "ownerId", record.getOwnerId());
     }
 
     private void requireFiller(SysUser user, int year) {

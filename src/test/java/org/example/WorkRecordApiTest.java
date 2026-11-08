@@ -535,6 +535,39 @@ class WorkRecordApiTest {
         assertEquals(404,request(HttpMethod.POST,"/work-records/export",admin,Map.of("ids",List.of(other,id))).getStatusCode().value());
     }
 
+    @Test void ownerCanDeleteOwnDraftWithoutSubmittedDeletePermission() throws Exception {
+        String owner=login(OWNER), other=login(OTHER), admin=login(ADMIN);
+        long id=create(owner,1).path("record").path("recordId").asLong();
+        assertFalse(ok(request(HttpMethod.GET,"/work-records/capabilities",owner,null)).path("canDelete").asBoolean());
+        assertEquals(OWNER,ok(request(HttpMethod.GET,"/work-records/capabilities",owner,null)).path("currentUserId").asLong());
+        assertEquals(403,request(HttpMethod.POST,"/work-records/"+id+"/delete",other,Map.of("version",0)).getStatusCode().value());
+        assertEquals(404,request(HttpMethod.POST,"/work-records/"+id+"/delete",admin,Map.of("version",0)).getStatusCode().value());
+        String snapshot=jdbc.queryForObject("SELECT statistics_json FROM biz_work_record_snapshot WHERE record_id=?",String.class,id);
+        ok(request(HttpMethod.POST,"/work-records/"+id+"/delete",owner,Map.of("version",0)));
+        Map<String,Object> deleted=jdbc.queryForMap("SELECT delete_marker,deleted_by,delete_reason FROM biz_work_record WHERE record_id=?",id);
+        assertEquals(id,((Number)deleted.get("delete_marker")).longValue());
+        assertEquals(OWNER,((Number)deleted.get("deleted_by")).longValue());
+        assertEquals("本人删除草稿",deleted.get("delete_reason"));
+        assertEquals(snapshot,jdbc.queryForObject("SELECT statistics_json FROM biz_work_record_snapshot WHERE record_id=?",String.class,id));
+        assertEquals(404,request(HttpMethod.GET,"/work-records/"+id,owner,null).getStatusCode().value());
+        long replacement=create(owner,1).path("record").path("recordId").asLong();
+        assertNotEquals(id,replacement);
+    }
+
+    @Test void batchDeleteChecksEveryRecordBeforeChangingAny() throws Exception {
+        String owner=login(OWNER), admin=login(ADMIN);
+        long first=create(owner,1).path("record").path("recordId").asLong();
+        long second=create(owner,2).path("record").path("recordId").asLong();
+        var items=List.of(Map.of("recordId",first,"version",0),Map.of("recordId",second,"version",1));
+        assertEquals(409,request(HttpMethod.POST,"/work-records/delete-batch",owner,Map.of("items",items)).getStatusCode().value());
+        assertEquals(2,jdbc.queryForObject("SELECT COUNT(*) FROM biz_work_record WHERE delete_marker=0",Integer.class));
+        assertEquals(404,request(HttpMethod.POST,"/work-records/delete-batch",admin,Map.of("items",List.of(Map.of("recordId",first,"version",0)))).getStatusCode().value());
+        var valid=List.of(Map.of("recordId",first,"version",0),Map.of("recordId",second,"version",0));
+        assertEquals(2,ok(request(HttpMethod.POST,"/work-records/delete-batch",owner,Map.of("items",valid))).path("count").asInt());
+        assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM biz_work_record WHERE delete_marker=0",Integer.class));
+        assertEquals(2,jdbc.queryForObject("SELECT COUNT(*) FROM biz_work_record_snapshot",Integer.class));
+    }
+
     @Test void deleteRequiresCurrentAdminAndDoesNotExposeOthersDrafts() throws Exception {
         String owner=login(OWNER),admin=login(ADMIN);long id=submittedForDelete(owner,1);
         assertTrue(ok(request(HttpMethod.GET,"/work-records/capabilities",admin,null)).path("canDelete").asBoolean());

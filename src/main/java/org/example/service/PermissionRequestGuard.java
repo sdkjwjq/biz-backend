@@ -79,7 +79,7 @@ public class PermissionRequestGuard {
             if(path.contains("/reports/")){Long report=number(variables.get("id"));var rows=jdbc.queryForList("SELECT indicator_id,record_year,flow_status FROM biz_core_report WHERE report_id=?",report);if(rows.isEmpty())deny("填报不存在或无权访问");var row=rows.get(0);indicator=PermissionService.number(row.get("indicator_id"));year=(int)PermissionService.number(row.get("record_year"));if(!get&&path.endsWith("/audit"))access.require(actor,PermissionService.number(row.get("flow_status"))==20?"core.archive":"core.audit");}
             if(year==null&&body!=null&&body.has("year"))year=body.get("year").asInt();if(indicator!=null)scope(actor,"core",indicator,year);
         }
-        if(path.startsWith("/work-records/")) {Long id=number(variables.get("id"));if(id!=null)scope(actor,"records",id,year);if(body!=null&&path.endsWith("/export")&&body.path("ids").isArray())for(JsonNode idNode:body.get("ids"))scope(actor,"records",idNode.asLong(),year);}
+        if(path.startsWith("/work-records/")) {Long id=number(variables.get("id"));if(id!=null)scope(actor,"records",id,year);if(body!=null&&path.endsWith("/export")&&body.path("ids").isArray())for(JsonNode idNode:body.get("ids"))scope(actor,"records",idNode.asLong(),year);if(body!=null&&path.endsWith("/delete-batch")&&body.path("items").isArray())for(JsonNode item:body.get("items"))if(item.path("recordId").canConvertToLong())scope(actor,"records",item.path("recordId").asLong(),year);}
         if(path.startsWith("/budget")) {if(path.contains("/versions/")&&variables.containsKey("versionId")){Long id=number(variables.get("versionId"));Long y=linked("SELECT year FROM biz_budget_import_version WHERE version_id=?",id);if(y==null)deny("预算版本不存在或无权访问");year=y.intValue();}if(!access.budgetScope(actor,year))deny("预算年度不在授权范围内");}
         if(path.startsWith("/manage/")) {
             String domain=path.contains("performance")||path.endsWith("/performances")?"performance":"tasks";
@@ -100,6 +100,7 @@ public class PermissionRequestGuard {
         if(p.startsWith("/system/notice"))return get||p.matches("/system/notice/[0-9]+")?"messages.read":"messages.send";
         if(p.equals("/system/alert"))return "messages.send";
         if(p.startsWith("/system/upload/"))return "upload";
+        if(p.startsWith("/work-records/")&&p.contains("/delete"))return "records.read";
         if(p.startsWith("/manage/transfer")){if(p.endsWith("/logs"))return "tasks.transfer";return p.endsWith("/performances")?"performance.transfer":"tasks.transfer";}
         if(p.startsWith("/manage/performance-relation"))return "performance.relations";
         if(p.startsWith("/manage/tasks"))return "tasks.attributes";
