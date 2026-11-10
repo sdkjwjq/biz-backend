@@ -26,6 +26,11 @@ public class TaskSupervisionController {
         return Map.of("message", "督办信息已发送");
     }
 
+    @GetMapping("/reminders/sent")
+    public Map<String, Object> sent(@RequestParam(defaultValue = "1") int page) {
+        return reminders.sent(access.actor(), page);
+    }
+
     @ExceptionHandler(AdminManagementException.class)
     public ResponseEntity<ErrorVO> error(AdminManagementException e) {
         return ResponseEntity.status(e.getCode()).body(new ErrorVO(e.getMessage(), e.getCode()));

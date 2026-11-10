@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
+import java.util.Map;
 import java.util.Objects;
 
 /** Task reminders use task reviewer duties, independently of the generic notice permission. */
@@ -59,5 +60,15 @@ public class TaskSupervisionService {
         notice.setIsDelete(0);
         notice.setCreateTime(new Date());
         users.sendNotice(notice);
+    }
+
+    public Map<String, Object> sent(Long actor, int requestedPage) {
+        access.require(actor, "tasks.supervise");
+        int page = Math.max(1, requestedPage);
+        int pageSize = 10;
+        long total = users.countSentTaskReminders(actor);
+        long offset = Math.min((long) (page - 1) * pageSize, total);
+        return Map.of("items", users.sentTaskReminders(actor, pageSize, offset),
+                "total", total, "page", page, "pageSize", pageSize);
     }
 }

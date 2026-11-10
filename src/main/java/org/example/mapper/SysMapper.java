@@ -10,6 +10,7 @@ import org.apache.ibatis.annotations.SelectProvider;
 import org.example.entity.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 系统数据访问接口
@@ -172,6 +173,46 @@ public interface SysMapper {
             "VALUES (#{fromUserId}, #{toUserId}, #{type}, #{triggerEvent}, #{title}, #{content}, #{sourceType}, #{sourceId}, #{isRead}, #{isDelete}, #{createTime})")
     @Options(useGeneratedKeys = true, keyProperty = "noticeId", keyColumn = "notice_id")
     void sendNotice(SysNotice notice);
+
+    @Select("SELECT COUNT(*) FROM sys_notice WHERE from_user_id=#{actor} "
+            + "AND type='3' AND trigger_event='TASK' AND source_type='0'")
+    long countSentTaskReminders(@Param("actor") Long actor);
+
+    @Select("SELECT n.notice_id AS noticeId,n.create_time AS createTime,n.title,n.content,"
+            + "n.is_read AS isRead,n.is_delete AS isDelete,n.to_user_id AS toUserId,"
+            + "u.nick_name AS recipientName,t.task_code AS taskCode,t.task_name AS taskName "
+            + "FROM sys_notice n LEFT JOIN sys_user u ON u.user_id=n.to_user_id "
+            + "LEFT JOIN biz_task t ON t.task_id=n.source_id "
+            + "WHERE n.from_user_id=#{actor} AND n.type='3' AND n.trigger_event='TASK' AND n.source_type='0' "
+            + "ORDER BY n.create_time DESC,n.notice_id DESC LIMIT #{limit} OFFSET #{offset}")
+    List<Map<String,Object>> sentTaskReminders(@Param("actor") Long actor,
+            @Param("limit") int limit,@Param("offset") long offset);
+
+    @Select("SELECT COUNT(*) FROM sys_notice n WHERE n.from_user_id=#{actor} AND "
+            + "(n.source_type='1' OR (n.source_type='0' AND n.type='3' AND n.trigger_event='TASK'))")
+    long countSentMessages(@Param("actor") Long actor);
+
+    @Select("SELECT n.notice_id AS noticeId,n.create_time AS createTime,n.title,n.content,"
+            + "n.type,n.trigger_event AS triggerEvent,n.source_type AS sourceType,n.source_id AS sourceId,"
+            + "n.is_read AS isRead,n.is_delete AS isDelete,n.to_user_id AS toUserId,"
+            + "u.nick_name AS recipientName,t.task_code AS taskCode,t.task_name AS taskName "
+            + "FROM sys_notice n LEFT JOIN sys_user u ON u.user_id=n.to_user_id "
+            + "LEFT JOIN biz_task t ON n.source_type='0' AND t.task_id=n.source_id "
+            + "WHERE n.from_user_id=#{actor} AND "
+            + "(n.source_type='1' OR (n.source_type='0' AND n.type='3' AND n.trigger_event='TASK')) "
+            + "ORDER BY n.create_time DESC,n.notice_id DESC LIMIT #{limit} OFFSET #{offset}")
+    List<Map<String,Object>> sentMessages(@Param("actor") Long actor,
+            @Param("limit") int limit,@Param("offset") long offset);
+
+    @Select("SELECT notice_id AS noticeId,from_user_id AS fromUserId,source_type AS sourceType,"
+            + "type,trigger_event AS triggerEvent,is_read AS isRead,is_delete AS isDelete "
+            + "FROM sys_notice WHERE notice_id=#{noticeId} FOR UPDATE")
+    Map<String,Object> lockSentMessage(@Param("noticeId") Long noticeId);
+
+    @Update("UPDATE sys_notice SET is_delete=1 WHERE notice_id=#{noticeId} AND from_user_id=#{actor} "
+            + "AND is_read='0' AND COALESCE(is_delete,0)=0 AND "
+            + "(source_type='1' OR (source_type='0' AND type='3' AND trigger_event='TASK'))")
+    int recallSentMessage(@Param("noticeId") Long noticeId,@Param("actor") Long actor);
     /**
      * 查看当前用户收到的信息
      * @param userId 用户ID

@@ -284,6 +284,11 @@ public class AdminManagementService {
             case "RELATION" -> mapper.relationOperation(id);
             case "BUDGET" -> mapper.budgetOperation(id);
             case "WORK_RECORD" -> mapper.deletedWorkRecordOperation(id);
+            case "TASK_AUDIT" -> mapper.taskAuditOperation(id);
+            case "PERFORMANCE_AUDIT" -> mapper.performanceAuditOperation(id);
+            case "ACHIEVEMENT_AUDIT" -> mapper.achievementAuditOperation(id);
+            case "CORE_AUDIT" -> mapper.coreAuditOperation(id);
+            case "FILE" -> mapper.fileOperation(id);
             default -> null;
         };
         if (row == null) throw new AdminManagementException(404, "操作记录不存在");
@@ -320,7 +325,7 @@ public class AdminManagementService {
     public List<Map<String,Object>> operationRowsByKeys(List<Map<String,Object>> keys, Long actor) {
         requireAdmin(actor);
         Map<String,Map<String,Object>> found=new java.util.HashMap<>();
-        for(String type:List.of("ADMIN","OWNERSHIP","RELATION","BUDGET","WORK_RECORD")){
+        for(String type:List.of("ADMIN","OWNERSHIP","RELATION","BUDGET","WORK_RECORD","TASK_AUDIT","PERFORMANCE_AUDIT","ACHIEVEMENT_AUDIT","CORE_AUDIT","FILE")){
             var ids=keys.stream().filter(k->type.equals(k.get("recordType")))
                     .map(k->((Number)k.get("recordId")).longValue()).distinct().toList();
             for(int start=0;start<ids.size();start+=500){
@@ -330,7 +335,13 @@ public class AdminManagementService {
                     case "OWNERSHIP" -> mapper.ownershipOperationsByIds(batch);
                     case "RELATION" -> mapper.relationOperationsByIds(batch);
                     case "BUDGET" -> mapper.budgetOperationsByIds(batch);
-                    default -> mapper.deletedWorkRecordOperationsByIds(batch);
+                    case "WORK_RECORD" -> mapper.deletedWorkRecordOperationsByIds(batch);
+                    case "TASK_AUDIT" -> mapper.taskAuditOperationsByIds(batch);
+                    case "PERFORMANCE_AUDIT" -> mapper.performanceAuditOperationsByIds(batch);
+                    case "ACHIEVEMENT_AUDIT" -> mapper.achievementAuditOperationsByIds(batch);
+                    case "CORE_AUDIT" -> mapper.coreAuditOperationsByIds(batch);
+                    case "FILE" -> mapper.fileOperationsByIds(batch);
+                    default -> List.<Map<String,Object>>of();
                 };
                 for(var row:rows)found.put(type+":"+row.get("recordId"),row);
             }

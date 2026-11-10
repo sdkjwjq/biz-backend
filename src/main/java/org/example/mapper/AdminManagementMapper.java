@@ -245,6 +245,54 @@ public interface AdminManagementMapper {
     @Select(WORK_RECORD_OPERATION_SQL + " AND r.record_id=#{id}")
     Map<String,Object> deletedWorkRecordOperation(@Param("id") Long id);
 
+    String TASK_AUDIT_OPERATION_SQL = "SELECT l.log_id recordId,'TASK_AUDIT' recordType,'TASK' module,l.action_type action,'TASK' targetType,"
+            + "CAST(t.task_id AS CHAR) targetId,CONCAT(t.task_code,' ',t.task_name) targetName,NULL batchId,l.operator_id operatorId,"
+            + "u.nick_name operatorName,l.comment reason,NULL beforeJson,NULL afterJson,l.create_time createTime "
+            + "FROM biz_audit_log l JOIN biz_material_submission s ON s.sub_id=l.sub_id JOIN biz_task t ON t.task_id=s.task_id "
+            + "LEFT JOIN sys_user u ON u.user_id=l.operator_id";
+    @Select("<script>" + TASK_AUDIT_OPERATION_SQL + " WHERE l.log_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach></script>")
+    List<Map<String,Object>> taskAuditOperationsByIds(@Param("ids") List<Long> ids);
+    @Select(TASK_AUDIT_OPERATION_SQL + " WHERE l.log_id=#{id}")
+    Map<String,Object> taskAuditOperation(@Param("id") Long id);
+
+    String PERFORMANCE_AUDIT_OPERATION_SQL = "SELECT l.log_id recordId,'PERFORMANCE_AUDIT' recordType,'PERFORMANCE' module,l.action_type action,'PERFORMANCE' targetType,"
+            + "CAST(p.perf_id AS CHAR) targetId,CONCAT(p.perf_code,' ',p.perf_name) targetName,NULL batchId,l.operator_id operatorId,"
+            + "u.nick_name operatorName,l.comment reason,NULL beforeJson,NULL afterJson,l.create_time createTime "
+            + "FROM biz_performance_audit_log l JOIN biz_performance_submission s ON s.sub_id=l.sub_id JOIN biz_performance p ON p.perf_id=s.perf_id "
+            + "LEFT JOIN sys_user u ON u.user_id=l.operator_id";
+    @Select("<script>" + PERFORMANCE_AUDIT_OPERATION_SQL + " WHERE l.log_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach></script>")
+    List<Map<String,Object>> performanceAuditOperationsByIds(@Param("ids") List<Long> ids);
+    @Select(PERFORMANCE_AUDIT_OPERATION_SQL + " WHERE l.log_id=#{id}")
+    Map<String,Object> performanceAuditOperation(@Param("id") Long id);
+
+    String ACHIEVEMENT_AUDIT_OPERATION_SQL = "SELECT l.log_id recordId,'ACHIEVEMENT_AUDIT' recordType,'ACHIEVEMENTS' module,l.action_type action,'ACHIEVEMENT' targetType,"
+            + "CAST(a.ach_id AS CHAR) targetId,a.ach_name targetName,NULL batchId,l.operator_id operatorId,"
+            + "u.nick_name operatorName,l.comment reason,NULL beforeJson,NULL afterJson,l.create_time createTime "
+            + "FROM biz_achievement_audit_log l JOIN biz_achievement_submission s ON s.sub_id=l.sub_id JOIN biz_achievement a ON a.ach_id=s.ach_id "
+            + "LEFT JOIN sys_user u ON u.user_id=l.operator_id";
+    @Select("<script>" + ACHIEVEMENT_AUDIT_OPERATION_SQL + " WHERE l.log_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach></script>")
+    List<Map<String,Object>> achievementAuditOperationsByIds(@Param("ids") List<Long> ids);
+    @Select(ACHIEVEMENT_AUDIT_OPERATION_SQL + " WHERE l.log_id=#{id}")
+    Map<String,Object> achievementAuditOperation(@Param("id") Long id);
+
+    String CORE_AUDIT_OPERATION_SQL = "SELECT l.log_id recordId,'CORE_AUDIT' recordType,'CORE' module,l.action,'CORE_INDICATOR' targetType,"
+            + "CAST(r.indicator_id AS CHAR) targetId,CONCAT(r.performance_code,' ',r.indicator_name) targetName,NULL batchId,l.operator_id operatorId,"
+            + "u.nick_name operatorName,l.comment reason,NULL beforeJson,NULL afterJson,l.create_time createTime "
+            + "FROM biz_core_audit_log l JOIN biz_core_report r ON r.report_id=l.report_id LEFT JOIN sys_user u ON u.user_id=l.operator_id";
+    @Select("<script>" + CORE_AUDIT_OPERATION_SQL + " WHERE l.log_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach></script>")
+    List<Map<String,Object>> coreAuditOperationsByIds(@Param("ids") List<Long> ids);
+    @Select(CORE_AUDIT_OPERATION_SQL + " WHERE l.log_id=#{id}")
+    Map<String,Object> coreAuditOperation(@Param("id") Long id);
+
+    String FILE_OPERATION_SQL = "SELECT f.file_id recordId,'FILE' recordType,'FILE' module,'UPLOAD' action,'FILE' targetType,"
+            + "CAST(f.file_id AS CHAR) targetId,f.file_name targetName,NULL batchId,f.upload_by operatorId,"
+            + "u.nick_name operatorName,NULL reason,NULL beforeJson,NULL afterJson,f.upload_time createTime "
+            + "FROM sys_file f LEFT JOIN sys_user u ON u.user_id=f.upload_by";
+    @Select("<script>" + FILE_OPERATION_SQL + " WHERE f.file_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach></script>")
+    List<Map<String,Object>> fileOperationsByIds(@Param("ids") List<Long> ids);
+    @Select(FILE_OPERATION_SQL + " WHERE f.file_id=#{id}")
+    Map<String,Object> fileOperation(@Param("id") Long id);
+
     @Select("SELECT r.record_id recordId,r.owner_id ownerId,r.owner_name ownerName,r.record_year recordYear,"
             + "r.record_month recordMonth,r.submit_time submitTime,r.deleted_by deletedBy,u.nick_name deletedByName,"
             + "r.deleted_time deletedTime,r.delete_reason deleteReason FROM biz_work_record r "

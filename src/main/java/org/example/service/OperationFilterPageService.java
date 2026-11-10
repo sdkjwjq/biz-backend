@@ -21,14 +21,16 @@ import static org.example.service.ListFilterQuery.*;
 public class OperationFilterPageService {
     private static final String SOURCES=sources();
     private static String sources(){
-        var inputs=List.of(ADMIN_OPERATION_SUMMARY_SQL,OWNERSHIP_OPERATION_SQL,RELATION_OPERATION_SQL,BUDGET_OPERATION_SQL,WORK_RECORD_OPERATION_SQL);var sources=new ArrayList<String>();
+        var inputs=List.of(ADMIN_OPERATION_SUMMARY_SQL,OWNERSHIP_OPERATION_SQL,RELATION_OPERATION_SQL,BUDGET_OPERATION_SQL,WORK_RECORD_OPERATION_SQL,TASK_AUDIT_OPERATION_SQL,PERFORMANCE_AUDIT_OPERATION_SQL,ACHIEVEMENT_AUDIT_OPERATION_SQL,CORE_AUDIT_OPERATION_SQL,FILE_OPERATION_SQL);var sources=new ArrayList<String>();
         for(int i=0;i<inputs.size();i++){var columns=new ArrayList<String>();for(String key:List.of("recordType","module","action","targetType","targetId","targetName","batchId","operatorName","reason"))columns.add("CAST(x."+key+" AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_bin "+key);
-            sources.add("SELECT "+i+" sourceRank,x.recordId,x.operatorId,x.createTime,"+String.join(",",columns)+" FROM ("+inputs.get(i)+") x");}
+            sources.add("SELECT "+i+" sourceRank,x.recordId,x.operatorId,x.createTime,"
+                    +"CASE WHEN x.module IN ('ADMIN_OPERATION','ADMIN_TEST') THEN 'technical' ELSE 'business' END recordClass,"
+                    +String.join(",",columns)+" FROM ("+inputs.get(i)+") x");}
         return "("+String.join(" UNION ALL ",sources)+") q";
     }
     private static final String ORDER=" ORDER BY q.createTime IS NULL,q.createTime DESC,q.sourceRank,q.recordId DESC";
-    private static final Set<String> SCALARS=Set.of("module","operatorId","action","targetType");
-    private static final List<Field> FIELDS=List.of(field("module","multi"),field("operatorId","multi"),field("action","multi"),field("targetType","multi"),
+    private static final Set<String> SCALARS=Set.of("recordClass","module","operatorId","action","targetType");
+    private static final List<Field> FIELDS=List.of(new Field("recordClass","记录类别","select",true,"",List.of(Map.of("value","business"),Map.of("value","technical"))),field("module","multi"),field("operatorId","multi"),field("action","multi"),field("targetType","multi"),
             field("createTime","date"),field("keyword","text"),field("targetId","text"),field("batchId","text"),field("reason","text"));
     private final PermissionService permissions;
     private final AdminManagementService management;
@@ -74,13 +76,13 @@ public class OperationFilterPageService {
     @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
     public Map<String,Object> legacyPage(Long actor,String module,Long operator,String keyword,String action,String start,String end,Integer requested,Integer pageSize){
         permissions.requireAdmin(actor);var matcher=legacyMatcher(module,operator,keyword,action,start,end);int page=requested==null?1:Math.max(1,requested),size=pageSize==null?10:Math.min(100,Math.max(1,pageSize));
-        var query=new Query(" WHERE 1=1",List.of(),null,false);var result=filteredPage(query,page,size,matcher);
+        var query=new Query(" WHERE q.sourceRank<5",List.of(),null,false);var result=filteredPage(query,page,size,matcher);
         var items=page>result.page()?List.<Map<String,Object>>of():management.operationRowsByKeys(result.items(),actor);
         return Map.of("items",items,"total",Math.toIntExact(result.total()),"page",page,"pageSize",size);
     }
     @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
     public void legacyExport(Long actor,String module,Long operator,String keyword,String action,String start,String end,HttpServletResponse response){
-        permissions.requireAdmin(actor);var matcher=legacyMatcher(module,operator,keyword,action,start,end);var query=new Query(" WHERE 1=1",List.of(),null,false);
+        permissions.requireAdmin(actor);var matcher=legacyMatcher(module,operator,keyword,action,start,end);var query=new Query(" WHERE q.sourceRank<5",List.of(),null,false);
         write(response,consumer->eachBatch(query,batch->consumer.accept(batch.stream().filter(matcher).toList())));
     }
     private Predicate<Map<String,Object>> legacyMatcher(String module,Long operator,String keyword,String action,String start,String end){
@@ -95,10 +97,13 @@ public class OperationFilterPageService {
         SXSSFWorkbook workbook=org.example.utils.SpreadsheetSupport.streamingWorkbook(100);
         try(workbook){
             var sheet=workbook.createSheet("管理员操作记录");String[] headers={"模块","动作","对象类型","对象ID","对象名称","操作人ID","操作人","原因","时间"};Row header=sheet.createRow(0);for(int c=0;c<headers.length;c++)header.createCell(c).setCellValue(headers[c]);int[] index={1};
-            source.accept(batch->{for(var item:batch){Row row=sheet.createRow(index[0]++);Object[] values={item.get("module"),item.get("action"),item.get("targetType"),item.get("targetId"),item.get("targetName"),item.get("operatorId"),item.get("operatorName"),item.get("reason"),item.get("createTime")};for(int c=0;c<values.length;c++)row.createCell(c).setCellValue(str(values[c]));}});
+            source.accept(batch->{for(var item:batch){Row row=sheet.createRow(index[0]++);boolean business="business".equals(item.get("recordClass"));Object[] values={business?moduleLabel(str(item.get("module"))):item.get("module"),business?actionLabel(str(item.get("action"))):item.get("action"),business?targetLabel(str(item.get("targetType"))):item.get("targetType"),item.get("targetId"),item.get("targetName"),item.get("operatorId"),item.get("operatorName"),item.get("reason"),item.get("createTime")};for(int c=0;c<values.length;c++)row.createCell(c).setCellValue(str(values[c]));}});
             org.example.utils.SpreadsheetSupport.setColumnWidths(sheet,18,20,18,22,48,22,20,65,24);response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");response.setHeader("Content-Disposition","attachment; filename*=UTF-8''"+URLEncoder.encode("管理员操作记录.xlsx",StandardCharsets.UTF_8).replace("+","%20"));workbook.write(response.getOutputStream());
         }catch(IOException e){throw new AdminManagementException(500,"操作记录导出失败");}finally{workbook.dispose();}
     }
     private static Field field(String key,String type){return new Field(key,key,type,true,"",List.of());}
+    private String moduleLabel(String value){return switch(value){case "PERMISSION"->"角色与权限";case "PLATFORM_NOTICE"->"平台通知";case "EXPERT_REVIEW"->"专家评审";case "USER"->"账号";case "DEPARTMENT"->"部门";case "OWNERSHIP"->"任务与绩效移交";case "PERFORMANCE_RELATION"->"绩效关联";case "BUDGET"->"预算";case "WORK_RECORD"->"工作纪实";case "TASK"->"建设任务";case "PERFORMANCE"->"绩效指标";case "ACHIEVEMENTS"->"建设成果";case "CORE"->"核心指标";case "FILE"->"附件";default->"其他业务";};}
+    private String actionLabel(String value){return switch(value.toUpperCase(Locale.ROOT)){case "CREATE"->"新增";case "UPDATE"->"修改";case "DELETE"->"删除";case "ENABLE"->"启用";case "DISABLE"->"停用";case "RESET_PASSWORD"->"重置密码";case "USER_POLICY"->"调整个人权限";case "ROLE_UPDATE"->"调整角色权限";case "ROLE_DELETE"->"删除角色";case "EXPERT_CREATE"->"新增专家账号";case "LEADERSHIP_ACCESS"->"调整领导查阅范围";case "ROUND_CREATE"->"创建评审任务";case "ROUND_UPDATE"->"修改评审任务";case "ROUND_PUBLISH"->"发布评审任务";case "MEMBER_ADD"->"添加评审专家";case "MEMBER_REMOVE"->"移除评审专家";case "ADD"->"新增关联";case "REMOVE"->"取消关联";case "TRANSFER"->"移交职责";case "IMPORT"->"导入预算";case "RESTORE"->"恢复预算版本";case "INITIAL"->"建立初始版本";case "EDIT"->"编辑预算";case "SAVE_DRAFT"->"保存草稿";case "PUBLISH"->"发布通知";case "WITHDRAW","WITHDRAW_SUBMISSION"->"撤回";case "SCOPE_UPDATE"->"调整评审范围";case "UPLOAD"->"上传附件";case "SUBMIT"->"提交";case "PASS","APPROVE","通过"->"审核通过";case "REJECT","退回"->"退回";case "ARCHIVE"->"归档";case "撤回提交"->"撤回提交";default->value.codePoints().anyMatch(c->Character.UnicodeScript.of(c)==Character.UnicodeScript.HAN)?value:"其他操作";};}
+    private String targetLabel(String value){return switch(value){case "USER"->"账号";case "ROLE"->"角色";case "DEPARTMENT"->"部门";case "TASK"->"任务";case "PERFORMANCE"->"绩效";case "ACHIEVEMENT"->"成果";case "CORE_INDICATOR"->"核心指标";case "FILE"->"附件";case "WORK_RECORD"->"工作纪实";case "BUDGET_SHEET"->"预算表";case "PLATFORM_NOTICE"->"平台通知";case "REVIEW_ROUND"->"评审任务";default->"业务对象";};}
     private int positive(String value,int fallback){if(value==null||value.isBlank())return fallback;try{int n=Integer.parseInt(value);if(n>0)return n;}catch(NumberFormatException ignored){}throw new AdminManagementException(400,"分页参数不正确");}
 }

@@ -25,6 +25,8 @@ public class PermissionRequestGuard {
         var state=access.state(actor);boolean get="GET".equals(request.getMethod());
         if(path.equals("/system/access")||path.endsWith("/capabilities"))return;
         if(path.equals("/supervision/reminders")&&"POST".equals(request.getMethod())){access.require(actor,"tasks.supervise");return;} // Task and recipient scope are checked by TaskSupervisionService.
+        if(path.equals("/supervision/reminders/sent")&&get){access.require(actor,"tasks.supervise");return;} // Only the sender's own notices are returned.
+        if((get&&path.equals("/messages/sent"))||("POST".equals(request.getMethod())&&path.matches("/messages/[0-9]+/recall"))){access.require(actor,"messages.read");return;} // Sender identity and recall state are checked again in SentMessageService.
         // Exact request endpoints: current duty, recipient identity and object scope are checked in the service.
         if(get&&path.matches("/task-transfer/(pending|sent|users|all-users|logs|[0-9]+/task)")||!get&&"POST".equals(request.getMethod())&&path.matches("/task-transfer/(request|batch|batch-accept|batch-reject|[0-9]+/(accept|reject))")){access.require(actor,"tasks.read");return;}
         if(get&&path.matches("/data-exports/(tasks|performance|achievements|core|records|budget|budget-versions|notices|audits|supervision|admin-users|admin-departments|admin-roles|admin-operations|platform-notices|review-tasks)"))return; // Export service rechecks module permission and row scope.
