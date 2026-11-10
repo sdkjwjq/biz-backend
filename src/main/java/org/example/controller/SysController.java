@@ -148,8 +148,10 @@ public class SysController {
     public Object passwordStatus(HttpServletRequest request) {
         Long userId = JWTUtil.getUserIdFromToken(request.getHeader("Authorization"));
         SysUser user = sysService.getUserById(userId);
-        return java.util.Map.of("requiresPasswordChange", user == null
-                || Integer.valueOf(1).equals(user.getForcePasswordChange()));
+        boolean sso = "SSO".equals(JWTUtil.verifyJwtToken(request.getHeader("Authorization"))
+                .getClaim("loginSource").asString());
+        return java.util.Map.of("requiresPasswordChange", !sso && (user == null
+                || Integer.valueOf(1).equals(user.getForcePasswordChange())));
     }
 
     /**

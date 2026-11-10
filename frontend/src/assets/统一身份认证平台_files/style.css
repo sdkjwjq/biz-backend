@@ -1,0 +1,507 @@
+﻿/*登录css*/
+
+div, form, img, ul, ol, li, dl, dt, dd, table, td, tr, th, p, span {
+	margin: 0;
+	padding: 0;
+	border: 0;
+	font-size: 12px;
+}
+.p-0{
+    padding: 0!important;
+}
+.p-r-0{
+    padding-right: 0!important;
+}
+
+.p-l-0{
+    padding-left: 0!important;
+}
+.p-l-25{
+    padding-left: 25px;
+}
+html {
+	height: 100%;
+}
+body {
+	height: 100%;
+    margin: 0;
+}
+.login-form a:hover,
+login-form a:focus{
+    color: #004ea2;
+}
+
+.logo{padding:10px 0 10px 20px;}
+.logo img{
+    display: block;
+    max-height: 70px;
+    max-width: 100%;
+}
+.login-page{    position: relative;
+    /*background: url(../images/bodybg.jpg) no-repeat center;*/
+    /*background-size: cover;
+    right: 0;
+    left: 0;
+    top:0;
+    bottom:0;
+    overflow: hidden;
+    min-height: 100vh;*/
+	width:100%;
+	height: calc(100% - 192px);
+    min-height: 550px;
+
+	
+}
+/*--滚动图--*/
+.fader { height:100%; overflow: hidden; }
+.fader .slide { position: absolute; width: 100%; height: 100%; top: 0; z-index: 1; opacity: 0; }
+.fader img.slide { height:100%; width: 100%}
+/*----*/
+.login-container{
+    max-width: 400px;
+    background:#fff;
+    min-height: 330px;
+    display: block;
+    position: absolute;
+	top:5px!important;
+	right:15%!important;
+	margin-top:150px!important;
+	border-radius:5px;
+	filter:alpha(opacity=95);
+	opacity:0.95;
+	z-index:999;
+}
+.login-footer{ width:100%;position:fixed;z-index:999;left:0;bottom:0;clear:both;background:#004ea2;padding:30px 0;}
+.login-footer p{ color:#fff;text-align:center;line-height:180%}
+.login-passtitle label{
+    color: #0551a3;
+    font-size: 24px;
+    line-height: 60px;
+    margin: 0;
+}
+
+
+.login-notice h3{
+    color: #fff;
+    font-size: 18px;
+    line-height: 40px;
+    margin: 10px 0 5px;
+}
+.login-notice ul{
+    padding: 0;
+    margin: 0;
+}
+.login-notice ul li{
+    font-size: 14px;
+    line-height: 30px;
+    color: #fff;
+    margin-bottom: 10px;
+    list-style: none;
+}
+.login-notice a{
+    color: #4588f8;
+}
+.login-notice a:hover,.login-notice a:focus{
+    color: #186cf7;
+}
+.login-form-wrap{
+    position: relative;
+}
+.login-ul{
+    position: absolute;
+    top: -60px;
+    right: -17px;
+}
+.login-ul li{
+    display: none;
+}
+.login-ul li a{
+    display: block;
+}
+.login-ul li a img{
+    width: 80%;
+}
+.login-ul li.active{
+    display: inherit;
+}
+/*.login-middle{*/
+    /*margin-top: 25px;*/
+/*}*/
+.login-info{
+    overflow: hidden;
+}
+.login-middle .input-group-addon{
+    background: transparent;
+    border: none;
+}
+.login-middle .form-control{
+    background: transparent;
+    border: 1px solid #d7d7d7;
+    box-shadow: none;
+    color: #a0a4a8;
+    border-radius: 0;
+}
+.login-middle h3{
+    font-size: 18px;
+    color: #fff;
+}
+.forget-pwd{
+	color:#0a8fe6;
+    line-height: 33px;
+    padding-right: 5px;
+}
+.pwd-input{
+ 
+}
+.code{
+    width: 100%;
+    overflow: hidden;
+    margin-bottom: 15px;
+}
+.code-text{
+    padding-right: 0;
+    line-height: 34px;
+}
+.code-text span{
+    color: #fff;
+}
+.code-img img{
+    max-width: 70%;
+}
+.code-img a{
+    color: #fff;
+    line-height:34px;
+}
+.login-btn{
+    background: #004ea2;
+    color: #fff;
+}
+.login-btn:hover,.login-btn:focus{
+    background: #186cf7;
+}
+.login-middle .error{
+    color: #f56060;
+    padding: 3px 15px;
+    border-radius: 10px;
+    margin-top: 10px;
+}
+.login-info .remember-me{
+    color: #8e9191;
+    height: 32px;
+    line-height: 32px;
+    text-align: right;
+    padding-right: 20px;
+}
+
+.login-page .login-form .login-way .fa {
+    font-size: 22px;
+    color: #8e9191;
+    margin: 0px 5px;
+    background: #797979;
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
+    border-radius: 100px;
+}
+
+.login-page .login-form .login-way .fa.fa-weixin {
+    background: #797979;
+}
+.login-page .login-form .login-way .fa.fa-weixin:hover{
+    background: #4aec65;
+}
+.login-page .login-form .login-way .fa.fa-qq:hover{
+    background: #59a1e2;
+}
+
+.login-page .login-form .login-way .fa:hover {
+    cursor: pointer;
+}
+
+#qrcode-img {
+    width: 270px;
+    height: 270px;
+    background: #fff;
+    margin: 0px auto;
+    padding-top: 2px;
+    padding: 9px 2px;
+}
+
+#qrcode-img img{
+    display: block;
+    margin-right: auto;
+    margin-left: auto;
+}
+#qcodepc span{
+    font-size: 14px;
+    color: #fff;
+    line-height: 35px;
+}
+#qcodepc span a{
+    color: #4385fb;
+    font-weight: bold;
+    font-size: 13px;
+    text-decoration: underline;
+}
+
+@keyframes hover-color {
+    from {
+        border-color: #c0c0c0;
+    }
+    to {
+        border-color: #ddd; }
+}
+.default-checkbox {
+    position: absolute;
+    opacity: 0;
+}
+.default-checkbox[disabled] {
+    cursor: not-allowed;
+}
+.default-checkbox + label {
+    position: relative;
+    display: block;
+    cursor: pointer;
+    vertical-align: middle;
+}
+.default-checkbox + label:hover:before {
+    animation-duration: 0.4s;
+    animation-fill-mode: both;
+    animation-name: hover-color;
+}
+.default-checkbox + label:before {
+    position: absolute;
+    top: 8px;
+    left: 0;
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    content: '';
+    border: 1px solid #c0c0c0;
+}
+.default-checkbox + label:after {
+    position: absolute;
+    display: none;
+    content: '';
+}
+.default-checkbox[disabled] + label {
+    cursor: not-allowed;
+    color: #e4e4e4;
+}
+.default-checkbox[disabled] + label:hover,.default-checkbox[disabled] + label:before,.default-checkbox[disabled] + label:after {
+    cursor: not-allowed;
+}
+.default-checkbox[disabled] + label:hover:before {
+    border: 1px solid #e4e4e4;
+    animation-name: none;
+}
+.default-checkbox[disabled] + label:before {
+    border-color: #e4e4e4;
+}
+.default-checkbox:checked + label:before {
+    animation-name: none;
+}
+.default-checkbox:checked + label:after {
+    display: block;
+}
+
+.default-checkbox + label:before {
+    border-radius: 3px;
+}
+.default-checkbox + label:after {
+    top: 8px;
+    left: 6px;
+    box-sizing: border-box;
+    width: 6px;
+    height: 12px;
+    transform: rotate(45deg);
+    border-width: 2px;
+    border-style: solid;
+    border-color: #fff;
+    border-top: 0;
+    border-left: 0;
+}
+.default-checkbox:checked + label:before {
+    border: #3e97eb;
+    background: #3e97eb;
+}
+.default-checkbox:checked[disabled] + label:before {
+    border: #c9e2f9;
+    background: #c9e2f9; }
+
+.login-page #qcodepc .refresh-text {
+    position: absolute;
+    line-height: 250px;
+    top: 60px;
+    left: 43%;
+    z-index: 9;
+}
+.login-page #qcodepc .refresh-text .fa{
+    font-size:20px;
+    color:#fff;
+    vertical-align: middle;
+}
+.login-page #qcodepc .refresh-text a {
+    color: #fff;
+    vertical-align: middle;
+    font-size:16px;
+}
+
+.login-page #qcodepc .qrcode-bg {
+    position: absolute;
+    top:0px;
+    left: 65px;
+    width: 270px;
+    height: 270px;
+    background-color: #000;
+    opacity: 0.95;
+}
+.login-page #sendsms{
+    background: #4588f8;
+    color: #fff;
+    border: none;
+    border-radius: 0;
+    padding: 5px 12px;
+    position: absolute;
+    z-index:100;
+    right: 0;
+    top: 0;
+}
+.login-page #sendsms:focus,.login-page #sendsms:hover{
+    background: #186cf7;
+}
+
+span .blue {
+    color : #337ab7;
+}
+.notice{
+    color: #337ab7;
+    margin: 10px;
+    overflow: hidden;
+    padding-bottom: 10px;
+}
+.notice .leftnotice{
+float:left;
+height:88px;
+overflow:hidden;
+width:50%;
+text-align:left;
+border-right:1px solid #ddd;
+	}
+.notice .noticecom{
+	width:50%;
+	margin:0 auto;	
+	}
+.notice .leftnotice .noticecom{float:right;}
+.notice .leftnotice h3{
+	background:url(../images/ico03.png) no-repeat left center;
+	height:35px;
+	line-height:35px;
+	color:#004ea2;
+	text-indent:2em;
+	}
+.notice .rightnotice h3{
+	background:url(../images/ico04.png) no-repeat left center;
+	height:35px;
+	line-height:35px;
+	color:#004ea2;
+	text-indent:2em;
+	}
+.notice .noticecom p{line-height:200%;color:#6c6b6b; font-size:14px;}
+.notice .rightnotice{
+float:left;
+height:88px;
+overflow:hidden;
+width:50%;
+text-align:left;
+	}
+@media (max-width: 768px) {
+    .login-container{
+        max-width: 95%;
+        margin: 0 auto;
+        right:3%!important;
+    }
+    .logo img{
+        max-width: 95%;
+        margin: 5% auto;
+		left:0!important;
+		right:0!important;
+    }
+    .login-container{
+	margin-top:100px!important;}
+	.notice{display:none}
+	.login-page{height:560px!important;}
+	.fader {  height:560px;  }
+.fader img.slide {height:560px; }
+}
+
+/*补充 2018-01-23 CT*/
+
+.login-img{
+    float: left;
+    margin: 33px 0 0 10px;
+}
+.login-img img{
+    max-height: 45px;
+    background: #ddd;
+    padding: 5px;
+}
+.login-img img:hover{
+    background: #fff;
+}
+
+.wechat-login-wrap{
+    max-width: 600px;
+    background: rgba(51,51,51,.75);
+    max-height: 400px;
+    min-height: 300px;
+    display: block;
+    position: absolute;
+}
+.wechat-login-wrap h4{
+    color: #fff;
+    margin-bottom: 30px;
+}
+.wechat-login-wrap .wechat-login .form-items{
+    margin-bottom: 10px;
+}
+.wechat-login-wrap .binding-account .title{
+    font-size: 15px;
+    color: #fff;
+}
+.wechat-login-wrap .wechat-back{
+    margin-top: 10px;
+}
+.wechat-login-wrap .wechat-back a{
+    font-size: 14px;
+    color: transparent;
+    padding: 0 15px;
+}
+.wechat-login-wrap .wechat-back i{
+    color: #fff;
+}
+
+.wecht-info {
+    color: red;
+    font-size: 14px;
+}
+input::-webkit-input-placeholder{
+    color:#78c2f7;
+}
+input::-moz-placeholder{ /* Mozilla Firefox 19+ */
+    color:#78c2f7;
+}
+input:-moz-placeholder{ /* Mozilla Firefox 4 to 18 */
+    color:#78c2f7;
+}
+input:-ms-input-placeholder{ /* Internet Explorer 10-11 */
+    color:#78c2f7;
+}
+/* 修改chrom记住密码输入框填充后默认的颜色*/
+input:-webkit-autofill , textarea:-webkit-autofill, select:-webkit-autofill {
+    -webkit-text-fill-color:#333 !important;      //修改默认的字体颜色
+-webkit-box-shadow: 0 0 0px 1000px transparent inset !important;
+    background-color:#78c2f7;   //修改默认的背景颜色
+background-image: none;
+    transition: background-color 50000s ease-in-out 0s;
+}

@@ -1,0 +1,21 @@
+/* Keep the business table reachable when advanced conditions take multiple rows. */
+.works-container:has(> .table-card > .query-filter-bar) {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+.works-container:has(> .table-card > .query-filter-bar) > .project-card,
+.works-container:has(> .table-card > .query-filter-bar) > .notice-bar {
+  flex-shrink: 0;
+}
+.works-container > .table-card:has(> .query-filter-bar) {
+  min-height: 360px;
+}
+.table-card > .query-filter-bar { flex-shrink: 0; }
+.works-container > .table-card:has(.advanced-groups) {
+  flex: none;
+}
+.table-card:has(.advanced-groups) > .table-wrapper {
+  flex: none;
+  height: max(320px, 45vh);
+}

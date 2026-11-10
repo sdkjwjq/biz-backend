@@ -13,7 +13,7 @@ public class ReviewModeInterceptor implements HandlerInterceptor {
  @Override public boolean preHandle(HttpServletRequest request,HttpServletResponse response,Object handler)throws Exception{
   String token=request.getHeader("Authorization");if(token==null||token.isBlank()||"OPTIONS".equals(request.getMethod())||!rounds.installed())return true;
   String path=request.getRequestURI().substring(request.getContextPath().length()).replaceAll("/+$","");
-  if(path.equals("/system/login")||path.startsWith("/system/password")||Set.of("/system/access","/system/logout","/system/review-context").contains(path)||path.startsWith("/platform-notices/")||path.equals("/platform-notices/status"))return true;
+  if(path.equals("/system/login")||path.startsWith("/system/sso/")||path.startsWith("/system/password")||Set.of("/system/access","/system/logout","/system/review-context").contains(path)||path.startsWith("/platform-notices/")||path.equals("/platform-notices/status"))return true;
   try{String mode=contexts.mode(token);
    if(path.startsWith("/expert-reviews")||path.matches("/admin/permissions/.*expert-tasks.*"))throw new AdminManagementException(410,"旧评审入口已停用，请在独立专家角色开展评审；旧意见保留在历史评审");
    if(path.startsWith("/review-history"))return true;

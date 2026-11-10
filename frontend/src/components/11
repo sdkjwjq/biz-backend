@@ -1,0 +1,3394 @@
+<template>
+  <div class="works-container">
+    <div class="notice-bar">
+      <div class="notice-bar-inner">
+        <div class="notice-bar-label">提示</div>
+        <div class="notice-bar-content">
+          <div class="notice-bar-marquee">
+            今天是{{ todayDate }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="project-card">
+      <div class="project-info">
+        <h2 class="project-title">徐州工业职业技术学院“双高建设计划”任务与绩效目标管理</h2>
+        <div class="project-meta">
+          <div class="meta-item">
+            <el-icon>
+              <Calendar />
+            </el-icon>
+            <span>周期: 2025-01-01 至 2029-12-31</span>
+          </div>
+          <div class="meta-item">
+            <el-icon>
+              <User />
+            </el-icon>
+            <span>责任部门：“双高”建设办公室</span>
+          </div>
+        </div>
+      </div>
+      <div class="project-actions">
+        <div class="toggle-group">
+          <button class="toggle-btn" :class="{ active: currentTab === 'task' }"
+            @click="handleTabSwitch('task')">任务</button>
+          <button class="toggle-btn" :class="{ active: currentTab === 'performance' }"
+            @click="handleTabSwitch('performance')">绩效</button>
+          <button class="toggle-btn" :class="{ active: currentTab === 'achievement' }"
+            @click="handleTabSwitch('achievement')">成果</button>
+        </div>
+        <el-tag size="small" effect="plain" type="info">共 {{ visibleNodeCount }} 条</el-tag>
+        <el-button type="primary" class="create-btn" v-if="false">
+          <el-icon class="mr-1">
+            <Plus />
+          </el-icon>
+          新建任务
+        </el-button>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <div class="filter-bar">
+        <div class="filter-left">
+          <div class="filter-item">
+            <span class="filter-label">年度:</span>
+            <el-select v-model="filterYear" placeholder="选择年度" class="filter-select">
+              <el-option label="全部" value=""></el-option>
+              <el-option v-for="year in yearOptions" :key="year" :label="`${year}年度`" :value="String(year)"></el-option>
+            </el-select>
+          </div>
+          <div class="filter-item">
+            <span class="filter-label">状态:</span>
+            <el-select v-model="filterStatus" placeholder="选择状态" class="filter-select">
+              <el-option label="全部" value=""></el-option>
+              <el-option label="进行中" value="ing"></el-option>
+              <el-option label="未开始" value="not_started"></el-option>
+              <el-option label="已完成" value="done"></el-option>
+              <el-option label="逾期" value="overdue"></el-option>
+            </el-select>
+          </div>
+        </div>
+        <div class="filter-right">
+          <el-input v-model="searchText" placeholder="搜索任务编号或名称..." class="search-input" clearable
+            @clear="handleCancelSearch" @keyup.enter="handleSearch">
+            <template #prefix>
+              <el-icon>
+                <Search />
+              </el-icon>
+            </template>
+          </el-input>
+          <el-button type="primary" @click="handleSearch" class="search-btn">
+            <el-icon>
+              <Search />
+            </el-icon>
+            搜索
+          </el-button>
+          <el-button
+            v-if="(searchText && String(searchText).trim()) || (actualSearchText && String(actualSearchText).trim())"
+            @click="handleCancelSearch" class="search-btn">
+            取消搜索
+          </el-button>
+          <el-button class="export-btn" v-if="false">
+            <el-icon>
+              <Download />
+            </el-icon>
+            导出
+          </el-button>
+        </div>
+      </div>
+
+      <div class="table-wrapper" v-loading="loading">
+        <el-table ref="taskTableRef" :data="taskTreeData" style="width: 100%" row-key="id" border
+          :expand-row-keys="expandedRowKeys" @expand-change="handleExpandChange" @row-click="handleRowClick"
+          :row-class-name="rowClassName" :tree-props="{ children: 'children', hasChildren: 'hasChildren' }"
+          :header-cell-style="{ background: '#f8f9fa', color: '#606266', fontWeight: 'bold' }">
+          <el-table-column prop="name" label="任务名称" min-width="400">
+            <template #default="scope">
+              <span class="task-name-cell" :class="getLevelClass(scope.row.level)">
+                <span v-if="scope.row.code" class="task-code">[{{ scope.row.code }}]</span>
+                <span class="task-name-text">{{ scope.row.name }}</span>
+                <span v-if="(scope.row.children?.length || 0) > 0" class="child-count">（{{ scope.row.children.length
+                  }}）</span>
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column label="进度" width="150">
+            <template #default="scope">
+              <el-progress :percentage="scope.row.progress" :status="getProgressStatus(scope.row)"
+                :stroke-width="8"></el-progress>
+            </template>
+          </el-table-column>
+          <el-table-column prop="status" label="状态" width="100" align="center">
+            <template #default="scope">
+              <el-tag :type="getStatusTag(scope.row.status)" effect="plain" size="small">
+                {{ scope.row.status }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="dept" label="归口部门" width="150" show-overflow-tooltip></el-table-column>
+          <el-table-column prop="principal" label="负责人" width="120">
+            <template #default="scope">
+              <div class="principal-cell" v-if="scope.row.principal">
+                <div class="avatar-circle">
+                  {{ scope.row.principal.charAt(0) }}
+                </div>
+                {{ scope.row.principal }}
+              </div>
+              <div v-else class="text-gray-400">-</div>
+            </template>
+          </el-table-column>
+          <el-table-column label="起止时间" width="180" align="center">
+            <template #default="scope">
+              <div class="date-cell">
+                {{ scope.row.startDate }}<br />{{ scope.row.endDate }}
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="220" fixed="right" align="center">
+            <template #default="scope">
+              <div v-if="scope.row.level === 3">
+                <el-button link type="primary" size="small" @click="handleViewDetail(scope.row)">
+                  <el-icon class="mr-1">
+                    <View />
+                  </el-icon>查看
+                </el-button>
+                <el-button v-if="canAuditTask(scope.row)" link type="success" size="small"
+                  @click="handleAuditTask(scope.row)">
+                  <el-icon class="mr-1">
+                    <Document />
+                  </el-icon>审核
+                </el-button>
+                <el-button link type="danger" size="small" @click="handleSupervise(scope.row)">
+                  <el-icon class="mr-1">
+                    <Bell />
+                  </el-icon>督办
+                </el-button>
+              </div>
+              <div v-else style="height: 24px;"></div>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+    </div>
+
+    <el-drawer v-model="drawerVisible" title="任务详情与反馈" size="70%" :destroy-on-close="true">
+      <div v-if="currentTask" class="drawer-content" v-loading="drawerLoading">
+          <h4 class="section-title">审核流程状态</h4>
+        <div class="task-info-box">
+          <div class="info-grid">
+            <div class="info-row">
+              <span class="label">任务编号：</span>
+              <span class="value">{{ currentTask.code }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">任务名称：</span>
+              <span class="value">{{ currentTask.name }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">当前进度：</span>
+              <span class="value">{{ currentTask.progress }}%</span>
+            </div>
+            <div class="info-row">
+              <span class="label">归口部门：</span>
+              <span class="value">{{ currentTask.dept }}</span>
+            </div>
+            <div class="info-row">
+              <span class="label">预期达成目标：</span>
+              <span class="value">{{ currentTask?._raw?.expTarget || '—' }}</span>
+          </div>
+            <div class="info-row info-row--full">
+              <span class="label">预期成果成效：</span>
+              <span class="value">{{ currentTask?._raw?.expEffect || '—' }}</span>
+            </div>
+            <div class="info-row info-row--full">
+              <span class="label">预期佐证清单：</span>
+              <span class="value">{{ currentTask?._raw?.expMaterialDesc || '—' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="step-section mb-6">
+          <el-steps :active="stepActive" finish-status="success" align-center class="custom-steps">
+            <el-step title="材料提交" :description="stepDesc.submit"></el-step>
+            <el-step title="专业群审核" :description="stepDesc.dept"></el-step>
+            <el-step title="归口审核" :description="stepDesc.principal"></el-step>
+            <el-step title="完结归档" :description="stepDesc.admin"></el-step>
+          </el-steps>
+        </div>
+        
+        <div class="section-title mt-6">进度反馈与材料上报</div>
+        <el-form label-position="top" class="feedback-form">
+          
+          <template v-if="forthTasks && forthTasks.length > 0">
+            <el-form-item 
+              v-for="(task, index) in forthTasks" 
+              :key="task.taskId" 
+              :label="task.taskName"
+            >
+              <div class="progress-input-wrapper">
+                <el-input-number 
+                  v-model="forthFeedbackData[task.taskId].progress" 
+                  :min="0" 
+                  :max="task.dataType === '2' ? 100 : 999999999" 
+                  :step="1"
+                  :precision="0" 
+                  controls-position="right" 
+                  style="width: 240px" 
+                  :disabled="!canSubmitMaterial" 
+                />
+                <span v-if="task.dataType === '2'" class="percent-suffix">%</span>
+              </div>
+            </el-form-item>
+          </template>
+
+          <template v-else>
+            <el-form-item :label="isPercentTask ? '本次进度更新(%)' : '本次填报值'">
+              <div class="progress-input-wrapper" :title="isPercentTask ? '可使用鼠标滚轮增减（每次±1）' : ''"
+                @wheel="handleProgressWheel">
+                <el-input-number v-model="feedbackForm.progress" :min="0" :max="isPercentTask ? 100 : 999999999" :step="1"
+                  :precision="0" controls-position="right" style="width: 240px" :disabled="!canSubmitMaterial" />
+                <span v-if="isPercentTask" class="percent-suffix">%</span>
+                <span v-if="isPercentTask" class="wheel-tip">滚轮可增减</span>
+              </div>
+            </el-form-item>
+          </template>
+
+          <el-form-item label="完成情况" v-if="canSubmitMaterial || isAnyAuditor">
+            <el-input v-model="feedbackForm.comment" type="textarea" :rows="2" :maxlength="50"
+              :show-word-limit="canSubmitMaterial" :disabled="!canSubmitMaterial"
+              :placeholder="canSubmitMaterial ? '请输入完成情况（50字以内）' : '暂无完成情况'" />
+          </el-form-item>
+          
+          <el-form-item label="佐证材料上传" v-if="canSubmitMaterial">
+            <el-upload class="upload-area" :class="{ 'hide-upload-trigger': fileList.length >= 1 }" drag action="#"
+              :limit="1" :on-exceed="handleExceed" :on-change="handleFileChange" :on-remove="handleRemove"
+              :on-preview="handlePreview" :file-list="fileList" :auto-upload="false" accept=".doc,.docx,.pdf">
+              <el-icon class="el-icon--upload">
+                <UploadFilled />
+              </el-icon>
+              <div class="el-upload__text">
+                拖拽文件到此处或 <em>点击上传</em>
+              </div>
+              <template #tip>
+                <div class="el-upload__tip">
+                  <el-icon class="mr-1 warning-icon">
+                    <Warning />
+                  </el-icon>
+                  仅允许上传 1 个文件，支持 doc/docx/pdf 格式，文件大小不超过 50MB
+                </div>
+              </template>
+            </el-upload>
+          </el-form-item>
+          
+          <div class="form-actions text-right mb-4">
+            <el-button type="primary" @click="submitFeedback" :disabled="!canSubmitMaterial">提交反馈</el-button>
+          </div>
+        </el-form>
+
+        <div v-if="canAudit && latestAudit" ref="auditSectionRef" class="audit-section mt-6">
+          <h4 class="section-title">审核处理</h4>
+          <el-form label-position="top" class="audit-form">
+            <el-form-item label="审核结果">
+              <el-radio-group v-model="auditForm.result">
+                <el-radio :label="1" border class="radio-success">通过</el-radio>
+                <el-radio :label="0" border class="radio-danger">驳回</el-radio>
+              </el-radio-group>
+            </el-form-item>
+            <el-form-item label="审批意见">
+              <el-input v-model="auditForm.comment" type="textarea" :rows="3" placeholder="请输入审批意见（必填）..."></el-input>
+            </el-form-item>
+            <el-form-item label="佐证材料" v-if="latestAudit.fileId || latestAudit.file_id">
+              <div class="file-link" @click="previewMaterialFile(latestAudit)">
+                <el-icon>
+                  <Document />
+                </el-icon>
+                <span>{{ getFileName(latestAudit.fileId || latestAudit.file_id) }}</span>
+              </div>
+            </el-form-item>
+            <div class="form-actions text-right mt-4">
+              <el-button type="primary" @click="submitAudit" :loading="auditSubmitting">确认提交</el-button>
+            </div>
+          </el-form>
+        </div>
+
+        <div class="log-section mt-6">
+          <h4 class="section-title">操作日志与审核记录</h4>
+          <div class="log-timeline-box">
+            <div class="sub-title">操作日志</div>
+            <template v-if="auditLogs && auditLogs.length">
+            <el-timeline>
+                <el-timeline-item v-for="log in auditLogs" :key="log.logId || (log.subId + '_' + log.createTime)"
+                  :timestamp="formatDateTime(log.createTime)" placement="top">
+                <el-card shadow="never" class="log-card-item">
+                  <div class="log-header">
+                      <span class="log-user font-bold">{{ getUserName(log.operatorId) }}</span>
+                      <el-tag size="small" type="info">{{ log.actionType || '操作' }}</el-tag>
+                    </div>
+                    <div class="log-content mt-2">
+                      状态：{{ getFlowStatusDesc(log.preStatus) }} → {{ getFlowStatusDesc(log.postStatus) }}
+                    </div>
+                    <div class="log-content mt-1" v-if="log.comment">
+                      意见：{{ log.comment }}
+                    </div>
+                  </el-card>
+                </el-timeline-item>
+              </el-timeline>
+            </template>
+            <template v-else-if="noticeLogs && noticeLogs.length">
+              <el-timeline>
+                <el-timeline-item v-for="log in noticeLogs" :key="log.id || (log.operatorId + '_' + log.createTime)"
+                  :timestamp="formatDateTime(log.createTime)" placement="top">
+                  <el-card shadow="never" class="log-card-item">
+                    <div class="log-header">
+                      <span class="log-user font-bold">{{ getUserName(log.operatorId) }}</span>
+                      <el-tag size="small" type="info">{{ log.actionType || '通知' }}</el-tag>
+                    </div>
+                    <div class="log-content mt-2" v-if="log.comment">
+                      {{ log.comment }}
+                    </div>
+                    </el-card>
+                </el-timeline-item>
+              </el-timeline>
+            </template>
+            <el-empty v-else description="暂无操作日志" :image-size="90" />
+
+            <div class="sub-title mt-4">审批记录</div>
+            <template v-if="auditList && auditList.length">
+              <el-timeline>
+                <el-timeline-item v-for="item in auditList" :key="item.subId || item.sub_id || item.submitTime"
+                  :timestamp="formatDateTime(item.submitTime)" placement="top">
+                  <el-card shadow="never" class="log-card-item">
+                    <div class="log-header">
+                      <span class="log-user font-bold">审批单 {{ item.subId || item.sub_id }}</span>
+                      <el-tag size="small" type="info">{{ getFlowStatusDesc(item.flowStatus ?? item.flow_status)
+                    }}</el-tag>
+                  </div>
+                    <div class="log-content mt-2">
+                      本次填报值：{{ item.reportedValue ?? item.reported_value ?? '-' }}，
+                      数据类型：{{ item.dataType ?? item.data_type ?? '-' }}
+                    </div>
+                    <div class="log-content mt-1 text-gray-400">
+                      提交人：{{ getUserName(item.submitBy ?? item.submit_by) }}，当前处理人：{{ getUserName(item.currentHandlerId
+                        ?? item.current_handler_id) }}
+                    </div>
+                    <div class="log-file mt-2" v-if="item.fileId || item.file_id">
+                    <el-icon>
+                      <Document />
+                    </el-icon>
+                      <span class="file-name">{{ getFileName(item.fileId || item.file_id) }}</span>
+                      <span class="preview-text" @click.stop="previewMaterialFile(item)">点击预览</span>
+                      <span class="preview-text"
+                        @click.stop="downloadByFileId(item.fileId || item.file_id, item.fileSuffix || item.file_suffix)">点击下载</span>
+                    </div>
+
+                    <div class="mt-2">
+                      <el-button link type="primary" size="small" @click.stop="toggleAuditItemLogs(item)">
+                        {{ auditItemLogVisible[getAuditSubKey(item)] ? '收起审批动作' : '查看审批动作' }}
+                      </el-button>
+                    </div>
+                    <div class="mt-2" v-if="auditItemLogVisible[getAuditSubKey(item)]">
+                      <div v-if="auditItemLogLoading[getAuditSubKey(item)]" class="text-gray-400">加载中...</div>
+                      <template v-else>
+                        <el-timeline
+                          v-if="auditItemLogList[getAuditSubKey(item)] && auditItemLogList[getAuditSubKey(item)].length">
+                          <el-timeline-item v-for="log in auditItemLogList[getAuditSubKey(item)]"
+                            :key="log.logId || (log.subId + '_' + log.createTime)"
+                            :timestamp="formatDateTime(log.createTime)" placement="top">
+                            <el-card shadow="never" class="log-card-item">
+                              <div class="log-header">
+                                <span class="log-user font-bold">{{ getUserName(log.operatorId) }}</span>
+                                <el-tag size="small" type="info">{{ log.actionType || '操作' }}</el-tag>
+                              </div>
+                              <div class="log-content mt-2">
+                                状态：{{ getFlowStatusDesc(log.preStatus) }} → {{ getFlowStatusDesc(log.postStatus) }}
+                              </div>
+                              <div class="log-content mt-1" v-if="log.comment">
+                                意见：{{ log.comment }}
+                  </div>
+                </el-card>
+              </el-timeline-item>
+            </el-timeline>
+                        <el-empty v-else description="暂无审批动作日志" :image-size="70" />
+                      </template>
+                    </div>
+                  </el-card>
+                </el-timeline-item>
+              </el-timeline>
+            </template>
+            <el-empty v-else description="暂无审批记录" :image-size="90" />
+          </div>
+        </div>
+
+      </div>
+    </el-drawer>
+
+    <el-dialog v-model="previewVisible" title="文件预览" width="60%" destroy-on-close @closed="cleanupPreviewUrl">
+      <div class="preview-container">
+        <div v-if="previewType === 'pdf'" class="pdf-viewer">
+          <div class="pdf-viewer-header">
+            <span class="file-name-display">{{ previewFileName }}</span>
+            <el-button type="primary" :icon="Download" @click="downloadPreviewFile" :disabled="!previewUrl">
+              下载文件
+            </el-button>
+          </div>
+          <iframe :src="previewUrl" width="100%" height="600px" style="border:none;" allow="fullscreen"></iframe>
+        </div>
+        <div v-else class="doc-viewer">
+          <div class="doc-icon">
+            <el-icon :size="60" color="#409eff">
+              <Document />
+            </el-icon>
+          </div>
+          <h3 class="mt-4">{{ previewFileName }}</h3>
+          <p class="text-gray-500 mt-2">
+            该文件为 Word 文档 (.doc/.docx)，暂不支持在线直接渲染。<br>
+            在实际生产环境中，此处会集成 Office Web Apps 或 PDF 转换服务进行预览。
+          </p>
+          <el-button type="primary" class="mt-4" @click="downloadSelectedLocalFile">下载当前选择文件</el-button>
+        </div>
+      </div>
+    </el-dialog>
+
+  </div>
+</template>
+
+<script setup>
+import { ref, reactive, onMounted, onUnmounted, watch, computed, nextTick } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { 
+  Calendar, User, Plus, Search, Download, UploadFilled, View, Bell, Document, Warning
+} from '@element-plus/icons-vue';
+import { ElMessage } from 'element-plus';
+import { getAllTasks, getTaskById, getForthTasks } from '@/api/task'; 
+import { getAllUsers } from '@/api/user';
+import { getAudit, getAuditByTaskId, getAuditLogs, reSubmitMaterial, auditTask, getTodoAudits } from '@/api/audit';
+// 引入新的批量提交接口 batchSubmitMaterial
+import { uploadFile, submitMaterial, batchSubmitMaterial, sendNotice } from '@/api/report';
+import { getNotices } from '@/api/notice';
+import { getDeptById } from '@/api/dept';
+
+// --- 状态管理 ---
+const route = useRoute();
+const router = useRouter();
+
+// 展开动画：记录“刚展开出现”的子行
+const animRowKeyMap = reactive({}); 
+
+// 默认显示当年度任务（当前年份）
+const currentYear = new Date().getFullYear();
+const filterYear = ref(String(currentYear)); // 默认显示当年度
+const filterStatus = ref('');
+const searchText = ref(''); // 搜索输入框的值
+const actualSearchText = ref(''); // 实际用于搜索的值
+const drawerVisible = ref(false);
+const previewVisible = ref(false);
+const currentTask = ref(null);
+const fileList = ref([]);
+const loading = ref(false);
+const drawerLoading = ref(false);
+// 是否需要定位到审核区域
+const shouldScrollToAudit = ref(false);
+// 展开状态：用户展开/收起后在刷新时保持
+const expandedRowKeys = ref([]);
+const expandedInitialized = ref(false);
+const taskTableRef = ref(null);
+// 审核区域引用
+const auditSectionRef = ref(null);
+
+// 四级任务状态
+const forthTasks = ref([]);
+const forthFeedbackData = reactive({});
+
+// 预览相关状态
+const previewType = ref('');
+const previewUrl = ref('');
+const previewFileName = ref('');
+const previewFileId = ref(null); 
+const previewFileBlob = ref(null); 
+const selectedFileObjectUrl = ref('');
+
+const feedbackForm = reactive({
+  progress: 0,
+  comment: '', // 完成情况
+});
+
+// 审核表单状态
+const auditForm = reactive({
+  result: 1, // 1=通过, 0=驳回
+  comment: '',
+});
+const auditSubmitting = ref(false);
+
+// 判断当前用户是否是审核人
+const canAudit = computed(() => {
+  const auth = getCurrentAuthInfo();
+  if (!auth || !latestAudit.value) return false;
+  const currentHandlerId = latestAudit.value.currentHandlerId ?? latestAudit.value.current_handler_id;
+  if (!currentHandlerId) return false;
+  return Number(currentHandlerId) === Number(auth.userId);
+});
+
+// 当前标签页
+const currentTab = computed(() => {
+  const path = route.path;
+  if (path.includes('/performance')) return 'performance';
+  if (path.includes('/achievement')) return 'achievement';
+  return 'task';
+});
+
+// 切换标签页
+const handleTabSwitch = (tab) => {
+  if (tab === 'task') {
+    router.push('/home/works');
+  } else if (tab === 'performance') {
+    router.push('/home/works/performance');
+  } else if (tab === 'achievement') {
+    router.push('/home/works/achievement');
+  }
+};
+
+// 判断当前用户是否是任何审核人
+const isAnyAuditor = computed(() => {
+  const auth = getCurrentAuthInfo();
+  if (!auth) return false;
+  const userId = Number(auth.userId);
+
+  const userRole = auth.role;
+  if (userRole === '0') return true;
+
+  const raw = currentTask.value?._raw;
+  const auditorId = raw?.auditorId ?? raw?.auditor_id ?? raw?.auditId ?? raw?.audit_id ?? null;
+  if (auditorId && Number(auditorId) === userId) return true;
+
+  const principalId = raw?.principalId ?? raw?.principal_id ?? null;
+  if (principalId && Number(principalId) === userId) return true;
+
+  if (latestAudit.value) {
+    const currentHandlerId = latestAudit.value.currentHandlerId ?? latestAudit.value.current_handler_id;
+    if (currentHandlerId && Number(currentHandlerId) === userId) return true;
+  }
+
+  if (auditList.value && auditList.value.length > 0) {
+    for (const audit of auditList.value) {
+      const handlerId = audit.currentHandlerId ?? audit.current_handler_id;
+      if (handlerId && Number(handlerId) === userId) return true;
+    }
+  }
+  return false;
+});
+
+// 今天的日期
+const todayDate = computed(() => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth() + 1;
+  const day = today.getDate();
+  return `${year}年${month}月${day}日`;
+});
+
+// 年度选项
+const yearOptions = computed(() => {
+  const years = [];
+  const startYear = 2025;
+  const endYear = 2029;
+  for (let y = startYear; y <= endYear; y++) {
+    years.push(y);
+  }
+  if (currentYear < startYear || currentYear > endYear) {
+    years.push(currentYear);
+    years.sort((a, b) => a - b);
+  }
+  return years;
+});
+
+let tasksAutoRefreshTimer = null;
+
+const isPercentTask = computed(() => {
+  const dt = currentTask.value?._raw?.dataType;
+  return String(dt) === '2';
+});
+
+const canSubmitMaterial = computed(() => {
+  const auth = getCurrentAuthInfo();
+  if (!auth) return false;
+  const leaderId = currentTask.value?._raw?.leaderId;
+  if (leaderId === undefined || leaderId === null) return false;
+  return Number(leaderId) === Number(auth.userId);
+});
+
+const handleProgressWheel = (e) => {
+  if (!isPercentTask.value) return;
+  e.preventDefault();
+  const cur = Number(feedbackForm.progress);
+  const base = Number.isFinite(cur) ? cur : 0;
+  const next = base + (e.deltaY < 0 ? 1 : -1);
+  feedbackForm.progress = Math.max(0, Math.min(100, Math.round(next)));
+};
+
+// --- 审批/上报信息 ---
+const auditList = ref([]);
+const todoAuditTaskMap = ref(new Map());
+const auditLogs = ref([]);
+const noticeLogs = ref([]);
+const auditLogsApiEnabled = ref(true);
+
+const auditItemLogVisible = reactive({}); 
+const auditItemLogLoading = reactive({}); 
+const auditItemLogList = reactive({}); 
+
+const fileMap = ref(new Map()); 
+const getFileName = (fileId) => {
+  if (fileId === undefined || fileId === null) return '';
+  const id = String(fileId);
+  let fileName = fileMap.value.get(id);
+  if (!fileName) return `文件ID: ${fileId}`;
+  if (fileName && fileName.includes('%') && !fileName.startsWith('文件ID:')) {
+    try {
+      fileName = decodeURIComponent(fileName);
+    } catch (e) { 
+      // 忽略
+    }
+  }
+  return fileName;
+};
+
+const fetchFileNameFromDownload = async (fileId) => {
+  if (!fileId) return null;
+  const id = String(fileId);
+  if (fileMap.value.has(id)) {
+    return fileMap.value.get(id);
+  }
+
+  try {
+    const token = localStorage.getItem('token') || '';
+    if (!token) return null;
+
+    let resp;
+    try {
+      resp = await fetch(`/system/download/${fileId}`, {
+        method: 'HEAD',
+        headers: { Authorization: token }
+      });
+    } catch (e) {
+      resp = await fetch(`/system/download/${fileId}`, {
+        method: 'GET',
+        headers: { Authorization: token }
+      });
+      if (resp.ok) {
+        const cd = resp.headers.get('content-disposition') || '';
+        const filename = parseFilenameFromContentDisposition(cd);
+        if (filename) {
+          fileMap.value.set(id, filename);
+          return filename;
+        }
+      }
+      return null;
+    }
+
+    if (resp.ok) {
+      const cd = resp.headers.get('content-disposition') || '';
+      const filename = parseFilenameFromContentDisposition(cd);
+      if (filename) {
+        fileMap.value.set(id, filename);
+        return filename;
+      }
+    }
+  } catch (e) {
+    // 忽略
+  }
+  return null;
+};
+
+const normalizeAuditItem = (it) => {
+  if (!it || typeof it !== 'object') return null;
+  return {
+    subId: it.subId ?? it.sub_id ?? null,
+    taskId: it.taskId ?? it.task_id ?? null,
+    fileId: it.fileId ?? it.file_id ?? null,
+    reportedValue: it.reportedValue ?? it.reported_value ?? null,
+    dataType: it.dataType ?? it.data_type ?? null,
+    submitBy: it.submitBy ?? it.submit_by ?? null,
+    submitDeptId: it.submitDeptId ?? it.submit_dept_id ?? null,
+    manageDeptId: it.manageDeptId ?? it.manage_dept_id ?? null,
+    submitTime: it.submitTime ?? it.submit_time ?? null,
+    fileSuffix: it.fileSuffix ?? it.file_suffix ?? null,
+    flowStatus: it.flowStatus ?? it.flow_status ?? null,
+    currentHandlerId: it.currentHandlerId ?? it.current_handler_id ?? null,
+    isDelete: it.isDelete ?? it.is_delete ?? null,
+    comment: it.comment ?? null, 
+    _raw: it,
+  };
+};
+
+const getAuditSubId = (it) => (it ? (it.subId ?? it.sub_id ?? null) : null);
+const getAuditSubKey = (it) => {
+  const id = getAuditSubId(it);
+  return id === undefined || id === null ? '' : String(id);
+};
+
+const toggleAuditItemLogs = async (item) => {
+  const subId = getAuditSubId(item);
+  if (!subId) return;
+  const key = String(subId);
+  auditItemLogVisible[key] = !auditItemLogVisible[key];
+  if (!auditItemLogVisible[key]) return;
+
+  if (Array.isArray(auditItemLogList[key]) && auditItemLogList[key].length > 0) return;
+  if (!auditLogsApiEnabled.value) return;
+
+  try {
+    auditItemLogLoading[key] = true;
+    const logs = await getAuditLogs(Number(subId));
+    const arr = Array.isArray(logs) ? logs : [];
+    arr.sort((a, b) => {
+      const ta = a?.createTime ? new Date(a.createTime).getTime() : 0;
+      const tb = b?.createTime ? new Date(b.createTime).getTime() : 0;
+      return tb - ta;
+    });
+    auditItemLogList[key] = arr;
+  } catch (e) {  
+    const msg = String(e?.message || '');
+    if (msg.includes('No endpoint GET /biz/audit/logs') || msg.includes('/biz/audit/logs') || msg.includes('404')) {
+      auditLogsApiEnabled.value = false;
+    }
+    auditItemLogList[key] = [];
+  } finally {
+    auditItemLogLoading[key] = false;
+  }
+};
+
+const deptInfoCache = ref(new Map());
+
+const ensureDeptInfo = async (deptId) => {
+  if (deptId === undefined || deptId === null) return;
+  const id = String(deptId);
+  if (deptInfoCache.value.has(id)) return;
+  try {
+    const dept = await getDeptById(Number(deptId));
+    if (dept && typeof dept === 'object') {
+      deptInfoCache.value.set(id, dept);
+    }
+  } catch (e) {
+    // 忽略
+  }
+};
+
+const formatDateTime = (val) => {
+  if (!val) return '';
+  try {
+    return new Date(val).toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    }).replace(/\//g, '-');
+  } catch (e) { 
+    return String(val);
+  }
+};
+
+const getFlowStatusDesc = (status) => {
+  const s = Number(status);
+  if (s === 40) return '已归档/通过';
+  if (s === 30) return '待管理员审批';
+  if (s === 20) return '待归口审批';
+  if (s === 10) return '待部门审批';
+  if (s < 0) return '已退回';
+  return '草稿/未知';
+};
+
+const latestAudit = computed(() => (auditList.value && auditList.value.length ? auditList.value[0] : null));
+
+const findDeptLeaderName = (deptId) => { 
+  if (deptId === undefined || deptId === null) return '';
+  const dept = deptInfoCache.value.get(String(deptId));
+  const leaderId = dept?.leaderId ?? dept?.leader_id;
+  return leaderId ? getUserName(leaderId) : '';
+};
+
+const findAdminName = () => {
+  const users = Array.isArray(allUsers.value) ? allUsers.value : [];
+  const hardcoded = users.find(u => Number(u?.userId) === 110228);
+  if (hardcoded) return hardcoded.nickName || hardcoded.userName || getUserName(hardcoded.userId);
+  const admin = users.find(u => String(u?.role) === '0');
+  return admin ? (admin.nickName || admin.userName || getUserName(admin.userId)) : '';
+};
+
+const stepApprover = computed(() => {
+  const raw = currentTask.value?._raw;
+  const leaderId = raw?.leaderId ?? raw?.leader_id ?? null;
+  const auditorName = raw?.auditorName ?? raw?.auditName ?? null;
+  const auditorId = raw?.auditorId ?? raw?.auditor_id ?? raw?.auditId ?? raw?.audit_id ?? null;
+  const principalId = raw?.principalId ?? raw?.principal_id ?? null;
+
+  let deptLeaderName = '';
+  if (auditorName && auditorName !== '无') {
+    deptLeaderName = auditorName;
+  } else if (!auditorName && auditorId) {
+    deptLeaderName = getUserName(auditorId);
+  }
+
+  return {
+    submitterName: (raw?.leaderName && raw.leaderName.trim() !== '') ? raw.leaderName : (leaderId ? getUserName(leaderId) : ''),
+    deptLeaderName: deptLeaderName,
+    principalName: (raw?.principalName && raw.principalName.trim() !== '') ? raw.principalName : (principalId ? getUserName(principalId) : ''),
+    adminName: findAdminName(),
+  };
+});
+
+const stepActive = computed(() => {
+  if (latestAudit.value) {
+    const s = Number(latestAudit.value.flowStatus ?? latestAudit.value.flow_status);
+    if (!Number.isNaN(s)) {
+      if (s >= 40) return 4;
+      if (s >= 30) return 3;
+      if (s >= 20) return 2;
+      if (s >= 10) return 1;
+      if (s <= -30) return 3;
+      if (s <= -20) return 2;
+      if (s <= -10) return 1;
+      return 1;
+    }
+  }
+
+  const rawStatus = currentTask.value?._raw?.status !== undefined && currentTask.value?._raw?.status !== null
+    ? String(currentTask.value._raw.status)
+    : '';
+
+  if (rawStatus === '2') {
+    return 2;
+  }
+  if (rawStatus === '3') {
+    return 4;
+  }
+  return 0;
+});
+
+const getAuditInfoFromLogs = (stage) => {
+  if (!auditLogs.value || auditLogs.value.length === 0) return null;
+  for (const log of auditLogs.value) {
+    const postStatus = Number(log.postStatus ?? log.post_status);
+    const preStatus = Number(log.preStatus ?? log.pre_status);
+
+    if (stage === 'dept') {
+      if (preStatus === 10 && (postStatus === 20 || postStatus === -10)) {
+        return {
+          time: log.createTime ?? log.create_time,
+          result: postStatus === 20 ? '审核通过' : '驳回',
+        };
+      }
+    } else if (stage === 'principal') {
+      if (preStatus === 20 && (postStatus === 30 || postStatus === -20)) {
+        return {
+          time: log.createTime ?? log.create_time,
+          result: postStatus === 30 ? '审核通过' : '驳回',
+        };
+      }
+    } else if (stage === 'admin') {
+      if (preStatus === 30 && (postStatus === 40 || postStatus === -30)) {
+        return {
+          time: log.createTime ?? log.create_time,
+          result: postStatus === 40 ? '已归档' : '驳回',
+        };
+      }
+    }
+  }
+  return null;
+};
+
+const stepDesc = computed(() => {
+  if (!latestAudit.value) {
+    return {
+      submit: `提交人：${stepApprover.value.submitterName || '—'}`,
+      dept: `审核人：${stepApprover.value.deptLeaderName || '—'}`,
+      principal: `审核人：${stepApprover.value.principalName || '—'}（待流转）`,
+      admin: `审核人：${stepApprover.value.adminName || '—'}（待流转）`,
+    };
+  }
+
+  const s = Number(latestAudit.value.flowStatus ?? latestAudit.value.flow_status);
+  const deptAuditInfo = getAuditInfoFromLogs('dept'); 
+  const principalAuditInfo = getAuditInfoFromLogs('principal'); 
+  const adminAuditInfo = getAuditInfoFromLogs('admin'); 
+
+  const getDeptText = () => {
+    const name = stepApprover.value.deptLeaderName || '—';
+    if (name === '—') return `审核人：${name}`;
+    if (deptAuditInfo) return `审核人：${name}（${formatDateTime(deptAuditInfo.time)} ${deptAuditInfo.result}）`;
+    if (s === 40 || s >= 20) return `审核人：${name}（审核通过）`;
+    if (s <= -10) return `审核人：${name}（驳回）`;
+    if (s === 10) return `审核人：${name}（进行中）`;
+    return `审核人：${name}（待流转）`;
+  };
+
+  const getPrincipalText = () => {
+    const name = stepApprover.value.principalName || '—';
+    if (name === '—') return `审核人：${name}`;
+    if (principalAuditInfo) return `审核人：${name}（${formatDateTime(principalAuditInfo.time)} ${principalAuditInfo.result}）`;
+    if (s === 40 || s >= 30) return `审核人：${name}（审核通过）`;
+    if (s <= -20) return `审核人：${name}（驳回）`;
+    if (s === 20) return `审核人：${name}（进行中）`;
+    return `审核人：${name}（待流转）`;
+  };
+
+  const getAdminText = () => {
+    const name = stepApprover.value.adminName || '—';
+    if (name === '—') return `审核人：${name}`;
+    if (adminAuditInfo) return `审核人：${name}（${formatDateTime(adminAuditInfo.time)} ${adminAuditInfo.result}）`;
+    if (s === 40) return `审核人：${name}（已归档）`;
+    if (s <= -30) return `审核人：${name}（驳回）`;
+    if (s === 30) return `审核人：${name}（进行中）`;
+    return `审核人：${name}（待流转）`;
+  };
+
+  return {
+    submit: `提交人：${stepApprover.value.submitterName || '—'}（${formatDateTime(latestAudit.value.submitTime) || '—'}）`,
+    dept: getDeptText(),
+    principal: getPrincipalText(),
+    admin: getAdminText(),
+  };
+});
+
+const toStr = (v) => (v === undefined || v === null ? '' : String(v));
+
+const loadNoticeLogsForTask = async (taskId) => {
+  if (!taskId) {
+    noticeLogs.value = [];
+    return;
+  }
+  try {
+    const list = await getNotices();
+    const arr = Array.isArray(list) ? list : [];
+    const filtered = arr
+      .filter(n => toStr(n.sourceId ?? n.source_id) === toStr(taskId))
+      .map(n => ({
+        _type: 'notice',
+        id: n.noticeId ?? n.notice_id,
+        operatorId: n.fromUserId ?? n.from_user_id,
+        actionType: n.title || n.triggerEvent || n.trigger_event || '通知',
+        comment: n.content || '',
+        createTime: n.createTime || n.create_time || '',
+        raw: n
+      }))
+      .sort((a, b) => {
+        const ta = a.createTime ? new Date(a.createTime).getTime() : 0;
+        const tb = b.createTime ? new Date(b.createTime).getTime() : 0;
+        return tb - ta;
+      });
+    noticeLogs.value = filtered;
+  } catch (e) { 
+    noticeLogs.value = [];
+  }
+};
+
+const allTaskTreeData = ref([]); 
+const taskTreeData = ref([]); 
+
+const visibleNodeCount = computed(() => {
+  const countNodes = (nodes) => {
+    if (!Array.isArray(nodes) || nodes.length === 0) return 0;
+    let n = 0;
+    nodes.forEach(it => {
+      const level = it?.level !== undefined && it?.level !== null ? Number(it.level) : NaN;
+      if (Number.isFinite(level) && level === 3) {
+        n += 1;
+      }
+      if (Array.isArray(it.children) && it.children.length > 0) {
+        n += countNodes(it.children);
+      }
+    });
+    return n;
+  };
+  return countNodes(taskTreeData.value);
+});
+
+const userMap = ref(new Map()); 
+const deptMap = ref(new Map()); 
+const allUsers = ref([]); 
+
+const TASKS_CACHE_KEY = 'works_tasks_cache_v1';
+const TASKS_CACHE_TIME_KEY = 'works_tasks_cache_time_v1';
+const USERS_CACHE_KEY = 'works_users_cache_v1';
+const USERS_CACHE_TIME_KEY = 'works_users_cache_time_v1';
+const EXPANDED_KEYS_CACHE_KEY = 'works_expanded_keys_v1';
+const CACHE_TTL_MS = 60 * 1000; 
+
+const readJsonCache = (key) => {
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) { 
+    return null;
+  }
+};
+
+const writeJsonCache = (key, val) => {
+  try {
+    sessionStorage.setItem(key, JSON.stringify(val));
+  } catch (e) { 
+  }
+};
+
+const isCacheFresh = (timeKey) => {
+  try {
+    const t = Number(sessionStorage.getItem(timeKey));
+    if (!Number.isFinite(t) || t <= 0) return false;
+    return Date.now() - t <= CACHE_TTL_MS;
+  } catch (e) { 
+    return false;
+  }
+};
+
+const collectTreeIds = (nodes, set) => {
+  if (!Array.isArray(nodes)) return;
+  nodes.forEach(n => {
+    if (!n) return;
+    set.add(String(n.id));
+    if (Array.isArray(n.children) && n.children.length > 0) collectTreeIds(n.children, set);
+  });
+};
+
+const countDescendants = (node) => {
+  if (!node || !Array.isArray(node.children) || node.children.length === 0) return 0;
+  let cnt = 0;
+  const stack = [...node.children];
+  while (stack.length) {
+    const n = stack.pop();
+    if (!n) continue;
+    cnt += 1;
+    if (Array.isArray(n.children) && n.children.length) {
+      for (let i = 0; i < n.children.length; i++) stack.push(n.children[i]);
+    }
+  }
+  return cnt;
+};
+
+const markChildrenAnimating = (row) => {
+  try {
+    const children = Array.isArray(row?.children) ? row.children : [];
+    if (!children.length) return;
+    const ids = children
+      .map(c => (c?.id !== undefined && c?.id !== null ? String(c.id) : ''))
+      .filter(Boolean)
+      .slice(0, 60);
+    if (!ids.length) return;
+
+    ids.forEach(id => {
+      animRowKeyMap[id] = true;
+      window.setTimeout(() => {
+        try { delete animRowKeyMap[id]; } catch (e) { 
+        }
+      }, 220);
+    });
+  } catch (e) { 
+  }
+};
+
+const rowClassName = ({ row }) => {
+  const id = row?.id !== undefined && row?.id !== null ? String(row.id) : '';
+  return id && animRowKeyMap[id] ? 'row-expand-anim' : '';
+};
+
+const handleExpandChange = (row, expanded) => {
+  const id = row?.id !== undefined && row?.id !== null ? String(row.id) : '';
+  if (!id) return;
+  const cur = new Set(Array.isArray(expandedRowKeys.value) ? expandedRowKeys.value.map(String) : []);
+  if (expanded) cur.add(id);
+  else cur.delete(id);
+  expandedRowKeys.value = Array.from(cur);
+  expandedInitialized.value = true;
+
+  try {
+    sessionStorage.setItem(EXPANDED_KEYS_CACHE_KEY, JSON.stringify(Array.from(cur)));
+  } catch (e) { 
+  }
+
+  if (expanded) markChildrenAnimating(row);
+};
+
+const isRowToggleBlocked = (evt) => {
+  const el = evt?.target;
+  if (!el || typeof el.closest !== 'function') return false;
+  return !!el.closest('button, a, .el-button, .el-dropdown, .el-input, .el-select, .el-switch, .el-checkbox, .el-radio, .preview-text');
+};
+
+const toggleRowExpand = (row) => {
+  if (!row || !Array.isArray(row.children) || row.children.length === 0) return;
+  const id = row?.id !== undefined && row?.id !== null ? String(row.id) : '';
+  if (!id) return;
+  const cur = new Set(Array.isArray(expandedRowKeys.value) ? expandedRowKeys.value.map(String) : []);
+  const expanded = cur.has(id);
+  handleExpandChange(row, !expanded);
+};
+
+const handleRowClick = (row, _column, event) => {
+  if (isRowToggleBlocked(event)) return;
+  if (row?.level === 3) {
+    handleViewDetail(row);
+    return;
+  }
+  toggleRowExpand(row);
+};
+
+const parseJwtPayload = (token) => {
+  try {
+    if (!token || typeof token !== 'string') return null;
+    const parts = token.split('.');
+    if (parts.length < 2) return null;
+    let payload = parts[1];
+    payload = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const pad = payload.length % 4;
+    if (pad) payload += '='.repeat(4 - pad);
+    const json = atob(payload);
+    return JSON.parse(json);
+  } catch (e) { 
+    return null;
+  }
+};
+
+const getCurrentAuthInfo = () => {
+  const token = localStorage.getItem('token') || '';
+  const payload = parseJwtPayload(token);
+  if (!payload) return null;
+  const userId = payload.id !== undefined ? Number(payload.id) : null;
+  const role = payload.role !== undefined ? String(payload.role) : '';
+  if (!userId || Number.isNaN(userId)) return null;
+  return { userId, role };
+};
+
+const filterTasksByRole = (tasks, auth) => { 
+  if (!Array.isArray(tasks) || tasks.length === 0) return [];
+  if (!auth) return [];
+
+  const { userId, role } = auth;
+  if (role === '0') return tasks; 
+
+  const me = Array.isArray(allUsers.value) ? allUsers.value.find(u => Number(u.userId) === Number(userId)) : null;
+  const myDeptId = me?.deptId !== undefined && me?.deptId !== null ? Number(me.deptId) : null;
+
+  const isMine = (t) => {
+    const principalId = t?.principalId !== undefined ? Number(t.principalId) : null; 
+    const leaderId = t?.leaderId !== undefined ? Number(t.leaderId) : null; 
+    const deptId = t?.deptId !== undefined ? Number(t.deptId) : null; 
+
+    if (role === '2') {
+      return (myDeptId !== null && deptId === myDeptId) || (principalId !== null && principalId === userId);
+    }
+    return (leaderId !== null && leaderId === userId) || (principalId !== null && principalId === userId);
+  };
+
+  const taskMap = new Map();
+  tasks.forEach(t => {
+    if (t?.taskId !== undefined && t?.taskId !== null) taskMap.set(String(t.taskId), t);
+  });
+
+  const keepIds = new Set();
+  const matched = tasks.filter(isMine);
+  matched.forEach(t => keepIds.add(String(t.taskId)));
+
+  const addParents = (t) => {
+    let parentId = t?.parentId !== undefined && t?.parentId !== null ? String(t.parentId) : null;
+    while (parentId && parentId !== '0' && !keepIds.has(parentId)) {
+      keepIds.add(parentId);
+      const parent = taskMap.get(parentId);
+      if (!parent) break;
+      parentId = parent?.parentId !== undefined && parent?.parentId !== null ? String(parent.parentId) : null;
+    }
+  };
+  matched.forEach(addParents);
+
+  return tasks.filter(t => keepIds.has(String(t.taskId)));
+};
+
+const mapStatus = (status) => {
+  const statusMap = {
+    '0': '未开始',
+    '1': '进行中',
+    '2': '审核中',
+    '3': '已完成'
+  };
+  return statusMap[status] || '未开始';
+};
+
+const formatDate = (date) => {
+  if (!date) return '';
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return '';
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getPhaseDateRange = (task) => {
+  const lvl = task?.level !== undefined && task?.level !== null ? Number(task.level) : NaN;
+  if (Number.isFinite(lvl) && (lvl === 1 || lvl === 2)) {
+    return {
+      startDate: '2025-01-01',
+      endDate: '2029-12-31',
+    };
+  }
+
+  const y = task?.phase !== undefined && task?.phase !== null ? Number(task.phase) : NaN;
+  if (Number.isFinite(y) && y > 1900) {
+    return {
+      startDate: `${y}-01-01`,
+      endDate: `${y}-12-31`,
+    };
+  }
+  return null;
+};
+
+const loadUserAndDeptMaps = async (tasks = []) => {
+  try {
+    let users = null;
+    if (isCacheFresh(USERS_CACHE_TIME_KEY)) {
+      const cached = readJsonCache(USERS_CACHE_KEY);
+      if (Array.isArray(cached)) users = cached;
+    }
+    if (!users) {
+      try {
+        users = await getAllUsers();
+        if (Array.isArray(users)) {
+          writeJsonCache(USERS_CACHE_KEY, users);
+          sessionStorage.setItem(USERS_CACHE_TIME_KEY, String(Date.now()));
+        }
+      } catch (e) {  
+        if (e?.isPermissionError || (e?.message && e.message.includes('无权限'))) {
+        } else {
+          console.warn('获取用户列表失败，使用缓存或降级处理:', e);
+        }
+        users = [];
+      }
+    }
+    allUsers.value = Array.isArray(users) ? users : [];
+    const newUserMap = new Map();
+    const newDeptMap = new Map();
+    
+    (Array.isArray(users) ? users : []).forEach(user => {
+      const uid = user?.userId ?? user?.user_id;
+      if (uid !== undefined && uid !== null) {
+        let name = user?.nickName ?? user?.nick_name ?? user?.userName ?? user?.user_name;
+        if (name) {
+          try {
+            if (typeof name === 'string') {
+              name = name.replace(/^\uFEFF/, '');
+              if (name.includes('\uFFFD') || /[\uFFFD]/.test(name)) {
+                try {
+                  name = decodeURIComponent(encodeURIComponent(name));
+                } catch (e) { 
+                }
+              }
+            }
+          } catch (e) {  
+            console.warn('用户名编码处理失败:', e);
+          }
+          if (name && name.trim() !== '') {
+            newUserMap.set(String(uid), name);
+          }
+        }
+      }
+    });
+
+    tasks.forEach(task => {
+      if (task) {
+        const leaderId = task?.leaderId ?? task?.leader_id;
+        let leaderName = task?.leaderName ?? task?.leader_name;
+        if (leaderId) {
+          if (leaderName && leaderName.trim() !== '') {
+            try {
+              leaderName = leaderName.replace(/^\uFEFF/, '');
+              if (leaderName.includes('\uFFFD') || /[\uFFFD]/.test(leaderName)) {
+                try {
+                  leaderName = decodeURIComponent(encodeURIComponent(leaderName));
+                } catch (e) { 
+                }
+              }
+            } catch (e) { 
+            }
+            if (leaderName && leaderName.trim() !== '') {
+              newUserMap.set(String(leaderId), leaderName);
+            }
+          }
+          if (!newUserMap.has(String(leaderId))) {
+            let user = allUsers.value.find(u => {
+              const uid = u?.userId ?? u?.user_id;
+              return uid !== undefined && uid !== null && Number(uid) === Number(leaderId);
+            });
+            if (!user) {
+              try {
+                const cachedUsers = readJsonCache(USERS_CACHE_KEY);
+                if (Array.isArray(cachedUsers)) {
+                  user = cachedUsers.find(u => {
+                    const uid = u?.userId ?? u?.user_id;
+                    return uid !== undefined && uid !== null && Number(uid) === Number(leaderId);
+                  });
+                }
+              } catch (e) { 
+              }
+            }
+            if (user) {
+              let userName = user?.nickName ?? user?.nick_name ?? user?.userName ?? user?.user_name;
+              if (userName) {
+                try {
+                  userName = userName.replace(/^\uFEFF/, '');
+                  if (userName.includes('\uFFFD') || /[\uFFFD]/.test(userName)) {
+                    try {
+                      userName = decodeURIComponent(encodeURIComponent(userName));
+                    } catch (e) { 
+                    }
+                  }
+                } catch (e) { 
+                }
+                if (userName && userName.trim() !== '') {
+                  newUserMap.set(String(leaderId), userName);
+                }
+              }
+            }
+          }
+        }
+        
+        const principalId = task?.principalId ?? task?.principal_id;
+        let principalName = task?.principalName ?? task?.principal_name;
+        if (principalId) {
+          if (principalName && principalName.trim() !== '') {
+            try {
+              principalName = principalName.replace(/^\uFEFF/, '');
+              if (principalName.includes('\uFFFD') || /[\uFFFD]/.test(principalName)) {
+                try {
+                  principalName = decodeURIComponent(encodeURIComponent(principalName));
+                } catch (e) { 
+                }
+              }
+            } catch (e) { 
+            }
+            if (principalName && principalName.trim() !== '') {
+              newUserMap.set(String(principalId), principalName);
+            }
+          }
+          if (!newUserMap.has(String(principalId))) {
+            let user = allUsers.value.find(u => {
+              const uid = u?.userId ?? u?.user_id;
+              return uid !== undefined && uid !== null && Number(uid) === Number(principalId);
+            });
+            if (!user) {
+              try {
+                const cachedUsers = readJsonCache(USERS_CACHE_KEY);
+                if (Array.isArray(cachedUsers)) {
+                  user = cachedUsers.find(u => {
+                    const uid = u?.userId ?? u?.user_id;
+                    return uid !== undefined && uid !== null && Number(uid) === Number(principalId);
+                  });
+                }
+              } catch (e) { 
+              }
+            }
+            if (user) {
+              let userName = user?.nickName ?? user?.nick_name ?? user?.userName ?? user?.user_name;
+              if (userName) {
+                try {
+                  userName = userName.replace(/^\uFEFF/, '');
+                  if (userName.includes('\uFFFD') || /[\uFFFD]/.test(userName)) {
+                    try {
+                      userName = decodeURIComponent(encodeURIComponent(userName));
+                    } catch (e) { 
+                    }
+                  }
+                } catch (e) { 
+                }
+                if (userName && userName.trim() !== '') {
+                  newUserMap.set(String(principalId), userName);
+                }
+              }
+            }
+          }
+        }
+        
+        const auditorId = task?.auditorId ?? task?.auditor_id ?? task?.auditId ?? task?.audit_id;
+        let auditorName = task?.auditorName ?? task?.auditName;
+        if (auditorId) {
+          if (auditorName && auditorName.trim() !== '' && auditorName !== '无') {
+            try {
+              auditorName = auditorName.replace(/^\uFEFF/, '');
+              if (auditorName.includes('\uFFFD') || /[\uFFFD]/.test(auditorName)) {
+                try {
+                  auditorName = decodeURIComponent(encodeURIComponent(auditorName));
+                } catch (e) { 
+                }
+              }
+            } catch (e) { 
+            }
+            if (auditorName && auditorName.trim() !== '' && auditorName !== '无') {
+              newUserMap.set(String(auditorId), auditorName);
+            }
+          }
+        }
+      }
+    });
+
+    const uniqueDeptIds = new Set();
+    tasks.forEach(task => {
+      if (task?.deptId) {
+        const deptIdStr = String(task.deptId);
+        uniqueDeptIds.add(deptIdStr);
+        if (task.deptName && task.deptName.trim() !== '' && !newDeptMap.has(deptIdStr)) {
+          newDeptMap.set(deptIdStr, String(task.deptName));
+        }
+      }
+    });
+    
+    const deptIdToUsers = new Map();
+    (Array.isArray(users) ? users : []).forEach(user => {
+      if (user.deptId) {
+        const deptIdStr = String(user.deptId);
+        if (!deptIdToUsers.has(deptIdStr)) {
+          deptIdToUsers.set(deptIdStr, []);
+        }
+        deptIdToUsers.get(deptIdStr).push(user);
+      }
+    });
+    
+    const missingDeptIds = Array.from(uniqueDeptIds).filter(deptId => !newDeptMap.has(deptId));
+    if (missingDeptIds.length > 0) {
+      await Promise.all(missingDeptIds.map(deptId =>
+        getDeptById(Number(deptId))
+          .then(dept => {
+            if (dept?.deptName) {
+              newDeptMap.set(String(deptId), String(dept.deptName));
+            }
+          })
+          .catch(() => {
+            newDeptMap.set(String(deptId), `部门${deptId}`);
+          })
+      ));
+    }
+    
+    userMap.value = newUserMap;
+    deptMap.value = newDeptMap;
+  } catch (error) { 
+    userMap.value = new Map();
+    deptMap.value = new Map();
+    allUsers.value = [];
+  }
+};
+
+const getDeptName = (deptId) => {
+  if (!deptId) return '';
+  const deptIdStr = String(deptId);
+  return deptMap.value.get(deptIdStr) || `部门${deptId}`;
+};
+
+const getUserName = (userId) => {
+  if (!userId) return '';
+  const userIdStr = String(userId);
+  let name = userMap.value.get(userIdStr);
+  if (name) {
+    try {
+      name = name.replace(/^\uFEFF/, '');
+      if (name.includes('') || /[\uFFFD]/.test(name)) {
+        try {
+          name = decodeURIComponent(encodeURIComponent(name));
+        } catch (e) { 
+        }
+      }
+    } catch (e) { 
+    }
+    return name;
+  }
+  let user = allUsers.value.find(u => {
+    const uid = u?.userId ?? u?.user_id;
+    return uid !== undefined && uid !== null && String(uid) === userIdStr;
+  });
+  if (!user) {
+    try {
+      const cachedUsers = readJsonCache(USERS_CACHE_KEY);
+      if (Array.isArray(cachedUsers)) {
+        user = cachedUsers.find(u => {
+          const uid = u?.userId ?? u?.user_id;
+          return uid !== undefined && uid !== null && String(uid) === userIdStr;
+        });
+      }
+    } catch (e) { 
+    }
+  }
+  if (user) {
+    let userName = user?.nickName ?? user?.nick_name ?? user?.userName ?? user?.user_name;
+    if (userName) {
+      try {
+        userName = userName.replace(/^\uFEFF/, '');
+        if (userName.includes('') || /[\uFFFD]/.test(userName)) {
+          try {
+            userName = decodeURIComponent(encodeURIComponent(userName));
+          } catch (e) { 
+          }
+        }
+      } catch (e) { 
+      }
+      if (userName && userName.trim() !== '') {
+        userMap.value.set(userIdStr, userName);
+        return userName;
+      }
+    }
+  }
+  return `用户${userId}`;
+};
+
+const toFiniteNumber = (val) => {
+  const n = Number(val);
+  return Number.isFinite(n) ? n : 0;
+};
+
+const clampPercent = (val) => {
+  const n = toFiniteNumber(val);
+  return Math.max(0, Math.min(100, n));
+};
+
+const getCurrentTarget = (raw) => {
+  const cur = toFiniteNumber(raw?.currentValue ?? raw?.current_value);
+  const target = toFiniteNumber(raw?.targetValue ?? raw?.target_value);
+  return { cur, target };
+};
+
+const calcProgressByCurrentTarget = (raw) => {
+  const { cur, target } = getCurrentTarget(raw);
+  if (target <= 0) return 0;
+  return clampPercent(Math.round((cur / target) * 100));
+};
+
+const transformTask = (task) => {
+  const phaseRange = getPhaseDateRange(task);
+  const level = Number(task.level) || 1;
+  const progress = calcProgressByCurrentTarget(task);
+  return {
+    id: String(task.taskId),
+    code: task.taskCode || '',
+    name: task.taskName || '',
+    level,
+    progress,
+    status: mapStatus(task.status),
+    dept: (task.deptName && task.deptName.trim() !== '') ? task.deptName : getDeptName(task.deptId),
+    principal: (() => {
+      const leaderId = task?.leaderId ?? task?.leader_id;
+      if (task.leaderName && task.leaderName.trim() !== '') {
+        let name = task.leaderName;
+        try {
+          name = name.replace(/^\uFEFF/, '');
+          if (name.includes('\uFFFD') || /[\uFFFD]/.test(name)) {
+            try {
+              name = decodeURIComponent(encodeURIComponent(name));
+            } catch (e) { 
+            }
+          }
+        } catch (e) { 
+        }
+        return name;
+      }
+      if (leaderId) {
+        return getUserName(leaderId);
+      }
+      return '';
+    })(),
+    startDate: phaseRange?.startDate || formatDate(task.createTime),
+    endDate: phaseRange?.endDate || formatDate(task.updateTime) || formatDate(task.createTime), 
+    _raw: task,
+    children: []
+  };
+};
+
+const loadTodoAudits = async () => {
+  try {
+    const list = await getTodoAudits();
+    const arr = Array.isArray(list) ? list : [];
+    const map = new Map();
+    arr.forEach(item => {
+      const taskId = item.task_id ?? item.taskId;
+      if (taskId) {
+        map.set(Number(taskId), true);
+      }
+    });
+    todoAuditTaskMap.value = map;
+  } catch (e) { 
+    todoAuditTaskMap.value = new Map();
+  }
+};
+
+const refreshTasksSilently = async () => {
+  try {
+    let tasks = await getAllTasks();
+    tasks = await supplementParentTasks(tasks);
+    await loadUserAndDeptMaps(tasks);
+    allTaskTreeData.value = buildTaskTree(tasks);
+    if (Array.isArray(tasks)) {
+      writeJsonCache(TASKS_CACHE_KEY, tasks);
+      sessionStorage.setItem(TASKS_CACHE_TIME_KEY, String(Date.now()));
+    }
+    applyFilters();
+
+    const curTaskId = currentTask.value?._raw?.taskId;
+    if (curTaskId) {
+      const found = Array.isArray(tasks) ? tasks.find(t => Number(t?.taskId) === Number(curTaskId)) : null;
+      if (found) currentTask.value = transformTask(found);
+    }
+
+    await loadTodoAudits();
+  } catch (e) { 
+  }
+};
+
+const supplementParentTasks = async (tasks) => {
+  if (!Array.isArray(tasks) || tasks.length === 0) return tasks;
+
+  const taskIdSet = new Set(tasks.map(t => String(t?.taskId ?? t?.task_id ?? '')));
+  const missingParentIds = new Set();
+  
+  tasks.forEach(task => {
+    const level = task?.level !== undefined && task?.level !== null ? Number(task.level) : NaN;
+    if (Number.isFinite(level) && level === 3) {
+      const parentId = task?.parentId ?? task?.parent_id;
+      if (parentId && parentId !== 0 && !taskIdSet.has(String(parentId))) {
+        missingParentIds.add(Number(parentId));
+      }
+    }
+  });
+
+  if (missingParentIds.size === 0) return tasks;
+
+  const parentTasks = [];
+  const fetchedTaskIds = new Set();
+
+  const fetchParentRecursively = async (taskId) => {
+    if (fetchedTaskIds.has(taskId)) return; 
+    if (taskIdSet.has(String(taskId))) return; 
+    fetchedTaskIds.add(taskId);
+
+    try {
+      const parentTask = await getTaskById(taskId);
+      if (parentTask && parentTask.taskId) {
+        parentTasks.push(parentTask);
+        taskIdSet.add(String(parentTask.taskId));
+
+        const parentLevel = parentTask?.level !== undefined && parentTask?.level !== null ? Number(parentTask.level) : NaN;
+        if (Number.isFinite(parentLevel) && parentLevel > 1) {
+          const grandParentId = parentTask?.parentId ?? parentTask?.parent_id;
+          if (grandParentId && grandParentId !== 0 && !taskIdSet.has(String(grandParentId))) {
+            await fetchParentRecursively(Number(grandParentId));
+          }
+        }
+      }
+    } catch (e) { 
+    }
+  };
+
+  await Promise.all(Array.from(missingParentIds).map(id => fetchParentRecursively(id)));
+  return [...tasks, ...parentTasks];
+};
+
+const buildTaskTree = (tasks) => {
+  if (!tasks || tasks.length === 0) return [];
+  
+  const transformedTasks = tasks.map(transformTask);
+  const taskMap = new Map();
+  transformedTasks.forEach(task => {
+    taskMap.set(task.id, task);
+  });
+  
+  const rootTasks = [];
+  transformedTasks.forEach(task => {
+    const parentId = task._raw.parentId ? String(task._raw.parentId) : null;
+    
+    if (!parentId || parentId === '0') {
+      rootTasks.push(task);
+    } else {
+      const parent = taskMap.get(parentId);
+      if (parent) {
+        if (!parent.children) {
+          parent.children = [];
+        }
+        parent.children.push(task);
+      } else {
+        rootTasks.push(task);
+      }
+    }
+  });
+  
+  const sortChildren = (nodes) => {
+    nodes.forEach(node => {
+      if (node.children && node.children.length > 0) {
+        node.children.sort((a, b) => {
+          const al = Number(a.level);
+          const bl = Number(b.level);
+          if (al !== bl) return al - bl;
+          return a.id.localeCompare(b.id);
+        });
+        sortChildren(node.children);
+      }
+    });
+  };
+  
+  sortChildren(rootTasks);
+  
+  const computeProgress = (node) => {
+    if (!node) return;
+    if (Array.isArray(node.children) && node.children.length > 0) {
+      node.children.forEach(computeProgress);
+    }
+
+    const lvl = Number(node.level);
+    if (lvl === 1) {
+      const getAllLevel3Progress = (n) => {
+        const progresses = [];
+        if (Array.isArray(n.children) && n.children.length > 0) {
+          n.children.forEach(child => {
+            const childLevel = Number(child.level);
+            if (childLevel === 3) {
+              if (child.progress !== undefined && child.progress !== null) {
+                progresses.push(Number(child.progress));
+              }
+            } else if (childLevel === 2) {
+              const level3Progresses = getAllLevel3Progress(child);
+              progresses.push(...level3Progresses);
+            }
+          });
+        }
+        return progresses;
+      };
+      const allLevel3Progresses = getAllLevel3Progress(node);
+      if (allLevel3Progresses.length > 0) {
+        const sum = allLevel3Progresses.reduce((acc, p) => acc + p, 0);
+        node.progress = clampPercent(Math.round(sum / allLevel3Progresses.length));
+      } else {
+        node.progress = 0;
+      }
+      return;
+    }
+    if (lvl === 2) {
+      const kids = (Array.isArray(node.children) ? node.children : []).filter(c => Number(c.level) === 3);
+      if (kids.length > 0) {
+        const progresses = kids
+          .map(k => Number(k.progress))
+          .filter(p => Number.isFinite(p));
+        if (progresses.length > 0) {
+          const sum = progresses.reduce((acc, p) => acc + p, 0);
+          node.progress = clampPercent(Math.round(sum / progresses.length));
+        } else {
+          node.progress = 0;
+        }
+      } else {
+        node.progress = 0;
+      }
+      return;
+    }
+
+    node.progress = calcProgressByCurrentTarget(node._raw);
+  };
+
+  rootTasks.forEach(computeProgress);
+  
+  const allIds = new Set();
+  collectTreeIds(rootTasks, allIds);
+  if (!expandedInitialized.value) {
+    let savedExpandedKeys = [];
+    try {
+      const saved = sessionStorage.getItem(EXPANDED_KEYS_CACHE_KEY);
+      if (saved) {
+        savedExpandedKeys = JSON.parse(saved);
+        if (Array.isArray(savedExpandedKeys)) {
+          savedExpandedKeys = savedExpandedKeys.filter(id => allIds.has(String(id)));
+        }
+      }
+    } catch (e) { 
+    }
+
+    if (savedExpandedKeys.length > 0) {
+      expandedRowKeys.value = savedExpandedKeys.map(String);
+    } else {
+      const TOTAL_NODES_THRESHOLD = 260; 
+      const ROOT_DESC_THRESHOLD = 90; 
+      const total = allIds.size;
+
+      if (total > TOTAL_NODES_THRESHOLD) {
+        expandedRowKeys.value = [];
+      } else {
+        expandedRowKeys.value = rootTasks
+          .filter(rt => countDescendants(rt) <= ROOT_DESC_THRESHOLD)
+          .map(t => String(t.id));
+      }
+    }
+    expandedInitialized.value = true;
+  } else {
+    expandedRowKeys.value = (Array.isArray(expandedRowKeys.value) ? expandedRowKeys.value : [])
+      .map(String)
+      .filter(id => allIds.has(id));
+    try {
+      sessionStorage.setItem(EXPANDED_KEYS_CACHE_KEY, JSON.stringify(expandedRowKeys.value));
+    } catch (e) { 
+    }
+  }
+  return rootTasks;
+};
+
+const loadTasks = async () => {
+  loading.value = true;
+  try {
+    if (isCacheFresh(TASKS_CACHE_TIME_KEY)) {
+      const cachedTasks = readJsonCache(TASKS_CACHE_KEY);
+      if (Array.isArray(cachedTasks) && cachedTasks.length > 0) {
+        await loadUserAndDeptMaps(cachedTasks);
+        allTaskTreeData.value = buildTaskTree(cachedTasks);
+        applyFilters();
+        loading.value = false;
+        refreshTasksSilently();
+        return;
+      }
+    }
+
+    let tasks = await getAllTasks();
+    tasks = await supplementParentTasks(tasks);
+    await loadUserAndDeptMaps(tasks);
+    await loadTodoAudits();
+
+    allTaskTreeData.value = buildTaskTree(tasks);
+    if (Array.isArray(tasks)) {
+      writeJsonCache(TASKS_CACHE_KEY, tasks);
+      sessionStorage.setItem(TASKS_CACHE_TIME_KEY, String(Date.now()));
+    }
+    applyFilters();
+    
+    const taskId = route.query.taskId;
+    if (taskId) {
+      setTimeout(() => {
+        openTaskFromQuery(taskId);
+      }, 300);
+    }
+  } catch (error) {  
+    const errorMsg = error.message || '';
+    if (errorMsg.includes('登录已过期') || errorMsg.includes('token无效') || errorMsg.includes('No Token')) {
+      ElMessage.error({
+        message: '请先登录后再访问。点击右上角"管理员登录"按钮进行登录。',
+        duration: 5000,
+        showClose: true
+      });
+    } else if (errorMsg.includes('token_blacklist') && errorMsg.includes("doesn't exist")) {
+      ElMessage.error({
+        message: '后端数据库配置错误：缺少 token_blacklist 表。请联系后端开发人员创建该表后再试。',
+        duration: 5000,
+        showClose: true
+      });
+    } else {
+      ElMessage.error(errorMsg || '加载任务数据失败，请稍后重试');
+    }
+    
+    allTaskTreeData.value = [];
+    taskTreeData.value = [];
+  } finally {
+    loading.value = false;
+  }
+};
+
+const filterTaskTree = (nodes, yearFilter, statusFilter, searchKeyword) => {
+  if (!nodes || nodes.length === 0) return [];
+  
+  return nodes.map(node => {
+    let matches = true;
+    
+    if (yearFilter) {
+      const taskPhase = node._raw?.phase;
+      const taskYear = taskPhase ? String(taskPhase) : (node.startDate ? String(new Date(node.startDate).getFullYear()) : '');
+      if (taskYear && taskYear !== String(yearFilter)) {
+        matches = false;
+      } else if (!taskYear && yearFilter) {
+        matches = false;
+      }
+    }
+    
+    if (statusFilter) {
+      const statusMap = {
+        'ing': '进行中',
+        'not_started': '未开始',
+        'done': '已完成',
+        'overdue': '逾期'
+      };
+      const targetStatus = statusMap[statusFilter];
+      if (statusFilter === 'ing') {
+        if (node.status !== '进行中' && node.status !== '审核中') matches = false;
+      } else if (statusFilter === 'not_started') {
+        if (node.status !== '未开始') matches = false;
+      } else if (node.status !== targetStatus) {
+        matches = false;
+      }
+    }
+    
+    if (searchKeyword) {
+      const keyword = searchKeyword.toLowerCase().trim();
+      if (keyword) {
+        const matchCode = node.code && node.code.toLowerCase().includes(keyword);
+        const matchName = node.name && node.name.toLowerCase().includes(keyword);
+        if (!matchCode && !matchName) {
+          matches = false;
+        }
+      }
+    }
+    
+    let filteredChildren = [];
+    if (node.children && node.children.length > 0) {
+      filteredChildren = filterTaskTree(node.children, yearFilter, statusFilter, searchKeyword);
+    }
+    
+    if (matches || filteredChildren.length > 0) {
+      return {
+        ...node,
+        children: filteredChildren
+      };
+    }
+    
+    return null;
+  }).filter(node => node !== null);
+};
+
+const recomputeProgressForFilteredTree = (nodes) => {
+  if (!nodes || nodes.length === 0) return;
+
+  const computeProgressForNode = (node) => {
+    if (!node) return;
+    if (Array.isArray(node.children) && node.children.length > 0) {
+      node.children.forEach(computeProgressForNode);
+    }
+
+    const lvl = Number(node.level);
+    if (lvl === 1) {
+      const getAllLevel3Progress = (n) => {
+        const progresses = [];
+        if (Array.isArray(n.children) && n.children.length > 0) {
+          n.children.forEach(child => {
+            const childLevel = Number(child.level);
+            if (childLevel === 3) {
+              if (child.progress !== undefined && child.progress !== null) {
+                progresses.push(Number(child.progress));
+              }
+            } else if (childLevel === 2) {
+              const level3Progresses = getAllLevel3Progress(child);
+              progresses.push(...level3Progresses);
+            }
+          });
+        }
+        return progresses;
+      };
+      const allLevel3Progresses = getAllLevel3Progress(node);
+      if (allLevel3Progresses.length > 0) {
+        const sum = allLevel3Progresses.reduce((acc, p) => acc + p, 0);
+        node.progress = clampPercent(Math.round(sum / allLevel3Progresses.length));
+      } else {
+        node.progress = 0;
+      }
+      return;
+    }
+    if (lvl === 2) {
+      const kids = (Array.isArray(node.children) ? node.children : []).filter(c => Number(c.level) === 3);
+      if (kids.length > 0) {
+        const progresses = kids
+          .map(k => Number(k.progress))
+          .filter(p => Number.isFinite(p));
+        if (progresses.length > 0) {
+          const sum = progresses.reduce((acc, p) => acc + p, 0);
+          node.progress = clampPercent(Math.round(sum / progresses.length));
+        } else {
+          node.progress = 0;
+        }
+      } else {
+        node.progress = 0;
+      }
+      return;
+    }
+  };
+
+  nodes.forEach(computeProgressForNode);
+};
+
+const applyFilters = () => {
+  const yearFilter = filterYear.value || '';
+  const statusFilter = filterStatus.value || '';
+  const searchKeyword = actualSearchText.value.trim() || '';
+  
+  taskTreeData.value = filterTaskTree(allTaskTreeData.value, yearFilter, statusFilter, searchKeyword);
+  recomputeProgressForFilteredTree(taskTreeData.value);
+};
+
+const handleSearch = () => {
+  actualSearchText.value = searchText.value;
+  applyFilters();
+};
+
+const handleCancelSearch = () => {
+  searchText.value = '';
+  actualSearchText.value = '';
+  applyFilters();
+};
+
+const findTaskById = (list, targetId) => {
+  const idStr = String(targetId);
+  for (const item of list) {
+    if (String(item.id) === idStr) {
+      return item;
+    }
+    if (item.children && item.children.length) {
+      const found = findTaskById(item.children, idStr);
+      if (found) return found;
+    }
+  }
+  return null;
+};
+
+const canAuditTask = (row) => {
+  if (!row || row.level !== 3) return false;
+  if (row.status !== '审核中') return false;
+  const taskId = row._raw?.taskId;
+  if (!taskId) return false;
+  return todoAuditTaskMap.value.has(Number(taskId));
+};
+
+const handleAuditTask = (row) => {
+  shouldScrollToAudit.value = true;
+  handleViewDetail(row);
+};
+
+const getLevelClass = (level) => {
+  switch (level) {
+    case 1: return 'font-bold text-gray-900 text-base';
+    case 2: return 'font-medium text-gray-700';
+    case 3: return 'text-gray-600 pl-2';
+    default: return '';
+  }
+};
+
+const getStatusTag = (status) => {
+  const map = {
+    '进行中': 'primary',
+    '审核中': 'warning',
+    '已完成': 'success',
+    '未开始': 'info',
+    '逾期': 'danger'
+  };
+  return map[status] || 'info';
+};
+
+const getProgressStatus = (row) => {
+  if (row.status === '逾期') return 'exception';
+  if (row.progress === 100) return 'success';
+  return '';
+};
+
+// --- 请求四级任务数据 ---
+const loadForthTasks = async (parentId) => {
+  try {
+    const data = await getForthTasks(parentId);
+    // 兼容可能存在的 data 层级包裹
+    forthTasks.value = Array.isArray(data) ? data : (data.data || []);
+    
+    forthTasks.value.forEach(t => {
+      const cv = t.currentValue ?? t.current_value;
+      const n = Number(cv);
+      forthFeedbackData[t.taskId] = {
+        progress: Number.isFinite(n) ? Math.round(n) : 0,
+      };
+    });
+  } catch (e) {
+    console.error(e);
+    forthTasks.value = [];
+  }
+};
+
+// 查看详情（并发拉取审批流和四级任务拆分）
+const handleViewDetail = async (row) => {
+  currentTask.value = row;
+  const cv = row?._raw?.currentValue ?? row?._raw?.current_value;
+  const n = Number(cv);
+  feedbackForm.progress = Number.isFinite(n) ? Math.round(n) : 0;
+  fileList.value = []; 
+  feedbackForm.comment = '';
+  auditForm.result = 1;
+  auditForm.comment = '同意';
+  
+  drawerVisible.value = true;
+  drawerLoading.value = true;
+
+  try {
+    const taskId = row._raw?.taskId;
+    if (taskId) {
+      await Promise.all([
+        loadAuditForCurrentTask(),
+        loadForthTasks(taskId)
+      ]);
+    } else {
+      await loadAuditForCurrentTask();
+    }
+  } finally {
+    drawerLoading.value = false;
+  }
+};
+
+const handleSupervise = async (row) => {
+  try {
+    const toUserId = row?._raw?.leaderId !== undefined && row?._raw?.leaderId !== null ? Number(row._raw.leaderId) : null;
+    const taskId = row?.id ? Number(row.id) : null;
+    if (!toUserId) {
+      ElMessage.warning('未找到任务负责人，无法发送督办');
+      return;
+    }
+    const auth = getCurrentAuthInfo();
+    if (auth?.userId && Number(auth.userId) === Number(toUserId)) {
+      ElMessage.warning('不能督办自己');
+      return;
+    }
+    await sendNotice({
+      to_user_id: toUserId,
+      title: `督办提醒：${row?.name || '任务'}`,
+      content: '请尽快更新任务进度并按要求提交佐证材料。',
+      source_id: taskId || undefined,
+      type: '3',
+      trigger_event: 'TASK',
+    });
+    ElMessage.success(`已向 ${getUserName(toUserId)} 发送督办提醒`);
+  } catch (e) {  
+    ElMessage.error(e?.message || '发送督办失败，请稍后重试');
+  }
+};
+
+const handleExceed = () => {
+  ElMessage.warning('只能上传 1 个文件，请先删除旧文件。');
+};
+
+const handleRemove = () => {
+  fileList.value = [];
+};
+
+const handleFileChange = (file, list) => {
+  const fileName = file.name.toLowerCase();
+  const isExtAllowed = fileName.endsWith('.doc') || fileName.endsWith('.docx') || fileName.endsWith('.pdf');
+
+  if (!isExtAllowed) {
+    ElMessage.error('不支持的文件类型！仅支持 doc, docx, pdf');
+    fileList.value = []; 
+    return;
+  }
+  
+  fileList.value = list.slice(-1); 
+};
+
+const openPreview = (name, url = '') => {
+  previewFileName.value = name;
+  const lowerName = name.toLowerCase();
+  
+  if (lowerName.endsWith('.pdf')) {
+    previewType.value = 'pdf';
+    previewUrl.value = url || 'https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf'; 
+  } else {
+    previewType.value = 'doc';
+  }
+  previewVisible.value = true;
+};
+
+const handlePreview = (file) => {
+  const raw = file?.raw;
+  if (raw && (raw.type === 'application/pdf' || String(file.name || '').toLowerCase().endsWith('.pdf'))) {
+    if (selectedFileObjectUrl.value) {
+      try { URL.revokeObjectURL(selectedFileObjectUrl.value); } catch (e) { 
+      }
+    }
+    selectedFileObjectUrl.value = URL.createObjectURL(raw);
+    openPreview(file.name, selectedFileObjectUrl.value);
+    return;
+  }
+  openPreview(file.name);
+};
+
+const previewLogFile = (fileName) => { 
+  openPreview(fileName);
+};
+
+const downloadSelectedLocalFile = () => {
+  const f = fileList.value?.[0];
+  if (!f?.raw) {
+    ElMessage.warning('暂无可下载的本地文件');
+    return;
+  }
+  const url = URL.createObjectURL(f.raw);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = f.name || 'download';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => {
+    try { URL.revokeObjectURL(url); } catch (e) { 
+    }
+  }, 500);
+};
+
+// 提交反馈材料处理
+const submitFeedback = async () => {
+  if (!canSubmitMaterial.value) {
+    ElMessage.warning('仅该任务负责人可提交材料');
+    return;
+  }
+  const taskId = currentTask.value?._raw?.taskId;
+  if (!taskId) {
+    ElMessage.error('未获取到任务信息，无法提交');
+    return;
+  }
+  if (!fileList.value || fileList.value.length === 0) {
+    ElMessage.warning('请先选择佐证材料文件（doc/docx/pdf）');
+    return;
+  }
+  const rawFile = fileList.value[0]?.raw;
+  if (!rawFile) {
+    ElMessage.error('未获取到上传文件，请重新选择');
+    return;
+  }
+
+  const taskRaw = currentTask.value._raw;
+  let hasAuditor = false;
+  if (taskRaw?.auditorId || taskRaw?.auditor_id || taskRaw?.auditId || taskRaw?.audit_id) {
+    hasAuditor = true;
+  } else if (taskRaw?.deptId) {
+    try {
+      const dept = await getDeptById(Number(taskRaw.deptId));
+      if (dept?.leaderId) {
+        hasAuditor = true;
+      }
+    } catch (e) { 
+    }
+  }
+
+  if (!hasAuditor) {
+    ElMessage.error({
+      message: '该任务未设置审核人，无法提交材料。请联系管理员为任务设置审核人后再试。',
+      duration: 5000,
+      showClose: true
+    });
+    return;
+  }
+
+  try {
+    drawerLoading.value = true;
+
+    const comment = String(feedbackForm.comment || '').trim();
+    if (comment.length > 50) {
+      ElMessage.warning('完成情况最多50字');
+      return;
+    }
+
+    const uploaded = await uploadFile(rawFile, Number(taskId));
+    const fileId = uploaded?.fileId;
+    if (!fileId) {
+      ElMessage.error('上传失败：未拿到 fileId');
+      return;
+    }
+
+    // 判断是否存在四级任务，如果有四级任务则走批量提交接口，否则按原本三级任务提报逻辑
+    if (forthTasks.value && forthTasks.value.length > 0) {
+      const subList = forthTasks.value.map(task => {
+        const dataType = task.dataType !== undefined && task.dataType !== null ? String(task.dataType) : '2';
+        const rv = Number.isFinite(Number(forthFeedbackData[task.taskId].progress)) 
+                    ? Math.round(Number(forthFeedbackData[task.taskId].progress)) 
+                    : 0;
+        
+        return {
+          task_id: Number(task.taskId),
+          reported_value: rv,
+          data_type: Number(dataType)
+        };
+      });
+
+      // 调用批量上报接口
+      await batchSubmitMaterial({
+        third_task_id: Number(taskId),
+        file_id: Number(fileId),
+        comment, // 如需支持全局评价，可在这里传递给后端
+        sub_list: subList
+      });
+
+    } else {
+      const dataType = taskRaw?.dataType !== undefined && taskRaw?.dataType !== null ? String(taskRaw.dataType) : '2';
+      const rv = Number.isFinite(Number(feedbackForm.progress)) ? Math.round(Number(feedbackForm.progress)) : 0;
+      
+      const a = latestAudit.value;
+      const flow = a ? Number(a.flowStatus ?? a.flow_status) : NaN;
+      const subId = a?.subId ?? a?.sub_id ?? null;
+      const submitBy = a?.submitBy ?? a?.submit_by ?? null;
+      const auth = getCurrentAuthInfo();
+      const myId = auth?.userId ?? null;
+
+      if (Number.isFinite(flow) && flow < 0 && subId) {
+        if (submitBy && myId && Number(submitBy) !== Number(myId)) {
+          ElMessage.warning('仅该审批单提交人可重新提交');
+          return;
+        }
+        await reSubmitMaterial({
+          sub_id: Number(subId),
+          file_id: Number(fileId),
+          reported_value: rv,
+          data_type: dataType,
+          comment,
+        });
+      } else {
+        await submitMaterial({
+          task_id: Number(taskId),
+          file_id: Number(fileId),
+          reported_value: rv,
+          data_type: dataType,
+          comment,
+        });
+      }
+    }
+
+    ElMessage.success('材料已提交（已进入审核流程）');
+    fileList.value = [];
+    feedbackForm.comment = '';
+    
+    await refreshTasksSilently();
+    drawerVisible.value = false;
+    currentTask.value = null;
+    try {
+      if (route.query?.taskId) {
+        const q = { ...route.query };
+        delete q.taskId;
+        router.replace({ query: q });
+      }
+    } catch (e) { 
+    }
+  } catch (e) {  
+    ElMessage.error(e?.message || '提交失败，请稍后重试');
+  } finally {
+    drawerLoading.value = false;
+  }
+};
+
+const loadAuditForCurrentTask = async () => {
+  const taskId = currentTask.value?._raw?.taskId;
+  if (!taskId) {
+    auditList.value = [];
+    auditLogs.value = [];
+    noticeLogs.value = [];
+    return;
+  }
+  try {
+    let res;
+    try {
+      res = await getAuditByTaskId(Number(taskId));
+    } catch (e) { 
+      res = await getAudit(Number(taskId));
+    }
+    if (Array.isArray(res)) {
+      const normalized = res.map(normalizeAuditItem).filter(Boolean);
+      normalized.sort((a, b) => {
+        const ta = a.submitTime ? new Date(a.submitTime).getTime() : 0;
+        const tb = b.submitTime ? new Date(b.submitTime).getTime() : 0;
+        return tb - ta;
+      });
+      auditList.value = normalized;
+
+      const fileIds = normalized
+        .map(item => item.fileId)
+        .filter(id => id !== undefined && id !== null);
+      if (fileIds.length > 0) {
+        const filePromises = fileIds.map(fileId =>
+          fetchFileNameFromDownload(fileId).catch(() => {
+          })
+        );
+        await Promise.all(filePromises);
+      }
+    } else {
+      auditList.value = [];
+    }
+
+    const submitDeptId = auditList.value?.[0]?.submitDeptId;
+    if (submitDeptId) {
+      await ensureDeptInfo(submitDeptId);
+    }
+
+    const allLogs = [];
+    if (auditLogsApiEnabled.value && auditList.value.length > 0) {
+      for (const auditItem of auditList.value) {
+        const subId = auditItem.subId ?? auditItem.sub_id;
+        if (subId) {
+          try {
+            const logs = await getAuditLogs(Number(subId));
+            if (Array.isArray(logs) && logs.length > 0) {
+              allLogs.push(...logs);
+            }
+          } catch (e) {  
+            const msg = String(e?.message || '');
+            if (msg.includes('No endpoint GET /biz/audit/logs') || msg.includes('/biz/audit/logs') || msg.includes('404')) {
+              auditLogsApiEnabled.value = false;
+              break; 
+            }
+          }
+        }
+      }
+    }
+
+    if (allLogs.length > 0) {
+      auditLogs.value = allLogs;
+      auditLogs.value.sort((a, b) => {
+        const ta = a?.createTime ? new Date(a.createTime).getTime() : 0;
+        const tb = b?.createTime ? new Date(b.createTime).getTime() : 0;
+        return tb - ta;
+      });
+    } else {
+      auditLogs.value = [];
+    }
+
+    if (!auditLogs.value || auditLogs.value.length === 0) {
+      await loadNoticeLogsForTask(taskId);
+    } else {
+      noticeLogs.value = [];
+    }
+
+    if (auditList.value && auditList.value.length > 0) {
+      const latest = auditList.value[0];
+      const comment = latest.comment ?? latest._raw?.comment ?? null;
+      if (comment) {
+        feedbackForm.comment = String(comment);
+      } else {
+        const taskComment = currentTask.value?._raw?.comment;
+        if (taskComment) {
+          feedbackForm.comment = String(taskComment);
+        } else {
+          feedbackForm.comment = '';
+        }
+      }
+    } else {
+      const taskComment = currentTask.value?._raw?.comment;
+      if (taskComment) {
+        feedbackForm.comment = String(taskComment);
+      } else {
+        feedbackForm.comment = '';
+      }
+    }
+  } catch (e) { 
+    auditList.value = [];
+    auditLogs.value = [];
+    noticeLogs.value = [];
+    feedbackForm.comment = '';
+  }
+};
+
+const parseFilenameFromContentDisposition = (cd) => {
+  if (!cd) return '';
+
+  const mStar = cd.match(/filename\*\s*=\s*([^']*)''([^;]+)/i);
+  if (mStar && mStar[2]) {
+    try {
+      return decodeURIComponent(mStar[2]);
+    } catch (e) { 
+      return mStar[2];
+    }
+  }
+
+  const m = cd.match(/filename\s*=\s*"([^";]+)"/i);
+  if (m && m[1]) {
+    let filename = m[1];
+    if (filename.includes('%')) {
+      try {
+        filename = decodeURIComponent(filename);
+      } catch (e) { 
+        try {
+          filename = decodeURIComponent(decodeURIComponent(filename));
+        } catch (e2) { 
+        }
+      }
+    }
+    return filename;
+  }
+
+  return '';
+};
+
+const ensureExt = (name, suffix) => {
+  const n = String(name || '').trim();
+  const s = String(suffix || '').trim().replace(/^\./, '').toLowerCase();
+  if (!n) return s ? `file.${s}` : 'file';
+  if (!s) return n;
+  if (/\.[a-z0-9]+$/i.test(n)) return n;
+  return `${n}.${s}`;
+};
+
+const downloadByFileId = async (fileId, fileSuffix) => {
+  if (!fileId) return;
+  const token = localStorage.getItem('token') || '';
+  if (!token) {
+    ElMessage.error('未登录或登录已过期，请先登录');
+    try { router.push('/login'); } catch (e) { 
+    }
+    return;
+  }
+
+  try {
+    const resp = await fetch(`/system/download/${fileId}`, {
+      method: 'GET',
+      headers: { Authorization: token }
+    });
+
+    if (resp.status === 401) {
+      try { localStorage.removeItem('token'); } catch (e) { 
+    }
+      try {
+        const full = `${window.location.pathname || ''}${window.location.search || ''}${window.location.hash || ''}`;
+        window.location.replace(`/login?redirect=${encodeURIComponent(full)}`);
+      } catch (e) { 
+        try { router.push('/login'); } catch (e2) { 
+        }
+      }
+      return;
+    }
+
+    const contentType = resp.headers.get('content-type') || '';
+    if (!resp.ok) {
+      let err;
+      if (contentType.includes('application/json')) {
+        try { err = await resp.json(); } catch (e) { 
+    }
+      } else {
+        try { err = { message: await resp.text() }; } catch (e) { 
+    }
+      }
+      throw new Error(err?.message || `下载失败(${resp.status})`);
+    }
+
+    if (contentType.includes('application/json')) {
+      const jsonData = await resp.json();
+      if (jsonData && (jsonData.code || jsonData.message)) {
+        throw new Error(jsonData.message || '下载失败');
+      }
+    }
+
+    const cd = resp.headers.get('content-disposition') || '';
+    let filename = parseFilenameFromContentDisposition(cd);
+    if (!filename) {
+      filename = `file_${fileId}`;
+    }
+    filename = ensureExt(filename, fileSuffix);
+
+    if (filename && !filename.startsWith('file_')) {
+      fileMap.value.set(String(fileId), filename);
+    }
+
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    let downloadName = filename;
+    if (downloadName.includes('%')) {
+      try {
+        downloadName = decodeURIComponent(downloadName);
+      } catch (e) { 
+      }
+    }
+    a.download = downloadName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => {
+      try { URL.revokeObjectURL(url); } catch (e) { 
+    }
+    }, 800);
+  } catch (e) {  
+    ElMessage.error(e?.message || '下载失败，请稍后重试');
+  }
+};
+
+const previewMaterialFile = async (auditItem) => {
+  const fileId = auditItem?.fileId ?? auditItem?.file_id;
+  if (!fileId) {
+    ElMessage.warning('未找到文件ID，无法预览');
+    return;
+  }
+  const token = localStorage.getItem('token') || '';
+  if (!token) {
+    ElMessage.error('未登录或登录已过期，请先登录');
+    return;
+  }
+
+  if (previewUrl.value) {
+    try { URL.revokeObjectURL(previewUrl.value); } catch (e) { 
+    }
+  }
+  if (selectedFileObjectUrl.value) {
+    try { URL.revokeObjectURL(selectedFileObjectUrl.value); } catch (e) { 
+    }
+  }
+
+  previewVisible.value = true;
+  previewType.value = '';
+  previewUrl.value = '';
+  previewFileName.value = '';
+
+  try {
+    const resp = await fetch(`/system/download/${fileId}`, {
+      method: 'GET',
+      headers: { Authorization: token }
+    });
+
+    if (resp.status === 401) {
+      try { localStorage.removeItem('token'); } catch (e) { 
+    }
+      try {
+        const full = `${window.location.pathname || ''}${window.location.search || ''}${window.location.hash || ''}`;
+        window.location.replace(`/login?redirect=${encodeURIComponent(full)}`);
+      } catch (e) { 
+    }
+      return;
+    }
+
+    if (!resp.ok) {
+      const contentType = resp.headers.get('content-type') || '';
+      let err;
+      if (contentType.includes('application/json')) {
+        try { err = await resp.json(); } catch (e) { 
+    }
+      } else {
+        try { err = { message: await resp.text() }; } catch (e) { 
+    }
+      }
+      throw new Error(err?.message || `文件获取失败(${resp.status})`);
+    }
+
+    const cd = resp.headers.get('content-disposition') || '';
+    const filename = parseFilenameFromContentDisposition(cd);
+    previewFileName.value = filename || `file_${fileId}`;
+
+    if (filename) {
+      fileMap.value.set(String(fileId), filename);
+      const currentItem = auditList.value.find(item => String(item.fileId || item.file_id) === String(fileId));
+      if (currentItem) {
+        currentItem.fileName = filename;
+      }
+    }
+
+    const blob = await resp.blob();
+    previewFileBlob.value = blob; 
+    const ext = getExtFromName(previewFileName.value);
+    const isPdf = ext === 'pdf' || (await isPdfBlob(blob));
+
+    if (isPdf) {
+      previewType.value = 'pdf';
+      const pdfBlob = blob.type === 'application/pdf' ? blob : new Blob([blob], { type: 'application/pdf' });
+      previewUrl.value = URL.createObjectURL(pdfBlob);
+    } else {
+      previewType.value = 'doc';
+      previewFileName.value = previewFileName.value || `file_${fileId}`;
+    }
+  } catch (e) {  
+    previewVisible.value = false;
+    ElMessage.error(e?.message || '预览失败，请稍后重试');
+  }
+};
+
+const downloadPreviewFile = () => {
+  if (!previewFileBlob.value || !previewFileName.value) {
+    ElMessage.warning('暂无可下载的文件');
+    return;
+  }
+
+  try {
+    const url = URL.createObjectURL(previewFileBlob.value);
+    const a = document.createElement('a');
+    a.href = url;
+    let downloadName = previewFileName.value;
+    if (downloadName.includes('%')) {
+      try {
+        downloadName = decodeURIComponent(downloadName);
+      } catch (e) { 
+      }
+    }
+    a.download = downloadName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => {
+      try { URL.revokeObjectURL(url); } catch (e) { 
+    }
+    }, 500);
+  } catch (e) { 
+    ElMessage.error('下载失败，请稍后重试');
+  }
+};
+
+const cleanupPreviewUrl = () => {
+  if (previewUrl.value) {
+    try { URL.revokeObjectURL(previewUrl.value); } catch (e) { 
+    }
+    previewUrl.value = '';
+  }
+  if (previewFileBlob.value) {
+    previewFileBlob.value = null;
+  }
+  previewFileId.value = null;
+  previewFileName.value = '';
+  previewType.value = '';
+};
+
+const isPdfBlob = async (blob) => {
+  try {
+    const buf = await blob.slice(0, 5).arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    return bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46 && bytes[4] === 0x2D;
+  } catch (e) { 
+    return false;
+  }
+};
+
+const getExtFromName = (name) => {
+  if (!name) return '';
+  const m = name.match(/\.([a-z0-9]+)$/i);
+  return m ? m[1].toLowerCase() : '';
+};
+
+const submitAudit = async () => {
+  if (!auditForm.comment) {
+    ElMessage.warning('请输入审批意见');
+    return;
+  }
+
+  if (!latestAudit.value) {
+    ElMessage.warning('未找到审批单信息');
+    return;
+  }
+
+  const subId = latestAudit.value.subId ?? latestAudit.value.sub_id;
+  if (!subId) {
+    ElMessage.warning('未找到审批单ID');
+    return;
+  }
+
+  auditSubmitting.value = true;
+  try {
+    await auditTask({
+      sub_id: Number(subId),
+      is_pass: auditForm.result === 1,
+      title: auditForm.comment,
+      content: auditForm.comment
+    });
+
+    ElMessage.success(auditForm.result === 1 ? '审批通过' : '已驳回');
+
+    auditForm.result = 1;
+    auditForm.comment = '';
+
+    await refreshTasksSilently();
+    await new Promise(resolve => setTimeout(resolve, 300));
+    await loadAuditForCurrentTask();
+  } catch (e) {  
+    ElMessage.error(e?.message || '审核提交失败，请稍后重试');
+  } finally {
+    auditSubmitting.value = false;
+  }
+};
+
+const openTaskFromQuery = (taskId) => {
+  if (!taskId) return;
+  const target = findTaskById(taskTreeData.value, taskId);
+  if (target) {
+    handleViewDetail(target);
+  } else {
+    ElMessage.info('未找到关联任务');
+  }
+};
+
+watch([filterYear, filterStatus], () => {
+  applyFilters();
+}, { deep: true });
+
+watch([drawerVisible, shouldScrollToAudit, canAudit, latestAudit], async ([drawerOpen, needScroll, canAuditNow, hasAudit]) => {
+  if (drawerOpen && needScroll && canAuditNow && hasAudit && auditSectionRef.value) {
+    await nextTick();
+    setTimeout(() => {
+      if (auditSectionRef.value) {
+        auditSectionRef.value.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        shouldScrollToAudit.value = false; 
+      }
+    }, 500);
+  }
+});
+
+watch(() => auditForm.result, (val) => {
+  if (val === 0) {
+    auditForm.comment = '驳回';
+  } else if (val === 1) {
+    auditForm.comment = '同意';
+  }
+});
+
+watch([canAudit, latestAudit], ([canAuditNow, hasAudit]) => {
+  if (canAuditNow && hasAudit && auditForm.result === 1) {
+    if (!auditForm.comment || auditForm.comment.trim() === '') {
+      auditForm.comment = '同意';
+    }
+  }
+}, { immediate: true });
+
+onMounted(() => {
+  loadTasks();
+
+  if (tasksAutoRefreshTimer) clearInterval(tasksAutoRefreshTimer);
+  tasksAutoRefreshTimer = setInterval(() => {
+    if (!document.hidden) refreshTasksSilently();
+  }, 15000);
+
+  try {
+    const handler = () => {
+      if (!document.hidden) refreshTasksSilently();
+    };
+    window.__worksVisibilityHandler = handler;
+    document.addEventListener('visibilitychange', handler);
+  } catch (e) { 
+  }
+});
+
+onUnmounted(() => {
+  if (tasksAutoRefreshTimer) {
+    clearInterval(tasksAutoRefreshTimer);
+    tasksAutoRefreshTimer = null;
+  }
+  try {
+    if (window.__worksVisibilityHandler) {
+      document.removeEventListener('visibilitychange', window.__worksVisibilityHandler);
+      delete window.__worksVisibilityHandler;
+    }
+  } catch (e) { 
+  }
+});
+
+watch(
+  () => route.query.taskId,
+  (val) => {
+    if (val && taskTreeData.value.length > 0) {
+      openTaskFromQuery(val);
+    }
+  }
+);
+</script>
+
+<style scoped>
+/* 容器样式 */
+.works-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+}
+
+/* 顶部滚动信息条（预留） */
+.notice-bar {
+  background: #fffbe6;
+  border: 1px solid #ffe58f;
+  border-radius: 6px;
+  padding: 6px 12px;
+}
+
+.notice-bar-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.notice-bar-label {
+  flex-shrink: 0;
+  padding: 0 8px;
+  font-size: 12px;
+  color: #faad14;
+  border-radius: 12px;
+  background-color: #fff1b8;
+}
+
+.notice-bar-content {
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.notice-bar-marquee {
+  display: inline-block;
+  padding-left: 100%;
+  font-size: 13px;
+  color: #ad6800;
+  animation: works-notice-marquee 18s linear infinite;
+}
+
+@keyframes works-notice-marquee {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+.sub-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #303133;
+  margin-bottom: 8px;
+}
+
+/* 项目信息卡片 */
+.project-card {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  border: 1px solid #ebeef5;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.project-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.project-title {
+  font-size: 20px;
+  font-weight: bold;
+  color: #303133;
+  margin: 0;
+}
+
+.project-meta {
+  display: flex;
+  gap: 24px;
+  color: #909399;
+  font-size: 14px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.project-actions {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.toggle-group {
+  background: #f5f7fa;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  gap: 4px;
+}
+
+.toggle-btn {
+  padding: 6px 16px;
+  border: none;
+  background: transparent;
+  color: #606266;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.toggle-btn.active {
+  background: #fff;
+  color: #1890ff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  font-weight: bold;
+}
+
+.create-btn {
+  background-color: #1890ff;
+  border-color: #1890ff;
+}
+
+/* 表格卡片 */
+.table-card {
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  border: 1px solid #ebeef5;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+/* 筛选栏 */
+.filter-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.filter-left {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.filter-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-label {
+  font-size: 14px;
+  color: #606266;
+}
+
+.filter-select {
+  width: 120px;
+}
+
+.filter-right {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.search-input {
+  width: 240px;
+}
+
+.search-btn {
+  margin-left: 0;
+}
+
+.export-btn {
+  color: #606266;
+}
+
+/* 表格样式 */
+.table-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+}
+
+:deep(.el-table__body tr.row-expand-anim) {
+  animation: works-row-expand 180ms ease-out both;
+}
+
+@keyframes works-row-expand {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.task-code {
+  color: #909399;
+  font-family: monospace;
+  margin-right: 6px;
+  font-weight: 700;
+}
+
+.task-name-cell {
+  cursor: pointer;
+}
+
+.task-name-text:hover {
+  text-decoration: underline;
+}
+
+.child-count {
+  margin-left: 6px;
+  color: #909399;
+  font-size: 12px;
+}
+
+::deep(.el-table__expand-icon) {
+  display: none;
+}
+
+.principal-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.avatar-circle {
+  width: 24px;
+  height: 24px;
+  background-color: #e6f7ff;
+  color: #1890ff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.date-cell {
+  font-size: 12px;
+  color: #909399;
+  font-family: monospace;
+}
+
+.ml-2 {
+  margin-left: 8px;
+}
+
+.mr-1 {
+  margin-right: 4px;
+}
+
+.mb-4 {
+  margin-bottom: 16px;
+}
+
+.mb-6 {
+  margin-bottom: 24px;
+}
+
+.mt-4 {
+  margin-top: 16px;
+}
+
+.mt-6 {
+  margin-top: 24px;
+}
+
+/* 抽屉样式 */
+.section-title {
+  font-size: 15px;
+  font-weight: bold;
+  color: #303133;
+  margin-bottom: 12px;
+  border-left: 3px solid #1890ff;
+  padding-left: 8px;
+}
+
+.task-info-box {
+  background: #f5f7fa;
+  padding: 16px;
+  border-radius: 4px;
+  margin-bottom: 24px;
+  border: 1px solid #e4e7ed;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.info-row {
+  display: flex;
+}
+
+.info-row--full {
+  grid-column: 1 / -1;
+  align-items: flex-start;
+}
+
+.info-row--full .label {
+  align-self: flex-start;
+  padding-top: 2px;
+  white-space: nowrap;
+}
+
+.info-row .label {
+  width: 92px;
+  color: #909399;
+  font-size: 14px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.info-row .value {
+  color: #303133;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.info-row--full .value {
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.6;
+}
+
+.slider-container {
+  padding: 0 10px;
+}
+
+.progress-input-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  user-select: none;
+}
+
+.percent-suffix {
+  color: #606266;
+  font-size: 14px;
+}
+
+.wheel-tip {
+  color: #909399;
+  font-size: 12px;
+}
+
+.drawer-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.hide-upload-trigger :deep(.el-upload--text) {
+  display: none;
+}
+
+/* 日志样式 */
+.log-timeline-box {
+  padding-left: 10px;
+}
+
+.log-card-item {
+  border: 1px solid #ebeef5;
+  background-color: #fff;
+}
+
+.log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.log-user {
+  font-size: 14px;
+  color: #303133;
+}
+
+.log-content {
+  color: #606266;
+  font-size: 13px;
+}
+
+.log-file {
+  color: #1890ff;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #f0f9eb;
+  padding: 4px 8px;
+  border-radius: 4px;
+  width: fit-content;
+}
+
+.log-file:hover {
+  text-decoration: underline;
+  background: #e1f3d8;
+}
+
+.preview-text {
+  font-size: 12px;
+  color: #909399;
+  margin-left: 4px;
+}
+
+.pdf-viewer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pdf-viewer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f5f7fa;
+  border-radius: 4px;
+  border: 1px solid #ebeef5;
+}
+
+.file-name-display {
+  font-size: 14px;
+  color: #303133;
+  font-weight: 500;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 16px;
+}
+
+.doc-viewer {
+  text-align: center;
+  padding: 40px 0;
+}
+
+/* 审核表单样式 */
+.audit-section {
+  border-top: 1px solid #ebeef5;
+  padding-top: 20px;
+}
+
+.audit-form {
+  background: #f5f7fa;
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.audit-form :deep(.el-radio) {
+  margin-right: 20px;
+}
+
+.radio-success :deep(.el-radio__label) {
+  color: #67c23a;
+}
+
+.radio-danger :deep(.el-radio__label) {
+  color: #f56c6c;
+}
+
+.file-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #409eff;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 8px 12px;
+  background: #ecf5ff;
+  border-radius: 4px;
+  transition: all 0.3s;
+}
+
+.file-link:hover {
+  background: #b3d8ff;
+  text-decoration: underline;
+}
+</style>

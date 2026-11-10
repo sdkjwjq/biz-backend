@@ -1,0 +1,27 @@
+/* 全局字体放大（统一调整整个项目字号） */
+
+html {
+    /* 原项目大量使用 14px 左右，这里统一提高到 16px 基准 */
+    font-size: 16px;
+    height: 100%;
+    overflow: hidden;
+}
+
+body {
+    font-size: 1rem;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+}
+
+#app {
+    height: 100%;
+    overflow: hidden;
+}
+
+/* Element Plus 全局字体变量（影响组件内文字） */
+:root {
+    --el-font-size-base: 16px;
+    --el-font-size-small: 14px;
+    --el-font-size-large: 18px;
+}

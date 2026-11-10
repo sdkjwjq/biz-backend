@@ -119,6 +119,21 @@ public class SysService {
         }
     }
 
+    /** School SSO only proves identity; local account status and permissions remain authoritative. */
+    public SysLoginVO loginFromSso(Long userId) {
+        SysUser user = sysMapper.getUserById(userId);
+        if (user == null || Integer.valueOf(1).equals(user.getIsDelete()) || !"1".equals(user.getStatus())) {
+            throw new SecurityException("统一认证账号未关联到正常的平台账号，请联系管理员");
+        }
+        SysDept dept = user.getDeptId() == null ? null : sysMapper.getDeptById(user.getDeptId());
+        String token = JWTUtil.generateJwtToken(user,
+                AchievementPermissionUtil.isAchievementUploadAccount(user, dept),
+                AchievementPermissionUtil.canViewAchievement(user, dept),
+                AchievementPermissionUtil.canUploadAchievement(user, dept));
+        token = JWTUtil.withLoginSource(token, "SSO");
+        return new SysLoginVO(user.getNickName(), reviewContexts.loginToken(userId, token), false);
+    }
+
     /**
      * 修改密码
      * @param userId 用户ID

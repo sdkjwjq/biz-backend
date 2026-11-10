@@ -39,3 +39,11 @@ build/
 ### Runtime ###
 logs/
 uploads/
+
+### Campus SSO test data and credentials ###
+/data/
+/.run/
+.env
+.env.*
+*.sql.gz
+*.sql..gz

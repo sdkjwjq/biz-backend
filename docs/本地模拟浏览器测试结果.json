@@ -1,0 +1,21 @@
+{
+  "loginButton": true,
+  "ssoToken": true,
+  "businessPage": true,
+  "accessOk": true,
+  "roleSelected": true,
+  "logoutClearedToken": true,
+  "casLogoutVisited": true,
+  "roleChoiceLogout": true,
+  "noCodeInAddress": true,
+  "providerCalls": {
+    "authorize": 2,
+    "token": 2,
+    "profile": 2,
+    "logout": 2
+  },
+  "errors": [],
+  "afterLoginUrl": "http://127.0.0.1:5175/choose-role",
+  "afterLoginTitle": "选择使用角色",
+  "afterRoleUrl": "http://127.0.0.1:5175/home/works"
+}

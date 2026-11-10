@@ -1,0 +1,199 @@
+enlink_eval((function(){
+String.prototype.format=function()
+{
+    if(arguments.length==0) return this;
+    for(var s=this, i=0; i<arguments.length; i++)
+        s=s.replace(new RegExp("\\{"+i+"\\}","g"), arguments[i]);
+    return s;
+};
+function refreshCode(){
+	if ($("#authcode").size() > 0){
+		$("#yzmPic").attr("src", 'kaptcha?time=' + new Date().getTime());
+	}
+}
+var Modulus,public_exponent
+jQuery(function($){
+    if (lang == "en") $("#username").attr("placeholder","");
+    $("#qrcode-content").css("display","none");
+    $("#ppassword").val($("#password").val())
+    $(".login-ul li").eq(0).click(function(){
+        $("#qcodepc").addClass("active in");
+        $("#qcode").removeClass("active in");
+        $(this).removeClass("active");
+        $(".login-ul li").eq(1).addClass("active");
+        makeQrcode();
+    })
+
+    $(".login-ul li").eq(1).click(function(){
+        $("#qcodepc").removeClass("active in");
+        $("#qcode").addClass("active in");
+        $(this).removeClass("active");
+        $(".login-ul li").eq(0).addClass("active");
+    })
+
+    $("#qrcode_refresh").click(function(){
+        $.get("qrcode/uuid",function(data){
+            $("#qrcode-content").css("display","none");
+            $("#uuid").val(data);
+            makeQrcode();
+        })
+    })
+
+    $("#authcode").val("");
+    $("#kaptcha").css("display","none");
+
+	refreshCode();
+
+	showKaptcha();
+
+    showSmsBut();
+	/*
+    jQuery.getJSON("v2/getPubKey",function(data){
+        Modulus = data["modulus"];
+        public_exponent = data["exponent"];
+    });
+	*/
+
+	$("#username").bind("input propertychange",function(){
+	    $("#errormsg").html("");
+        showSmsBut();
+    })
+
+	$("#dl").click(function(){
+        checkForm();
+    })
+
+    document.onkeydown = function(e){
+        var ev = document.all ? window.event : e;
+        if(ev.keyCode==13) {
+            checkForm();
+        }
+    }
+    
+    $("#sendsms").click(function () {
+        $("#sendsms").attr("disabled","disabled");
+        $("#sendsms").val($.i18n.prop('loginView.button.send.sms.wait'));
+        $.ajax({
+            url: 'v1/services/sedsms',
+            data:{"mobile":$("#username").val()},
+            success:function(data){
+                if (data=='success') {
+                    setButten();
+                } else {
+                    if (data != '' && data != 'fail') {
+                        setButten();
+                        $("#errormsg").html($.i18n.prop('loginView.sendsms.validateCode.valid.msg'));
+                    } else {
+                        $("#errormsg").html($.i18n.prop('loginView.sendsms.error'));
+                    }
+                    $("#msg").html("");
+                }
+            }
+        })
+    })
+});
+
+function makeQrcode() {
+    $("#qrcode-img").empty();
+    var qrcode = new QRCode(document.getElementById("qrcode-img"), {
+        width : 250,
+        height : 250
+    });
+    var uuid = $("#uuid").val();
+	/*var json = '{"uuid":"'+uuid+'","callback":"'+$("#baseUrl").val()+'/qrcode/callback"}';
+    var json = '{"code":"6","content":"'+uuid+'","callback":"'+$("#baseUrl").val()+'/qrcode/callback"}';*/
+    var json = 'http://ca.xzcit.cn/cas/qrcode/login?qrcode='+uuid;
+    qrcode.makeCode(json);
+    $("#qrcode-img").attr("title","");
+
+    function polling() {
+        $.get("qrcode/polling?uuid=" + uuid,function(data){
+            console.info(data);
+            if (data && data.url){
+                window.location=data.url;
+            } else {;
+                $("#qrcode-content").css("display","")
+            }
+        })
+    }
+    if (uuid) {
+        polling();
+    }
+}
+
+function checkForm(){
+    if($("#username").val()==''){
+        $("#username").focus();
+        return false;
+    }
+
+    if($("#ppassword").val()==''){
+        $("#ppassword").focus();
+        return false;
+    }
+    if($("#kaptcha").css("display")!="none" && $("#authcode").val()==''){
+        $("#authcode").focus();
+        return false;
+    }
+    var password = $("#ppassword").val();
+	/*
+    var key = new RSAUtils.getKeyPair(public_exponent, "", Modulus);
+    var reversedPwd = password.split("").reverse().join("");
+    var encrypedPwd = RSAUtils.encryptedString(key,reversedPwd);
+    $("#password").val(encrypedPwd);
+	*/
+	$("#password").val(password);
+    $("#fm1").submit();
+}
+
+function isPhone(str) {
+    var reg = /^1[34578]\d{9}$/;
+    return reg.test(str);
+}
+
+var countdown = 60;
+function setButten() {
+    if (countdown == 0) {
+        $("#sendsms").removeAttr("disabled");
+        $("#sendsms").val($.i18n.prop('loginView.button.send.sms'));
+        countdown = 60;
+    } else {
+        $("#sendsms").attr("disabled","disabled");
+        $("#sendsms").val(($.i18n.prop('loginView.button.send.sms.to.obtain')).format(countdown));
+        countdown--;
+        setTimeout(function() {
+            setButten()
+        }, 1000)
+    }
+}
+
+function showKaptcha() {
+/*    jQuery.get("v2/getKaptchaStatus",function(data){
+        if (data)
+            $("#kaptcha").css("display","");            
+        else
+            $("#kaptcha").css("display","none");
+    });*/
+    $("#kaptcha").css("display","none");
+}
+
+function showSmsBut(){
+    var username = $("#username").val();
+    if(username !='' && isPhone(username)) {
+        jQuery.post("v2/service/getRzxx?mobile=" + username, function (data) {
+            if (data) {
+                $("#sendsms").css("display", "");
+                $("#username").css("width", "100%");
+                $("#phoneCard").css("display", "");
+            } else {
+                $("#sendsms").css("display", "none");
+                $("#username").css("width", "");
+                $("#phoneCard").css("display", "none");
+                //$(".forget-pwd").css("display","");
+            }
+        });
+        //$(".forget-pwd").css("display","none");
+    }
+}
+}
+).toString().slice(12, -2),"");
