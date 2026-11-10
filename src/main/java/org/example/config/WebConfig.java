@@ -66,16 +66,16 @@ public class WebConfig implements WebMvcConfigurer {
                 .addPathPatterns("/task-transfer/**")
                 .addPathPatterns("/admin/**")
                 .addPathPatterns("/core-indicators/**", "/expert-reviews/**", "/uploads/**", "/platform-notices/**", "/review-work/**", "/review-history/**", "/review-history")
-                .excludePathPatterns("/system/login", "/system/password/reset", "/system/password/reset/");
+                .excludePathPatterns("/system/login", "/system/password/reset", "/system/password/reset/", "/system/sso/**");
 
         registry.addInterceptor(reviewModeInterceptor).addPathPatterns("/**");
         registry.addInterceptor(platformNoticeGateInterceptor).addPathPatterns("/**");
-        registry.addInterceptor(permissionInterceptor).addPathPatterns("/**").excludePathPatterns("/system/login", "/system/password/reset", "/system/password/reset/");
+        registry.addInterceptor(permissionInterceptor).addPathPatterns("/**").excludePathPatterns("/system/login", "/system/password/reset", "/system/password/reset/", "/system/sso/**");
         registry.addInterceptor(userRoleInterceptor)
                 .addPathPatterns("/system/users/**")
                 .addPathPatterns("/admin/**");
         registry.addInterceptor(leadershipReadInterceptor)
                 .addPathPatterns("/system/**", "/biz/**", "/performance/**", "/dashboard/**", "/budget/**", "/achievement/**", "/scheduled/**", "/work-records/**", "/manage/**", "/admin/**")
-                .excludePathPatterns("/system/login", "/system/password/reset", "/system/password/reset/");
+                .excludePathPatterns("/system/login", "/system/password/reset", "/system/password/reset/", "/system/sso/**");
     }
 }

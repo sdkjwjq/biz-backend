@@ -69,7 +69,8 @@ public class JwtInterceptor implements HandlerInterceptor {
             boolean passwordEndpoint = ("GET".equals(request.getMethod()) && "/system/password/status".equals(path))
                     || ("POST".equals(request.getMethod())
                     && ("/system/password".equals(path) || "/system/logout".equals(path)));
-            if (Integer.valueOf(1).equals(user.getForcePasswordChange()) && !passwordEndpoint) {
+            if (Integer.valueOf(1).equals(user.getForcePasswordChange())
+                    && !"SSO".equals(decodedJWT.getClaim("loginSource").asString()) && !passwordEndpoint) {
                 sendError(response, 428, "请先修改密码，新密码至少8位，并同时包含大写字母、小写字母和数字");
                 return false;
             }

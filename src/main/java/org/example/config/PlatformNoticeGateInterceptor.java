@@ -16,6 +16,7 @@ public class PlatformNoticeGateInterceptor implements HandlerInterceptor {
     @Override public boolean preHandle(HttpServletRequest request,HttpServletResponse response,Object handler)throws Exception{
         if("OPTIONS".equals(request.getMethod()))return true;
         String path=request.getRequestURI().substring(request.getContextPath().length()).replaceAll("/+$","");
+        if (path.startsWith("/system/sso/")) return true;
         if(Set.of("/system/login","/system/password/reset","/system/password/status","/system/password","/system/logout","/system/access").contains(path))return true;
         if(("GET".equals(request.getMethod())&&(path.equals("/platform-notices/status")||path.matches("/platform-notices/[0-9]+/attachments/[0-9]+")))
           ||("POST".equals(request.getMethod())&&path.matches("/platform-notices/[0-9]+/(open|confirm)")))return true;
