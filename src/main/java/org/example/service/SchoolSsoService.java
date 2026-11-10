@@ -20,7 +20,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.Duration;
-import java.util.Base64;
+import java.util.HexFormat;
 import java.util.Map;
 
 /** The CAS credential and access token are used only on the server. */
@@ -62,7 +62,8 @@ public class SchoolSsoService {
         requireAvailable();
         byte[] nonce = new byte[32];
         random.nextBytes(nonce);
-        String state = Base64.getUrlEncoder().withoutPadding().encodeToString(nonce);
+        // The school's OAuth guide restricts state to ASCII letters and digits.
+        String state = HexFormat.of().formatHex(nonce);
         String url = casBaseUrl + "/oauth2.0/authorize?response_type=code&client_id=" + encode(clientId)
                 + "&redirect_uri=" + encode(redirectUri) + "&state=" + encode(state);
         return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, stateCookie(request, state, 300).toString())

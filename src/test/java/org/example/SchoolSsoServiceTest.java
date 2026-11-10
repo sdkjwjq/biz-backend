@@ -49,7 +49,8 @@ class SchoolSsoServiceTest {
         String url = start.getBody().get("url");
         assertTrue(url.contains("redirect_uri=http%3A%2F%2F127.0.0.1%2F"));
         String state = param(url, "state");
-        assertEquals(43, state.length());
+        assertEquals(64, state.length());
+        assertTrue(state.matches("[a-zA-Z0-9]+"));
         assertTrue(start.getHeaders().getFirst("Set-Cookie").contains("HttpOnly"));
         assertTrue(start.getHeaders().getFirst("Set-Cookie").contains("SameSite=Lax"));
         request.setCookies(new jakarta.servlet.http.Cookie("sg_sso_state", state));
